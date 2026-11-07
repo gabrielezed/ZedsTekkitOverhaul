@@ -12,7 +12,7 @@ public final class BlockDistillationPart extends BlockDistillationComponent {
     private final DistillationPartType part;
 
     public BlockDistillationPart(int id, DistillationPartType part) {
-        super(id);
+        super(id, part);
         this.part = part;
         setHardness(3.0F);
         setResistance(8.0F);

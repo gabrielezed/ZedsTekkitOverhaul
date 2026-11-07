@@ -1,6 +1,5 @@
 package zed.tekkitoverhaul.distillation;
 
-import net.minecraft.src.Block;
 import net.minecraft.src.BlockContainer;
 import net.minecraft.src.EntityLiving;
 import net.minecraft.src.Material;
@@ -9,8 +8,14 @@ import net.minecraft.src.World;
 
 /** Shared placement behavior for the boiler and its auxiliaries. */
 abstract class BlockDistillationComponent extends BlockContainer {
-    protected BlockDistillationComponent(int id) {
-        super(id, Block.blockSteel.blockIndexInTexture, Material.iron);
+    protected BlockDistillationComponent(int id, DistillationPartType part) {
+        // ItemBlock uses this index for its flat inventory, held and dropped sprite.
+        super(id, part.index, Material.iron);
+    }
+
+    @Override
+    public String getTextureFile() {
+        return "/zed/textures/distillation_items.png";
     }
 
     @Override

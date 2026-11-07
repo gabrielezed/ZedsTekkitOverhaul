@@ -12,7 +12,7 @@ import net.minecraft.src.Slot;
 import net.minecraft.src.SlotCrafting;
 import net.minecraft.src.World;
 
-/** 25 slot di crafting, 1 output e 36 slot player. */
+/** 25 crafting inputs, one result slot and 36 player inventory slots. */
 public final class ContainerAdvancedCraftingTable extends Container {
     public final InventoryCrafting craftMatrix = new InventoryCrafting(this, 5, 5);
     public final IInventory craftResult = new InventoryCraftResult();
@@ -25,7 +25,7 @@ public final class ContainerAdvancedCraftingTable extends Container {
         this.y = y;
         this.z = z;
 
-        // Il vanilla SlotCrafting consuma tutte le celle della matrice via getSizeInventory().
+        // Vanilla SlotCrafting consumes ingredients across the crafting inventory.
         addSlot(new SlotCrafting(inventory.player, craftMatrix, craftResult, 0, 158, 66));
         for (int row = 0; row < 5; row++) {
             for (int col = 0; col < 5; col++) {
@@ -58,7 +58,7 @@ public final class ContainerAdvancedCraftingTable extends Container {
     @Override
     public void onCraftGuiClosed(EntityPlayer player) {
         super.onCraftGuiClosed(player);
-        // Come il normale banco da lavoro, restituisce gli input rimasti.
+        // Return remaining inputs when the GUI closes, as a vanilla crafting table does.
         for (int index = 0; index < craftMatrix.getSizeInventory(); index++) {
             ItemStack stack = craftMatrix.getStackInSlot(index);
             if (stack != null) {
@@ -68,7 +68,7 @@ public final class ContainerAdvancedCraftingTable extends Container {
         }
     }
 
-    // Il trasferimento Shift+clic sara' aggiunto dopo aver verificato il ciclo vanilla.
+    // Shift-click transfer remains unimplemented until the basic crafting flow is verified.
     @Override
     public ItemStack transferStackInSlot(int slotIndex) {
         return null;

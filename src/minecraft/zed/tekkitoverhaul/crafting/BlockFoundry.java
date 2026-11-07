@@ -3,7 +3,7 @@ package zed.tekkitoverhaul.crafting;
 import net.minecraft.src.Block;
 import net.minecraft.src.Material;
 
-/** Blocco di test senza TileEntity o comportamento macchina. */
+/** Test block with no TileEntity or machine behavior. */
 public final class BlockFoundry extends Block {
     public BlockFoundry(int id) {
         super(id, Block.stoneOvenIdle.blockIndexInTexture, Material.rock);

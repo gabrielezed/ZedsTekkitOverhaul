@@ -8,9 +8,9 @@ import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.ee2.IC2EmcIntegration;
 import zed.tekkitoverhaul.integration.ee2.AdvancedCraftingEmcIntegration;
 
-/** Entrypoint ModLoader 1.2.5: solo bootstrap e callback. */
+/** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
-    // Integrazione IC2 legacy lasciata nello stesso stato del tuo zed.zip.
+    // Keep the legacy IC2 integration in its existing disabled state.
     private static final boolean ENABLE_IC2_EMC_INTEGRATION = false;
     private final EE2FuelIntegration ee2Fuels = new EE2FuelIntegration();
     private final AdvancedCraftingEmcIntegration craftingEmc = new AdvancedCraftingEmcIntegration();
@@ -22,7 +22,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void load() {
         AdvancedCraftingRegistry.register();
-        ModLoader.setInGameHook(this, true, false); // Primo tick: registrazione EMC EE2.
+        ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         System.out.println("[ZTO] v" + getVersion() + " loaded");
     }
 

@@ -6,7 +6,7 @@ import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.forge.Configuration;
 
-/** Registrazione blocchi e ricette, senza modificare classi vanilla. */
+/** Registers blocks and recipes without changing vanilla classes. */
 public final class AdvancedCraftingRegistry {
     public static Block advancedTable;
     public static Block foundry;
@@ -16,7 +16,7 @@ public final class AdvancedCraftingRegistry {
 
     public static void register() {
         if (initialized) return;
-        // La config viene salvata dopo il primo avvio. Non cambiare ID in un mondo esistente.
+        // Configuration is saved on first launch. Do not change IDs in an existing world.
         Configuration config = new Configuration(new File("config/ZedsTekkitOverhaul.cfg"));
         config.load();
         int tableId = config.getOrCreateBlockIdProperty("advancedCraftingTable", 3000).getInt();
@@ -25,8 +25,8 @@ public final class AdvancedCraftingRegistry {
         if (tableId == foundryId || tableId < 1 || foundryId < 1
                 || tableId >= Block.blocksList.length || foundryId >= Block.blocksList.length
                 || Block.blocksList[tableId] != null || Block.blocksList[foundryId] != null) {
-            throw new IllegalStateException("ZTO: ID blocchi occupati o fuori range: "
-                    + tableId + ", " + foundryId + ". Controlla config/ZedsTekkitOverhaul.cfg");
+            throw new IllegalStateException("ZTO: Block IDs are already used or out of range: "
+                    + tableId + ", " + foundryId + ". Check config/ZedsTekkitOverhaul.cfg");
         }
 
         advancedTable = new BlockAdvancedCraftingTable(tableId);
@@ -36,12 +36,12 @@ public final class AdvancedCraftingRegistry {
         ModLoader.addName(advancedTable, "Advanced Crafting Table");
         ModLoader.addName(foundry, "Foundry");
 
-        // Due righe da due crafting table (4 in tutto), accetta anche l'offset vanilla.
+        // Two rows of two crafting tables (four total); vanilla recipe offsets are accepted.
         ModLoader.addRecipe(new ItemStack(advancedTable, 1), new Object[] {
             "TT", "TT", Character.valueOf('T'), Block.workbench
         });
 
-        // Ricetta esclusiva della 5x5: 16 blocchi di smooth stone, perimetro completo.
+        // Dedicated 5x5 recipe: 16 smooth Stone blocks around the entire perimeter.
         AdvancedCraftingManager.register(new ItemStack(foundry, 1), new String[] {
             "SSSSS",
             "S   S",

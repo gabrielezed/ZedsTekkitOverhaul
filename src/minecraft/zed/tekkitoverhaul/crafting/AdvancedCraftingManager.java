@@ -7,7 +7,7 @@ import net.minecraft.src.InventoryCrafting;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 
-/** Ricette esclusive 5x5. Nessun intervento sul CraftingManager vanilla. */
+/** Dedicated 5x5 recipes; does not modify vanilla CraftingManager. */
 public final class AdvancedCraftingManager {
     private static final List<Recipe> RECIPES = new ArrayList<Recipe>();
 
@@ -15,12 +15,12 @@ public final class AdvancedCraftingManager {
 
     public static void register(ItemStack output, String[] rows, Object... mappings) {
         if (rows == null || rows.length != 5 || mappings.length % 2 != 0) {
-            throw new IllegalArgumentException("Pattern 5x5 o mapping non valido");
+            throw new IllegalArgumentException("Invalid 5x5 pattern or ingredient mapping");
         }
         ItemStack[] ingredients = new ItemStack[25];
         for (int y = 0; y < 5; y++) {
             if (rows[y] == null || rows[y].length() != 5) {
-                throw new IllegalArgumentException("La riga " + y + " non e' lunga 5");
+                throw new IllegalArgumentException("Row " + y + " must contain exactly 5 characters");
             }
             for (int x = 0; x < 5; x++) {
                 char symbol = rows[y].charAt(x);
@@ -32,7 +32,7 @@ public final class AdvancedCraftingManager {
                         break;
                     }
                 }
-                if (obj == null) throw new IllegalArgumentException("Nessun mapping per '" + symbol + "'");
+                if (obj == null) throw new IllegalArgumentException("No mapping for '" + symbol + "'");
                 ingredients[x + y * 5] = toStack(obj);
             }
         }
@@ -43,7 +43,7 @@ public final class AdvancedCraftingManager {
         if (obj instanceof ItemStack) return ((ItemStack)obj).copy();
         if (obj instanceof Block) return new ItemStack((Block)obj, 1);
         if (obj instanceof Item) return new ItemStack((Item)obj, 1);
-        throw new IllegalArgumentException("Ingrediente non supportato: " + obj);
+        throw new IllegalArgumentException("Unsupported ingredient: " + obj);
     }
 
     public static ItemStack findMatchingRecipe(InventoryCrafting inv) {

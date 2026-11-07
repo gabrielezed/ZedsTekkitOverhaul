@@ -24,13 +24,14 @@ This is a **directional design plan**, not a list of already implemented feature
 | D-006 | Treat EMC and block IDs as economic/save-compatibility inputs. | Avoid game-breaking exploits and damaged worlds. |
 | D-007 | Preserve English repository content, Italian conversation. | Make code and agent handoffs consistent and broadly readable. |
 
-## Experimental implementation (feature branch only)
+## Verified foundations and current prototype
 
-The Foundry OBJ prototype provides a standalone mesh parser, named parts, a renderer and a rotating example model. It has passed offline parser tests but is **not yet validated in the actual MCP/Tekkit runtime**. Review [OBJ renderer prototype](obj-renderer.md) before treating OBJ as the adopted pipeline.
+- **Confirmed in Tekkit Dev by the owner:** OBJ mesh rendering, a rotating rotor, right-click pause/resume, NBT persistence for multiple Foundry blocks, and the corrected full-bright OBJ colors.
+- **Under development on a feature branch:** a reusable relative-offset structure pattern with a provisional flat 3×3 Stone ring around the Foundry controller. This is **not** the final multiblock design and still requires a real-game check. See [multiblock validator](multiblock-validator.md).
 
 ## Proposals requiring tests before adoption
 
-- Adopting the experimental OBJ loader as the permanent model pipeline after an in-game compatibility test.
+- Hardening the working OBJ prototype for production (world-aware lighting, asset error handling and performance tests).
 - Full IC2/EE2 deobfuscated development libraries.
 - A production-safe bytecode transformer for inventory drag.
 - Multiplayer networking and container synchronization.

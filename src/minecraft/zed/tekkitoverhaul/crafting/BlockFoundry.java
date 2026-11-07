@@ -8,7 +8,7 @@ import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.render.TileEntityFoundryVisual;
 
-/** Placeable Foundry test block; right-click toggles a persistent visual rotor. */
+/** Foundry prototype: rotor control and provisional 3x3 Stone ring detection. */
 public final class BlockFoundry extends BlockContainer {
     public BlockFoundry(int id) {
         super(id, Block.stoneOvenIdle.blockIndexInTexture, Material.rock);
@@ -29,11 +29,29 @@ public final class BlockFoundry extends BlockContainer {
     }
 
     @Override
+    public void onNeighborBlockChange(World world, int x, int y, int z, int neighborId) {
+        super.onNeighborBlockChange(world, x, y, z, neighborId);
+        TileEntity tile = world.getBlockTileEntity(x, y, z);
+        if (tile instanceof TileEntityFoundryVisual) {
+            ((TileEntityFoundryVisual)tile).invalidateStructure();
+        }
+        // Diagonal block changes are handled by the tile's periodic recheck.
+    }
+
+    @Override
     public boolean blockActivated(World world, int x, int y, int z, EntityPlayer player) {
         if (!world.isRemote) {
             TileEntity tile = world.getBlockTileEntity(x, y, z);
             if (tile instanceof TileEntityFoundryVisual) {
-                ((TileEntityFoundryVisual) tile).toggleRotor();
+                TileEntityFoundryVisual foundry = (TileEntityFoundryVisual)tile;
+                foundry.checkStructureNow();
+                foundry.toggleRotor();
+                if (foundry.isStructureFormed()) {
+                    player.addChatMessage("[ZTO] Foundry structure: FORMED (8/8 Stone)");
+                } else {
+                    player.addChatMessage("[ZTO] Foundry structure: INCOMPLETE ("
+                            + foundry.getMissingStoneCount() + " Stone missing)");
+                }
             }
         }
         return true;

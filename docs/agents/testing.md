@@ -5,9 +5,11 @@
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.
 - **Previously observed in real Tekkit (owner):** EE2 Alchemical Coal provides fuel to an IC2 Generator.
 - **Observed in-game (owner):** Foundry right-click rotor toggle and independent NBT state across multiple placed blocks survive saving and reopening the world.
-- **Implemented, not fully verified in this repository:** new block EMC mappings, multiplayer behavior, deploy script on the owner's Windows machine, a production-compatible drag GUI hook, and full-bright lightmap fix.
-- **Observed in-game (owner):** OBJ model loads in Tekkit and the Foundry rotor animates; its initial appearance is much darker than the source PNG even after disabling GL_LIGHTING.
-- **Planned only:** Foundry multiblock/energy/processing, finalized external 3D model pipeline, BuildCraft refinery, more complete EE2–IC2 conversion.
+- **Observed in-game (owner):** the explicit full-bright OBJ lightmap fix resolves the previously dark rotor colors.
+- **Implemented, not fully verified in this repository:** new block EMC mappings, multiplayer behavior, a production-compatible drag GUI hook and the proposed multiblock validator.
+- **Observed in-game (owner):** OBJ model loads in Tekkit and the Foundry rotor animates. The initial dark colors were corrected by setting explicit Tessellator lightmap brightness.
+- **Implemented on a feature branch, not yet tested in real Tekkit:** a temporary 3×3 Foundry Stone ring validator with isolated Java tests.
+- **Planned only:** final Foundry multiblock architecture, EU energy/processing, production world-aware OBJ lighting, BuildCraft refinery, more complete EE2–IC2 conversion.
 
 Update this list only with explicit evidence and indicate the game environment, date or build if known.
 
@@ -19,7 +21,8 @@ Update this list only with explicit evidence and indicate the game environment, 
 4. If shipping code: run MCP reobfuscation and inspect the packaging for `zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class` and `zed/gui/advanced_table.png`.
 5. If changing runtime behavior: launch the **isolated Tekkit Dev** instance and test in a disposable/copy world.
 6. If changing OBJ or renderer code: run `zto-tools/test-obj-loader.bat` and verify the packaged `zed/models/` and `zed/textures/` assets; confirm the visual outcome in the Prism instance.
-7. If touching an integration: verify it with the relevant installed mod and consider absence/failure paths.
+7. If changing structure validation: run `zto-tools/test-multiblock.bat`, then test the 3×3 ring in Prism and check multiple controllers and world reload.
+8. If touching an integration: verify it with the relevant installed mod and consider absence/failure paths.
 
 ## Regression checklist
 

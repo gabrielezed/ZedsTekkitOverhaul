@@ -1,5 +1,7 @@
 # Tekkit mod integration boundaries
 
+**Version-specific references:** [Tekkit Classic 3.1.2 API handbook](../reference/tekkit-classic-3.1.2/README.md), with [IC2 1.97](../reference/tekkit-classic-3.1.2/ic2-1.97.md), [EE2 1.4.6.5](../reference/tekkit-classic-3.1.2/ee2-1.4.6.5.md), [BuildCraft 2.2.14](../reference/tekkit-classic-3.1.2/buildcraft-2.2.14.md), and [Forge 1.2.5](../reference/tekkit-classic-3.1.2/forge-1.2.5.md). Signature evidence and licensing are documented separately from these general integration boundaries.
+
 ## Existing integrations
 
 ### Equivalent Exchange 2 (EE2 1.4.6.5)

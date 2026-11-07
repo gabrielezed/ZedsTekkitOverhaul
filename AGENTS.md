@@ -1,6 +1,6 @@
 # Instructions for coding agents
 
-This is a **legacy Minecraft 1.2.5** project. Read this file before modifying code, then consult [docs/agents/README.md](docs/agents/README.md) for task-specific context.
+This is a **legacy Minecraft 1.2.5** project. Read this file before modifying code, then consult [docs/agents/README.md](docs/agents/README.md) for task-specific context. For IC2, EE2, BuildCraft, Forge and other external APIs, use the [version-pinned Tekkit Classic 3.1.2 reference](docs/reference/tekkit-classic-3.1.2/README.md) and verify uncertain signatures in matching artifacts.
 
 ## Language policy
 
@@ -36,3 +36,9 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 - [Validation and acceptance](docs/agents/testing.md)
 - [Development workflow](docs/agents/workflow.md)
 - [Roadmap and decisions](docs/agents/roadmap.md)
+
+## Legacy external APIs
+
+- [Tekkit Classic 3.1.2 API index](docs/reference/tekkit-classic-3.1.2/README.md)
+- [Source quality and licensing](docs/reference/tekkit-classic-3.1.2/sources.md)
+- Do not copy or redistribute mod SDKs, decompiled files or production JARs into Git. API summaries do not replace a version-matched MCP compilation.

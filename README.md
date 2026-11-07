@@ -38,6 +38,10 @@ The script expects the isolated PrismLauncher instance `Tekkit Dev` under `%APPD
 
 **Important:** the original production Tekkit mod JARs are obfuscated. Placing IC2/EE2 release JARs directly into the deobfuscated MCP runtime can cause class-loading failures. Test full mod integration in the separate PrismLauncher instance; see [environment notes](docs/agents/environment.md).
 
+## Legacy mod API documentation
+
+The [Tekkit Classic 3.1.2 reference](docs/reference/tekkit-classic-3.1.2/README.md) documents selected historical IC2, EE2, BuildCraft, Railcraft, RedPower and Forge integration surfaces, including sources, version caveats and unverified contracts. No third-party mod binaries or source archives are included.
+
 ## Contribution and agent guidance
 
 Read [AGENTS.md](AGENTS.md) before changing any code, and use the [agent handbook](docs/agents/README.md) for architecture, compatibility constraints, validation and planned work.

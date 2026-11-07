@@ -8,7 +8,7 @@ This directory is the **project-specific technical reference** for coding agents
 | --- | --- |
 | Starting a new work session | [Architecture](architecture.md), [Environment](environment.md) |
 | Updating blocks, recipes or GUI | [Architecture](architecture.md), [Compatibility](compatibility.md), [Testing](testing.md) |
-| IC2, EE2, BuildCraft or EMC changes | [Integrations](integrations.md), [Compatibility](compatibility.md) |
+| IC2, EE2, BuildCraft or EMC changes | [Integrations](integrations.md), [Versioned API reference](../reference/tekkit-classic-3.1.2/README.md), [Compatibility](compatibility.md) |
 | Building, deploying or fixing a crash | [Environment](environment.md), [Testing](testing.md) |
 | Planning multiblocks or custom rendering | [Roadmap](roadmap.md), [Architecture](architecture.md), [OBJ prototype](obj-renderer.md), [Legacy lightmap](lightmap-diagnostics.md) |
 | Making a Git commit or pull request | [Workflow](workflow.md), [Testing](testing.md) |
@@ -27,3 +27,7 @@ Project documentation may become outdated. When documentation conflicts with sou
 ## Language
 
 Everything committed to this repository is in **English**. Chat with the owner may remain in Italian. Do not translate API identifiers, class names, item registry keys, or on-disk configuration names merely for style consistency.
+
+## Version-pinned external references
+
+Read [Tekkit Classic 3.1.2](../reference/tekkit-classic-3.1.2/README.md) before creating external-mod adapters. Pages distinguish inspected API declarations from unverified, version-specific research leads; use the [source policy](../reference/tekkit-classic-3.1.2/sources.md) before committing dependency material.

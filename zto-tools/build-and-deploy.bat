@@ -42,6 +42,24 @@ if not exist "src\minecraft\zed\textures\foundry_rotor.png" (
     echo [ZTO] ERROR: Missing Foundry texture asset.
     goto :fail
 )
+for %%M in (boiler heater column condenser receiver thermometer) do (
+    if not exist "src\minecraft\zed\models\distillation_%%M.obj" (
+        echo [ZTO] ERROR: Missing distillation %%M OBJ model.
+        goto :fail
+    )
+)
+if not exist "src\minecraft\zed\textures\distillation_atlas.png" (
+    echo [ZTO] ERROR: Missing distillation texture atlas.
+    goto :fail
+)
+if not exist "src\minecraft\zed\models\distillation_connections.obj" (
+    echo [ZTO] ERROR: Missing distillation connector OBJ model.
+    goto :fail
+)
+if not exist "src\minecraft\mcmod.info" (
+    echo [ZTO] ERROR: Missing mcmod.info metadata resource.
+    goto :fail
+)
 where jar.exe >nul 2>&1
 if errorlevel 1 (
     echo [ZTO] ERROR: jar.exe was not found in PATH. Configure JDK 8.
@@ -58,6 +76,10 @@ for %%F in ("%MODS_DIR%\ZedsTekkitOverhaul*.jar") do (
         )
     )
 )
+
+echo [ZTO] Preparing local IC2 1.97 compile-time placeholders...
+call "zto-tools\prepare-ic2-dev-stubs.bat"
+if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
 call "recompile.bat"
@@ -114,6 +136,11 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add texture assets to the JAR.
     goto :fail
 )
+jar uf "%BUILD_JAR%" -C "src\minecraft" mcmod.info
+if errorlevel 1 (
+    echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
+    goto :fail
+)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.
@@ -132,6 +159,28 @@ if errorlevel 1 (
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/foundry_rotor.png" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Foundry texture was not found in the JAR.
+    goto :fail
+)
+for %%M in (boiler heater column condenser receiver thermometer) do (
+    jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/distillation_%%M.obj" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Distillation %%M model missing from JAR.
+        goto :fail
+    )
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/distillation_atlas.png" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Distillation atlas missing from JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/distillation_connections.obj" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Distillation connector model missing from JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"mcmod.info" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: mcmod.info missing from JAR.
     goto :fail
 )
 

@@ -1,0 +1,15 @@
+[
+  {
+    "modid": "mod_ZedsTekkitOverhaul",
+    "name": "Zed's Tekkit Overhaul",
+    "description": "A Minecraft 1.2.5 expansion for Tekkit Classic: advanced crafting, legacy cross-mod integrations and experimental multiblock industrial machinery.",
+    "version": "0.7.0-distillation-prototype",
+    "mcversion": "1.2.5",
+    "url": "https://github.com/gabrielezed/ZedsTekkitOverhaul",
+    "updateUrl": "",
+    "authorList": ["Gabriele Zed"],
+    "credits": "Original ZTO models and textures; visual inspiration from Minecraft, IndustrialCraft 2 and BuildCraft. See CREDITS.md.",
+    "logoFile": "",
+    "screenshots": []
+  }
+]

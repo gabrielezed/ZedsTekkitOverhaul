@@ -28,3 +28,7 @@ An EE2→EU converter or alternative thermal power source can create exploitativ
 ## Dependencies
 
 Avoid introducing direct references to optional mod classes into the core bootstrap. Reflection is currently used where appropriate. If compile-time dependencies are required for new APIs, document how to obtain/remap them for MCP and validate startup both with and without the optional mod, as applicable.
+
+## Experimental fractional distillation (feature branch)
+
+The initial distillation heater proposes a direct IC2 1.97 `IEnergySink` implementation and uses original, compile-only ABI placeholders in the ignored local MCP tree. The release JAR must contain only `zed/` project classes/resources. Verify actual EnergyNet linking and EU remainder semantics in real Tekkit; do not confuse the test-double EnergyNet with a functional client integration. BuildCraft 2.2.14 pipes/liquid transport are deferred; only internal mB storage and bucket-based exchange exist in V1.

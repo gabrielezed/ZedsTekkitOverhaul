@@ -5,6 +5,8 @@
 ```text
 src/minecraft/zed/
 ├── gui/advanced_table.png
+├── models/foundry_rotor.obj
+├── textures/foundry_rotor.png
 └── tekkitoverhaul/
     ├── mod_ZedsTekkitOverhaul.java
     ├── crafting/
@@ -14,6 +16,12 @@ src/minecraft/zed/
     │   ├── BlockFoundry.java
     │   ├── ContainerAdvancedCraftingTable.java
     │   └── GuiAdvancedCraftingTable.java
+    ├── machine/FoundryRotorState.java
+    ├── render/
+    │   ├── TileEntityFoundryVisual.java
+    │   ├── model/ (OBJ loader and mesh model)
+    │   └── client/ (legacy Tessellator and TESR)
+    ├── multiblock/ (pattern, Foundry ring, World adapter)
     └── integration/
         ├── ee2/
         │   ├── EE2FuelIntegration.java
@@ -37,7 +45,7 @@ The `ENABLE_IC2_EMC_INTEGRATION` flag is currently **false**. Do not enable it i
 - `AdvancedCraftingManager`: recipes in a **fixed 5×5 grid**, with exact item ID and metadata matching; blank pattern cells must remain empty. This is not vanilla CraftingManager or an ore dictionary implementation.
 - `ContainerAdvancedCraftingTable`: 25 inputs, one result, player inventory and vanilla `SlotCrafting` ingredient consumption.
 - `GuiAdvancedCraftingTable`: a **212×236** GUI backed by `/zed/gui/advanced_table.png` in a 256×256 texture.
-- `BlockFoundry`: placeable, **inert** block with vanilla furnace textures; no TileEntity, inventory, multiblock detection or processing logic yet.
+- `BlockFoundry`: placeable prototype with vanilla furnace textures and a small, animated OBJ rotor. The rotor has persistent NBT state and right-click pause/resume; **there is no machine inventory, energy use or processing yet**. On the multiblock feature branch, a temporary eight-Stone 3×3 ring validator is used for formation testing. See [multiblock validator](multiblock-validator.md).
 
 The Foundry test recipe uses **16 smooth Stone** on the perimeter of the 5×5 grid, with the nine interior cells empty. The Advanced Crafting Table uses four vanilla crafting tables in a 2×2.
 
@@ -46,4 +54,4 @@ The Foundry test recipe uses **16 smooth Stone** on the perimeter of the 5×5 gr
 - Keep world logic, recipe matching, inventory handling and rendering in separate classes.
 - Keep dependency-specific access behind integrations or adapters.
 - Avoid growing the `BaseMod` entry point into a feature implementation.
-- Any future multiblock should have a controller, structure validator, persistence and rendering layers; these are **design intentions**, not existing classes.
+- The generic `StructurePattern` and its Minecraft `WorldBlockView` adapter provide the first testable structure validator. Its temporary eight-Stone ring is not the final Foundry design. Machines still need dedicated controllers, processing, energy and synchronization layers.

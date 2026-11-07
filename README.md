@@ -5,12 +5,12 @@ A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and al
 ## Current functionality
 
 - **Advanced Crafting Table:** a placeable 5×5 crafting station with its own recipe manager and GUI.
-- **Foundry:** an inert placeable test block crafted from 16 smooth Stone arranged on the outer ring of the 5×5 grid.
+- **Foundry:** a placeable block crafted from 16 smooth Stone around the 5×5 grid, with a small animated OBJ rotor and persistent NBT pause/resume state. A provisional 3×3 in-world structure validator is being developed separately.
 - **EE2 fuels for IC2 generators:** legacy fuel integration through the ModLoader furnace-fuel callback.
 - **EMC mapping hooks:** optional/experimental integrations. The new block EMC registration targets 128 EMC for the Advanced Crafting Table and 16 EMC for the Foundry, subject to EE2 mappings already present.
 - **Inventory drag module:** Java implementation exists but requires a separate, compatible GUI event hook; it is not self-contained in the packaged mod.
 
-The 5×5 interface and Foundry crafting were verified in-game by the project owner. **Do not interpret this as verification of every integration.** The Foundry does not yet implement a multiblock, energy use or processing logic.
+The 5×5 interface, Foundry crafting, OBJ rotor, independent NBT rotor state and lightmap correction were verified in-game by the project owner. **Do not interpret this as verification of every integration.** The Foundry does not yet implement its final multiblock, energy use or processing logic.
 
 ## Project structure
 

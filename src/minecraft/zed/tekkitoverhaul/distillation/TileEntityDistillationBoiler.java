@@ -59,6 +59,34 @@ public final class TileEntityDistillationBoiler extends TileEntity {
         return taken;
     }
 
+    /**
+     * Explain a stalled processing cycle using the current controller state.
+     * This is diagnostic feedback, not a networking or process simulation.
+     */
+    public String getProcessStatus() {
+        if (!formed) return "Structure incomplete";
+        DistillateType selected = process.selectedType();
+        if (selected == null) return "No fraction selected";
+        if (process.getCrudeMB() < FractionationProcess.BATCH_INPUT_MB)
+            return "Crude oil required";
+        if (process.getCoolantMB() < selected.coolantPerBatchMB)
+            return "Cooling water required";
+        if (process.getDistillateMB() > 0 &&
+                process.getOutputTypeId() != selected.id)
+            return "Receiver contains another fraction";
+        if (process.getDistillateMB() >
+                FractionationProcess.TANK_CAPACITY_MB - FractionationProcess.BATCH_OUTPUT_MB)
+            return "Receiver is full";
+        if (worldObj == null) return "World not available";
+        TileEntity below = worldObj.getBlockTileEntity(xCoord, yCoord - 1, zCoord);
+        if (!(below instanceof TileEntityDistillationHeater))
+            return "LV heater missing";
+        if (((TileEntityDistillationHeater)below).getStoredEnergy() <
+                FractionationProcess.EU_PER_TICK)
+            return "Waiting for LV power";
+        return "Processing";
+    }
+
     public void refreshStructure() {
         lastStructure = DistillationStructure.check(worldObj, xCoord, yCoord, zCoord);
         formed = lastStructure != null && lastStructure.isFormed();

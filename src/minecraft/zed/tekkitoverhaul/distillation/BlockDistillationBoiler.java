@@ -62,6 +62,9 @@ public final class BlockDistillationBoiler extends BlockContainer {
             }
             player.addChatMessage("[ZTO] Crude: " + boiler.getProcess().getCrudeMB()
                     + " mB; Cooling water: " + boiler.getProcess().getCoolantMB() + " mB");
+            player.addChatMessage("[ZTO] Process: " + boiler.getProcessStatus()
+                    + " (setpoint " + boiler.getProcess().selectedType().temperatureCelsius
+                    + " C; progress " + boiler.getProcess().getProgressTicks() + " ticks)");
         }
         return true;
     }

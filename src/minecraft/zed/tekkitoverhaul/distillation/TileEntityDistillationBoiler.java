@@ -16,7 +16,17 @@ public final class TileEntityDistillationBoiler extends TileEntity {
     public FractionationProcess getProcess() { return process; }
     public boolean isFormed() { return formed; }
     public int getMissingParts() { return missingParts; }
+    private long lastVisualCheck = Long.MIN_VALUE;
+
     public DistillationLayout.Facing getFacing() {
+        if (worldObj != null && (lastStructure == null || worldObj.isRemote)) {
+            long now = worldObj.getWorldTime();
+            if (lastVisualCheck == Long.MIN_VALUE || now < lastVisualCheck ||
+                    now - lastVisualCheck >= STRUCTURE_CHECK_INTERVAL) {
+                lastVisualCheck = now;
+                refreshStructure();
+            }
+        }
         return lastStructure == null ? DistillationLayout.Facing.EAST : lastStructure.facing;
     }
     public String getStructureDetails() {

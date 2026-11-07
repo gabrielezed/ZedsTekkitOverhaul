@@ -5,6 +5,7 @@ import net.minecraft.src.ModLoader;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
+import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.ee2.IC2EmcIntegration;
 import zed.tekkitoverhaul.integration.ee2.AdvancedCraftingEmcIntegration;
@@ -30,6 +31,9 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() { ee2Fuels.onModsLoaded(); }
+
+    @Override
+    public void registerAnimation(Minecraft minecraft) { DistillateBucketTextures.register(); }
 
     @Override
     public int addFuel(int id, int metadata) { return ee2Fuels.getBurnTime(id, metadata); }

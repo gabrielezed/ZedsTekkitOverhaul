@@ -16,6 +16,7 @@ import zed.tekkitoverhaul.distillation.client.RenderDistillationComponent;
 public final class DistillationRegistry {
     private static final Block[] BLOCKS = new Block[DistillationPartType.values().length];
     private static final Item[] BUCKETS = new Item[DistillateType.values().length];
+    private static final int[] BUCKET_ICONS = new int[BUCKETS.length];
     private static boolean registered;
     private static int oilBucketIdOverride = -1;
 
@@ -36,6 +37,10 @@ public final class DistillationRegistry {
 
     public static Item bucketFor(int typeId) {
         return typeId < 0 || typeId >= BUCKETS.length ? null : BUCKETS[typeId];
+    }
+
+    public static int bucketIcon(int typeId) {
+        return BUCKET_ICONS[typeId];
     }
 
     public static boolean isBuildCraftOilBucket(ItemStack stack) {
@@ -103,8 +108,8 @@ public final class DistillationRegistry {
         }
         for (DistillateType type : DistillateType.values()) {
             Item item = new ItemDistillateBucket(itemIds[type.id], type);
-            item.setIconIndex(ModLoader.addOverride("/gui/items.png",
-                    "/zed/textures/" + type.name().toLowerCase() + "_bucket.png"));
+            BUCKET_ICONS[type.id] = ModLoader.getUniqueSpriteIndex("/gui/items.png");
+            item.setIconIndex(Item.bucketEmpty.getIconFromDamage(0));
             BUCKETS[type.id] = item;
             ModLoader.addName(item, type.displayName + " Bucket");
         }

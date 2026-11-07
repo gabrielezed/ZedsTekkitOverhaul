@@ -11,6 +11,10 @@ Programming assistance, technical analysis and initial procedural model/texture 
 - **Minecraft**: Mojang Studios. Original Minecraft resources and game assets remain the property of their respective owners.
 - **IndustrialCraft 2**: the IC2 team. This mod uses version-pinned integration references; the distillation texture restyle is original artwork **inspired by the general low-resolution industrial palette**, not copied IC2 pixels.
 - **BuildCraft**: the BuildCraft team. Fluid and machinery design references use the historical BuildCraft 2.2.14 ecosystem; BuildCraft artwork is not included in the ZTO material atlas.
+  Distillate bucket icons use the fuel bucket tile from the locally installed
+  `net/minecraft/src/buildcraft/core/gui/item_textures.png` at runtime. ZTO changes
+  the fuel color and clears the atlas padding. The original sprite and generated
+  variants are sourced at runtime from the player's BuildCraft installation.
 - **Equivalent Exchange 2**, **Railcraft**, **RedPower 2** and other Tekkit components: all trademarks and assets belong to their respective authors.
 
 ### Future derivative textures

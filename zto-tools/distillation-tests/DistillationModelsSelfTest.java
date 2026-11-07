@@ -31,6 +31,23 @@ public final class DistillationModelsSelfTest {
             check(faces >= 20, "Model unexpectedly empty: " + part);
             System.out.println("[ZTO] " + part + " OBJ: " + faces + " triangles");
         }
+        ObjModel connectors = ObjLoader.read(new FileInputStream(
+                "src/minecraft/zed/models/distillation_connections.obj"));
+        String[] requiredGroups = {
+                "boiler", "heater", "column_lower", "column_upper",
+                "condenser", "receiver", "thermometer"
+        };
+        for (String group : requiredGroups) {
+            ObjModel.Part part = connectors.getPart(group);
+            check(part != null && part.vertices.size() >= 6,
+                    "Missing or empty connector group: " + group);
+            for (ObjModel.Vertex vertex : part.vertices) {
+                check(vertex.u >= 0F && vertex.u <= 1F &&
+                      vertex.v >= 0F && vertex.v <= 1F,
+                      "Connector UV out of range: " + group);
+            }
+        }
+        System.out.println("[ZTO] Connector groups: " + requiredGroups.length);
         System.out.println("PASS: " + checks + " OBJ model assertions");
     }
 }

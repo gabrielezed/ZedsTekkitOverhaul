@@ -2,7 +2,6 @@ package zed.tekkitoverhaul.distillation;
 
 import net.minecraft.src.GuiButton;
 import net.minecraft.src.GuiScreen;
-import org.lwjgl.opengl.GL11;
 
 /**
  * Singleplayer-only temperature control. Dedicated client/server networking is
@@ -22,7 +21,7 @@ public final class GuiDistillationThermometer extends GuiScreen {
         int top = height / 2 - 66;
         for (DistillateType type : DistillateType.values()) {
             controlList.add(new GuiButton(type.id, cx - 93, top + type.id * 25,
-                    186, 21, type.displayName + "  |  " + type.temperatureCelsius + " C"));
+                    186, 20, type.displayName + "  |  " + type.temperatureCelsius + " C"));
         }
         controlList.add(new GuiButton(99, cx - 93, top + 106, 186, 20, "Close"));
     }

@@ -4,6 +4,7 @@ import net.minecraft.src.BaseMod;
 import net.minecraft.src.ModLoader;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
+import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.ee2.IC2EmcIntegration;
 import zed.tekkitoverhaul.integration.ee2.AdvancedCraftingEmcIntegration;
@@ -17,11 +18,12 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     private IC2EmcIntegration ic2Emc;
 
     @Override
-    public String getVersion() { return "0.6.0-advanced-crafting"; }
+    public String getVersion() { return "0.7.0-distillation-prototype"; }
 
     @Override
     public void load() {
         AdvancedCraftingRegistry.register();
+        DistillationRegistry.register();
         ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         System.out.println("[ZTO] v" + getVersion() + " loaded");
     }

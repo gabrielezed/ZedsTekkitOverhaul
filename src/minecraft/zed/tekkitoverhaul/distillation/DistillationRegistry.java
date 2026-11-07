@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.distillation;
 
 import java.io.File;
+import java.util.Locale;
 import net.minecraft.src.Block;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
@@ -59,8 +60,10 @@ public final class DistillationRegistry {
                     type.modelName, 3010 + type.index).getInt();
         }
         for (DistillateType type : DistillateType.values()) {
+            // Legacy Forge configuration keys cannot contain underscores.
+            String bucketKey = type.name().toLowerCase(Locale.ROOT).replace("_", "") + "Bucket";
             itemIds[type.id] = config.getOrCreateIntProperty(
-                    type.name().toLowerCase() + "Bucket", "item", 22000 + type.id).getInt();
+                    bucketKey, "item", 22000 + type.id).getInt();
         }
         oilBucketIdOverride = config.getOrCreateIntProperty(
                 "buildcraftOilBucketItemId", "integration", -1).getInt();

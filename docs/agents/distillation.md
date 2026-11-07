@@ -31,6 +31,11 @@ Create a dedicated legacy fluid module for Gasoline, Kerosene, Diesel and Heavy 
 
 ## Short test command
 
+For an existing `config/ZedsTekkitOverhaul-Distillation.cfg` that fails with
+`unknown character _`, close Minecraft and rename `heavy_gas_oilBucket`
+to `heavygasoilBucket`. Keep the
+numeric value and the rest of the file so existing item and block IDs are preserved.
+
 ```powershell
 .\zto-tools\test-distillation-core.bat
 .\zto-tools\build-and-deploy.bat

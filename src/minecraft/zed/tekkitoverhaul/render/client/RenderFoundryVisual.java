@@ -10,7 +10,7 @@ import zed.tekkitoverhaul.render.TileEntityFoundryVisual;
 import zed.tekkitoverhaul.render.model.ObjLoader;
 import zed.tekkitoverhaul.render.model.ObjModel;
 
-/** Draws a small OBJ rotor above the vanilla-textured Foundry block. */
+/** Draws the OBJ rotor above the vanilla-textured Foundry block. */
 public final class RenderFoundryVisual extends TileEntitySpecialRenderer {
     private ObjModel model;
     private boolean attemptedLoad;
@@ -42,14 +42,14 @@ public final class RenderFoundryVisual extends TileEntitySpecialRenderer {
             GL11.glTranslatef((float)x + 0.5F, (float)y + 1.015F, (float)z + 0.5F);
             GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+            // Unlit preview: display the atlas's real colors while legacy lighting is being validated.
+            // Reintroduce world-based light before using the renderer on production machines.
+            GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glColor4f(1F, 1F, 1F, 1F);
             bindTextureByName("/zed/textures/foundry_rotor.png");
             ObjTessellatorRenderer.render(model.getPart("base"));
 
-            float angle = 0F;
-            if (tile.worldObj != null) {
-                angle = (tile.worldObj.getWorldTime() + partialTicks) * 8F;
-            }
+            float angle = ((TileEntityFoundryVisual)tile).getRotorAngle(partialTicks);
             GL11.glRotatef(angle, 0F, 1F, 0F);
             ObjTessellatorRenderer.render(model.getPart("rotor"));
         } finally {

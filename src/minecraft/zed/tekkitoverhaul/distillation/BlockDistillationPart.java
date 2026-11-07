@@ -1,21 +1,18 @@
 package zed.tekkitoverhaul.distillation;
 
-import net.minecraft.src.Block;
-import net.minecraft.src.BlockContainer;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
-import net.minecraft.src.Material;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
 
 /** Boiler auxiliaries: electric heater, column, condenser, receiver and thermometer. */
-public final class BlockDistillationPart extends BlockContainer {
+public final class BlockDistillationPart extends BlockDistillationComponent {
     private final DistillationPartType part;
 
     public BlockDistillationPart(int id, DistillationPartType part) {
-        super(id, Block.blockSteel.blockIndexInTexture, Material.iron);
+        super(id);
         this.part = part;
         setHardness(3.0F);
         setResistance(8.0F);
@@ -45,6 +42,12 @@ public final class BlockDistillationPart extends BlockContainer {
     @Override
     public boolean blockActivated(World world, int x, int y, int z, EntityPlayer player) {
         if (part == DistillationPartType.COLUMN) return false;
+        ItemStack held = player.inventory.getCurrentItem();
+        if (held != null && !(held.stackSize == 1 &&
+                ((part == DistillationPartType.CONDENSER && held.itemID == Item.bucketWater.shiftedIndex) ||
+                 (part == DistillationPartType.RECEIVER && held.itemID == Item.bucketEmpty.shiftedIndex)))) {
+            return false;
+        }
         TileEntityDistillationBoiler boiler = getBoiler(world, x, y, z);
         if (part == DistillationPartType.HEATER) {
             TileEntity te = world.getBlockTileEntity(x, y, z);
@@ -58,7 +61,6 @@ public final class BlockDistillationPart extends BlockContainer {
                         + " at (" + x + ", " + y + ", " + z + "). Check assembly positions.");
             return true;
         }
-        ItemStack held = player.inventory.getCurrentItem();
         if (part == DistillationPartType.CONDENSER) {
             if (held != null && held.stackSize == 1 && held.itemID == Item.bucketWater.shiftedIndex) {
                 if (!world.isRemote && boiler.getProcess().getCoolantMB() <=

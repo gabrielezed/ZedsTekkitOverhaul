@@ -73,7 +73,7 @@ public final class RenderDistillationComponent extends TileEntitySpecialRenderer
         DistillationLayout.Facing facing = DistillationLayout.Facing.EAST;
         boolean upperColumn = false;
         if (tile instanceof TileEntityDistillationBoiler) {
-            facing = ((TileEntityDistillationBoiler)tile).getFacing();
+            facing = ((TileEntityDistillationBoiler)tile).getVisualFacing();
         } else if (tile instanceof TileEntityDistillationPart) {
             TileEntityDistillationPart part = (TileEntityDistillationPart)tile;
             facing = part.getVisualFacing();

@@ -9,16 +9,25 @@ import java.util.List;
  */
 public final class DistillationLayout {
     public enum Facing {
-        EAST(1, 0, 0), SOUTH(0, 1, -90), WEST(-1, 0, 180), NORTH(0, -1, 90);
+        EAST(1, 0, 0, 2), SOUTH(0, 1, -90, 5), WEST(-1, 0, 180, 3), NORTH(0, -1, 90, 4);
 
         public final int dx;
         public final int dz;
         public final int rotationDegrees;
+        public final short frontSide;
 
-        Facing(int dx, int dz, int rotationDegrees) {
+        Facing(int dx, int dz, int rotationDegrees, int frontSide) {
             this.dx = dx;
             this.dz = dz;
             this.rotationDegrees = rotationDegrees;
+            this.frontSide = (short) frontSide;
+        }
+
+        public static Facing fromFrontSide(int side) {
+            for (Facing facing : values()) {
+                if (facing.frontSide == side) return facing;
+            }
+            return EAST;
         }
     }
 
@@ -104,10 +113,14 @@ public final class DistillationLayout {
     }
 
     public static Match inspectBest(BlockAccess blocks, int x, int y, int z) {
-        Match best = null;
+        return inspectBest(blocks, x, y, z, Facing.EAST);
+    }
+
+    public static Match inspectBest(BlockAccess blocks, int x, int y, int z, Facing preferred) {
+        Match best = inspect(blocks, x, y, z, preferred);
         for (Facing facing : Facing.values()) {
             Match m = inspect(blocks, x, y, z, facing);
-            if (best == null || m.missingParts < best.missingParts) best = m;
+            if (m.missingParts < best.missingParts) best = m;
         }
         return best;
     }

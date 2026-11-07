@@ -3,7 +3,11 @@ setlocal EnableExtensions
 pushd "%~dp0.." || exit /b 1
 set "TARGET=src\minecraft\ic2\api"
 if exist "%TARGET%\IEnergySink.java" (
-    echo [ZTO] IC2 API source already exists. Nothing was overwritten.
+    if not exist "%TARGET%\IWrenchable.java" (
+        copy "zto-tools\ic2-dev-stubs\ic2\api\IWrenchable.java" "%TARGET%\" >nul
+        if errorlevel 1 goto :failed
+    )
+    echo [ZTO] IC2 API source already exists. Existing files were preserved.
     popd
     exit /b 0
 )

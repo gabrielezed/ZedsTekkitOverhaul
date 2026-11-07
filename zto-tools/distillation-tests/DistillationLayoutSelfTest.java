@@ -42,8 +42,13 @@ public final class DistillationLayoutSelfTest {
         for (DistillationLayout.Facing facing : DistillationLayout.Facing.values()) {
             Grid grid = new Grid();
             int bx = 50, by = 65, bz = 90;
+            check(DistillationLayout.Facing.fromFrontSide(facing.frontSide) == facing,
+                    "Front side must round-trip");
+            check(DistillationLayout.inspectBest(grid, bx, by, bz, facing).facing == facing,
+                    "An empty layout must respect the placement front");
             grid.build(bx, by, bz, facing);
-            DistillationLayout.Match complete = DistillationLayout.inspectBest(grid, bx, by, bz);
+            DistillationLayout.Facing opposite = DistillationLayout.Facing.values()[(facing.ordinal() + 2) % 4];
+            DistillationLayout.Match complete = DistillationLayout.inspectBest(grid, bx, by, bz, opposite);
             check(complete.isFormed(), facing + " must form");
             check(complete.facing == facing, facing + " orientation mismatch");
             DistillationLayout.Placement thermometer =

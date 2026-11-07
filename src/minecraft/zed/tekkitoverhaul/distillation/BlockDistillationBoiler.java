@@ -1,11 +1,8 @@
 package zed.tekkitoverhaul.distillation;
 
-import net.minecraft.src.Block;
-import net.minecraft.src.BlockContainer;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
-import net.minecraft.src.Material;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
@@ -14,9 +11,9 @@ import net.minecraft.src.World;
  * Controller and crude intake: hold a BuildCraft oil bucket and right-click,
  * or right-click empty-handed to inspect the apparatus.
  */
-public final class BlockDistillationBoiler extends BlockContainer {
+public final class BlockDistillationBoiler extends BlockDistillationComponent {
     public BlockDistillationBoiler(int id) {
-        super(id, Block.blockSteel.blockIndexInTexture, Material.iron);
+        super(id);
         setHardness(4.0F);
         setResistance(10.0F);
         setStepSound(soundMetalFootstep);
@@ -52,11 +49,12 @@ public final class BlockDistillationBoiler extends BlockContainer {
             }
             return true;
         }
+        if (held != null) return false;
         if (!world.isRemote) {
             boiler.refreshStructure();
             player.addChatMessage("[ZTO] Distiller " + (boiler.isFormed() ?
                     "FORMED" : "INCOMPLETE (" + boiler.getMissingParts() + " parts missing)")
-                    + " facing " + boiler.getFacing().name());
+                    + " facing " + boiler.getVisualFacing().name());
             if (!boiler.isFormed()) {
                 player.addChatMessage("[ZTO] Missing: " + boiler.getStructureDetails());
             }

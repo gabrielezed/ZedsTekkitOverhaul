@@ -4,7 +4,7 @@ import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.TileEntity;
 
 /** Boiler controller: stores tanks, selected fraction and manufacturing progress. */
-public final class TileEntityDistillationBoiler extends TileEntity {
+public final class TileEntityDistillationBoiler extends TileEntityDistillationComponent {
     private static final int STRUCTURE_CHECK_INTERVAL = 20;
     private final FractionationProcess process = new FractionationProcess();
     private int checkCountdown;
@@ -18,7 +18,7 @@ public final class TileEntityDistillationBoiler extends TileEntity {
     public int getMissingParts() { return missingParts; }
     private long lastVisualCheck = Long.MIN_VALUE;
 
-    public DistillationLayout.Facing getFacing() {
+    public DistillationLayout.Facing getVisualFacing() {
         if (worldObj != null && (lastStructure == null || worldObj.isRemote)) {
             long now = worldObj.getWorldTime();
             if (lastVisualCheck == Long.MIN_VALUE || now < lastVisualCheck ||
@@ -27,7 +27,12 @@ public final class TileEntityDistillationBoiler extends TileEntity {
                 refreshStructure();
             }
         }
-        return lastStructure == null ? DistillationLayout.Facing.EAST : lastStructure.facing;
+        return lastStructure == null ? getPreferredFacing() : lastStructure.facing;
+    }
+
+    @Override
+    protected boolean canTurnTo(DistillationLayout.Facing facing) {
+        return DistillationStructure.canFace(worldObj, xCoord, yCoord, zCoord, facing);
     }
     public String getStructureDetails() {
         return lastStructure == null ? "No boiler structure" : lastStructure.describeMissing();

@@ -20,7 +20,14 @@ public final class DistillationStructure {
     public static DistillationLayout.Match check(World world, int x, int y, int z) {
         if (world == null || world.getBlockId(x, y, z) !=
                 DistillationRegistry.blockId(DistillationPartType.BOILER)) return null;
-        return DistillationLayout.inspectBest(new WorldAccess(world), x, y, z);
+        return DistillationLayout.inspectBest(new WorldAccess(world), x, y, z,
+                DistillationLayout.Facing.fromFrontSide(world.getBlockMetadata(x, y, z)));
+    }
+
+    static boolean canFace(World world, int x, int y, int z, DistillationLayout.Facing facing) {
+        DistillationLayout.Match best = check(world, x, y, z);
+        return best != null && DistillationLayout.inspect(new WorldAccess(world), x, y, z, facing)
+                .missingParts == best.missingParts;
     }
 
     /** Locates the correct boiler without requiring full structure formation. */

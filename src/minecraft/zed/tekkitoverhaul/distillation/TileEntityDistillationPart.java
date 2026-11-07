@@ -6,13 +6,13 @@ import net.minecraft.src.TileEntity;
  * Visual anchor for an auxiliary apparatus block.
  * Resolve and cache the nearest matching boiler orientation for rendering.
  */
-public class TileEntityDistillationPart extends TileEntity {
-    private DistillationLayout.Facing visualFacing = DistillationLayout.Facing.EAST;
+public class TileEntityDistillationPart extends TileEntityDistillationComponent {
+    private DistillationLayout.Facing visualFacing;
     private boolean upperColumn;
     private long lastVisualCheck = Long.MIN_VALUE;
 
     public DistillationLayout.Facing getVisualFacing() {
-        if (worldObj == null) return visualFacing;
+        if (worldObj == null) return getPreferredFacing();
         long tick = worldObj.getWorldTime();
         if (lastVisualCheck == Long.MIN_VALUE || tick < lastVisualCheck ||
                 tick - lastVisualCheck >= 20L) {
@@ -21,12 +21,22 @@ public class TileEntityDistillationPart extends TileEntity {
                     worldObj.getBlockId(xCoord, yCoord, zCoord));
             DistillationLayout.Match linked = DistillationStructure.resolve(
                     worldObj, xCoord, yCoord, zCoord, part);
-            visualFacing = linked == null ?
-                    DistillationLayout.Facing.EAST : linked.facing;
+            visualFacing = linked == null ? null : linked.facing;
+            if (linked != null && (part == DistillationPartType.HEATER || part == DistillationPartType.COLUMN)) {
+                TileEntity boiler = worldObj.getBlockTileEntity(linked.boilerX, linked.boilerY, linked.boilerZ);
+                if (boiler instanceof TileEntityDistillationBoiler)
+                    visualFacing = ((TileEntityDistillationBoiler) boiler).getVisualFacing();
+            }
             upperColumn = part == DistillationPartType.COLUMN &&
                     linked != null && yCoord == linked.boilerY + 2;
         }
-        return visualFacing;
+        return visualFacing == null ? getPreferredFacing() : visualFacing;
+    }
+
+    @Override
+    protected boolean canTurnTo(DistillationLayout.Facing facing) {
+        DistillationPartType part = DistillationRegistry.typeForBlockId(worldObj.getBlockId(xCoord, yCoord, zCoord));
+        return DistillationStructure.resolve(worldObj, xCoord, yCoord, zCoord, part) == null;
     }
 
     public boolean isUpperColumn() {

@@ -34,6 +34,14 @@ if not exist "src\minecraft\zed\gui\advanced_table.png" (
     echo [ZTO] ERROR: Missing src\minecraft\zed\gui\advanced_table.png
     goto :fail
 )
+if not exist "src\minecraft\zed\models\foundry_rotor.obj" (
+    echo [ZTO] ERROR: Missing Foundry OBJ model asset.
+    goto :fail
+)
+if not exist "src\minecraft\zed\textures\foundry_rotor.png" (
+    echo [ZTO] ERROR: Missing Foundry texture asset.
+    goto :fail
+)
 where jar.exe >nul 2>&1
 if errorlevel 1 (
     echo [ZTO] ERROR: jar.exe was not found in PATH. Configure JDK 8.
@@ -96,6 +104,16 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add GUI assets to the JAR.
     goto :fail
 )
+jar uf "%BUILD_JAR%" -C "src\minecraft" zed\models
+if errorlevel 1 (
+    echo [ZTO] ERROR: Failed to add model assets to the JAR.
+    goto :fail
+)
+jar uf "%BUILD_JAR%" -C "src\minecraft" zed\textures
+if errorlevel 1 (
+    echo [ZTO] ERROR: Failed to add texture assets to the JAR.
+    goto :fail
+)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.
@@ -104,6 +122,16 @@ if errorlevel 1 (
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/gui/advanced_table.png" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: GUI texture was not found in the JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/foundry_rotor.obj" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Foundry OBJ model was not found in the JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/foundry_rotor.png" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Foundry texture was not found in the JAR.
     goto :fail
 )
 

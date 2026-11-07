@@ -3,14 +3,14 @@ package zed.tekkitoverhaul.integration.ee2;
 import java.lang.reflect.Method;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 
-/** Registra EMC esplicito per i nuovi blocchi senza dipendenze EE2 compile-time. */
+/** Registers explicit EMC values for new blocks without a compile-time EE2 dependency. */
 public final class AdvancedCraftingEmcIntegration {
     private boolean done;
 
     public void onGameTick() {
         if (done || AdvancedCraftingRegistry.advancedTable == null) return;
         try {
-            // EE2 registra le integrazioni esterne nel primo tick; attendiamo.
+            // Wait until EE2 completes its external mod initialization.
             Class<?> base = Class.forName("ee.EEBase");
             if (!base.getField("externalModsInitialized").getBoolean(null)) return;
             Class<?> maps = Class.forName("ee.EEMaps");
@@ -22,7 +22,7 @@ public final class AdvancedCraftingEmcIntegration {
             System.out.println("[ZTO] EMC Advanced Crafting Table=128, Foundry=16 (unless EE2 already assigned values)");
             done = true;
         } catch (ClassNotFoundException absent) {
-            // Se EE2 non e' installata, non ripetere la ricerca ad ogni tick.
+            // Do not retry every tick when EE2 is absent.
             done = true;
         } catch (Throwable failure) {
             System.err.println("[ZTO] EMC advanced crafting integration failed: " + failure);

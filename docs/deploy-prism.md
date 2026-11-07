@@ -1,50 +1,48 @@
-# Build e deploy automatico su PrismLauncher (Windows)
+# Automatic build and deployment to PrismLauncher (Windows)
 
-Questo workflow usa il **workspace FoxyRetroMDK / MCP 6.2 esistente** e non contiene binari di Minecraft, Forge o Tekkit.
+This workflow uses the **existing FoxyRetroMDK / MCP 6.2 workspace**. It does not include Minecraft, Forge or Tekkit binaries.
 
-## Prerequisiti
+## Prerequisites
 
-- JDK 8 con jar.exe nel PATH (lo stesso ambiente usato da MCP).
-- \`MDK-1.2.5\` configurato con \`recompile.bat\` e \`reobfuscate.bat\`.
-- Sorgenti in \`src/minecraft/zed/\` e texture \`src/minecraft/zed/gui/advanced_table.png\`.
-- Istanza PrismLauncher **Tekkit Dev** presente e Minecraft chiuso durante il deploy.
+- JDK 8 with `jar.exe` available on `PATH` (the same environment used by MCP).
+- A working `MDK-1.2.5` directory containing `recompile.bat` and `reobfuscate.bat`.
+- Original mod source under `src/minecraft/zed/` and GUI texture at `src/minecraft/zed/gui/advanced_table.png`.
+- The isolated PrismLauncher instance named **Tekkit Dev**, with Minecraft closed before deployment.
 
-## Un comando
+## One command
 
-Apri PowerShell dalla root \`MDK-1.2.5\`:
+From PowerShell in the `MDK-1.2.5` root:
 
-\`\`\`powershell
+```powershell
 .\zto-tools\build-and-deploy.bat
-\`\`\`
+```
 
-Lo script:
+The script:
 
-1. Esegue la compilazione MCP.
-2. Pulisce **soltanto** \`reobf/minecraft/zed/\` per evitare classi obsolete, poi esegue la reobfuscation.
-3. Crea \`dist-zto/ZedsTekkitOverhaul.jar\` con tutte le classi \`zed/\` e la texture della GUI.
-4. Esegue un backup di un'eventuale versione precedente in \`dist-zto/ZedsTekkitOverhaul.previous.jar\`, quindi copia il JAR nell'istanza Prism.
+1. Runs MCP compilation.
+2. Removes **only** the old `reobf/minecraft/zed/` output, then runs reobfuscation.
+3. Creates `dist-zto/ZedsTekkitOverhaul.jar` with the `zed/` classes and GUI texture.
+4. If present, backs up the previously deployed JAR as `dist-zto/ZedsTekkitOverhaul.previous.jar`, then copies the new JAR to PrismLauncher.
 
-### Destinazione predefinita
+### Default destination
 
-\`\`\`text
+```text
 %APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods
-\`\`\`
+```
 
-Corrisponde al percorso \`C:\Users\zed\AppData\Roaming\PrismLauncher\instances\Tekkit Dev\minecraft\mods\` nella configurazione attuale.
+To change the target directory for the current PowerShell session:
 
-Per cambiare destinazione solo nella sessione PowerShell corrente:
-
-\`\`\`powershell
+```powershell
 $env:ZTO_PRISM_MODS = 'D:\PrismLauncher\instances\Tekkit Dev\minecraft\mods'
 .\zto-tools\build-and-deploy.bat
-\`\`\`
+```
 
-## Precauzioni
+## Safeguards and limitations
 
-- La directory mods deve **già esistere**. Lo script non crea un'istanza Prism nuova.
-- Se trova \`ZedsTekkitOverhaul-0.6.0.jar\` o altri vecchi \`ZedsTekkitOverhaul*.jar\`, interrompe il deploy: spostali fuori da \`mods\` per non caricare due copie della mod.
-- Non modifica \`minecraft.jar\`, \`modpack.jar\`, IC2, EE2 o BuildCraft.
-- Il deploy di questa mod **non include** eventuali Java agent/patch runtime richiesti da feature GUI sperimentali: sono componenti separati.
-- Se compilazione, reobfuscation o packaging falliscono, non sovrascrive il JAR dell'istanza.
-- Confronta i valori di ID blocco/config con quelli del tuo mondo prima di avviare un salvataggio esistente.
-- Non è stata eseguita una compilazione MCP Windows sul tuo PC da questo repository: il primo deploy va verificato nel tuo ambiente.
+- The destination mods directory must **already exist**. The script does not create new Prism instances.
+- If `ZedsTekkitOverhaul-0.6.0.jar` or another competing `ZedsTekkitOverhaul*.jar` is detected, the script stops. Move the old file out of `mods` before retrying.
+- The script does **not** modify `minecraft.jar`, `modpack.jar`, IC2, EE2 or BuildCraft.
+- Runtime Java agents or binary hooks needed by optional experimental GUI features are **not** part of this deploy.
+- Failed compilation, reobfuscation or packaging stops before the new JAR is copied.
+- Check block ID mappings and the mod configuration before opening an existing world.
+- A complete Windows MCP build and Prism launch must still be verified on the owner's development machine.

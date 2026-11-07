@@ -5,7 +5,7 @@ import net.minecraft.src.InventoryPlayer;
 import net.minecraft.src.World;
 import org.lwjgl.opengl.GL11;
 
-/** UI client per Minecraft 1.2.5. Texture game-ready 256x256 in resources. */
+/** Minecraft 1.2.5 client GUI with a 256x256 texture resource. */
 public final class GuiAdvancedCraftingTable extends GuiContainer {
     private static final String TEXTURE = "/zed/gui/advanced_table.png";
 

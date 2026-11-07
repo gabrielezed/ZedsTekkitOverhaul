@@ -1,0 +1,27 @@
+# Allowlist: track only the ZedsTekkitOverhaul project, not FoxyRetroMDK/MCP.
+# Keep this file in the MDK-1.2.5 root.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/AGENTS.md
+!/docs/
+!/zto-tools/
+!/src/
+
+# The MCP source tree contains third-party code; only include our own namespace.
+/src/*
+!/src/minecraft/
+/src/minecraft/*
+!/src/minecraft/zed/
+
+# Never commit compiled classes, mod/client binaries or secrets.
+*.class
+*.jar
+*.zip
+*.log
+*.key
+*.pem
+.env
+.env.*
+!.env.example

@@ -1,0 +1,11 @@
+# Consistent source formatting across Windows and tools
+*.java text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.py text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.ogg binary

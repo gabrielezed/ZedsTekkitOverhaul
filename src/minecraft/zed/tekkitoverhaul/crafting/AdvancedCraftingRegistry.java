@@ -5,6 +5,8 @@ import net.minecraft.src.Block;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.forge.Configuration;
+import zed.tekkitoverhaul.render.TileEntityFoundryVisual;
+import zed.tekkitoverhaul.render.client.RenderFoundryVisual;
 
 /** Registers blocks and recipes without changing vanilla classes. */
 public final class AdvancedCraftingRegistry {
@@ -35,6 +37,8 @@ public final class AdvancedCraftingRegistry {
         ModLoader.registerBlock(foundry);
         ModLoader.addName(advancedTable, "Advanced Crafting Table");
         ModLoader.addName(foundry, "Foundry");
+        // This renderer is a client-only prototype; multiplayer support is not implemented.
+        ModLoader.registerTileEntity(TileEntityFoundryVisual.class, "ZTOFoundryVisual", new RenderFoundryVisual());
 
         // Two rows of two crafting tables (four total); vanilla recipe offsets are accepted.
         ModLoader.addRecipe(new ItemStack(advancedTable, 1), new Object[] {

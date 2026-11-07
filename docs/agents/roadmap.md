@@ -24,9 +24,13 @@ This is a **directional design plan**, not a list of already implemented feature
 | D-006 | Treat EMC and block IDs as economic/save-compatibility inputs. | Avoid game-breaking exploits and damaged worlds. |
 | D-007 | Preserve English repository content, Italian conversation. | Make code and agent handoffs consistent and broadly readable. |
 
+## Experimental implementation (feature branch only)
+
+The Foundry OBJ prototype provides a standalone mesh parser, named parts, a renderer and a rotating example model. It has passed offline parser tests but is **not yet validated in the actual MCP/Tekkit runtime**. Review [OBJ renderer prototype](obj-renderer.md) before treating OBJ as the adopted pipeline.
+
 ## Proposals requiring tests before adoption
 
-- An external model format/loader (OBJ is one candidate, **not yet a settled implementation**).
+- Adopting the experimental OBJ loader as the permanent model pipeline after an in-game compatibility test.
 - Full IC2/EE2 deobfuscated development libraries.
 - A production-safe bytecode transformer for inventory drag.
 - Multiplayer networking and container synchronization.

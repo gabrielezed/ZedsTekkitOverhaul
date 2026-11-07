@@ -66,6 +66,12 @@ The renderer now **disables blending for the opaque atlas** and enables alpha te
 
 These fittings extend slightly beyond their own block bounds to meet the neighboring component. The actual physical interaction blocks, recipes and collision behavior are unchanged. Their additional OBJ groups and small chamfers reduce the appearance of disconnected cubes without requiring a custom physics or Create-style renderer.
 
+## Operational diagnostics
+
+The boiler's right-click chat now reports **why the process is stalled** in addition to structure status and tank quantities. Reasons include: incomplete structure, insufficient crude, missing cooling water, incompatible or full receiver, missing LV heater and insufficient stored EU. In the owner's screenshot, the boiler already displayed **1,000 mB crude but 0 mB coolant**; even a fully formed assembly could not process a batch until water was provided.
+
+This diagnostic distinguishes the **controller-binding problem** from the **independent energy/coolant prerequisites**. It does not claim that the IC2 EnergyNet connection itself has passed an in-game test.
+
 ## In-game acceptance conditions
 
 1. Build the seven-part structure with the receiver/thermometer/condenser side facing each of the **four** horizontal directions. Right-click the boiler; all orientations should report `FORMED`.

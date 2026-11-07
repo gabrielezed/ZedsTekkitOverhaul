@@ -13,7 +13,7 @@ import net.minecraft.src.World;
  */
 public final class BlockDistillationBoiler extends BlockDistillationComponent {
     public BlockDistillationBoiler(int id) {
-        super(id);
+        super(id, DistillationPartType.BOILER);
         setHardness(4.0F);
         setResistance(10.0F);
         setStepSound(soundMetalFootstep);

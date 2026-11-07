@@ -4,8 +4,9 @@
 
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.
 - **Previously observed in real Tekkit (owner):** EE2 Alchemical Coal provides fuel to an IC2 Generator.
-- **Implemented, not fully verified in this repository:** new block EMC mappings, multiplayer behavior, deploy script on the owner's Windows machine, and a production-compatible drag GUI hook.
-- **Experimental on a feature branch:** OBJ loader and simple Foundry visual renderer (offline parser tests passed; no in-game confirmation yet).
+- **Observed in-game (owner):** Foundry right-click rotor toggle and independent NBT state across multiple placed blocks survive saving and reopening the world.
+- **Implemented, not fully verified in this repository:** new block EMC mappings, multiplayer behavior, deploy script on the owner's Windows machine, a production-compatible drag GUI hook, and full-bright lightmap fix.
+- **Observed in-game (owner):** OBJ model loads in Tekkit and the Foundry rotor animates; its initial appearance is much darker than the source PNG even after disabling GL_LIGHTING.
 - **Planned only:** Foundry multiblock/energy/processing, finalized external 3D model pipeline, BuildCraft refinery, more complete EE2–IC2 conversion.
 
 Update this list only with explicit evidence and indicate the game environment, date or build if known.

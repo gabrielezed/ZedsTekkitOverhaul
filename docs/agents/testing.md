@@ -38,3 +38,7 @@ Update this list only with explicit evidence and indicate the game environment, 
 - [ ] NEI works unchanged when testing any future GUI hook.
 
 A documentation-only commit does not require claiming a successful Minecraft build. Never fabricate test output.
+
+## Fractional distillation V1 prototype (feature branch)
+
+The fluid state core and six OBJ models have portable Java tests. Before a merge, run `zto-tools/test-distillation-core.bat` and `zto-tools/test-distillation-models.bat` in the MDK workspace; compile using the actual MCP/Forge sources, then deploy to the isolated Prism instance. Check IC2 1.97 LV energy input, seven placement offsets, four thermometer setpoints, 1000 mB bucket transactions, NBT persistence and existing Foundry/GUI regressions. This feature is **not** runtime verified. See [engineering specification](../engineering/fractional-distillation-v1.md).

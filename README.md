@@ -42,6 +42,10 @@ The script expects the isolated PrismLauncher instance `Tekkit Dev` under `%APPD
 
 The [Tekkit Classic 3.1.2 reference](docs/reference/tekkit-classic-3.1.2/README.md) documents selected historical IC2, EE2, BuildCraft, Railcraft, RedPower and Forge integration surfaces, including sources, version caveats and unverified contracts. No third-party mod binaries or source archives are included.
 
+## Fractional distillation (experimental branch)
+
+A seven-placement apparatus with six distinct custom OBJ block components, a low-voltage EU heater, water-cooled condenser, selection GUI and four internally modeled petroleum fractions is under active development. It is **not yet a BuildCraft fluid-pipe integration**, and it remains unverified in the real MCP/Tekkit runtime. Read the [engineering specification](docs/engineering/fractional-distillation-v1.md) before testing or changing it.
+
 ## Contribution and agent guidance
 
 Read [AGENTS.md](AGENTS.md) before changing any code, and use the [agent handbook](docs/agents/README.md) for architecture, compatibility constraints, validation and planned work.

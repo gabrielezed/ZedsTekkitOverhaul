@@ -42,3 +42,10 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 - [Tekkit Classic 3.1.2 API index](docs/reference/tekkit-classic-3.1.2/README.md)
 - [Source quality and licensing](docs/reference/tekkit-classic-3.1.2/sources.md)
 - Do not copy or redistribute mod SDKs, decompiled files or production JARs into Git. API summaries do not replace a version-matched MCP compilation.
+
+## Experimental fractional distillation
+
+- [Fractional distillation V1 specification](docs/engineering/fractional-distillation-v1.md)
+- [Distillation agent handoff](docs/agents/distillation.md)
+- Experimental 3D assets, EU adapter, internal fluid IDs and temperature GUI are on a feature branch; do not treat this as production-verified or a BuildCraft 2.2.14 liquid pipe API implementation.
+- Confirm exact IC2 1.97 ABI and reobfuscated runtime linking before merging any direct `ic2.api` dependency.

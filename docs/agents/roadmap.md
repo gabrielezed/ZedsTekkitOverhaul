@@ -38,3 +38,7 @@ This is a **directional design plan**, not a list of already implemented feature
 - Standardized machine energy/heat/fluid adapter interfaces.
 
 Avoid prematurely implementing frameworks for untested requirements. Prove each shared abstraction through one machine before broad adoption.
+
+## Fractional distillation prototype (feature branch)
+
+An experimental, seven-placement fractional-distillation multiblock has original OBJ meshes, four internal petroleum fluid identifiers (Gasoline, Kerosene, Diesel, Heavy Gas Oil), a thermometer selector, cooling-water tank and an IC2 1.97 low-voltage heater adapter. **These are not yet tested in a real MCP or Tekkit Dev runtime and do not implement BuildCraft 2.2.14 liquid pipes.** See [engineering specification](../engineering/fractional-distillation-v1.md) for setpoints, approximate batch rules, IDs and exact required structure.

@@ -1,6 +1,15 @@
 # BuildCraft reference — version 2.2.14 / Minecraft 1.2.5
 
-**Verification status:** the exact version and its five client modules are confirmed from the official [BuildCraft 2.2.14 release archive](https://mod-buildcraft.com/releases/BuildCraft/2.2.14/) and the [Technic pack list](https://www.technicpack.net/modpack/tekkit.552560/mods). We do **not yet have a locally audited 2.2.14 Java API archive or signature map**. This document therefore records safe integration boundaries and the work needed to verify them, rather than guessing signatures.
+**Verification status:** the exact version and its five client modules are confirmed from the official [BuildCraft 2.2.14 release archive](https://mod-buildcraft.com/releases/BuildCraft/2.2.14/) and the [Technic pack list](https://www.technicpack.net/modpack/tekkit.552560/mods). The liquid signatures and extraction sequence below were checked against the installed Tekkit Dev archives using `javap`.
+
+## Verified liquid ABI
+
+- `buildcraft.api.ILiquidContainer` exposes `fill(Orientations, int, int, boolean)`, `empty(int, boolean)`, `getLiquidQuantity()`, `getCapacity()` and `getLiquidId()`. All return `int`. The fill arguments are side, volume, liquid block ID and commit flag.
+- A powered wooden waterproof pipe calls `empty(amount, false)`, fills its transport using the reported liquid ID, then calls `empty(accepted, true)`. Extraction has no side parameter. BuildCraft tanks implement the same interface.
+- `buildcraft.api.API.liquids` stores `LiquidData(int liquidId, int filledBucketId)`. The tank bucket handler looks up the filled bucket by liquid ID. Pipe and tank renderers resolve the liquid ID through the block array.
+- `buildcraft.core.ILiquid.stillLiquidId()` exposes the canonical still block ID. `API.ironEngineFuel` is a separate registry keyed by liquid ID.
+
+The compile-time placeholders under `zto-tools/buildcraft-dev-stubs/` declare the narrow surface used by ZTO. The deployed JAR uses the installed BuildCraft classes.
 
 ## Components
 

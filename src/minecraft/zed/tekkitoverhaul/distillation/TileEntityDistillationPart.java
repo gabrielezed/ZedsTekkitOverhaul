@@ -11,6 +11,17 @@ public class TileEntityDistillationPart extends TileEntityDistillationComponent 
     private boolean upperColumn;
     private long lastVisualCheck = Long.MIN_VALUE;
 
+    @Override
+    public void updateEntity() {
+        // Older worlds used this stateless tile for receivers. Upgrade it in place.
+        if (getClass() != TileEntityDistillationPart.class || worldObj == null) return;
+        int id = worldObj.getBlockId(xCoord, yCoord, zCoord);
+        if (id == DistillationRegistry.blockId(DistillationPartType.RECEIVER)) {
+            worldObj.setBlockTileEntity(xCoord, yCoord, zCoord, new TileEntityDistillationReceiver());
+            worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, id);
+        }
+    }
+
     public DistillationLayout.Facing getVisualFacing() {
         if (worldObj == null) return getPreferredFacing();
         long tick = worldObj.getWorldTime();

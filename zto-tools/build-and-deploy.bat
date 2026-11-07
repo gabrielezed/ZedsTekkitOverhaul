@@ -80,6 +80,8 @@ for %%F in ("%MODS_DIR%\ZedsTekkitOverhaul*.jar") do (
 echo [ZTO] Preparing local IC2 1.97 compile-time placeholders...
 call "zto-tools\prepare-ic2-dev-stubs.bat"
 if errorlevel 1 goto :fail
+call "zto-tools\prepare-buildcraft-dev-stubs.bat"
+if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
 call "recompile.bat"
@@ -171,6 +173,16 @@ for %%M in (boiler heater column condenser receiver thermometer) do (
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/distillation_atlas.png" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Distillation atlas missing from JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/gasoline_fluid.png" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Gasoline texture missing from JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/distillation/TileEntityDistillationReceiver.class" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: BuildCraft receiver missing from JAR.
     goto :fail
 )
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/distillation_connections.obj" >nul

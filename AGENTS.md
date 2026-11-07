@@ -47,5 +47,6 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 
 - [Fractional distillation V1 specification](docs/engineering/fractional-distillation-v1.md)
 - [Distillation agent handoff](docs/agents/distillation.md)
+- [Rotatable layout and visual connector reference](docs/engineering/distillation-rendering-and-binding-v2.md)
 - Experimental 3D assets, EU adapter, internal fluid IDs and temperature GUI are on a feature branch; do not treat this as production-verified or a BuildCraft 2.2.14 liquid pipe API implementation.
 - Confirm exact IC2 1.97 ABI and reobfuscated runtime linking before merging any direct `ic2.api` dependency.

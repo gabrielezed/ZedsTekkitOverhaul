@@ -38,6 +38,8 @@ Side elevation, facing toward +Z
 
 The two column segments are the same block type; there are **six unique blocks** and **seven physical placements**. The heater sits **below** the boiler and should have an exposed cable-access face. The condenser's bucket input is a test substitute for a water pipe. The receiver's empty-bucket interaction is the test substitute for a BuildCraft liquid output pipe.
 
+The initial +X-only layout has been extended to four horizontal rotations. See [binding and visual pass](distillation-rendering-and-binding-v2.md) for the exact orientation rules, missing-part messages, original restyled textures and connector geometry.
+
 This layout is deliberately small for prototyping. Final industrial-scale dimensions, rotational symmetry, transparent mechanics and any multi-block transform into a single rendered unit remain design decisions.
 
 ### Model dimensions
@@ -157,9 +159,9 @@ git switch -c feature/fractional-distillation-v1 --track origin/feature/fraction
 
 ## 8. Follow-up milestones
 
-- **V2:** verify and correct all legacy MCP signatures, IC2 1.97 EnergyNet lifecycle, first in-game models and interaction behavior.
+- **V2 in draft:** four-way orientation/controller lookup, better structure diagnostics, opaque IC2/BuildCraft-inspired palette, interlocking connection meshes, and `mcmod.info` JAR metadata. The actual IC2 1.97 EnergyNet lifecycle and new visuals still require in-game validation.
 - **V3:** BuildCraft 2.2.14-specific liquid adapter, water input via pipe, receiver pipe output and pumps.
 - **V4:** actual multi-output fractional yields, residue, energy/EMC balancing and alternative heat adapters.
-- **V5:** rotation-aware multiblock, production world lighting, stronger graphics and server synchronization.
+- **V5:** production world lighting, refined glass rendering, more detailed models and server synchronization.
 
 Do not merge into `main` until the user's real MCP and Tekkit Dev tests pass.

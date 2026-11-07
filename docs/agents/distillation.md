@@ -1,6 +1,6 @@
 # Fractional distillation agent handoff
 
-**Implementation:** [engineering specification](../engineering/fractional-distillation-v1.md).
+**Implementation:** [engineering specification](../engineering/fractional-distillation-v1.md) and [rotated binding / visual pass](../engineering/distillation-rendering-and-binding-v2.md).
 
 This is the first ZTO refinery machine and exercises the existing OBJ model parser, lightmap renderer, generic structure validator and TileEntity NBT patterns.
 
@@ -20,6 +20,10 @@ This is the first ZTO refinery machine and exercises the existing OBJ model pars
 The model and gameplay source were authored for the legacy target; check the version-specific [IC2 API reference](../reference/tekkit-classic-3.1.2/ic2-1.97.md) and [BuildCraft 2.2.14 reference](../reference/tekkit-classic-3.1.2/buildcraft-2.2.14.md) before modifying adapters.
 
 A source-level test or Java stub compile is **not** equivalent to a successful real Tekkit deployment. Record exact Eclipse errors, Visuals, UI response, water/oil consumption, actual EU transfer, chunk unload/reload and NBT state before promoting the first iteration from draft.
+
+## Current debugging status
+
+The project owner confirmed the component recipes and NEI discovery in-game. Reports of missing controller binding and unfinished geometry prompted a four-way layout resolver, precise missing-part diagnostics, an opaque industrial atlas and interlocking connector geometry. These changes have **not yet been validated in Tekkit Dev**; see the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
 
 ## Short test command
 

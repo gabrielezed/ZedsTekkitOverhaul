@@ -39,22 +39,7 @@ public final class BlockDistillationPart extends BlockContainer {
     public boolean renderAsNormalBlock() { return false; }
 
     private TileEntityDistillationBoiler getBoiler(World world, int x, int y, int z) {
-        int bx = x, by = y, bz = z;
-        if (part == DistillationPartType.THERMOMETER) bx = x - 1;
-        else if (part == DistillationPartType.CONDENSER) { bx = x - 1; by = y - 2; }
-        else if (part == DistillationPartType.RECEIVER) { bx = x - 1; by = y - 1; }
-        else if (part == DistillationPartType.HEATER) by = y + 1;
-        else if (part == DistillationPartType.COLUMN) {
-            TileEntity upper = world.getBlockTileEntity(x, y + 1, z);
-            if (upper instanceof TileEntityDistillationBoiler) by = y + 1;
-            else {
-                TileEntity lower = world.getBlockTileEntity(x, y - 1, z);
-                if (lower instanceof TileEntityDistillationBoiler) by = y - 1;
-                else by = y - 2;
-            }
-        }
-        TileEntity tile = world.getBlockTileEntity(bx, by, bz);
-        return tile instanceof TileEntityDistillationBoiler ? (TileEntityDistillationBoiler)tile : null;
+        return DistillationStructure.boilerFor(world, x, y, z, part);
     }
 
     @Override
@@ -69,7 +54,8 @@ public final class BlockDistillationPart extends BlockContainer {
             return true;
         }
         if (boiler == null) {
-            if (!world.isRemote) player.addChatMessage("[ZTO] No matching distillation boiler");
+            if (!world.isRemote) player.addChatMessage("[ZTO] No boiler linked to this " + part.displayName
+                        + " at (" + x + ", " + y + ", " + z + "). Check assembly positions.");
             return true;
         }
         ItemStack held = player.inventory.getCurrentItem();

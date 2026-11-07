@@ -2,7 +2,6 @@ package zed.tekkitoverhaul.distillation;
 
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.TileEntity;
-import zed.tekkitoverhaul.multiblock.StructurePattern;
 
 /** Boiler controller: stores tanks, selected fraction and manufacturing progress. */
 public final class TileEntityDistillationBoiler extends TileEntity {
@@ -11,11 +10,18 @@ public final class TileEntityDistillationBoiler extends TileEntity {
     private int checkCountdown;
     private boolean formed;
     private int missingParts = 6;
+    private DistillationLayout.Match lastStructure;
     private long lastSavedTick;
 
     public FractionationProcess getProcess() { return process; }
     public boolean isFormed() { return formed; }
     public int getMissingParts() { return missingParts; }
+    public DistillationLayout.Facing getFacing() {
+        return lastStructure == null ? DistillationLayout.Facing.EAST : lastStructure.facing;
+    }
+    public String getStructureDetails() {
+        return lastStructure == null ? "No boiler structure" : lastStructure.describeMissing();
+    }
 
     public void select(int id) {
         DistillateType next = DistillateType.fromId(id);
@@ -44,9 +50,9 @@ public final class TileEntityDistillationBoiler extends TileEntity {
     }
 
     public void refreshStructure() {
-        StructurePattern.Result result = DistillationStructure.check(worldObj, xCoord, yCoord, zCoord);
-        formed = result != null && result.formed;
-        missingParts = result == null ? 6 : result.mismatches;
+        lastStructure = DistillationStructure.check(worldObj, xCoord, yCoord, zCoord);
+        formed = lastStructure != null && lastStructure.isFormed();
+        missingParts = lastStructure == null ? 6 : lastStructure.missingParts;
         checkCountdown = STRUCTURE_CHECK_INTERVAL;
     }
 
@@ -80,6 +86,7 @@ public final class TileEntityDistillationBoiler extends TileEntity {
                 tag.getInteger("ZTO_DistillProgress"));
         formed = false;
         missingParts = 6;
+        lastStructure = null;
         checkCountdown = 0;
     }
 

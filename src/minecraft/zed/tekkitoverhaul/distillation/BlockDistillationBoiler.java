@@ -55,7 +55,11 @@ public final class BlockDistillationBoiler extends BlockContainer {
         if (!world.isRemote) {
             boiler.refreshStructure();
             player.addChatMessage("[ZTO] Distiller " + (boiler.isFormed() ?
-                    "FORMED" : "INCOMPLETE (" + boiler.getMissingParts() + " parts missing)"));
+                    "FORMED" : "INCOMPLETE (" + boiler.getMissingParts() + " parts missing)")
+                    + " facing " + boiler.getFacing().name());
+            if (!boiler.isFormed()) {
+                player.addChatMessage("[ZTO] Missing: " + boiler.getStructureDetails());
+            }
             player.addChatMessage("[ZTO] Crude: " + boiler.getProcess().getCrudeMB()
                     + " mB; Cooling water: " + boiler.getProcess().getCoolantMB() + " mB");
         }

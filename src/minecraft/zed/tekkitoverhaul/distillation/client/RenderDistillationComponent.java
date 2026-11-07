@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
+import net.minecraft.src.OpenGlHelper;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.TileEntitySpecialRenderer;
 import org.lwjgl.opengl.GL11;
@@ -23,8 +24,6 @@ import zed.tekkitoverhaul.render.model.ObjModel;
  * pixel-art atlas and interlocking component connections.
  */
 public final class RenderDistillationComponent extends TileEntitySpecialRenderer {
-    // Temporary diagnostic full-brightness. Replace with world light in a separate pass.
-    private static final int BRIGHTNESS = 0x00F000F0;
     private final EnumMap<DistillationPartType, ObjModel> models =
             new EnumMap<DistillationPartType, ObjModel>(DistillationPartType.class);
     private final Set<DistillationPartType> attempted =
@@ -81,9 +80,13 @@ public final class RenderDistillationComponent extends TileEntitySpecialRenderer
             upperColumn = type == DistillationPartType.COLUMN && part.isUpperColumn();
         }
 
+        int brightness = tile.worldObj.getLightBrightnessForSkyBlocks(
+                tile.xCoord, tile.yCoord, tile.zCoord, 0);
         GL11.glPushMatrix();
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT |
-                GL11.GL_LIGHTING_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                GL11.GL_LIGHTING_BIT | GL11.GL_COLOR_BUFFER_BIT |
+                GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_TEXTURE_BIT);
+        GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
         try {
             GL11.glTranslatef((float)x + 0.5F, (float)y, (float)z + 0.5F);
             GL11.glRotatef(facing.rotationDegrees, 0F, 1F, 0F);
@@ -97,18 +100,23 @@ public final class RenderDistillationComponent extends TileEntitySpecialRenderer
             GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glDepthMask(true);
             GL11.glColor4f(1F, 1F, 1F, 1F);
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+            OpenGlHelper.setClientActiveTexture(OpenGlHelper.defaultTexUnit);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             bindTextureByName("/zed/textures/distillation_atlas.png");
 
             for (ObjModel.Part part : mesh.getParts().values()) {
-                ObjTessellatorRenderer.render(part, BRIGHTNESS);
+                ObjTessellatorRenderer.render(part, brightness);
             }
             ObjModel attachments = connections();
             if (attachments != null) {
                 String groupName = type == DistillationPartType.COLUMN ?
                         (upperColumn ? "column_upper" : "column_lower") : type.modelName;
-                ObjTessellatorRenderer.render(attachments.getPart(groupName), BRIGHTNESS);
+                ObjTessellatorRenderer.render(attachments.getPart(groupName), brightness);
             }
         } finally {
+            GL11.glPopClientAttrib();
             GL11.glPopAttrib();
             GL11.glPopMatrix();
         }

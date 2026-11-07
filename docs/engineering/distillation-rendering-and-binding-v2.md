@@ -50,7 +50,9 @@ The new `src/minecraft/zed/textures/distillation_atlas.png` retains the **64×32
 
 This is independently produced artwork inspired by the low-resolution **aesthetic** of IC2/BuildCraft, not a direct asset rip. The user-provided IC2 texture files have not been included in the current development workspace. Any later derivative work must record exact source filenames, licenses and credit in `CREDITS.md`.
 
-The renderer now **disables blending for the opaque atlas** and enables alpha testing rather than blending everything. It still uses diagnostic full-bright packed lightmap coordinates to ensure correct colors; world-aware lighting is a separate future task.
+The original opaque restyle placed all painted material tiles in PNG rows 0–15. After the standard OBJ V flip, the six models and the connectors actually sample rows 16–31. Those rows were black even with the previous diagnostic full-bright value. The corrected atlas stores OBJ material row zero at PNG rows 24–31 and material row one at rows 16–23, preserving every model's UVs. The renderer binds the atlas on the default texture unit, keeps the lightmap active with the same world brightness sample as the vanilla tile dispatcher, and restores texture and client array state after drawing.
+
+The thermometer uses the legacy 20-pixel button height. A 21-pixel button samples an extra row past its state in `/gui/gui.png`. The existing button hit testing, selection and readouts continue to use `GuiScreen`.
 
 ## Model cohesion and soft edges
 

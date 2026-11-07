@@ -15,4 +15,4 @@ Programming assistance, technical analysis and initial procedural model/texture 
 
 ### Future derivative textures
 
-If IC2/BuildCraft texture pixels are copied or adapted in a later commit, record the **exact original asset filename, mod version, license/permission and attribution** here before distribution. The current `distillation_atlas.png` restyle is an independently authored 64×32 pixel atlas with fully opaque pixels. No third-party texture files were copied into this commit.
+If IC2/BuildCraft texture pixels are copied or adapted in a later commit, record the **exact original asset filename, mod version, license/permission and attribution** here before distribution. The current `distillation_atlas.png` restyle is an independently authored 64×32 pixel atlas with fully opaque pixels. Visual references were IC2 1.97's `ic2/sprites/block_machine.png` and BuildCraft 2.2.14's `net/minecraft/src/buildcraft/core/gui/block_textures.png`. The atlas uses original pixel patterns and palettes.

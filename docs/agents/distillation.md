@@ -23,7 +23,11 @@ A source-level test or Java stub compile is **not** equivalent to a successful r
 
 ## Current debugging status
 
-The project owner confirmed the component recipes and NEI discovery in-game. Reports of missing controller binding and unfinished geometry prompted a four-way layout resolver, precise missing-part diagnostics, an opaque industrial atlas and interlocking connector geometry. These changes have **not yet been validated in Tekkit Dev**; see the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
+The project owner confirmed recipes, NEI discovery, structure formation, LV EU intake, thermometer readouts and distillate output in Tekkit Dev before the visual fixes. The revised atlas, thermometer controls and connector fit still require a Tekkit Dev pass. See the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
+
+## Next iteration: placeable petroleum fluids
+
+Create a dedicated legacy fluid module for Gasoline, Kerosene, Diesel and Heavy Gas Oil. Give each fluid its own configurable block IDs, flowing and still behavior, world textures and a placeable bucket variant drawn in the style of the original Minecraft bucket. Keep the existing NBT fluid IDs and plan compatibility for existing sample buckets before changing their behavior. Verify the BuildCraft 2.2.14 liquid interfaces in matching artifacts before wiring pipe transport, then reuse the module for storage tanks and fuel consumers. The current iteration still uses internal tanks and sealed sample buckets.
 
 ## Short test command
 

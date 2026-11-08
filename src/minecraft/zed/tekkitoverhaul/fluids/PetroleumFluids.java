@@ -49,6 +49,10 @@ public final class PetroleumFluids {
         String name = "zto" + type.displayName.replace(" ", "");
         Block flowing = new Flowing(id, material, type).setBlockName(name + "Flowing");
         Block still = new Still(id + 1, material, type).setBlockName(name + "Still");
+        // Forge uses the texture flag to route these quads to their own atlas batch.
+        String atlas = texturePath(type);
+        flowing.setTextureFile(atlas);
+        still.setTextureFile(atlas);
         ModLoader.registerBlock(flowing);
         ModLoader.registerBlock(still);
         ModLoader.addName(flowing, "Flowing " + type.displayName);
@@ -59,9 +63,7 @@ public final class PetroleumFluids {
 
     public static int stillId(DistillateType type) { return flowingId(type) + 1; }
 
-    private static String texture(DistillateType type) {
-        // Block's constructor asks for the texture before the subclass stores its type.
-        if (type == null) type = DistillateType.GASOLINE;
+    public static String texturePath(DistillateType type) {
         return "/zed/textures/" + type.name().toLowerCase(Locale.ROOT) + "_fluid.png";
     }
 
@@ -125,7 +127,6 @@ public final class PetroleumFluids {
             setTickRandomly(false);
         }
 
-        public String getTextureFile() { return texture(type); }
         public int getRenderType() { return renderType; }
         public int stillLiquidId() { return stillId(type); }
         public int tickRate() { return type.flowTicks; }
@@ -195,7 +196,6 @@ public final class PetroleumFluids {
             setLightOpacity(3);
         }
 
-        public String getTextureFile() { return texture(type); }
         public int getRenderType() { return renderType; }
         public int stillLiquidId() { return blockID; }
         public int tickRate() { return type.flowTicks; }

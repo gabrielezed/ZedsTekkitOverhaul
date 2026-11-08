@@ -41,7 +41,10 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     }
 
     @Override
-    public void registerAnimation(Minecraft minecraft) { DistillateBucketTextures.register(); }
+    public void registerAnimation(Minecraft minecraft) {
+        RenderPetroleum.preloadTextures();
+        DistillateBucketTextures.register();
+    }
 
     @Override
     public boolean renderWorldBlock(RenderBlocks renderer, IBlockAccess world, int x, int y, int z,

@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul
 
+The experimental single-player [Creative inventory backport](docs/engineering/creative-inventory-backport.md)
+adds a tabbed catalog, search and a player inventory view to the normal Creative inventory key.
+The local prototype uses four verified Minecraft 1.4.7 textures prepared separately from the repository.
+The **1.2.5** tab opens the classic Creative screen. Press **F6** to restore the backport,
+or rebind **Restore ZTO Creative Inventory** in Options → Controls.
+
 A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and alchemical progression. Built with FoxyRetroMDK 1.3.6, MCP 6.2, Forge 3.4.9.171 and the legacy ModLoader API.
 
 ## Current functionality

@@ -23,4 +23,8 @@ public final class EnergyNet {
     public void removeTileEntity(TileEntity tile) {
         // Deliberately no-op.
     }
+
+    public int emitEnergyFrom(IEnergySource source, int amount) {
+        return amount;
+    }
 }

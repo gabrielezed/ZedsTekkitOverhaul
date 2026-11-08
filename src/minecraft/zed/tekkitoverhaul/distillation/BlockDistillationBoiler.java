@@ -40,29 +40,19 @@ public final class BlockDistillationBoiler extends BlockDistillationComponent {
         if (!(te instanceof TileEntityDistillationBoiler)) return false;
         TileEntityDistillationBoiler boiler = (TileEntityDistillationBoiler)te;
         ItemStack held = player.inventory.getCurrentItem();
-        if (held != null && held.stackSize == 1 && DistillationRegistry.isBuildCraftOilBucket(held)) {
-            if (!world.isRemote && boiler.getProcess().getCrudeMB() <=
-                    FractionationProcess.TANK_CAPACITY_MB - 1000 && boiler.addCrude(1000) == 1000) {
-                player.inventory.setInventorySlotContents(player.inventory.currentItem,
-                        new ItemStack(Item.bucketEmpty));
-                player.addChatMessage("[ZTO] Boiler: 1000 mB crude oil loaded");
-            }
-            return true;
-        }
-        if (held != null) return false;
+        if (held != null && (held.stackSize != 1 || !DistillationRegistry.isBuildCraftOilBucket(held))) return false;
         if (!world.isRemote) {
-            boiler.refreshStructure();
-            player.addChatMessage("[ZTO] Distiller " + (boiler.isFormed() ?
-                    "FORMED" : "INCOMPLETE (" + boiler.getMissingParts() + " parts missing)")
-                    + " facing " + boiler.getVisualFacing().name());
-            if (!boiler.isFormed()) {
-                player.addChatMessage("[ZTO] Missing: " + boiler.getStructureDetails());
+            String result = null;
+            if (held != null) {
+                result = "Not enough space for an oil bucket.";
+                if (boiler.getProcess().getCrudeMB() <= FractionationProcess.TANK_CAPACITY_MB - 1000
+                        && boiler.addCrude(1000) == 1000) {
+                    player.inventory.setInventorySlotContents(player.inventory.currentItem, new ItemStack(Item.bucketEmpty));
+                    result = "Loaded 1000 mB of crude oil.";
+                }
             }
-            player.addChatMessage("[ZTO] Crude: " + boiler.getProcess().getCrudeMB()
-                    + " mB; Cooling water: " + boiler.getProcess().getCoolantMB() + " mB");
-            player.addChatMessage("[ZTO] Process: " + boiler.getProcessStatus()
-                    + " (setpoint " + boiler.getProcess().selectedType().temperatureCelsius
-                    + " C; progress " + boiler.getProcess().getProgressTicks() + " ticks)");
+            boiler.refreshStructure();
+            ModLoader.openGUI(player, new GuiDistillationPanel(DistillationPartType.BOILER, boiler, boiler, result));
         }
         return true;
     }

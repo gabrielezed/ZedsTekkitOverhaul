@@ -110,7 +110,7 @@ zed.tekkitoverhaul.distillation/
 ├── TileEntityDistillationBoiler.java persistent process state and structure check
 ├── TileEntityDistillationPart.java  visual-only auxiliary anchor
 ├── TileEntityDistillationHeater.java IC2 1.97 IEnergySink adapter
-├── GuiDistillationThermometer.java  four singleplayer setpoint buttons
+├── GuiDistillationPanel.java        local component status and four setpoint buttons
 └── client/
     └── RenderDistillationComponent.java  six OBJ meshes via legacy TESR
 ```

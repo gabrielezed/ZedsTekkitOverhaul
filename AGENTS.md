@@ -18,6 +18,12 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 - Never assume release IC2/EE2 JARs work in the deobfuscated MCP runtime. Review [environment.md](docs/agents/environment.md) first.
 - Treat numeric block IDs, recipe behavior and EMC values as world-compatibility concerns. Avoid silent migrations.
 
+## Player-facing interactions
+
+- Present machine status, controls, transfer results, and actionable failures in an in-game GUI. Include units, capacity, and guidance where needed.
+- Reserve the console and logs for debugging, developer diagnostics, and failures that cannot be shown in-game. Do not use chat as a substitute for a machine menu.
+- Preserve direct gameplay interactions such as bucket transfers and held-block placement. Keep GUI state separate from machine processing and use the appropriate client/server boundary.
+
 ## Workflow and verification
 
 1. Confirm the current Git branch, repository state and relevant source files.
@@ -48,5 +54,5 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 - [Fractional distillation V1 specification](docs/engineering/fractional-distillation-v1.md)
 - [Distillation agent handoff](docs/agents/distillation.md)
 - [Rotatable layout and visual connector reference](docs/engineering/distillation-rendering-and-binding-v2.md)
-- Experimental 3D assets, EU adapter, internal fluid IDs and temperature GUI are on a feature branch; do not treat this as production-verified or a BuildCraft 2.2.14 liquid pipe API implementation.
+- The distillation prototype includes 3D assets, an IC2 LV heater, BuildCraft 2.2.14 liquid ports, four placeable fractions and local machine panels. See the handoff for the remaining runtime checks.
 - Confirm exact IC2 1.97 ABI and reobfuscated runtime linking before merging any direct `ic2.api` dependency.

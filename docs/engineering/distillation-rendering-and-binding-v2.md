@@ -70,7 +70,7 @@ These fittings extend slightly beyond their own block bounds to meet the neighbo
 
 ## Operational diagnostics
 
-The boiler's right-click chat now reports **why the process is stalled** in addition to structure status and tank quantities. Reasons include: incomplete structure, insufficient crude, missing cooling water, incompatible or full receiver, missing LV heater and insufficient stored EU. In the owner's screenshot, the boiler already displayed **1,000 mB crude but 0 mB coolant**; even a fully formed assembly could not process a batch until water was provided.
+The boiler's right-click panel reports **why the process is stalled** alongside its tanks and missing components. Reasons include incomplete structure, insufficient crude, missing cooling water, an incompatible or full receiver, a missing LV heater, and insufficient stored EU. In the owner's original test, the boiler held **1,000 mB crude and 0 mB coolant**. The assembly needed water before it could process a batch.
 
 This diagnostic distinguishes the **controller-binding problem** from the **independent energy/coolant prerequisites**. It does not claim that the IC2 EnergyNet connection itself has passed an in-game test.
 

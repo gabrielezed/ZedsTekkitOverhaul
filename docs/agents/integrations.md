@@ -23,12 +23,14 @@ The distillation boiler and receiver integrate with BuildCraft 2.2.14 liquids. T
 
 ## Economic integrity
 
+The [Alchemical Converter](../engineering/alchemical-power-v1.md) uses adjacent EE2 packets and the IC2 EnergyNet source API. It keeps conversion accounting separate from item EMC and applies per-collector throughput limits.
+
 An EE2→EU converter or alternative thermal power source can create exploitative EMC/EU cycles. Before adding recipes or conversions, document input/output units, throughput, losses and whether any closed-loop path generates resources. These are design constraints, not currently enforced by a balance engine.
 
 ## Dependencies
 
 Avoid introducing direct references to optional mod classes into the core bootstrap. Reflection is currently used where appropriate. If compile-time dependencies are required for new APIs, document how to obtain/remap them for MCP and validate startup both with and without the optional mod, as applicable.
 
-## Experimental fractional distillation (feature branch)
+## Fractional distillation
 
-The initial distillation heater proposes a direct IC2 1.97 `IEnergySink` implementation and uses original, compile-only ABI placeholders in the ignored local MCP tree. The release JAR must contain only `zed/` project classes/resources. Verify actual EnergyNet linking and EU remainder semantics in real Tekkit; do not confuse the test-double EnergyNet with a functional client integration. BuildCraft 2.2.14 pipes/liquid transport are deferred; only internal mB storage and bucket-based exchange exist in V1.
+The distillation heater implements the IC2 1.97 `IEnergySink` interface. The boiler, condenser and receiver use the BuildCraft 2.2.14 liquid ABI. The converter implements EE2's adjacent power receiver and IC2's energy source. MCP uses compile-only placeholders for these APIs. Package only original ZTO classes and resources and verify network and transport behavior in Tekkit Dev.

@@ -23,7 +23,7 @@ A source-level test or Java stub compile is **not** equivalent to a successful r
 
 ## Current debugging status
 
-The project owner confirmed recipes, NEI discovery, structure formation, LV EU intake, thermometer readouts and distillate output in Tekkit Dev before the visual fixes. The revised atlas, thermometer controls and connector fit still require a Tekkit Dev pass. See the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
+The project owner confirmed recipes, NEI discovery, structure formation, LV EU intake, thermometer readouts and distillate output in Tekkit Dev on an earlier build. The latest component panels compiled, reobfuscated and deployed to Tekkit Dev. Their visual and interaction checks, including bucket feedback, remain open. See the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
 
 ## Placeable petroleum fluids
 
@@ -48,7 +48,7 @@ Align the receiver flange to the pipe geometry in all four rotations. BuildCraft
 
 Place components like a furnace, with the preferred front facing the player. Use the IC2 wrench on a horizontal face to turn a standalone part. A linked auxiliary follows the boiler so the ports line up. The boiler's preferred front breaks ties between equally complete layouts, while a better physical match wins. Wrench removal is disabled for these components.
 
-Use an empty hand for diagnostics and the thermometer. The supported bucket interactions still take priority, while held construction blocks pass through to normal placement.
+Right-click any of the six components with an empty hand to open its live panel. The boiler shows its tanks and missing parts, the heater shows EU, the column shows batch progress, the condenser and receiver show their respective fluid, and the thermometer provides four setpoints. Supported bucket interactions still transfer directly and show their result in the panel. Held construction blocks pass through to normal placement. Keep developer diagnostics in the logs and gameplay feedback in the GUI.
 
 ## Short test command
 

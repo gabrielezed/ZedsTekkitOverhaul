@@ -82,6 +82,8 @@ call "zto-tools\prepare-ic2-dev-stubs.bat"
 if errorlevel 1 goto :fail
 call "zto-tools\prepare-buildcraft-dev-stubs.bat"
 if errorlevel 1 goto :fail
+call "zto-tools\prepare-ee2-dev-stubs.bat"
+if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
 call "recompile.bat"
@@ -195,6 +197,11 @@ if errorlevel 1 (
 jar tf "%BUILD_JAR%" | findstr /L /C:"mcmod.info" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: mcmod.info missing from JAR.
+    goto :fail
+)
+jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/power/TileAlchemicalConverter.class" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Alchemical converter missing from JAR.
     goto :fail
 )
 

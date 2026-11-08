@@ -3,11 +3,21 @@ setlocal EnableExtensions
 pushd "%~dp0.." || exit /b 1
 set "TARGET=src\minecraft\ic2\api"
 if exist "%TARGET%\IEnergySink.java" (
-    if not exist "%TARGET%\IWrenchable.java" (
-        copy "zto-tools\ic2-dev-stubs\ic2\api\IWrenchable.java" "%TARGET%\" >nul
-        if errorlevel 1 goto :failed
+    for %%I in (IWrenchable IEnergyEmitter IEnergySource) do (
+        if not exist "%TARGET%\%%I.java" (
+            copy "zto-tools\ic2-dev-stubs\ic2\api\%%I.java" "%TARGET%\" >nul
+            if errorlevel 1 goto :failed
+        )
     )
-    echo [ZTO] IC2 API source already exists. Existing files were preserved.
+    findstr /L /C:"MCP-only test double" "%TARGET%\EnergyNet.java" >nul 2>&1
+    if not errorlevel 1 (
+        findstr /L /C:"emitEnergyFrom" "%TARGET%\EnergyNet.java" >nul
+        if errorlevel 1 (
+            copy /Y "zto-tools\ic2-dev-stubs\ic2\api\EnergyNet.java" "%TARGET%\" >nul
+            if errorlevel 1 goto :failed
+        )
+    )
+    echo [ZTO] IC2 API prepared. Existing external API sources were preserved.
     popd
     exit /b 0
 )

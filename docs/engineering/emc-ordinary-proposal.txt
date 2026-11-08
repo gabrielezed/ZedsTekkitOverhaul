@@ -1,0 +1,7 @@
+# Merge these rules into the active APPLY profile under its existing header.
+# Values come from the baseline input EMC and the vanilla recipe quantities.
+SET name:item.cauldron 0 1792
+SET name:item.brewingStand 0 1539
+
+# Glass panes remain pending. Six glass at 1 EMC yield sixteen panes,
+# so assigning each pane the minimum 1 EMC creates a 10 EMC crafting gain.

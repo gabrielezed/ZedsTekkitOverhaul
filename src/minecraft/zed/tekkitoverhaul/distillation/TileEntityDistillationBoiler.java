@@ -37,8 +37,14 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
     protected boolean canTurnTo(DistillationLayout.Facing facing) {
         return DistillationStructure.canFace(worldObj, xCoord, yCoord, zCoord, facing);
     }
-    public String getStructureDetails() {
-        return lastStructure == null ? "No boiler structure" : lastStructure.describeMissing();
+    String getMissingPartNames() {
+        if (lastStructure == null) return "Structure check pending";
+        StringBuilder names = new StringBuilder();
+        for (DistillationLayout.Placement placement : lastStructure.missing) {
+            if (names.length() > 0) names.append(", ");
+            names.append(placement.part.displayName);
+        }
+        return names.toString();
     }
 
     public void select(int id) {

@@ -9,8 +9,8 @@ import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
-import zed.tekkitoverhaul.fluids.GasolineFluid;
-import zed.tekkitoverhaul.fluids.client.RenderGasoline;
+import zed.tekkitoverhaul.fluids.PetroleumFluids;
+import zed.tekkitoverhaul.fluids.client.RenderPetroleum;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.ee2.IC2EmcIntegration;
 import zed.tekkitoverhaul.integration.ee2.AdvancedCraftingEmcIntegration;
@@ -22,7 +22,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     private final EE2FuelIntegration ee2Fuels = new EE2FuelIntegration();
     private final AdvancedCraftingEmcIntegration craftingEmc = new AdvancedCraftingEmcIntegration();
     private IC2EmcIntegration ic2Emc;
-    private int gasolineModel;
+    private int petroleumModel;
 
     @Override
     public String getVersion() { return "0.7.0-distillation-prototype"; }
@@ -30,8 +30,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void load() {
         AdvancedCraftingRegistry.register();
-        gasolineModel = ModLoader.getUniqueBlockModelID(this, false);
-        GasolineFluid.setRenderType(gasolineModel);
+        petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
+        PetroleumFluids.setRenderType(petroleumModel);
         DistillationRegistry.register();
         ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         System.out.println("[ZTO] v" + getVersion() + " loaded");
@@ -46,7 +46,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public boolean renderWorldBlock(RenderBlocks renderer, IBlockAccess world, int x, int y, int z,
                                     Block block, int modelId) {
-        return modelId == gasolineModel && RenderGasoline.render(renderer, world, x, y, z, block);
+        return modelId == petroleumModel && RenderPetroleum.render(renderer, world, x, y, z, block);
     }
 
     @Override

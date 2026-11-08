@@ -175,10 +175,12 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Distillation atlas missing from JAR.
     goto :fail
 )
-jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/gasoline_fluid.png" >nul
-if errorlevel 1 (
-    echo [ZTO] ERROR: Gasoline texture missing from JAR.
-    goto :fail
+for %%F in (gasoline kerosene diesel heavy_gas_oil) do (
+    jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/%%F_fluid.png" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: %%F fluid texture missing from JAR.
+        goto :fail
+    )
 )
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/distillation/TileEntityDistillationReceiver.class" >nul
 if errorlevel 1 (

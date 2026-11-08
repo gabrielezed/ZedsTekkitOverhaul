@@ -9,19 +9,15 @@ import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
+import zed.tekkitoverhaul.emc.EmcIntegration;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
 import zed.tekkitoverhaul.fluids.client.RenderPetroleum;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
-import zed.tekkitoverhaul.integration.ee2.IC2EmcIntegration;
-import zed.tekkitoverhaul.integration.ee2.AdvancedCraftingEmcIntegration;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
-    // Keep the legacy IC2 integration in its existing disabled state.
-    private static final boolean ENABLE_IC2_EMC_INTEGRATION = false;
     private final EE2FuelIntegration ee2Fuels = new EE2FuelIntegration();
-    private final AdvancedCraftingEmcIntegration craftingEmc = new AdvancedCraftingEmcIntegration();
-    private IC2EmcIntegration ic2Emc;
+    private final EmcIntegration emc = new EmcIntegration();
     private int petroleumModel;
 
     @Override
@@ -54,11 +50,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public boolean onTickInGame(float partialTick, Minecraft minecraft) {
-        craftingEmc.onGameTick();
-        if (ENABLE_IC2_EMC_INTEGRATION) {
-            if (ic2Emc == null) ic2Emc = new IC2EmcIntegration();
-            ic2Emc.onGameTick();
-        }
+        emc.onGameTick(minecraft.mcDataDir);
         return true;
     }
 }

@@ -1,0 +1,208 @@
+# Opt-in Tekkit Dev example. Verify runtime IDs before using it in another pack.
+zto-emc 1 APPLY
+
+# Preserve base stone and the existing ZTO crafting parity.
+INHERIT name:tile.stonebrick 0
+INHERIT name:tile.stone 0
+INHERIT name:tile.ztoAdvancedCraftingTable 0
+INHERIT name:tile.ztoFoundry 0
+
+# Keep the reusable bucket value and remove the renewable water filling premium.
+SET name:item.bucketWater 0 768
+
+# EE2 also classifies the Oil Bucket as a collector fuel.
+INHERIT name:item.bucketOil 0
+INHERIT name:item.bucketFuel 0
+
+# Recipe-derived mappings for IC2, BuildCraft, RedPower and EE2.
+# Positive baseline entries are preserved; unresolved alternatives are held back.
+# RedPower Buffer - RedPowerMachine.java:192
+SET id:137 2 416
+# RedPower Project Table - RedPowerBase.java:337
+SET id:137 3 131
+# RedPower Ruby Block - RedPowerWorld.java:345
+SET id:145 0 9216
+# RedPower 145:1 - RedPowerWorld.java:346
+SET id:145 1 9216
+# RedPower 145:2 - RedPowerWorld.java:347
+SET id:145 2 9216
+# RedPower Block Breaker - RedPowerMachine.java:186
+SET id:150 1 1194
+# RedPower Transposer - RedPowerMachine.java:187
+SET id:150 2 433
+# RedPower Ejector - RedPowerMachine.java:205
+SET id:150 14 947
+# BuildCraft Quarry - BuildCraftFactory.java:98
+SET id:153 0 130260
+# BuildCraft Land Mark - BuildCraftBuilders.java:86
+SET id:154 0 932
+# BuildCraft Filler - BuildCraftBuilders.java:87
+SET id:155 0 19532
+# BuildCraft Builder - BuildCraftBuilders.java:88
+SET id:157 0 85068
+# BuildCraft Redstone Engine - BuildCraftEnergy.java:91
+SET id:161 0 405
+# BuildCraft 161:1 - BuildCraftEnergy.java:92
+SET id:161 1 392
+# BuildCraft 161:2 - BuildCraftEnergy.java:93
+SET id:161 2 3205
+# BuildCraft Pump - BuildCraftFactory.java:102
+SET id:164 0 3428
+# BuildCraft Tank - BuildCraftFactory.java:103
+SET id:165 0 8
+# BuildCraft Refinery - BuildCraftFactory.java:104
+SET id:167 0 42164
+# BuildCraft Automatic Crafting Table - BuildCraftFactory.java:101
+SET id:169 0 96
+# BuildCraft Mining Well - BuildCraftFactory.java:97
+SET id:174 0 3420
+# IC2 Crop - mod_IC2.java:1149
+SET id:218 0 8
+# IC2 224:1 - mod_IC2.java:851
+SET id:224 1 2304
+# IC2 224:2 - mod_IC2.java:850
+SET id:224 2 2295
+# IC2 Industrial TNT - mod_IC2.java:919
+SET id:239 0 729
+# IC2 250:1 - mod_IC2.java:854
+SET id:250 1 1288
+# RedPower Screwdriver - RedPowerBase.java:351
+SET id:1262 0 260
+# BuildCraft Wooden Gear - BuildCraftCore.java:121
+SET id:4056 0 16
+# BuildCraft Stone Gear - BuildCraftCore.java:122
+SET id:4057 0 20
+# BuildCraft Iron Gear - BuildCraftCore.java:123
+SET id:4058 0 1044
+# BuildCraft Gold Gear - BuildCraftCore.java:124
+SET id:4059 0 9236
+# BuildCraft Diamond Gear - BuildCraftCore.java:125
+SET id:4060 0 42004
+# BuildCraft Wrench - BuildCraftCore.java:120
+SET id:4062 0 788
+# BuildCraft Diamond Transport Pipe - BuildCraftTransport.java:94
+SET id:4311 0 2048
+# BuildCraft Obsidian Transport Pipe - BuildCraftTransport.java:95
+SET id:4312 0 16
+# EE2 Philosopher's Stone - EEMaps.java:1039
+SET id:27526 0 9984
+# EE2 Evertide Amulet - EEMaps.java:1104
+SET id:27530 0 417792
+# EE2 Volcanite Amulet - EEMaps.java:1105
+SET id:27531 0 418176
+# EE2 Hyperkinetic Lens - EEMaps.java:1097
+SET id:27535 0 329186
+# EE2 Dark Matter Shovel - EEMaps.java:1048
+SET id:27544 0 155648
+# EE2 Dark Matter Hoe - EEMaps.java:1049
+SET id:27545 0 294912
+# EE2 Dark Matter Sword - EEMaps.java:1050
+SET id:27546 0 286720
+# EE2 Dark Matter Shears - EEMaps.java:1052
+SET id:27548 0 147456
+# EE2 Dark Matter Hammer - EEMaps.java:1053
+SET id:27555 0 303104
+# EE2 Divining Rod - EEMaps.java:1117
+SET id:27585 0 12
+# EE2 Divining Rod - EEMaps.java:1118
+SET id:27585 1 76
+# EE2 Divining Rod - EEMaps.java:1119
+SET id:27585 2 1740
+# IC2 Hydration Cell - TileEntityExtractor.java:23
+SET id:30120 0 64
+# IC2 Clay Dust - TileEntityMacerator.java:26
+SET id:30133 0 32
+# IC2 Coal Chunk - mod_IC2.java:1058
+SET id:30136 0 8288
+# IC2 Compressed Coal Ball - TileEntityCompressor.java:24
+SET id:30137 0 1028
+# IC2 Coal Ball - mod_IC2.java:1057
+SET id:30138 0 1028
+# IC2 Carbon Plate - TileEntityCompressor.java:23
+SET id:30150 0 1024
+# IC2 Raw Carbon Mesh - mod_IC2.java:1118
+SET id:30151 0 1024
+# IC2 Raw Carbon Fibre - mod_IC2.java:1054
+SET id:30152 0 512
+# IC2 Wrench - mod_IC2.java:1023
+SET id:30183 0 1530
+# IC2 Uninsulated Copper Cable - mod_IC2.java:979
+SET id:30184 1 42
+# IC2 Gold Cable - mod_IC2.java:980
+SET id:30184 2 512
+# IC2 Ultra-Low-Current Cable - mod_IC2.java:990
+SET id:30184 10 85
+# IC2 Bronze Boots - mod_IC2.java:1093
+SET id:30192 0 1020
+# IC2 Bronze Legs - mod_IC2.java:1092
+SET id:30193 0 1785
+# IC2 Bronze Chestplate - mod_IC2.java:1091
+SET id:30194 0 2040
+# IC2 Bronze Helmet - mod_IC2.java:1090
+SET id:30195 0 1275
+# IC2 Bronze Hoe - mod_IC2.java:1020
+SET id:30196 0 518
+# IC2 Bronze Shovel - mod_IC2.java:1022
+SET id:30197 0 263
+# IC2 Bronze Sword - mod_IC2.java:1021
+SET id:30198 0 514
+# IC2 Bronze Axe - mod_IC2.java:1019
+SET id:30199 0 773
+# IC2 Bronze Pickaxe - mod_IC2.java:1018
+SET id:30200 0 773
+# IC2 Coolant Cell - TileEntityExtractor.java:22
+SET id:30206 0 64
+# IC2 Treetap - mod_IC2.java:1009
+SET id:30212 0 40
+# IC2 Sticky Dynamite - mod_IC2.java:1114
+SET id:30214 0 95
+# IC2 Dynamite - mod_IC2.java:1115
+SET id:30215 0 92
+# IC2 Water Cell - mod_IC2.java:1183
+SET id:30218 0 64
+# IC2 Tin Can - mod_IC2.java:1182
+SET id:30222 0 320
+# IC2 H. Coal - TileEntityCompressor.java:17
+SET id:30225 0 128
+# IC2 Hydrated Coal Dust - mod_IC2.java:1063
+SET id:30226 0 128
+# IC2 Coalfuel Cell - TileEntityExtractor.java:21
+SET id:30228 0 192
+# IC2 H. Coal Cell - mod_IC2.java:1188
+SET id:30230 0 192
+# IC2 (Empty) Fuel Can - mod_IC2.java:1181
+SET id:30231 0 1792
+# IC2 Empty Cell - mod_IC2.java:1180
+SET id:30237 0 64
+# IC2 Small Pile of Iron Dust - mod_IC2.java:1061
+SET id:30250 0 1449
+# IC2 Coal Dust - TileEntityMacerator.java:17
+SET id:30256 0 128
+
+# IC2 and ZTO follow-up. IDs and metadata are instance-specific.
+# Refined Iron retains the material value of the iron ingot.
+SET id:30249 0 256
+# The IC2 extractor produces three rubber from one 24 EMC resin.
+SET id:30216 0 8
+# Insulated copper cable costs 50 per unit in materials. Its shared ID uses
+# metadata 0 as a fallback, so the circuit calculation uses the cost directly.
+SET id:30191 0 684
+SET id:30190 0 3436
+
+# Distillation equipment, in registry order.
+SET id:3010 0 1801
+SET id:3011 0 1480
+SET id:3012 0 769
+SET id:3013 0 1538
+SET id:3014 0 773
+SET id:3015 0 1410
+# Three glowstone blocks, two machine blocks, advanced circuit, and cable.
+SET id:3024 0 12190
+
+# Each 1000 mB fraction carries 2048 EMC, plus a reusable 768 EMC bucket.
+# Distillation consumes EU and cooling water without adding an EMC premium.
+# These four SET rules replace the earlier bucket inheritance.
+SET id:22256 0 2816
+SET id:22257 0 2816
+SET id:22258 0 2816
+SET id:22259 0 2816

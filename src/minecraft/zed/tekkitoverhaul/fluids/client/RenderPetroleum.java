@@ -5,6 +5,9 @@ import net.minecraft.src.IBlockAccess;
 import net.minecraft.src.Material;
 import net.minecraft.src.RenderBlocks;
 import net.minecraft.src.Tessellator;
+import net.minecraft.src.forge.MinecraftForgeClient;
+import zed.tekkitoverhaul.distillation.DistillateType;
+import zed.tekkitoverhaul.fluids.PetroleumFluids;
 
 /** Renders the custom liquid without the vanilla water/lava-only flow-vector lookup. */
 public final class RenderPetroleum {
@@ -12,6 +15,13 @@ public final class RenderPetroleum {
     private static final double TILE_END = 15.99D / 256D;
 
     private RenderPetroleum() { }
+
+    public static void preloadTextures() {
+        // Texture uploads can change the GL binding. Load atlases outside chunk compilation.
+        for (DistillateType type : DistillateType.values()) {
+            MinecraftForgeClient.preloadTexture(PetroleumFluids.texturePath(type));
+        }
+    }
 
     public static boolean render(RenderBlocks renderer, IBlockAccess world, int x, int y, int z, Block block) {
         Material material = block.blockMaterial;

@@ -103,6 +103,8 @@ public final class DistillationRegistry {
                 "ZTODistillationLVHeater", new RenderDistillationComponent());
         ModLoader.registerTileEntity(TileEntityDistillationReceiver.class,
                 "ZTODistillationReceiver", new RenderDistillationComponent());
+        ModLoader.registerTileEntity(TileEntityDistillationCondenser.class,
+                "ZTODistillationCondenser", new RenderDistillationComponent());
 
         for (DistillationPartType type : DistillationPartType.values()) {
             Block block = type == DistillationPartType.BOILER ?

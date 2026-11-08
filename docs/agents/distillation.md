@@ -29,7 +29,11 @@ The project owner confirmed recipes, NEI discovery, structure formation, LV EU i
 
 The experimental gasoline slice uses `block.gasolineFlowing` in the distillation config (default 3016). The next consecutive ID is the still block and the BuildCraft liquid ID. Keep both IDs stable once a world contains gasoline. The existing gasoline bucket ID now pours a source and an empty bucket collects it again. Boiler NBT keeps its existing internal product IDs. Older receiver tiles upgrade in place on their first tick.
 
-In Tekkit Dev, produce at least 1,000 mB of gasoline. Connect a powered wooden waterproof pipe to the receiver and run waterproof pipes to an empty BuildCraft tank. Check that the boiler loses exactly what the pipes and tank gain, that a stopped or full pipe stops draining, and that an empty bucket can collect gasoline from the tank. Pour it into a basin and collect the source again. Save and reopen to verify the stored liquid ID and volume. Repeat on an older receiver saved before the adapter was installed.
+The owner verified gasoline transport from the receiver to a BuildCraft tank. World placement crashed with the vanilla fluid renderer, whose flow-vector lookup assumes the water or lava material. Gasoline now has its own world render callback and keeps its distinct liquid material.
+
+For the new intake test, route oil from a BuildCraft pump or tank into the boiler and water into the condenser. Each inlet accepts only its designated liquid and clamps to its remaining 8,000 mB capacity. Try swapping the pipes and verify that the wrong liquids do not enter either tank. Existing bucket inputs share the same tanks. Test a condenser saved before the adapter was installed so its port upgrades in place.
+
+Pour gasoline into a basin, check the source and flowing surfaces, and collect the source again. Save and reopen to verify world liquid, pipe contents and tank quantities.
 
 Extend the same boundary to Kerosene, Diesel and Heavy Gas Oil once the gasoline path is verified. Align the receiver flange to the pipe geometry in all four rotations. BuildCraft 2.2.14 extraction is unsided, so the experimental endpoint is accessible from any face. Changing generic Fuel production and engine support is a later compatibility decision for existing worlds.
 

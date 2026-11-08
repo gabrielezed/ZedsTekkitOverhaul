@@ -18,9 +18,15 @@ public final class DistillationCoreSelfTest {
         }
         check(DistillateType.fromId(99) == null, "Unexpected fluid ID");
         FractionationProcess f = new FractionationProcess();
+        check(f.fillCrude(10000, false) == 8000 && f.getCrudeMB() == 0,
+                "Oil pipe simulation must clamp without writing");
+        check(f.fillCoolant(10000, false) == 8000 && f.getCoolantMB() == 0,
+                "Water pipe simulation must clamp without writing");
         check(f.fillCrude(10000) == 8000, "Crude capacity not enforced");
         check(f.fillCrude(1000) == 0, "Overfill accepted");
         check(f.fillCoolant(1000) == 1000, "Water input failed");
+        check(f.fillCoolant(8000, false) == 7000 && f.getCoolantMB() == 1000,
+                "Water pipe simulation must respect remaining capacity");
         check(f.tick(false, 100) == 0, "Unformed structure processed");
         check(f.tick(true, 7) == 0, "Insufficient EU processed");
         check(f.tick(true, 8) == 8, "Process did not consume 8 EU/t");

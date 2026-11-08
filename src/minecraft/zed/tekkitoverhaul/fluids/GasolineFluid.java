@@ -21,8 +21,11 @@ public final class GasolineFluid {
     private static final String TEXTURE = "/zed/textures/gasoline_fluid.png";
     private static int flowingId;
     private static int stillId;
+    private static int renderType;
 
     private GasolineFluid() { }
+
+    public static void setRenderType(int id) { renderType = id; }
 
     public static void registerBlocks(int id) {
         // Vanilla flow transitions assume moving and still IDs are consecutive.
@@ -68,6 +71,7 @@ public final class GasolineFluid {
         }
 
         public String getTextureFile() { return TEXTURE; }
+        public int getRenderType() { return renderType; }
         public int stillLiquidId() { return GasolineFluid.stillId(); }
         public int tickRate() { return 5; }
     }
@@ -81,6 +85,7 @@ public final class GasolineFluid {
         }
 
         public String getTextureFile() { return TEXTURE; }
+        public int getRenderType() { return renderType; }
         public int stillLiquidId() { return GasolineFluid.stillId(); }
     }
 }

@@ -24,6 +24,7 @@ public final class BlockDistillationPart extends BlockDistillationComponent {
     public TileEntity getBlockEntity() {
         if (part == DistillationPartType.HEATER) return new TileEntityDistillationHeater();
         if (part == DistillationPartType.RECEIVER) return new TileEntityDistillationReceiver();
+        if (part == DistillationPartType.CONDENSER) return new TileEntityDistillationCondenser();
         return new TileEntityDistillationPart();
     }
 

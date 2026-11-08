@@ -29,14 +29,22 @@ public final class FractionationProcess {
     }
 
     public int fillCrude(int requestedMB) {
+        return fillCrude(requestedMB, true);
+    }
+
+    public int fillCrude(int requestedMB, boolean commit) {
         int accepted = accept(crudeMB, requestedMB);
-        crudeMB += accepted;
+        if (commit) crudeMB += accepted;
         return accepted;
     }
 
     public int fillCoolant(int requestedMB) {
+        return fillCoolant(requestedMB, true);
+    }
+
+    public int fillCoolant(int requestedMB, boolean commit) {
         int accepted = accept(coolantMB, requestedMB);
-        coolantMB += accepted;
+        if (commit) coolantMB += accepted;
         return accepted;
     }
 

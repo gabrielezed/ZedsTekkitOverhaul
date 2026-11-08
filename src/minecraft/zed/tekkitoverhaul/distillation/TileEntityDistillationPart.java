@@ -13,11 +13,17 @@ public class TileEntityDistillationPart extends TileEntityDistillationComponent 
 
     @Override
     public void updateEntity() {
-        // Older worlds used this stateless tile for receivers. Upgrade it in place.
+        // Older worlds used this stateless tile for both liquid port blocks.
         if (getClass() != TileEntityDistillationPart.class || worldObj == null) return;
         int id = worldObj.getBlockId(xCoord, yCoord, zCoord);
+        TileEntity upgraded = null;
         if (id == DistillationRegistry.blockId(DistillationPartType.RECEIVER)) {
-            worldObj.setBlockTileEntity(xCoord, yCoord, zCoord, new TileEntityDistillationReceiver());
+            upgraded = new TileEntityDistillationReceiver();
+        } else if (id == DistillationRegistry.blockId(DistillationPartType.CONDENSER)) {
+            upgraded = new TileEntityDistillationCondenser();
+        }
+        if (upgraded != null) {
+            worldObj.setBlockTileEntity(xCoord, yCoord, zCoord, upgraded);
             worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, id);
         }
     }

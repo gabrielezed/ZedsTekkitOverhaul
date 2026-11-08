@@ -22,12 +22,12 @@ src/minecraft/zed/
     │   ├── model/ (OBJ loader and mesh model)
     │   └── client/ (legacy Tessellator and TESR)
     ├── multiblock/ (pattern, Foundry ring, World adapter)
+    ├── emc/ (catalog, profile validation, rules, EE2 adapter)
     └── integration/
         ├── ee2/
         │   ├── EE2FuelIntegration.java
         │   ├── EE2ItemResolver.java
-        │   ├── IC2EmcIntegration.java
-        │   └── AdvancedCraftingEmcIntegration.java
+        │   └── IC2EmcIntegration.java (inactive experiment)
         └── inventory/
             ├── DistributionPlanner.java
             └── DragDistributionIntegration.java
@@ -35,9 +35,7 @@ src/minecraft/zed/
 
 ## Bootstrapping
 
-`mod_ZedsTekkitOverhaul` extends the legacy `BaseMod`. Its `load()` registers advanced crafting and enables a game-tick hook. `modsLoaded()` resolves EE2 fuels; `addFuel()` forwards fuel burn-time queries. Its tick callback invokes advanced crafting EMC registration and optionally the experimental IC2 EMC mapping.
-
-The `ENABLE_IC2_EMC_INTEGRATION` flag is currently **false**. Do not enable it incidentally.
+`mod_ZedsTekkitOverhaul` extends the legacy `BaseMod`. Its `load()` registers advanced crafting and distillation and enables a game-tick hook. `modsLoaded()` resolves EE2 fuels and `addFuel()` forwards burn-time queries. The tick callback delegates to the EMC module, which applies compatibility defaults or the selected profile. The experimental IC2 EMC mapping has no bootstrap caller.
 
 ## Advanced crafting
 

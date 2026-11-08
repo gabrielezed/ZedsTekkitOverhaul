@@ -1,0 +1,19 @@
+# Candidate for review in an isolated world. See emc-economy.md.
+zto-emc 1 APPLY
+
+# Preserve base stone and the existing ZTO crafting parity.
+INHERIT name:tile.stonebrick 0
+INHERIT name:tile.stone 0
+INHERIT name:tile.ztoAdvancedCraftingTable 0
+INHERIT name:tile.ztoFoundry 0
+
+# Keep the reusable bucket value and remove the renewable water filling premium.
+SET name:item.bucketWater 0 768
+
+# EE2 also classifies the Oil Bucket as a collector fuel.
+INHERIT name:item.bucketOil 0
+INHERIT name:item.bucketFuel 0
+INHERIT name:item.ztoGASOLINEBucket 0
+INHERIT name:item.ztoKEROSENEBucket 0
+INHERIT name:item.ztoDIESELBucket 0
+INHERIT name:item.ztoHEAVYGASOILBucket 0

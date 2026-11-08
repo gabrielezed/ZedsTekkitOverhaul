@@ -1,10 +1,13 @@
 package zed.tekkitoverhaul.distillation;
 
+import buildcraft.api.ILiquidContainer;
+import buildcraft.api.Orientations;
+import net.minecraft.src.Block;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.TileEntity;
 
 /** Boiler controller: stores tanks, selected fraction and manufacturing progress. */
-public final class TileEntityDistillationBoiler extends TileEntityDistillationComponent {
+public final class TileEntityDistillationBoiler extends TileEntityDistillationComponent implements ILiquidContainer {
     private static final int STRUCTURE_CHECK_INTERVAL = 20;
     private final FractionationProcess process = new FractionationProcess();
     private int checkCountdown;
@@ -47,15 +50,53 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
     }
 
     public int addCrude(int mb) {
-        int added = process.fillCrude(mb);
-        if (added > 0) onInventoryChanged();
-        return added;
+        return acceptCrude(mb, true);
+    }
+
+    private int acceptCrude(int mb, boolean commit) {
+        int accepted = process.fillCrude(mb, commit);
+        if (commit && accepted > 0) onInventoryChanged();
+        return accepted;
     }
 
     public int addCoolingWater(int mb) {
-        int added = process.fillCoolant(mb);
-        if (added > 0) onInventoryChanged();
-        return added;
+        return acceptCoolingWater(mb, true);
+    }
+
+    int acceptCoolingWater(int mb, boolean commit) {
+        int accepted = process.fillCoolant(mb, commit);
+        if (commit && accepted > 0) onInventoryChanged();
+        return accepted;
+    }
+
+    @Override
+    public int fill(Orientations from, int quantity, int liquidId, boolean commit) {
+        if (worldObj == null || commit && worldObj.isRemote || liquidId <= 0
+                || liquidId != BuildCraftOil.STILL_ID) return 0;
+        return acceptCrude(quantity, commit);
+    }
+
+    public int empty(int quantity, boolean commit) { return 0; }
+
+    public int getLiquidQuantity() { return process.getCrudeMB(); }
+
+    public int getCapacity() { return FractionationProcess.TANK_CAPACITY_MB; }
+
+    public int getLiquidId() { return getLiquidQuantity() > 0 ? BuildCraftOil.STILL_ID : 0; }
+
+    private static final class BuildCraftOil {
+        // BuildCraftEnergy is in the default package in 2.2.14 and cannot be imported.
+        private static final int STILL_ID = findStillId();
+
+        private static int findStillId() {
+            try {
+                Object oil = Class.forName("BuildCraftEnergy").getField("oilStill").get(null);
+                if (oil instanceof Block) return ((Block) oil).blockID;
+            } catch (ReflectiveOperationException unavailable) {
+                System.err.println("[ZTO] BuildCraft crude oil lookup failed: " + unavailable);
+            }
+            return 0;
+        }
     }
 
     public int takeDistillate(int mb) {

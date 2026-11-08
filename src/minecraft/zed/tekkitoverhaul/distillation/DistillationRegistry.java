@@ -8,6 +8,7 @@ import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.forge.Configuration;
 import zed.tekkitoverhaul.distillation.client.RenderDistillationComponent;
+import zed.tekkitoverhaul.fluids.GasolineFluid;
 
 /**
  * Registers the provisional apparatus, four bottled liquids and their textures.
@@ -72,6 +73,7 @@ public final class DistillationRegistry {
         }
         oilBucketIdOverride = config.getOrCreateIntProperty(
                 "buildcraftOilBucketItemId", "integration", -1).getInt();
+        int gasolineFlowingId = config.getOrCreateIntProperty("gasolineFlowing", "block", 3016).getInt();
         config.save();
 
         for (int i = 0; i < blockIds.length; i++) {
@@ -86,6 +88,8 @@ public final class DistillationRegistry {
             int shifted = itemIds[i] + 256;
             if (itemIds[i] < 0 || shifted >= Item.itemsList.length || Item.itemsList[shifted] != null)
                 throw new IllegalStateException("ZTO: Invalid or occupied distillate item ID " + shifted);
+            if (shifted == gasolineFlowingId || shifted - 1 == gasolineFlowingId)
+                throw new IllegalStateException("ZTO: Distillate item ID overlaps gasoline block ID " + shifted);
             for (int j = 0; j < i; j++)
                 if (itemIds[i] == itemIds[j])
                     throw new IllegalStateException("ZTO: Duplicate distillate item ID " + shifted);
@@ -97,6 +101,10 @@ public final class DistillationRegistry {
                 "ZTODistillationPart", new RenderDistillationComponent());
         ModLoader.registerTileEntity(TileEntityDistillationHeater.class,
                 "ZTODistillationLVHeater", new RenderDistillationComponent());
+        ModLoader.registerTileEntity(TileEntityDistillationReceiver.class,
+                "ZTODistillationReceiver", new RenderDistillationComponent());
+        ModLoader.registerTileEntity(TileEntityDistillationCondenser.class,
+                "ZTODistillationCondenser", new RenderDistillationComponent());
 
         for (DistillationPartType type : DistillationPartType.values()) {
             Block block = type == DistillationPartType.BOILER ?
@@ -106,6 +114,7 @@ public final class DistillationRegistry {
             ModLoader.registerBlock(block);
             ModLoader.addName(block, type.displayName);
         }
+        GasolineFluid.registerBlocks(gasolineFlowingId);
         for (DistillateType type : DistillateType.values()) {
             Item item = new ItemDistillateBucket(itemIds[type.id], type);
             BUCKET_ICONS[type.id] = ModLoader.getUniqueSpriteIndex("/gui/items.png");
@@ -113,6 +122,7 @@ public final class DistillationRegistry {
             BUCKETS[type.id] = item;
             ModLoader.addName(item, type.displayName + " Bucket");
         }
+        GasolineFluid.registerBucket(bucketFor(DistillateType.GASOLINE.id));
         registerTemporaryRecipes();
         registered = true;
         System.out.println("[ZTO] Registered six distillation block types and four test fluid containers");

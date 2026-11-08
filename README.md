@@ -7,10 +7,12 @@ A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and al
 - **Advanced Crafting Table:** a placeable 5×5 crafting station with its own recipe manager and GUI.
 - **Foundry:** a placeable block crafted from 16 smooth Stone around the 5×5 grid, with a small animated OBJ rotor and persistent NBT pause/resume state. A provisional 3×3 in-world structure validator is being developed separately.
 - **EE2 fuels for IC2 generators:** legacy fuel integration through the ModLoader furnace-fuel callback.
-- **EMC mapping hooks:** optional/experimental integrations. The new block EMC registration targets 128 EMC for the Advanced Crafting Table and 16 EMC for the Foundry, subject to EE2 mappings already present.
+- **Configurable EMC:** compatibility defaults of 128 EMC for the Advanced Crafting Table and 16 for the Foundry, plus external audit and override profiles. The example profile covers selected IC2, BuildCraft, RedPower, EE2 and ZTO products. [Profile guide](docs/engineering/emc-profile.md) · [Coverage audit](docs/engineering/emc-coverage-audit.md)
+- **Alchemical Converter:** accepts EMC from adjacent EE2 collectors and supplies the IC2 network on any free face. The highest connected collector tier sets the shared output limit. Right-click with an empty hand for the live EMC buffer and connection status. [Converter specification](docs/engineering/alchemical-power-v1.md)
+- **Fractional distillation:** six distinct components form a seven-position apparatus. An IC2 LV heater powers oil processing, with BuildCraft oil and water intake, fraction extraction, and four placeable petroleum liquids. Empty-hand right-click opens each component's live status panel. [Distillation handoff](docs/agents/distillation.md)
 - **Inventory drag module:** Java implementation exists but requires a separate, compatible GUI event hook; it is not self-contained in the packaged mod.
 
-The 5×5 interface, Foundry crafting, OBJ rotor, independent NBT rotor state and lightmap correction were verified in-game by the project owner. **Do not interpret this as verification of every integration.** The Foundry does not yet implement its final multiblock, energy use or processing logic.
+The project owner verified the 5×5 interface, Foundry crafting and rotor persistence, and operation of the original single-input Alchemical Converter. The latest six-face converter and machine panels were compiled, reobfuscated and deployed to Tekkit Dev. Their visual and interaction checks are pending. The Foundry remains a visual prototype.
 
 ## Project structure
 
@@ -42,13 +44,9 @@ The script expects the isolated PrismLauncher instance `Tekkit Dev` under `%APPD
 
 The [Tekkit Classic 3.1.2 reference](docs/reference/tekkit-classic-3.1.2/README.md) documents selected historical IC2, EE2, BuildCraft, Railcraft, RedPower and Forge integration surfaces, including sources, version caveats and unverified contracts. No third-party mod binaries or source archives are included.
 
-## Fractional distillation (experimental branch)
-
-A seven-placement apparatus with six distinct custom OBJ block components, a low-voltage EU heater, water-cooled condenser, selection GUI and four internally modeled petroleum fractions is under active development. It is **not yet a BuildCraft fluid-pipe integration**, and it remains unverified in the real MCP/Tekkit runtime. Read the [engineering specification](docs/engineering/fractional-distillation-v1.md) before testing or changing it.
-
 ## Visual assets and metadata
 
-The experimental distillation branch includes an [opaque industrial-style atlas and connected pipe geometry](docs/engineering/distillation-rendering-and-binding-v2.md), a root-of-JAR `mcmod.info`, and [asset credits](CREDITS.md). The textures in this revision are original project artwork, not copied IC2 assets.
+The distillation prototype includes an [industrial-style atlas and connected pipe geometry](docs/engineering/distillation-rendering-and-binding-v2.md), a root-of-JAR `mcmod.info`, and [asset credits](CREDITS.md). The project uses original artwork for the custom distillation textures.
 
 ## Contribution and agent guidance
 

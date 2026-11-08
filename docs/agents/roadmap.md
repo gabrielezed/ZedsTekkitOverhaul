@@ -39,8 +39,8 @@ This is a **directional design plan**, not a list of already implemented feature
 
 Avoid prematurely implementing frameworks for untested requirements. Prove each shared abstraction through one machine before broad adoption.
 
-## Fractional distillation prototype (feature branch)
+## Fractional distillation prototype
 
-An experimental, seven-placement fractional-distillation multiblock has original OBJ meshes, four internal petroleum fluid identifiers (Gasoline, Kerosene, Diesel, Heavy Gas Oil), a thermometer selector, cooling-water tank and an IC2 1.97 low-voltage heater adapter. See the [engineering specification](../engineering/fractional-distillation-v1.md) for setpoints, batch rules, IDs and structure.
+The seven-placement prototype has original OBJ meshes, a thermometer selector, cooling-water tank and an IC2 1.97 low-voltage heater. Gasoline, Kerosene, Diesel and Heavy Gas Oil have placeable world blocks, buckets and BuildCraft liquid identities. See the [engineering specification](../engineering/fractional-distillation-v1.md) for setpoints, batch rules, IDs and structure.
 
-**Immediate next iteration:** implement the four petroleum products as distinct placeable fluid blocks with legacy liquid behavior, world textures and classic-style buckets. Preserve saved tank identities and verify BuildCraft 2.2.14 pipe compatibility with the version-matched runtime. Use the fluid module as the basis for later storage tanks and fuel consumers. See the [distillation handoff](distillation.md).
+**Immediate next iteration:** verify the component panels, bucket feedback, pipe and tank conservation, and save/reopen behavior for each fraction. Engine fuel registration for the ZTO fractions is a separate progression decision. See the [distillation handoff](distillation.md).

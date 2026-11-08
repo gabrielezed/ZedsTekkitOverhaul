@@ -13,6 +13,7 @@ import zed.tekkitoverhaul.emc.EmcIntegration;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
 import zed.tekkitoverhaul.fluids.client.RenderPetroleum;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
+import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -34,7 +35,10 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     }
 
     @Override
-    public void modsLoaded() { ee2Fuels.onModsLoaded(); }
+    public void modsLoaded() {
+        ee2Fuels.onModsLoaded();
+        AlchemicalPowerRegistry.register();
+    }
 
     @Override
     public void registerAnimation(Minecraft minecraft) { DistillateBucketTextures.register(); }

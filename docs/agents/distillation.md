@@ -25,17 +25,24 @@ A source-level test or Java stub compile is **not** equivalent to a successful r
 
 The project owner confirmed recipes, NEI discovery, structure formation, LV EU intake, thermometer readouts and distillate output in Tekkit Dev before the visual fixes. The revised atlas, thermometer controls and connector fit still require a Tekkit Dev pass. See the [visual and binding acceptance plan](../engineering/distillation-rendering-and-binding-v2.md).
 
-## Next iteration: placeable petroleum fluids
+## Placeable petroleum fluids
 
-The experimental gasoline slice uses `block.gasolineFlowing` in the distillation config (default 3016). The next consecutive ID is the still block and the BuildCraft liquid ID. Keep both IDs stable once a world contains gasoline. The existing gasoline bucket ID now pours a source and an empty bucket collects it again. Boiler NBT keeps its existing internal product IDs. Older receiver tiles upgrade in place on their first tick.
+All four fractions have a flowing block, a consecutive still block and a reusable bucket. The still block ID is also the BuildCraft liquid ID. Keep both block IDs stable once a world contains that fraction. Existing bucket IDs and boiler NBT product IDs are unchanged. Older receiver tiles upgrade in place on their first tick.
 
-The owner verified gasoline transport from the receiver to a BuildCraft tank. World placement crashed with the vanilla fluid renderer, whose flow-vector lookup assumes the water or lava material. Gasoline now has its own world render callback and keeps its distinct liquid material.
+| Fraction | Flowing config key | Default flowing / still IDs | Ticks per flow update | Horizontal velocity retained |
+| --- | --- | --- | --- | --- |
+| Gasoline | `gasolineFlowing` | 3016 / 3017 | 5 | 95% |
+| Kerosene | `keroseneFlowing` | 3018 / 3019 | 9 | 88% |
+| Diesel | `dieselFlowing` | 3020 / 3021 | 14 | 76% |
+| Heavy Gas Oil | `heavygasoilFlowing` | 3022 / 3023 | 22 | 60% |
+
+The four fluids use distinct materials and a shared world renderer. Each spreads at most four horizontal steps from a source. A drop carries the distance already traveled. On a flat open floor a single source covers 41 cells, compared with up to 113 for vanilla water. The drag percentages describe a horizontal velocity multiplier per player tick, rather than a measured movement speed. At a boundary between liquids the strongest drag applies. Heavy Gas Oil also uses a brief vanilla Slowness effect to reduce ground acceleration and preserves any Slowness already active on the player.
 
 For the new intake test, route oil from a BuildCraft pump or tank into the boiler and water into the condenser. Each inlet accepts only its designated liquid and clamps to its remaining 8,000 mB capacity. Try swapping the pipes and verify that the wrong liquids do not enter either tank. Existing bucket inputs share the same tanks. Test a condenser saved before the adapter was installed so its port upgrades in place.
 
-Pour gasoline into a basin, check the source and flowing surfaces, and collect the source again. Save and reopen to verify world liquid, pipe contents and tank quantities.
+Pour each fuel into a basin, check the source and flowing surfaces, and collect the source again. Send each fraction through a powered wooden waterproof pipe into an empty BuildCraft tank and collect it with a bucket. Save and reopen to verify world liquid, pipe contents and tank quantities. Test walking in gasoline, water and Heavy Gas Oil on the same floor.
 
-Extend the same boundary to Kerosene, Diesel and Heavy Gas Oil once the gasoline path is verified. Align the receiver flange to the pipe geometry in all four rotations. BuildCraft 2.2.14 extraction is unsided, so the experimental endpoint is accessible from any face. Changing generic Fuel production and engine support is a later compatibility decision for existing worlds.
+Align the receiver flange to the pipe geometry in all four rotations. BuildCraft 2.2.14 extraction is unsided, so the endpoint is accessible from any face. Changing generic Fuel production and engine support is a later compatibility decision for existing worlds.
 
 ## Placement and wrench
 

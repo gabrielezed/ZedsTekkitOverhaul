@@ -7,11 +7,11 @@ import net.minecraft.src.RenderBlocks;
 import net.minecraft.src.Tessellator;
 
 /** Renders the custom liquid without the vanilla water/lava-only flow-vector lookup. */
-public final class RenderGasoline {
+public final class RenderPetroleum {
     private static final double TILE = 1D / 16D;
     private static final double TILE_END = 15.99D / 256D;
 
-    private RenderGasoline() { }
+    private RenderPetroleum() { }
 
     public static boolean render(RenderBlocks renderer, IBlockAccess world, int x, int y, int z, Block block) {
         Material material = block.blockMaterial;
@@ -66,3 +66,4 @@ public final class RenderGasoline {
         tessellator.addVertexWithUV(dx, dy, dz, u + TILE_END, 0D);
     }
 }
+

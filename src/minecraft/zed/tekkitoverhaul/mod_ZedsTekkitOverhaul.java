@@ -3,10 +3,13 @@ package zed.tekkitoverhaul;
 import net.minecraft.src.BaseMod;
 import net.minecraft.src.Block;
 import net.minecraft.src.IBlockAccess;
+import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
+import net.minecraft.src.MLProp;
 import net.minecraft.src.RenderBlocks;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
+import zed.tekkitoverhaul.creative.CreativeInventoryHook;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.emc.EmcIntegration;
@@ -17,8 +20,12 @@ import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
+    @MLProp(info = "Enable the single-player creative inventory backport when its local assets are installed")
+    public static boolean creativeInventoryBackport = true;
+
     private final EE2FuelIntegration ee2Fuels = new EE2FuelIntegration();
     private final EmcIntegration emc = new EmcIntegration();
+    private final CreativeInventoryHook creativeInventory = new CreativeInventoryHook();
     private int petroleumModel;
 
     @Override
@@ -38,7 +45,11 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void modsLoaded() {
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();
+        if (creativeInventoryBackport) creativeInventory.register(this);
     }
+
+    @Override
+    public void keyboardEvent(KeyBinding key) { creativeInventory.onKeyPressed(key); }
 
     @Override
     public void registerAnimation(Minecraft minecraft) {

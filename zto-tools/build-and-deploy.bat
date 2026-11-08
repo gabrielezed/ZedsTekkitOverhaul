@@ -145,6 +145,15 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
     goto :fail
 )
+if defined ZTO_CREATIVE_ASSETS (
+    for %%F in (allitems list_items search survival_inv) do (
+        jar uf "%BUILD_JAR%" -C "%ZTO_CREATIVE_ASSETS%" "zed/creative-1.4.7/%%F.png"
+        if errorlevel 1 (
+            echo [ZTO] ERROR: Missing or unreadable local creative asset %%F.png.
+            goto :fail
+        )
+    )
+)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.

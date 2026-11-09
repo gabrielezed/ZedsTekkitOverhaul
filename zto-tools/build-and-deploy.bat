@@ -14,7 +14,7 @@ if errorlevel 1 (
 set "MODS_DIR=%APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods"
 if defined ZTO_PRISM_MODS set "MODS_DIR=%ZTO_PRISM_MODS%"
 set "JAR_NAME=ZedsTekkitOverhaul.jar"
-set "BUILD_JAR=dist-zto\%JAR_NAME%"
+set "BUILD_JAR=dist-zto\ZedsTekkitOverhaul.building.jar"
 set "DEPLOY_JAR=%MODS_DIR%\%JAR_NAME%"
 
 if not exist "recompile.bat" (
@@ -145,24 +145,6 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
     goto :fail
 )
-if defined ZTO_HOPPER_ASSETS (
-    for %%F in (gui outer top inside item) do (
-        jar uf "%BUILD_JAR%" -C "%ZTO_HOPPER_ASSETS%" "zed/hopper-1.5.2/%%F.png"
-        if errorlevel 1 (
-            echo [ZTO] ERROR: Missing or unreadable local Hopper asset %%F.png.
-            goto :fail
-        )
-    )
-)
-if defined ZTO_CREATIVE_ASSETS (
-    for %%F in (allitems list_items search survival_inv) do (
-        jar uf "%BUILD_JAR%" -C "%ZTO_CREATIVE_ASSETS%" "zed/creative-1.4.7/%%F.png"
-        if errorlevel 1 (
-            echo [ZTO] ERROR: Missing or unreadable local creative asset %%F.png.
-            goto :fail
-        )
-    )
-)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.
@@ -224,13 +206,12 @@ if errorlevel 1 (
 )
 
 echo [ZTO] 4/4 - Deploying to PrismLauncher...
-if exist "%DEPLOY_JAR%" (
-    copy /Y "%DEPLOY_JAR%" "dist-zto\ZedsTekkitOverhaul.previous.jar" >nul
-    if errorlevel 1 (
-        echo [ZTO] ERROR: Failed to back up the previous JAR.
-        goto :fail
-    )
-)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\preserve-local-assets.ps1" -Candidate "%BUILD_JAR%" -Installed "%DEPLOY_JAR%"
+if errorlevel 1 goto :fail
+move /Y "%BUILD_JAR%" "dist-zto\%JAR_NAME%" >nul
+if errorlevel 1 goto :fail
+set "BUILD_JAR=dist-zto\%JAR_NAME%"
+
 copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to copy the JAR into PrismLauncher.

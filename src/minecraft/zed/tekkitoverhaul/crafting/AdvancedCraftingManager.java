@@ -66,12 +66,26 @@ public final class AdvancedCraftingManager {
         return null;
     }
 
-    private static final class Recipe {
+    public static List<Recipe> getRecipes() {
+        return new ArrayList<Recipe>(RECIPES);
+    }
+
+    public static final class Recipe {
         final ItemStack[] inputs;
         final ItemStack output;
         Recipe(ItemStack[] inputs, ItemStack output) {
             this.inputs = inputs;
             this.output = output;
         }
+
+        public ItemStack[] getInputs() {
+            ItemStack[] copy = new ItemStack[inputs.length];
+            for (int index = 0; index < inputs.length; index++) {
+                if (inputs[index] != null) copy[index] = inputs[index].copy();
+            }
+            return copy;
+        }
+
+        public ItemStack getOutput() { return output.copy(); }
     }
 }

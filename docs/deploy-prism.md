@@ -21,8 +21,8 @@ The script:
 
 1. Runs MCP compilation.
 2. Removes **only** the old `reobf/minecraft/zed/` output, then runs reobfuscation.
-3. Creates `dist-zto/ZedsTekkitOverhaul.jar` with the `zed/` classes and GUI texture.
-4. If present, backs up the previously deployed JAR as `dist-zto/ZedsTekkitOverhaul.previous.jar`, then copies the new JAR to PrismLauncher.
+3. Builds a candidate JAR and restores complete local Hopper and creative texture sets from the configured asset directories, installed JAR, last published JAR, or backup, in that order.
+4. Publishes `dist-zto/ZedsTekkitOverhaul.jar`, backs up the deployed JAR, and copies the new JAR to PrismLauncher. If the deployed JAR has lost textures found in the previous backup, the displaced JAR goes to `ZedsTekkitOverhaul.replaced.jar` so the working backup stays available.
 
 ### Default destination
 
@@ -44,5 +44,7 @@ $env:ZTO_PRISM_MODS = 'D:\PrismLauncher\instances\Tekkit Dev\minecraft\mods'
 - The script does **not** modify `minecraft.jar`, `modpack.jar`, IC2, EE2 or BuildCraft.
 - Runtime Java agents or binary hooks needed by optional experimental GUI features are **not** part of this deploy.
 - Failed compilation, reobfuscation or packaging stops before the new JAR is copied.
+- A configured Hopper requires all five local textures. Deployment stops if the textures cannot be recovered. For first-time setup, use `ZTO_HOPPER_ASSETS` and `ZTO_CREATIVE_ASSETS` with the directories produced by the local asset preparation scripts.
+- The JDK `jar` tool adds the recovered textures. The candidate must pass a full Java `ZipInputStream` read before publication because NEI streams mod archives on the first world tick.
 - Check block ID mappings and the mod configuration before opening an existing world.
 - A complete Windows MCP build and Prism launch must still be verified on the owner's development machine.

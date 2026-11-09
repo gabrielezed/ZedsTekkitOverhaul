@@ -8,6 +8,7 @@ This directory is the **project-specific technical reference** for coding agents
 | --- | --- |
 | Starting a new work session | [Architecture](architecture.md), [Environment](environment.md) |
 | Updating blocks, recipes or GUI | [Architecture](architecture.md), [Compatibility](compatibility.md), [Testing](testing.md) |
+| Crafting and inventory UX, NEI or Inventory Tweaks | [Implementation checklist and agent prompts](crafting-inventory-ux.md) |
 | IC2, EE2, BuildCraft or EMC changes | [Integrations](integrations.md), [Versioned API reference](../reference/tekkit-classic-3.1.2/README.md), [Compatibility](compatibility.md) |
 | Fractional distillation or fluid models | [Distillation handoff](distillation.md), [Engineering spec](../engineering/fractional-distillation-v1.md), [IC2 API](../reference/tekkit-classic-3.1.2/ic2-1.97.md) |
 | Building, deploying or fixing a crash | [Environment](environment.md), [Testing](testing.md) |

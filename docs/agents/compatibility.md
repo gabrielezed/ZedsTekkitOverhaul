@@ -13,11 +13,9 @@
 - Build with MCP's `recompile.bat` and `reobfuscate.bat`; package only our own `zed/` classes/assets.
 - Binary patches to vanilla classes are **not** part of normal releases. They can overwrite NEI modifications and should not be inserted into `modpack.jar` or `minecraft.jar` during routine work.
 
-## Inventory drag prototype
+## Inventory drag
 
-`DragDistributionIntegration` is an implementation module, not an automatic ModLoader feature. It was exercised with a source-level `GuiContainer` hook during Eclipse testing. In production, Tekkit's existing obfuscated `gb.class` contains **Not Enough Items (NEI)** code. A naive replacement can remove NEI behavior; do not ship one.
-
-The old hook/ASM agent experiments are separate prototypes, not proof that the repository's current JAR enables drag on its own. A runtime hook must explicitly preserve NEI and be validated in the exact loaded game configuration.
+The production drag path uses the opt-in Java 8 [mouse dispatcher agent](../engineering/inventory-drag.md). It recognizes the verified 1.2.5 `vp.class` fingerprint and inserts a cancellable event check in memory. NEI's `gb.class` remains the installed class. The old local MCP source hooks are available for development and are excluded from the packaged mod.
 
 ## Safe numeric data changes
 

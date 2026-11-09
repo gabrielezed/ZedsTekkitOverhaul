@@ -23,8 +23,9 @@ public final class BlockAdvancedCraftingTable extends Block {
 
     @Override
     public boolean blockActivated(World world, int x, int y, int z, EntityPlayer player) {
-        // In 1.2.5 SSP, the Container is local. SMP requires server/client GUI handling.
-        ModLoader.openGUI(player, new GuiAdvancedCraftingTable(player.inventory, world, x, y, z));
+        if (!world.isRemote) {
+            ModLoader.openGUI(player, new GuiAdvancedCraftingTable(player.inventory, world, x, y, z));
+        }
         return true;
     }
 }

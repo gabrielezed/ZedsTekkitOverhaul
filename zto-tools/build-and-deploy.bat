@@ -145,6 +145,15 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
     goto :fail
 )
+if defined ZTO_HOPPER_ASSETS (
+    for %%F in (gui outer top inside item) do (
+        jar uf "%BUILD_JAR%" -C "%ZTO_HOPPER_ASSETS%" "zed/hopper-1.5.2/%%F.png"
+        if errorlevel 1 (
+            echo [ZTO] ERROR: Missing or unreadable local Hopper asset %%F.png.
+            goto :fail
+        )
+    )
+)
 if defined ZTO_CREATIVE_ASSETS (
     for %%F in (allitems list_items search survival_inv) do (
         jar uf "%BUILD_JAR%" -C "%ZTO_CREATIVE_ASSETS%" "zed/creative-1.4.7/%%F.png"

@@ -17,6 +17,8 @@ import zed.tekkitoverhaul.fluids.PetroleumFluids;
 import zed.tekkitoverhaul.fluids.client.RenderPetroleum;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
+import zed.tekkitoverhaul.hopper.HopperRegistry;
+import zed.tekkitoverhaul.hopper.RenderHopper;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -45,6 +47,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void modsLoaded() {
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();
+        HopperRegistry.register(this);
         if (creativeInventoryBackport) creativeInventory.register(this);
     }
 
@@ -60,6 +63,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public boolean renderWorldBlock(RenderBlocks renderer, IBlockAccess world, int x, int y, int z,
                                     Block block, int modelId) {
+        if (HopperRegistry.block != null && modelId == HopperRegistry.model)
+            return RenderHopper.render(renderer, world, x, y, z, block);
         return modelId == petroleumModel && RenderPetroleum.render(renderer, world, x, y, z, block);
     }
 
@@ -69,6 +74,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public boolean onTickInGame(float partialTick, Minecraft minecraft) {
         emc.onGameTick(minecraft.mcDataDir);
+        zed.tekkitoverhaul.hopper.dev.HopperAcceptance.tick(minecraft);
         return true;
     }
 }

@@ -45,3 +45,7 @@ For a different Prism instance, set `ZTO_PRISM_MODS` before calling it. See [../
 ## Version control boundaries
 
 Never commit `bin/`, `reobf/`, `jars/`, `forge/`, `runtime/`, `eclipse/`, local `config/`, saves, copied mod archives, or proprietary decompiled sources. Only original code/resources under `src/minecraft/zed/`, project tools and documentation are intended for Git.
+
+## Local Tekkit research catalog
+
+This workstation keeps versioned extracted classes and decompiled sources in the ignored root directory 	ekkit-mods-decompiles/. Start with its local catalog.csv. Use decompilations as research leads and verify ABI details with javap against the matching binaries. Keep the catalog and all upstream files out of Git.

@@ -26,3 +26,6 @@
 .env
 .env.*
 !.env.example
+
+# Local Tekkit research artifacts.
+/tekkit-mods-decompiles/

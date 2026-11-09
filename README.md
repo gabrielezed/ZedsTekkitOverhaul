@@ -10,6 +10,7 @@ A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and al
 
 ## Current functionality
 
+- **Hopper prototype:** five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI, based on the official 1.5.2 client. Requires locally prepared assets. Includes a narrow IC2 1.97 adapter and inventory-facing BuildCraft integration. See the [engineering and acceptance note](docs/engineering/hopper-backport.md) for preparation, compatibility and the exact verification status.
 - **Advanced Crafting Table:** a placeable 5×5 crafting station with its own recipe manager and GUI.
 - **Foundry:** a placeable block crafted from 16 smooth Stone around the 5×5 grid, with a small animated OBJ rotor and persistent NBT pause/resume state. A provisional 3×3 in-world structure validator is being developed separately.
 - **EE2 fuels for IC2 generators:** legacy fuel integration through the ModLoader furnace-fuel callback.

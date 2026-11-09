@@ -48,4 +48,9 @@ Never commit `bin/`, `reobf/`, `jars/`, `forge/`, `runtime/`, `eclipse/`, local 
 
 ## Local Tekkit research catalog
 
-This workstation keeps versioned extracted classes and decompiled sources in the ignored root directory 	ekkit-mods-decompiles/. Start with its local catalog.csv. Use decompilations as research leads and verify ABI details with javap against the matching binaries. Keep the catalog and all upstream files out of Git.
+The ignored root directory `tekkit-mods-decompiles/` is a workstation reference for Tekkit Dev. It contains two collections:
+
+- **Mod archives and directories.** The root `catalog.csv` lists 42 decompiled entries and three resource-only directories. Archive directories under `mods/` preserve their installed names and contain `extracted/` files, `decompiled/` sources, and Fernflower logs. Examples include IC2 1.97, EE2 1.4.6.5, BuildCraft 2.2.14, IronChests 3.8.0.40, and the separate NEI plugins for Railcraft and RedPower. For Inventory Tweaks 1.41b, start in `mods/InvTweaks-1.41b-1.2.4.zip/decompiled/` with `InvTweaksContainerManager.java`, `InvTweaksHandlerSorting.java`, and `InvTweaksHandlerShortcuts.java`.
+- **Core client references.** The separately added `mods/coremods/` tree contains 401 Java files and some resources. The older CSV and local README describe the original mod archive pass, so the CSV does not inventory this addition. For NEI 1.2.2.4, start with `mod_NotEnoughItems.java`, `codechicken/nei/NEIController.java`, `codechicken/nei/LayoutManager.java`, and `gb.java`, the NEI-patched inventory screen. Forge and FML references are under `forge/` and `cpw/mods/fml/`. The observed tree does not establish complete coverage of the runtime overlay.
+
+The local `tools/` directory contains the Fernflower launcher, engine and install metadata. Use reconstructed sources to trace behavior, then confirm signatures and class ownership with `javap` against the exact Tekkit Dev JARs in runtime order. See the [Creative inventory audit](../engineering/creative-inventory-backport.md) for a worked example. Keep the local catalog, extracted files and decompiled sources outside Git.

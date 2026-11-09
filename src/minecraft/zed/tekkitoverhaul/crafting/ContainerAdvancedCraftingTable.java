@@ -17,10 +17,12 @@ public final class ContainerAdvancedCraftingTable extends Container {
     public final InventoryCrafting craftMatrix = new InventoryCrafting(this, 5, 5);
     public final IInventory craftResult = new InventoryCraftResult();
     private final World world;
+    private final EntityPlayer owner;
     private final int x, y, z;
 
     public ContainerAdvancedCraftingTable(InventoryPlayer inventory, World world, int x, int y, int z) {
         this.world = world;
+        this.owner = inventory.player;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -68,9 +70,39 @@ public final class ContainerAdvancedCraftingTable extends Container {
         }
     }
 
-    // Shift-click transfer remains unimplemented until the basic crafting flow is verified.
     @Override
     public ItemStack transferStackInSlot(int slotIndex) {
-        return null;
+        if (slotIndex != 0 || world.isRemote || owner.craftingInventory != this || !canInteractWith(owner)
+                || owner.inventory.getItemStack() != null) return null;
+        Slot result = getSlot(0);
+        ItemStack output = result.getStack();
+        if (output == null) return null;
+        Slot[] destinations = new Slot[36];
+        for (int index = 0; index < destinations.length; index++) {
+            destinations[index] = getSlot(61 - index);
+        }
+        InventoryPlan plan = new InventoryPlan(destinations);
+        if (plan.insert(output, 0, destinations.length) != 0 || !plan.commit(this)) return null;
+        ItemStack crafted = result.decrStackSize(output.stackSize);
+        result.onPickupFromSlot(crafted);
+        return crafted;
+    }
+
+    @Override
+    protected void retrySlotClick(int slotIndex, int mouseButton, boolean shift, EntityPlayer player) {
+        if (slotIndex != 0 || player.craftingInventory != this || !canInteractWith(player)) return;
+        for (int attempt = 1; attempt < 64; attempt++) {
+            int before = ingredientCount();
+            if (transferStackInSlot(0) == null || ingredientCount() >= before) return;
+        }
+    }
+
+    private int ingredientCount() {
+        int total = 0;
+        for (int index = 0; index < craftMatrix.getSizeInventory(); index++) {
+            ItemStack stack = craftMatrix.getStackInSlot(index);
+            if (stack != null) total += stack.stackSize;
+        }
+        return total;
     }
 }

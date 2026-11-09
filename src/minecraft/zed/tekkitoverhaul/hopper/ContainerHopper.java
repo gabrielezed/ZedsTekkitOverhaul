@@ -3,13 +3,14 @@ package zed.tekkitoverhaul.hopper;
 import net.minecraft.src.*;
 
 public final class ContainerHopper extends Container {
+    static final int OUTPUT_ROW_EXTRA_HEIGHT = 10;
     private final TileHopper hopper;
     public ContainerHopper(InventoryPlayer player, TileHopper tile) {
         hopper = tile;
         for (int i=0;i<5;i++) addSlot(new Slot(tile,i,44+i*18,20));
         for (int row=0;row<3;row++) for (int col=0;col<9;col++)
-            addSlot(new Slot(player,col+row*9+9,8+col*18,51+row*18));
-        for (int col=0;col<9;col++) addSlot(new Slot(player,col,8+col*18,109));
+            addSlot(new Slot(player,col+row*9+9,8+col*18,51+OUTPUT_ROW_EXTRA_HEIGHT+row*18));
+        for (int col=0;col<9;col++) addSlot(new Slot(player,col,8+col*18,109+OUTPUT_ROW_EXTRA_HEIGHT));
     }
     public boolean canInteractWith(EntityPlayer player) { return hopper.isUseableByPlayer(player); }
     public ItemStack transferStackInSlot(int index) {

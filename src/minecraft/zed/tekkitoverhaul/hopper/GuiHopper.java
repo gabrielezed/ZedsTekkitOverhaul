@@ -4,14 +4,19 @@ import net.minecraft.src.*;
 import org.lwjgl.opengl.GL11;
 
 public final class GuiHopper extends GuiContainer {
+    private static final int PANEL_TEXTURE_HEIGHT = 133;
+    private static final int OUTPUT_ROW_TEXTURE_Y = 38;
     private final TileHopper hopper;
     public GuiHopper(InventoryPlayer player, TileHopper tile) {
-        super(new ContainerHopper(player,tile)); hopper=tile; xSize=176; ySize=133;
+        super(new ContainerHopper(player,tile));
+        hopper = tile;
+        xSize = 176;
+        ySize = PANEL_TEXTURE_HEIGHT + ContainerHopper.OUTPUT_ROW_EXTRA_HEIGHT;
     }
     @Override
     public void initGui() {
         super.initGui();
-        controlList.add(new GuiButton(90, guiLeft + 89, guiTop + 36, 79, 13, hopper.outputModeName()));
+        controlList.add(new GuiButton(90, guiLeft + 106, guiTop + 39, 62, 20, hopper.outputModeName()));
     }
 
     @Override
@@ -25,7 +30,7 @@ public final class GuiHopper extends GuiContainer {
     protected void drawGuiContainerForegroundLayer() {
         fontRenderer.drawString("Hopper",8,6,4210752);
         fontRenderer.drawString(hopper.isLocked()?"Locked":"Enabled",122,6,4210752);
-        fontRenderer.drawString("Inventory",8,39,4210752);
+        fontRenderer.drawString("Inventory",8,45,4210752);
     }
     public void drawScreen(int mouseX,int mouseY,float partialTick) {
         super.drawScreen(mouseX,mouseY,partialTick);
@@ -46,6 +51,14 @@ public final class GuiHopper extends GuiContainer {
     protected void drawGuiContainerBackgroundLayer(float partialTick,int mouseX,int mouseY) {
         GL11.glColor4f(1,1,1,1);
         mc.renderEngine.bindTexture(mc.renderEngine.getTexture("/zed/hopper-1.5.2/gui.png"));
-        drawTexturedModalRect((width-xSize)/2,(height-ySize)/2,0,0,xSize,ySize);
+        drawTexturedModalRect(guiLeft, guiTop, 0, 0, xSize, OUTPUT_ROW_TEXTURE_Y);
+        // Extend the blank strip while keeping the original slot frames and side borders.
+        int extraHeight = ContainerHopper.OUTPUT_ROW_EXTRA_HEIGHT;
+        for (int row = 0; row < extraHeight; row++) {
+            drawTexturedModalRect(guiLeft, guiTop + OUTPUT_ROW_TEXTURE_Y + row,
+                0, OUTPUT_ROW_TEXTURE_Y, xSize, 1);
+        }
+        drawTexturedModalRect(guiLeft, guiTop + OUTPUT_ROW_TEXTURE_Y + extraHeight,
+            0, OUTPUT_ROW_TEXTURE_Y, xSize, PANEL_TEXTURE_HEIGHT - OUTPUT_ROW_TEXTURE_Y);
     }
 }

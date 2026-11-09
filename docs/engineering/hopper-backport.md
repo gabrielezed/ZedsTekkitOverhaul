@@ -104,6 +104,8 @@ Do not call the feature fully accepted until the runtime results and manual chec
 
 ## Follow-up controls and integration
 
+The output selector uses a full-height legacy button. The panel adds ten pixels below the Hopper slots and moves the player slot frames and click targets together.
+
 The output button cycles Auto, Input, and Fuel. The selection is saved as OutputMode and old saves default to Auto. Vanilla furnace Auto follows the legacy face range. Input selects the smelting slot and Fuel selects the fuel slot regardless of face, subject to item validation. The IC2 coal Generator uses slot 1 in Auto and Fuel and accepts ordinary furnace fuels meeting its burn threshold, excluding lava buckets. Input disables output to that generator. Other destinations retain their existing policies. The button changes routing only. The spout still follows the placement face.
 
 IronChests 3.8.0.40 implements the production inventory interface io without Forge sided ranges. The optional adapter recognizes its TileEntityIronChest base class and handles all variants through the normal stack checks. The downward spout extends one pixel over the recessed chest lid. Neither adapter links optional classes directly.

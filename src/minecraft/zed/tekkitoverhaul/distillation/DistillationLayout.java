@@ -35,6 +35,10 @@ public final class DistillationLayout {
         boolean hasPart(int x, int y, int z, DistillationPartType type);
     }
 
+    public interface FacingLookup {
+        Facing preferredFacing(int x, int y, int z);
+    }
+
     public static final class Placement {
         public final DistillationPartType part;
         public final int x, y, z;
@@ -133,6 +137,11 @@ public final class DistillationLayout {
      * A tied score across different boilers is ambiguous; never bind blindly.
      */
     public static Match resolve(BlockAccess blocks, int x, int y, int z, DistillationPartType clicked) {
+        return resolve(blocks, x, y, z, clicked, null);
+    }
+
+    public static Match resolve(BlockAccess blocks, int x, int y, int z, DistillationPartType clicked,
+                                FacingLookup facings) {
         if (clicked == null || clicked == DistillationPartType.BOILER) return null;
         Match best = null;
         boolean ambiguous = false;
@@ -144,7 +153,9 @@ public final class DistillationLayout {
                 int by = y - OFFSETS[i][1];
                 int bz = z - lateral * facing.dz;
                 if (!blocks.hasPart(bx, by, bz, DistillationPartType.BOILER)) continue;
-                Match candidate = inspect(blocks, bx, by, bz, facing);
+                Facing preferred = facings == null ? Facing.EAST : facings.preferredFacing(bx, by, bz);
+                Match candidate = inspectBest(blocks, bx, by, bz, preferred);
+                if (candidate.facing != facing) continue;
                 if (best == null || candidate.missingParts < best.missingParts) {
                     best = candidate;
                     ambiguous = false;

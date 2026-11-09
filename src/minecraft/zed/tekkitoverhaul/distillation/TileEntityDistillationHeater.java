@@ -46,7 +46,7 @@ public final class TileEntityDistillationHeater extends TileEntityDistillationPa
 
     @Override
     public void updateEntity() {
-        if (worldObj == null || worldObj.isRemote || registeredToNetwork) return;
+        if (worldObj == null || worldObj.isRemote || isInvalid() || registeredToNetwork) return;
         try {
             // Register only after world assignment to avoid a double EnergyNet insertion.
             EnergyNet.getForWorld(worldObj).addTileEntity(this);
@@ -58,6 +58,17 @@ public final class TileEntityDistillationHeater extends TileEntityDistillationPa
 
     @Override
     public void invalidate() {
+        disconnect();
+        super.invalidate();
+    }
+
+    @Override
+    public void onChunkUnload() {
+        disconnect();
+        super.onChunkUnload();
+    }
+
+    private void disconnect() {
         if (registeredToNetwork && worldObj != null && !worldObj.isRemote) {
             try {
                 EnergyNet.getForWorld(worldObj).removeTileEntity(this);
@@ -67,7 +78,6 @@ public final class TileEntityDistillationHeater extends TileEntityDistillationPa
                 registeredToNetwork = false;
             }
         }
-        super.invalidate();
     }
 
     @Override

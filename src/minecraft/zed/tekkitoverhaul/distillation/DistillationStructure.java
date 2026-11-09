@@ -7,21 +7,25 @@ import net.minecraft.src.World;
 public final class DistillationStructure {
     private DistillationStructure() { }
 
-    private static final class WorldAccess implements DistillationLayout.BlockAccess {
+    private static final class WorldAccess implements DistillationLayout.BlockAccess, DistillationLayout.FacingLookup {
         private final World world;
 
         WorldAccess(World world) { this.world = world; }
 
         public boolean hasPart(int x, int y, int z, DistillationPartType type) {
-            return world.getBlockId(x, y, z) == DistillationRegistry.blockId(type);
+            return world.blockExists(x, y, z) && world.getBlockId(x, y, z) == DistillationRegistry.blockId(type);
+        }
+
+        public DistillationLayout.Facing preferredFacing(int x, int y, int z) {
+            return DistillationLayout.Facing.fromFrontSide(world.getBlockMetadata(x, y, z));
         }
     }
 
     public static DistillationLayout.Match check(World world, int x, int y, int z) {
-        if (world == null || world.getBlockId(x, y, z) !=
-                DistillationRegistry.blockId(DistillationPartType.BOILER)) return null;
-        return DistillationLayout.inspectBest(new WorldAccess(world), x, y, z,
-                DistillationLayout.Facing.fromFrontSide(world.getBlockMetadata(x, y, z)));
+        if (world == null) return null;
+        WorldAccess access = new WorldAccess(world);
+        if (!access.hasPart(x, y, z, DistillationPartType.BOILER)) return null;
+        return DistillationLayout.inspectBest(access, x, y, z, access.preferredFacing(x, y, z));
     }
 
     static boolean canFace(World world, int x, int y, int z, DistillationLayout.Facing facing) {
@@ -34,7 +38,8 @@ public final class DistillationStructure {
     public static DistillationLayout.Match resolve(World world, int x, int y, int z,
                                                     DistillationPartType clicked) {
         if (world == null) return null;
-        return DistillationLayout.resolve(new WorldAccess(world), x, y, z, clicked);
+        WorldAccess access = new WorldAccess(world);
+        return DistillationLayout.resolve(access, x, y, z, clicked, access);
     }
 
     public static TileEntityDistillationBoiler boilerFor(World world, int x, int y, int z,

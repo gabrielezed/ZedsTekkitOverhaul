@@ -45,14 +45,26 @@ public final class DistillationRegistry {
     }
 
     public static boolean isBuildCraftOilBucket(ItemStack stack) {
-        if (stack == null || stack.getItem() == null) return false;
+        if (stack == null) return false;
+        Item item = stack.getItem();
+        if (item == null || item instanceof ItemDistillateBucket) return false;
         if (oilBucketIdOverride >= 0 && stack.itemID == oilBucketIdOverride) return true;
-        // BuildCraft 2.2.14 item IDs are configurable. This is a cautious fallback,
-        // not a substitute for inspecting the exact API before supporting pipes.
-        String key = stack.getItem().getItemName();
-        if (key == null) return false;
-        String low = key.toLowerCase();
-        return low.indexOf("bucket") >= 0 && low.indexOf("oil") >= 0;
+        return item == BuildCraftOilBucket.ITEM;
+    }
+
+    private static final class BuildCraftOilBucket {
+        private static final Item ITEM = find();
+
+        private static Item find() {
+            try {
+                Object bucket = Class.forName("BuildCraftEnergy").getField("bucketOil").get(null);
+                return bucket instanceof Item ? (Item) bucket : null;
+            } catch (ReflectiveOperationException unavailable) {
+                return null;
+            } catch (LinkageError unavailable) {
+                return null;
+            }
+        }
     }
 
     public static void register() {

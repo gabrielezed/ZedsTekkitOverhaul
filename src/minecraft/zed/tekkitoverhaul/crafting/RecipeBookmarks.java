@@ -8,7 +8,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.src.CompressedStreamTools;
+import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
+import net.minecraft.src.NBTBase;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagList;
 
@@ -22,13 +24,23 @@ final class RecipeBookmarks {
         file = new File(gameDirectory, "config/ZTORecipeBookmarks.dat");
         NBTTagCompound saved = CompressedStreamTools.read(file);
         if (saved == null) return;
-        NBTTagList list = saved.getTagList("recipes");
+        NBTBase recipes = saved.getTag("recipes");
+        if (!(recipes instanceof NBTTagList)) return;
+        NBTTagList list = (NBTTagList) recipes;
         for (int index = 0; index < list.tagCount() && entries.size() < LIMIT; index++) {
             if (!(list.tagAt(index) instanceof NBTTagCompound)) continue;
             NBTTagCompound tag = (NBTTagCompound) list.tagAt(index);
-            ItemStack item = ItemStack.loadItemStackFromNBT(tag.getCompoundTag("item"));
-            if (item == null) continue;
-            entries.add(new Entry(item, tag.getBoolean("usage"), tag.getString("category"), tag.getInteger("page")));
+            try {
+                NBTTagCompound itemTag = tag.getCompoundTag("item");
+                int id = itemTag.getShort("id");
+                if (!itemTag.hasKey("id") || id < 0 || id >= Item.itemsList.length || Item.itemsList[id] == null) continue;
+                ItemStack item = ItemStack.loadItemStackFromNBT(itemTag);
+                if (item != null && item.stackSize > 0) {
+                    entries.add(new Entry(item, tag.getBoolean("usage"), tag.getString("category"), tag.getInteger("page")));
+                }
+            } catch (ClassCastException malformed) {
+                // Keep the other bookmarks when a single entry has invalid NBT field types.
+            }
         }
     }
 

@@ -18,7 +18,17 @@ The main mod JAR contains the NEI rendering changes and the drag logic. The laun
 
 Pick up a stack normally, then press and drag from a compatible slot. The preview shows the amount to be added to each selected slot. Left drag gives each visited eligible slot the same integer share, limited by its free capacity, with leftovers on the cursor. Right drag places one item per visited eligible slot. Revisiting a slot does not add a second entry. A press and release with a single eligible slot replays the ordinary NEI click.
 
-Supported in local Survival on the vanilla inventory, workbench, plain single/double chests and native 5x5 table. The gesture selects ordinary slots with an empty or strictly matching ID, damage and NBT. Armor, crafting outputs, recipe screens and machine-specific destinations retain their existing actions. Shift/Ctrl/Alt, the drop shortcut, NEI widget presses, infinite held stacks and delete mode are outside the gesture. Inventory Tweaks bulk-action rules still apply to ZTO's automated moves. Drag is an explicit manual slot selection.
+In local Survival, drag selects ordinary slots with an empty or strictly matching ID, damage and NBT. Ordinary player inventory slots are available when the GUI and container follow the standard click path or an audited equivalent. Non-player slots use the following layout rules.
+
+| Container | Eligible non-player slots |
+| --- | --- |
+| Vanilla and ZTO | Crafting inputs in 2x2, 3x3 and 5x5, vanilla chests, dispensers, furnace input and fuel, and Hopper storage |
+| IronChest and EnderStorage | Chest storage, with the slot count checked against the backing inventory |
+| EE2 | Alchemical Chest storage, Energy Condenser storage slots 1–91, and Portable Crafting Table inputs |
+| IC2 and BuildCraft | Standard electric machine material input and Auto Workbench inputs |
+| RedPower PR5B2 | Project Table grid slots 0–8 and storage slots 10–27, Buffer Chest storage, Deployer and Ejector inventory, and Alloy Furnace, Blulectric Furnace and Blulectric Alloy Furnace material inputs |
+
+Armor, crafting outputs, NEI recipe screens, the Condenser target, RedPower sorting and filtering templates, and unaudited machine slots retain their existing actions. The Project Table refill result uses its original click path. EE2 Transmutation uses custom click handling and is outside this policy. Shift/Ctrl/Alt, the drop shortcut, NEI widget presses, infinite held stacks and delete mode are outside the gesture. Inventory Tweaks bulk-action rules still apply to ZTO's automated moves. Drag is an explicit manual slot selection.
 
 The session checks the live screen, window, player, cursor, slot ownership, capacities and the original target stack snapshots. The commit uses ordinary window clicks on the game thread and stops if any result differs from the planned change. This sequence is local only. A verified server-side drag transaction would be required for multiplayer activation.
 
@@ -28,7 +38,7 @@ The compact actions use the same atlas and complete four-corner border as legacy
 
 ## Verification
 
-- `zto-tools/test-crafting-ux.bat` runs against real MCP classes and checks both split policies, a capped slot, remainders and empty/full targets, alongside the crafting transaction regressions.
+- `zto-tools/test-crafting-ux.bat` runs against real MCP classes and checks both split policies, a capped slot, remainders and empty/full targets. It also verifies mod slot boundaries, including the Condenser target and machine outputs.
 - `zto-tools/test-drag-agent.ps1` verifies the injected dispatch under `-Xverify:all` with Tekkit Dev's actual modpack, Minecraft and LWJGL artifacts. It checks that the callback receives the correct screen once and that the NEI subclass still owns its mouse override.
 - Live acceptance still covers left and right drags in each supported GUI, normal clicks and NEI overlays, closing mid-gesture, rapid input, display scales, and the four reported layout cases. Use an expendable world in **Tekkit Dev**.
 

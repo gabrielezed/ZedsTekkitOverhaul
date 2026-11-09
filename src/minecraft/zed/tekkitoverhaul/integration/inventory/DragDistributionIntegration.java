@@ -7,16 +7,9 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import net.minecraft.client.Minecraft;
-import net.minecraft.src.Container;
-import net.minecraft.src.ContainerChest;
-import net.minecraft.src.ContainerPlayer;
-import net.minecraft.src.ContainerWorkbench;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Gui;
-import net.minecraft.src.GuiChest;
 import net.minecraft.src.GuiContainer;
-import net.minecraft.src.GuiCrafting;
-import net.minecraft.src.GuiInventory;
 import net.minecraft.src.GuiScreen;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
@@ -25,9 +18,6 @@ import net.minecraft.src.Slot;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
-import zed.tekkitoverhaul.crafting.ContainerAdvancedCraftingTable;
-import zed.tekkitoverhaul.crafting.CraftingDestination;
-import zed.tekkitoverhaul.crafting.GuiAdvancedCraftingTable;
 import zed.tekkitoverhaul.crafting.InventoryPlan;
 
 /** Collects a held-stack gesture before the legacy dispatcher clicks its first slot. */
@@ -143,7 +133,7 @@ public final class DragDistributionIntegration {
                 || Mouse.isButtonDown(1 - button)) return false;
         ItemStack held = game.thePlayer.inventory.getItemStack();
         if (held == null || held.stackSize <= 1 || held.getMaxStackSize() <= 1
-                || !validSlot(gui, slot) || room(slot, held) == 0) return false;
+                || !DragSlotPolicy.canPlace(gui, slot, game.thePlayer) || room(slot, held) == 0) return false;
         session = new Session(game.thePlayer, gui, button, x, y, held, slot);
         return true;
     }
@@ -156,7 +146,7 @@ public final class DragDistributionIntegration {
             return false;
         }
         if (button != -1 && button != drag.button) return false;
-        if (drag.slots.size() < drag.initial.stackSize && validSlot(gui, slot)
+        if (drag.slots.size() < drag.initial.stackSize && DragSlotPolicy.canPlace(gui, slot, game.thePlayer)
                 && room(slot, drag.initial) > 0 && !drag.slots.containsKey(slot)) {
             drag.slots.put(slot, copy(slot.getStack()));
         }
@@ -171,7 +161,7 @@ public final class DragDistributionIntegration {
         int[] capacities = new int[slots.length];
         for (int index = 0; index < slots.length; index++) {
             Slot slot = slots[index];
-            if (!validSlot(drag.gui, slot) || !ItemStack.areItemStacksEqual(drag.slots.get(slot), slot.getStack())) return;
+            if (!DragSlotPolicy.canPlace(drag.gui, slot, drag.player) || !ItemStack.areItemStacksEqual(drag.slots.get(slot), slot.getStack())) return;
             capacities[index] = room(slot, drag.initial);
             if (capacities[index] == 0) return;
         }
@@ -196,7 +186,7 @@ public final class DragDistributionIntegration {
                 ItemStack held = game.thePlayer.inventory.getItemStack();
                 if (!canUse(game, drag.gui) || drag.gui.inventorySlots.windowId != drag.window
                         || game.thePlayer != drag.player || !InventoryPlan.sameType(held, drag.initial)
-                        || held.stackSize != remaining || !validSlot(drag.gui, slot)
+                        || held.stackSize != remaining || !DragSlotPolicy.canPlace(drag.gui, slot, drag.player)
                         || !ItemStack.areItemStacksEqual(expected, slot.getStack()) || room(slot, held) == 0) return;
                 click(game, drag, slot, 1);
                 remaining--;
@@ -265,27 +255,7 @@ public final class DragDistributionIntegration {
                 && game.thePlayer != null && game.thePlayer.isEntityAlive() && game.playerController != null
                 && !(game.playerController instanceof PlayerControllerMP) && !game.playerController.isInCreativeMode()
                 && game.thePlayer.craftingInventory == gui.inventorySlots
-                && supported(gui) && gui.inventorySlots.canInteractWith(game.thePlayer);
-    }
-
-    private static boolean supported(GuiContainer gui) {
-        Class<?> screen = gui.getClass();
-        Class<?> container = gui.inventorySlots.getClass();
-        return screen == GuiInventory.class && container == ContainerPlayer.class
-                || screen == GuiCrafting.class && container == ContainerWorkbench.class
-                || screen == GuiAdvancedCraftingTable.class && container == ContainerAdvancedCraftingTable.class
-                || screen == GuiChest.class && container == ContainerChest.class;
-    }
-
-    private static boolean validSlot(GuiContainer gui, Slot slot) {
-        if (slot == null || slot.getClass() != Slot.class) return false;
-        Container container = gui.inventorySlots;
-        int index = slot.slotNumber;
-        if (index < 0 || index >= container.inventorySlots.size() || container.getSlot(index) != slot) return false;
-        if (gui.getClass() == GuiChest.class) {
-            return CraftingDestination.chestSize(container) > 0;
-        }
-        return index != 0 && (gui.getClass() != GuiInventory.class || index <= 4 || index >= 9);
+                && gui.inventorySlots.canInteractWith(game.thePlayer);
     }
 
     private static int room(Slot slot, ItemStack stack) {

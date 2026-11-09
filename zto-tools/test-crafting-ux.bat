@@ -7,7 +7,9 @@ if not exist "bin\minecraft\zed\tekkitoverhaul\crafting\CraftingFill.class" (
 )
 set "ZTO_UX_CLASSPATH=bin\minecraft;lib\*;jars\bin\*"
 if not exist "temp\crafting-ux-test" mkdir "temp\crafting-ux-test"
-javac -source 1.6 -target 1.6 -Xlint:-options -cp "%ZTO_UX_CLASSPATH%" -d "temp\crafting-ux-test" zto-tools\crafting-tests\CraftingUxTest.java
+javac -source 1.6 -target 1.6 -Xlint:-options -cp "%ZTO_UX_CLASSPATH%" -d "temp\crafting-ux-test" zto-tools\crafting-tests\CraftingUxTest.java zto-tools\crafting-tests\DragSlotPolicyTest.java
 if errorlevel 1 exit /b 1
 java -cp "temp\crafting-ux-test;%ZTO_UX_CLASSPATH%" zed.tekkitoverhaul.crafting.CraftingUxTest
+if errorlevel 1 exit /b 1
+java -cp "temp\crafting-ux-test;%ZTO_UX_CLASSPATH%" zed.tekkitoverhaul.integration.inventory.DragSlotPolicyTest
 exit /b %ERRORLEVEL%

@@ -18,6 +18,14 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 - Never assume release IC2/EE2 JARs work in the deobfuscated MCP runtime. Review [environment.md](docs/agents/environment.md) first.
 - Treat numeric block IDs, recipe behavior and EMC values as world-compatibility concerns. Avoid silent migrations.
 
+## Project Vision
+
+Before designing or implementing any feature, read `PROJECT_VISION.md` in the repository root.
+Treat it as the authoritative reference for the project's game design philosophy, intended player experience, atmosphere, balancing principles, and cross-system integration requirements.
+Distinguish confirmed design directions from proposals and unresolved decisions. Do not assume that features described in the vision document are already implemented.
+Feature-specific technical specifications govern implementation details, but must remain consistent with the broader project vision.
+When completing a task, explain how the implementation supports the project vision and which integration points have been preserved for future development.
+
 ## Player-facing interactions
 
 - Present machine status, controls, transfer results, and actionable failures in an in-game GUI. Include units, capacity, and guidance where needed.

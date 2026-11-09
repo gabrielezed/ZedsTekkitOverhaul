@@ -44,6 +44,23 @@ public final class HopperInventorySelfTest {
         right.setInventorySlotContents(26,new ItemStack(Block.stone,2));
         check(InventoryAccess.moveOne(new InventoryLargeChest("test",left,right),0,new TileHopper(),-1),"second double chest half");
         check(right.getStackInSlot(26).stackSize==1,"double chest count");
+        TileEntityChest refusingSource = new TileEntityChest() {
+            @Override
+            public ItemStack decrStackSize(int slot, int count) { return null; }
+        };
+        refusingSource.setInventorySlotContents(0, new ItemStack(Block.stone));
+        TileHopper empty = new TileHopper();
+        check(!InventoryAccess.moveOne(refusingSource, 0, empty, -1), "refused extraction");
+        check(refusingSource.getStackInSlot(0).stackSize == 1 && empty.getStackInSlot(0) == null,
+                "refused extraction does not duplicate");
+
+        TileEntityChest refusingTarget = new TileEntityChest() {
+            @Override
+            public void setInventorySlotContents(int slot, ItemStack stack) { }
+        };
+        check(!InventoryAccess.moveOne(source, -1, refusingTarget, 0), "refused insertion");
+        check(source.getStackInSlot(0).stackSize == 63 && refusingTarget.getStackInSlot(0) == null,
+                "refused insertion restores the source");
         System.out.println("PASS: "+checks+" Hopper assertions using actual MCP inventory/NBT classes; IC2/BC absent.");
     }
     private static void check(boolean condition,String message) {

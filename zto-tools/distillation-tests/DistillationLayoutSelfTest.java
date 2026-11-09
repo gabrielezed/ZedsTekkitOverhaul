@@ -83,6 +83,13 @@ public final class DistillationLayoutSelfTest {
         check(link != null && link.boilerX == 20, "Boiler cross-link");
         check(DistillationLayout.resolve(separate, 70, 70, 70,
                 DistillationPartType.THERMOMETER) == null, "Unrelated part was linked");
+        Grid east = new Grid();
+        east.build(0, 10, 0, DistillationLayout.Facing.EAST);
+        east.put(-1, 11, 0, DistillationPartType.RECEIVER);
+        check(DistillationLayout.resolve(east, -1, 11, 0, DistillationPartType.RECEIVER) == null,
+                "Receiver outside the active facing must not share the boiler output");
+        check(DistillationLayout.resolve(east, 1, 11, 0, DistillationPartType.RECEIVER) != null,
+                "Receiver in the active facing must remain connected");
         System.out.println("PASS: " + assertions + " distillation layout assertions");
     }
 }

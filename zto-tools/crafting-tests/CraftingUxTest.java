@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import net.minecraft.src.Block;
+import net.minecraft.src.CompressedStreamTools;
 import net.minecraft.src.Container;
 import net.minecraft.src.CraftingManager;
 import net.minecraft.src.EntityPlayer;
@@ -13,8 +14,12 @@ import net.minecraft.src.InventoryBasic;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.NBTTagList;
 import net.minecraft.src.ShapedRecipes;
 import net.minecraft.src.Slot;
+import zed.tekkitoverhaul.distillation.DistillateType;
+import zed.tekkitoverhaul.distillation.DistillationRegistry;
+import zed.tekkitoverhaul.distillation.ItemDistillateBucket;
 import zed.tekkitoverhaul.integration.inventory.DistributionPlanner;
 
 /** Runs against MCP's real ItemStack, Slot, Container and recipe classes. */
@@ -27,6 +32,9 @@ public final class CraftingUxTest {
         storageAndBookmarks();
         dragDistribution();
         hotbarRecipeSource();
+        check(!DistillationRegistry.isBuildCraftOilBucket(new ItemStack(
+                new ItemDistillateBucket(20000, DistillateType.HEAVY_GAS_OIL))),
+                "Heavy Gas Oil is not a BuildCraft crude oil bucket");
         System.out.println("Crafting UX transaction checks passed.");
     }
 
@@ -86,8 +94,20 @@ public final class CraftingUxTest {
             RecipeBookmarks.Entry entry = new RecipeBookmarks.Entry(item, true, "Shaped Crafting", 2);
             RecipeBookmarks bookmarks = new RecipeBookmarks(base);
             check(bookmarks.toggle(entry).equals("Recipe bookmarked"), "bookmark saved");
+            File file = new File(config, "ZTORecipeBookmarks.dat");
+            NBTTagCompound saved = CompressedStreamTools.read(file);
+            NBTTagList entries = saved.getTagList("recipes");
+            NBTTagCompound invalid = new NBTTagCompound();
+            NBTTagCompound invalidItem = new NBTTagCompound();
+            invalidItem.setShort("id", (short) -1);
+            invalid.setCompoundTag("item", invalidItem);
+            NBTTagList mixed = new NBTTagList();
+            mixed.appendTag(invalid);
+            mixed.appendTag(entries.tagAt(0));
+            saved.setTag("recipes", mixed);
+            CompressedStreamTools.write(saved, file);
             bookmarks = new RecipeBookmarks(base);
-            check(bookmarks.advance().same(entry), "bookmark reload preserves item, NBT, mode and page");
+            check(bookmarks.advance().same(entry), "invalid bookmark does not hide a valid entry");
             check(bookmarks.toggle(entry).equals("Bookmark removed") && new RecipeBookmarks(base).advance() == null,
                     "bookmark removal persists");
         } finally {

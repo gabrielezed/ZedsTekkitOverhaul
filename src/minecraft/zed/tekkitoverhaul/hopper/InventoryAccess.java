@@ -75,12 +75,15 @@ public final class InventoryAccess {
             ItemStack current = target.getStackInSlot(slot);
             if (current != null && !same(current, stack)) continue;
             int limit = Math.min(target.getInventoryStackLimit(), stack.getMaxStackSize());
-            int amount = Math.min(remaining, Math.max(0, limit - (current == null ? 0 : current.stackSize)));
+            int oldCount = current == null ? 0 : current.stackSize;
+            int amount = Math.min(remaining, Math.max(0, limit - oldCount));
             if (amount == 0) continue;
             if (commit) {
                 ItemStack updated = current == null ? stack.copy() : current.copy();
-                updated.stackSize = (current == null ? 0 : current.stackSize) + amount;
+                updated.stackSize = oldCount + amount;
                 target.setInventorySlotContents(slot, updated);
+                ItemStack stored = target.getStackInSlot(slot);
+                amount = same(stored, stack) ? Math.min(amount, Math.max(0, stored.stackSize - oldCount)) : 0;
             }
             remaining -= amount;
         }
@@ -106,8 +109,19 @@ public final class InventoryAccess {
             ItemStack one = stack.copy();
             one.stackSize = 1;
             if (insert(target, one, targetSide, false) != 1) continue;
-            if (insert(target, one, targetSide, true) != 1) return false;
-            source.decrStackSize(slot, 1);
+            ItemStack before = stack.copy();
+            ItemStack expected = before.stackSize == 1 ? null : before.copy();
+            if (expected != null) expected.stackSize--;
+            ItemStack extracted = source.decrStackSize(slot, 1);
+            if (!ItemStack.areItemStacksEqual(one, extracted)
+                    || !ItemStack.areItemStacksEqual(expected, source.getStackInSlot(slot))
+                    || insert(target, extracted, targetSide, true) != 1) {
+                if (!ItemStack.areItemStacksEqual(before, source.getStackInSlot(slot))) {
+                    source.setInventorySlotContents(slot, before);
+                    source.onInventoryChanged();
+                }
+                return false;
+            }
             source.onInventoryChanged();
             return true;
         }

@@ -9,8 +9,6 @@ import cpw.mods.fml.common.TickType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.src.Chunk;
 import net.minecraft.src.ChunkPosition;
-import net.minecraft.src.ChunkProvider;
-import net.minecraft.src.IChunkProvider;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
@@ -24,8 +22,11 @@ public final class DevBridge implements ITickHandler {
     private long worldSequence;
     private long worldId;
     private long tick;
+    private long simulationTicks;
+    private final HopperTestFixture fixture;
 
-    private DevBridge(BridgeDispatcher dispatcher, LocalLunarCalendar lunar) {
+    private DevBridge(BridgeDispatcher dispatcher, LocalLunarCalendar lunar, HopperTestFixture fixture) {
+        this.fixture = fixture;
         this.dispatcher = dispatcher;
         this.lunar = lunar;
     }
@@ -37,8 +38,10 @@ public final class DevBridge implements ITickHandler {
         try {
             int port = Integer.parseInt(System.getProperty("zto.devBridge.port", "0"));
             BridgeDispatcher dispatcher = new BridgeDispatcher();
-            server = new BridgeServer(port, dispatcher, version);
-            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher, lunar));
+            boolean testing = "true".equals(System.getProperty("zto.devBridge.testing"));
+            HopperTestFixture fixture = testing ? new HopperTestFixture() : null;
+            server = new BridgeServer(port, dispatcher, version, testing);
+            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher, lunar, fixture));
             ModLoader.getLogger().info("[ZTO] Read-only Dev Bridge enabled. Discovery: " + server.discovery());
         } catch (IOException failure) {
             startupFailed(server, failure);
@@ -59,9 +62,15 @@ public final class DevBridge implements ITickHandler {
 
     @Override
     public void tickEnd(EnumSet<TickType> types, Object... data) {
-        if (types.contains(TickType.WORLD)) tick++;
+        if (types.contains(TickType.WORLD)) {
+            tick++;
+            Minecraft game = ModLoader.getMinecraftInstance();
+            World world = game.theWorld;
+            if (world != null && world == observed.get() && !game.isGamePaused
+                    && !world.isRemote && !game.isMultiplayerWorld()) simulationTicks++;
+        }
         if (!types.contains(TickType.RENDER)) return;
-        Minecraft game = ModLoader.getMinecraftInstance();
+        final Minecraft game = ModLoader.getMinecraftInstance();
         World world = observeWorld(game);
 
         String state = "ready";
@@ -75,7 +84,7 @@ public final class DevBridge implements ITickHandler {
             final World current = world;
             dispatcher.drain(new BridgeDispatcher.Reader() {
                 public String read(BridgeProtocol.Query query) throws BridgeProtocol.Error {
-                    return readQuery(current, dimension, query);
+                    return readQuery(game, current, dimension, query);
                 }
             });
         }
@@ -87,12 +96,26 @@ public final class DevBridge implements ITickHandler {
         if (world != observed.get() || (world == null && worldId != 0)) {
             observed = new WeakReference<World>(world);
             worldId = world == null ? 0 : ++worldSequence;
+            simulationTicks = 0;
+            if (fixture != null) fixture.bind(worldId, world);
         }
         lunarObserver.bind(worldId, lunar.service(world));
         return world;
     }
 
-    private String readQuery(World world, int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
+    private String readQuery(Minecraft game, World world, int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
+        if ("inventory.player".equals(query.op)) return BridgeSnapshots.player(game.thePlayer.inventory, worldId);
+        if ("test.context".equals(query.op)) {
+            return fixture == null ? "{\"allowed\":false}" : fixture.context(game.mcDataDir, world, dimension, simulationTicks);
+        }
+        if (query.sessionId != 0 && fixture != null) {
+            return fixture.command(game.mcDataDir, world, dimension, simulationTicks, query);
+        }
+        if ("inventory.container".equals(query.op) || "machine.inspect".equals(query.op)) {
+            if (query.worldId != worldId) throw new BridgeProtocol.Error(409, "STALE_WORLD", "The active world has changed");
+            checkCoordinates(dimension, query);
+            return BridgeSnapshots.inspect(world, query, simulationTicks);
+        }
         if ("lunar.snapshot".equals(query.op)) return lunarObserver.snapshot();
         if ("lunar.events".equals(query.op)) return lunarObserver.poll(query.worldId, query.afterSequence);
         return read(world, dimension, query);
@@ -105,6 +128,17 @@ public final class DevBridge implements ITickHandler {
                     + ",\"dayTime\":" + Math.floorMod(time, 24000L) + ",\"raining\":" + world.isRaining()
                     + ",\"thundering\":" + world.isThundering() + "}";
         }
+        checkCoordinates(dimension, query);
+        Chunk chunk = BridgeSnapshots.loaded(world, query.x, query.z);
+        int x = query.x & 15;
+        int z = query.z & 15;
+        return "{\"dimension\":" + dimension + ",\"x\":" + query.x + ",\"y\":" + query.y + ",\"z\":" + query.z
+                + ",\"loaded\":true,\"blockId\":" + chunk.getBlockID(x, query.y, z)
+                + ",\"metadata\":" + chunk.getBlockMetadata(x, query.y, z)
+                + ",\"tilePresent\":" + chunk.chunkTileEntityMap.containsKey(new ChunkPosition(x, query.y, z)) + "}";
+    }
+
+    private static void checkCoordinates(int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
         if (query.dimension != dimension) {
             throw new BridgeProtocol.Error(400, "INVALID_ARGUMENT", "Use the active local dimension");
         }
@@ -112,22 +146,6 @@ public final class DevBridge implements ITickHandler {
                 || query.y < 0 || query.y >= 256) {
             throw new BridgeProtocol.Error(400, "OUT_OF_BOUNDS", "The block coordinates are outside legacy world bounds");
         }
-        IChunkProvider provider = world.getChunkProvider();
-        if (provider.getClass() != ChunkProvider.class) {
-            throw new BridgeProtocol.Error(409, "UNSUPPORTED", "The active chunk provider has no loaded-only adapter");
-        }
-        int chunkX = query.x >> 4;
-        int chunkZ = query.z >> 4;
-        if (!provider.chunkExists(chunkX, chunkZ)) {
-            throw new BridgeProtocol.Error(404, "CHUNK_NOT_LOADED", "The target chunk is not loaded");
-        }
-        Chunk chunk = provider.provideChunk(chunkX, chunkZ);
-        int x = query.x & 15;
-        int z = query.z & 15;
-        return "{\"dimension\":" + dimension + ",\"x\":" + query.x + ",\"y\":" + query.y + ",\"z\":" + query.z
-                + ",\"loaded\":true,\"blockId\":" + chunk.getBlockID(x, query.y, z)
-                + ",\"metadata\":" + chunk.getBlockMetadata(x, query.y, z)
-                + ",\"tilePresent\":" + chunk.chunkTileEntityMap.containsKey(new ChunkPosition(x, query.y, z)) + "}";
     }
 
     @Override

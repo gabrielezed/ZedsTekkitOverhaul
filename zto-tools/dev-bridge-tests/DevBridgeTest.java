@@ -23,6 +23,7 @@ public final class DevBridgeTest {
 
     public static void main(String[] args) throws Exception {
         lunarObserver();
+        commandTransport();
         BridgeDispatcher dispatcher = new BridgeDispatcher();
         BridgeServer server = new BridgeServer(0, dispatcher, "test");
         ExecutorService callers = Executors.newFixedThreadPool(2);
@@ -84,6 +85,54 @@ public final class DevBridgeTest {
             expect("/health", null, token, 401, "UNAUTHORIZED");
         }
         System.out.println("Dev Bridge transport, dispatch, deadlines, world transitions and restart passed.");
+    }
+
+    private static void commandTransport() throws Exception {
+        BridgeDispatcher dispatcher = new BridgeDispatcher();
+        String input = "{\"requestId\":\"seed\",\"op\":\"test.input\","
+                + "\"args\":{\"sessionId\":1,\"worldId\":2,\"runId\":3,\"revision\":0,\"count\":4}}";
+        try (BridgeServer server = new BridgeServer(0, dispatcher, "test", true)) {
+            String discovery = new String(Files.readAllBytes(server.discovery()), StandardCharsets.US_ASCII);
+            port = Integer.parseInt(field(discovery, "\"port\":([0-9]+)"));
+            token = field(discovery, "\"token\":\"([A-Za-z0-9_-]{43})\"");
+            expect("/capabilities", null, token, 200, "test.input@1");
+            expect("/command", input, null, 401, "UNAUTHORIZED");
+            expect("/query", input, token, 404, "UNSUPPORTED");
+            expect("/command", QUERY, token, 404, "UNSUPPORTED");
+            expect("/command", input.replace("\"count\":4", "\"count\":9"), token, 400, "INVALID_ARGUMENT");
+            expect("/command", input.replace("\"revision\":0", "\"x\":0"), token, 400, "INVALID_ARGUMENT");
+            expect("/command", input.replace("\"sessionId\":1", "\"sessionId\":0"), token, 400, "INVALID_ARGUMENT");
+            expect("/query", QUERY.replace("world.time", "inventory.player"), token, 503, "NOT_READY");
+            expect("/query", QUERY.replace("world.time", "machine.inspect"), token, 400, "INVALID_ARGUMENT");
+
+            dispatcher.observe("multiplayer", 0, 0, 0);
+            expect("/command", input, token, 503, "NOT_READY");
+            dispatcher.observe("paused", 0, 2, 1);
+            expect("/command", input, token, 503, "NOT_READY");
+
+            ExecutorService caller = Executors.newSingleThreadExecutor();
+            try {
+                dispatcher.observe("ready", 0, 2, 2);
+                Future<String> queued = caller.submit(() -> expect("/command", input, token, 503, "NOT_READY"));
+                waitForQueue(dispatcher, 1);
+                dispatcher.observe("ready", 0, 3, 3);
+                dispatcher.drain(query -> { throw new AssertionError("A stale write reached the game reader"); });
+                queued.get(2, TimeUnit.SECONDS);
+
+                Future<String> fresh = caller.submit(() -> expect("/command", input, token, 200, "\"revision\":1"));
+                waitForQueue(dispatcher, 1);
+                Thread owner = Thread.currentThread();
+                dispatcher.drain(query -> {
+                    check(Thread.currentThread() == owner, "Command was dispatched off the owner thread");
+                    check(query.worldId == 2 && query.sessionId == 1 && query.runId == 3
+                            && query.afterSequence == 0 && query.count == 4, "Command fields changed during dispatch");
+                    return "{\"revision\":1}";
+                });
+                fresh.get(2, TimeUnit.SECONDS);
+            } finally {
+                caller.shutdownNow();
+            }
+        }
     }
 
     private static void lunarObserver() throws Exception {
@@ -154,7 +203,6 @@ public final class DevBridgeTest {
                 byte[] bytes = body.getBytes(StandardCharsets.US_ASCII);
                 connection.setRequestMethod("POST");
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setFixedLengthStreamingMode(bytes.length);
                 connection.setDoOutput(true);
                 try (java.io.OutputStream output = connection.getOutputStream()) {
                     output.write(bytes);

@@ -10,7 +10,20 @@ final class BridgeProtocol {
             + "{\"op\":\"world.time\",\"schema\":\"world.time@1\"},"
             + "{\"op\":\"world.block\",\"schema\":\"world.block@1\"},"
             + "{\"op\":\"lunar.snapshot\",\"schema\":\"lunar.snapshot@1\"},"
-            + "{\"op\":\"lunar.events\",\"schema\":\"lunar.events@1\"}]}";
+            + operation("lunar.events") + "," + operation("inventory.player") + ","
+            + operation("inventory.container") + "," + operation("machine.inspect") + ","
+            + operation("test.context") + "]}";
+
+    static String capabilities(boolean testing) {
+        if (!testing) return CAPABILITIES;
+        return CAPABILITIES.substring(0, CAPABILITIES.length() - 2) + ","
+                + operation("fixture.create") + "," + operation("fixture.reset") + ","
+                + operation("fixture.destroy") + "," + operation("test.input") + "],\"testing\":true}";
+    }
+
+    private static String operation(String op) {
+        return "{\"op\":\"" + op + "\",\"schema\":\"" + op + "@1\"}";
+    }
 
     // The wire schema uses only ASCII identifiers, flat integer arguments and one nested object.
     private static final String SPACE = "[ \\r\\n\\t]*";
@@ -25,6 +38,10 @@ final class BridgeProtocol {
     }
 
     static Query parse(String body) throws Error {
+        return parse(body, false);
+    }
+
+    static Query parse(String body, boolean command) throws Error {
         Map<String, String> fields = object(body, FIELD);
         String id = identifier(fields.get("requestId"));
         try {
@@ -32,9 +49,27 @@ final class BridgeProtocol {
             String args = fields.get("args");
             if (fields.size() != 3 || args == null) throw invalid();
             Map<String, String> values = object(args, ARG);
-            if ("world.time".equals(op) || "lunar.snapshot".equals(op)) {
+            if (command) {
+                boolean input = "test.input".equals(op);
+                if (!input && !"fixture.create".equals(op) && !"fixture.reset".equals(op)
+                        && !"fixture.destroy".equals(op)) {
+                    throw new Error(404, "UNSUPPORTED", "Unknown command operation");
+                }
+                if (values.size() != (input ? 5 : 4)) throw invalid();
+                int count = input ? integer(values, "count") : 0;
+                if (input && (count < 1 || count > 8)) throw invalid();
+                return new Query(id, op, 0, 0, 0, 0, positive(values, "worldId"),
+                        nonnegative(values, "revision"), positive(values, "sessionId"), positive(values, "runId"), count);
+            }
+            if ("world.time".equals(op) || "lunar.snapshot".equals(op)
+                    || "inventory.player".equals(op) || "test.context".equals(op)) {
                 if (!values.isEmpty()) throw invalid();
                 return new Query(id, op, 0, 0, 0, 0, 0, 0);
+            }
+            if ("inventory.container".equals(op) || "machine.inspect".equals(op)) {
+                if (values.size() != 5) throw invalid();
+                return new Query(id, op, integer(values, "dimension"), integer(values, "x"),
+                        integer(values, "y"), integer(values, "z"), positive(values, "worldId"), 0);
             }
             if ("world.block".equals(op)) {
                 if (values.size() != 4) throw invalid();
@@ -94,6 +129,12 @@ final class BridgeProtocol {
         }
     }
 
+    private static long positive(Map<String, String> args, String key) throws Error {
+        long value = nonnegative(args, key);
+        if (value == 0) throw invalid();
+        return value;
+    }
+
     static Error invalid() {
         return new Error(400, "INVALID_ARGUMENT", "The request does not match the v1 schema");
     }
@@ -126,9 +167,18 @@ final class BridgeProtocol {
         final String id;
         final String op;
         final int dimension, x, y, z;
-        final long worldId, afterSequence;
+        final long worldId, afterSequence, sessionId, runId;
+        final int count;
 
         Query(String id, String op, int dimension, int x, int y, int z, long worldId, long afterSequence) {
+            this(id, op, dimension, x, y, z, worldId, afterSequence, 0, 0, 0);
+        }
+
+        Query(String id, String op, int dimension, int x, int y, int z, long worldId,
+                long afterSequence, long sessionId, long runId, int count) {
+            this.sessionId = sessionId;
+            this.runId = runId;
+            this.count = count;
             this.id = id;
             this.op = op;
             this.dimension = dimension;

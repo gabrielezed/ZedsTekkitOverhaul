@@ -1,15 +1,12 @@
 # ZedsTekkitOverhaul
 
-The experimental single-player [Creative inventory backport](docs/engineering/creative-inventory-backport.md)
-adds a tabbed catalog, search and a player inventory view to the normal Creative inventory key.
-The local prototype uses four verified Minecraft 1.4.7 textures prepared separately from the repository.
-The **1.2.5** tab opens the classic Creative screen. Press **F6** to restore the backport,
-or rebind **Restore ZTO Creative Inventory** in Options → Controls.
-
-A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and alchemical progression. Built with FoxyRetroMDK 1.3.6, MCP 6.2, Forge 3.4.9.171 and the legacy ModLoader API.
+A Minecraft **1.2.5 / Tekkit Classic 3.1.2** overhaul that connects industrial and alchemical progression and uses the moon as a recurring signal for future world events. The development target is FoxyRetroMDK 1.3.6, MCP 6.2, JDK 8, Forge 3.4.9.171 and the legacy ModLoader API.
 
 ## Current functionality
 
+- **Lunar Cycle:** a persistent eight-phase single-player calendar, immutable snapshots, transition events and scheduling windows. New saves start at new moon. Legacy saves retain their initial vanilla atlas cell. Native moon rendering uses a separately enabled launch agent. An opt-in Lunar Debug panel exposes the calendar, transitions and detached simulations. [Lunar handoff and acceptance](docs/agents/lunar-cycle-implementation.md)
+- **Dev Bridge:** opt-in authenticated loopback access to read-only local single-player diagnostics. The PowerShell CLI can inspect the world clock, loaded blocks, the lunar snapshot and recent lunar transitions. [Dev Bridge setup and protocol](docs/agents/dev-bridge.md)
+- **Creative inventory backport:** tabbed catalog, search and a player inventory view with locally prepared textures. The **1.2.5** tab opens the classic screen. Press **F6** to restore the backport, or rebind **Restore ZTO Creative Inventory** in Options → Controls. [Creative inventory backport](docs/engineering/creative-inventory-backport.md)
 - **Hopper prototype:** five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI, based on the official 1.5.2 client. Requires locally prepared assets. Includes a narrow IC2 1.97 adapter and inventory-facing BuildCraft integration. See the [engineering and acceptance note](docs/engineering/hopper-backport.md) for preparation, compatibility and the exact verification status.
 - **Advanced Crafting Table:** a placeable 5×5 crafting station with its own recipe manager and GUI.
 - **Foundry:** a placeable block crafted from 16 smooth Stone around the 5×5 grid, with a small animated OBJ rotor and persistent NBT pause/resume state. A provisional 3×3 in-world structure validator is being developed separately.
@@ -17,7 +14,7 @@ A Minecraft **1.2.5 / Tekkit Classic 3.1.2** mod that connects industrial and al
 - **Configurable EMC:** compatibility defaults of 128 EMC for the Advanced Crafting Table and 16 for the Foundry, plus external audit and override profiles. The example profile covers selected IC2, BuildCraft, RedPower, EE2 and ZTO products. [Profile guide](docs/engineering/emc-profile.md) · [Coverage audit](docs/engineering/emc-coverage-audit.md)
 - **Alchemical Converter:** accepts EMC from adjacent EE2 collectors and supplies the IC2 network on any free face. The highest connected collector tier sets the shared output limit. Right-click with an empty hand for the live EMC buffer and connection status. [Converter specification](docs/engineering/alchemical-power-v1.md)
 - **Fractional distillation:** six distinct components form a seven-position apparatus. An IC2 LV heater powers oil processing, with BuildCraft oil and water intake, fraction extraction, and four placeable petroleum liquids. Empty-hand right-click opens each component's live status panel. [Distillation handoff](docs/agents/distillation.md)
-- **Inventory drag module:** Java implementation exists but requires a separate, compatible GUI event hook; it is not self-contained in the packaged mod.
+- **Crafting and inventory tools:** recipe preparation and inventory drag support for compatible modded containers. Drag requires the separate inventory agent and a supported GUI fingerprint. [Crafting and inventory handbook](docs/agents/crafting-inventory-ux.md)
 
 The project owner verified the 5×5 interface, Foundry crafting and rotor persistence, and operation of the original single-input Alchemical Converter. The latest six-face converter and machine panels were compiled, reobfuscated and deployed to Tekkit Dev. Their visual and interaction checks are pending. The Foundry remains a visual prototype.
 
@@ -44,6 +41,12 @@ Minecraft, Forge, IC2, EE2, BuildCraft and MCP source/binaries are **not include
 ```
 
 The script expects the isolated PrismLauncher instance `Tekkit Dev` under `%APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods`. See [deployment documentation](docs/deploy-prism.md) for overrides, prerequisites and safeguards.
+
+### Optional development features
+
+- **Moon rendering:** run `.\zto-tools\build-lunar-agent.bat` and add `-javaagent:<absolute-path-to-ZTOLunarAgent.jar>` to Tekkit Dev's Java 8 arguments. The agent can run alongside the inventory agent. Unsupported renderer fingerprints keep the native phase selection.
+- **Lunar Debug:** set `lunarDebugKey=67` in `config/mod_ZedsTekkitOverhaul.cfg` for F9. The default `0` disables the shortcut. Optionally set `lunarVerboseLogging=true` for transition logs. Restart after changing these settings.
+- **Dev Bridge:** add `-Dzto.dev=true -Dzto.devBridge.enabled=true` to the isolated instance's JVM arguments. Use the discovery path printed in the log with `zto-tools/zed-dev.ps1`. The discovery file contains the authentication token. [CLI examples and wire contract](docs/agents/dev-bridge.md)
 
 **Important:** the original production Tekkit mod JARs are obfuscated. Placing IC2/EE2 release JARs directly into the deobfuscated MCP runtime can cause class-loading failures. Test full mod integration in the separate PrismLauncher instance; see [environment notes](docs/agents/environment.md).
 

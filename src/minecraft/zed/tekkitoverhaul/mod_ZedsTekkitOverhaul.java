@@ -12,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
+import zed.tekkitoverhaul.devbridge.DevBridge;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.emc.EmcIntegration;
@@ -71,6 +72,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AlchemicalPowerRegistry.register();
         HopperRegistry.register(this);
         if (creativeInventoryBackport) creativeInventory.register(this);
+        DevBridge.startIfEnabled(getVersion());
     }
 
     @Override

@@ -13,6 +13,8 @@ This directory is the **project-specific technical reference** for coding agents
 | Fractional distillation or fluid models | [Distillation handoff](distillation.md), [Engineering spec](../engineering/fractional-distillation-v1.md), [IC2 API](../reference/tekkit-classic-3.1.2/ic2-1.97.md) |
 | Building, deploying or fixing a crash | [Environment](environment.md), [Testing](testing.md) |
 | Planning multiblocks or custom rendering | [Roadmap](roadmap.md), [Architecture](architecture.md), [OBJ prototype](obj-renderer.md), [Legacy lightmap](lightmap-diagnostics.md), [Multiblock validator](multiblock-validator.md) |
+| Implementing the lunar calendar, moon rendering or debug menu | [Lunar implementation handoff](lunar-cycle-implementation.md), [Original lunar specification](lunar-cycle-system.md) |
+| Using or extending the read-only local Dev Bridge | [Runtime audit, protocol and tests](dev-bridge.md) |
 | Making a Git commit or pull request | [Workflow](workflow.md), [Testing](testing.md) |
 
 ## Evidence levels

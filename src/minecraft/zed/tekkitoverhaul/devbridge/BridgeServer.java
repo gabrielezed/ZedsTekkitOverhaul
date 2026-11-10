@@ -50,6 +50,7 @@ final class BridgeServer implements AutoCloseable {
             });
     private final BridgeDispatcher dispatcher;
     private final String version;
+    private final boolean testing;
     private final byte[] authorization;
     private final Thread shutdownHook = new Thread(new Runnable() {
         public void run() { close(); }
@@ -59,6 +60,11 @@ final class BridgeServer implements AutoCloseable {
     private int requests;
 
     BridgeServer(int port, BridgeDispatcher dispatcher, String version) throws IOException {
+        this(port, dispatcher, version, false);
+    }
+
+    BridgeServer(int port, BridgeDispatcher dispatcher, String version, boolean testing) throws IOException {
+        this.testing = testing;
         this.dispatcher = dispatcher;
         this.version = version;
         byte[] secret = new byte[32];
@@ -163,11 +169,12 @@ final class BridgeServer implements AutoCloseable {
     private String route(Request request) throws IOException, BridgeProtocol.Error, InterruptedException {
         if ("GET".equals(request.method) && request.length == 0) {
             if ("/v1/health".equals(request.path)) return BridgeProtocol.success(null, null, "{\"alive\":true}");
-            if ("/v1/capabilities".equals(request.path)) return BridgeProtocol.success(null, null, BridgeProtocol.CAPABILITIES);
+            if ("/v1/capabilities".equals(request.path)) return BridgeProtocol.success(null, null, BridgeProtocol.capabilities(testing));
             if ("/v1/status".equals(request.path)) return BridgeProtocol.success(null, null, dispatcher.status(version));
-        } else if ("POST".equals(request.method) && "/v1/query".equals(request.path)) {
+        } else if ("POST".equals(request.method) && ("/v1/query".equals(request.path)
+                || (testing && "/v1/command".equals(request.path)))) {
             if (!"application/json".equalsIgnoreCase(request.headers.get("content-type"))) throw BridgeProtocol.invalid();
-            BridgeProtocol.Query query = BridgeProtocol.parse(request.body());
+            BridgeProtocol.Query query = BridgeProtocol.parse(request.body(), "/v1/command".equals(request.path));
             try {
                 return dispatcher.submit(query);
             } catch (BridgeProtocol.Error failure) {

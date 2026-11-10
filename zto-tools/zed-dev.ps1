@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('health', 'capabilities', 'status', 'query')]
+    [ValidateSet('health', 'capabilities', 'status', 'query', 'command')]
     [string]$Action,
     [Parameter(Position = 1)]
-    [ValidateSet('world.time', 'world.block', 'lunar.snapshot', 'lunar.events')]
+    [ValidateSet('world.time', 'world.block', 'lunar.snapshot', 'lunar.events', 'inventory.player', 'inventory.container', 'machine.inspect',
+        'test.context', 'fixture.create', 'fixture.reset', 'fixture.destroy', 'test.input')]
     [string]$Op,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [int]$Dimension = 0,
@@ -13,6 +14,11 @@ param(
     [int]$Z,
     [long]$WorldId,
     [long]$AfterSequence = 0,
+    [long]$SessionId,
+    [long]$RunId,
+    [long]$Revision,
+    [int]$Count,
+    [string]$RequestId = [Guid]::NewGuid().ToString('N'),
     [switch]$Json,
     [switch]$Quiet
 )
@@ -25,9 +31,9 @@ $request = $null
 $response = $null
 
 try {
-    if (!$Discovery -or ($Action -eq 'query' -and !$Op)) { throw 'Missing argument' }
+    if (!$Discovery -or ($Action -in 'query', 'command' -and !$Op)) { throw 'Missing argument' }
     if ($Op -eq 'lunar.events' -and ($WorldId -le 0 -or $AfterSequence -lt 0)) { throw 'Invalid lunar cursor' }
-    if ($Op -eq 'world.block') {
+    if ($Op -in 'world.block', 'inventory.container', 'machine.inspect') {
         foreach ($coordinate in 'X', 'Y', 'Z') {
             if (!$PSBoundParameters.ContainsKey($coordinate)) { throw 'Missing coordinate' }
         }
@@ -46,15 +52,20 @@ try {
     $client.Timeout = [TimeSpan]::FromSeconds(3)
     $client.MaxResponseContentBufferSize = 8192
     $method = [System.Net.Http.HttpMethod]::Get
-    if ($Action -eq 'query') { $method = [System.Net.Http.HttpMethod]::Post }
+    if ($Action -in 'query', 'command') { $method = [System.Net.Http.HttpMethod]::Post }
     $endpoint = 'http://127.0.0.1:{0}/v1/{1}' -f $session.port, $Action.ToLowerInvariant()
     $request = New-Object System.Net.Http.HttpRequestMessage($method, $endpoint)
     $request.Headers.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue('Bearer', $session.token)
-    if ($Action -eq 'query') {
+    if ($Action -in 'query', 'command') {
         $arguments = @{}
-        if ($Op -eq 'world.block') { $arguments = @{ dimension = $Dimension; x = $X; y = $Y; z = $Z } }
+        if ($Op -in 'world.block', 'inventory.container', 'machine.inspect') { $arguments = @{ dimension = $Dimension; x = $X; y = $Y; z = $Z } }
         if ($Op -eq 'lunar.events') { $arguments = @{ worldId = $WorldId; afterSequence = $AfterSequence } }
-        $body = @{ requestId = [Guid]::NewGuid().ToString('N'); op = $Op.ToLowerInvariant(); args = $arguments } | ConvertTo-Json -Compress
+        if ($Op -in 'inventory.container', 'machine.inspect') { $arguments.worldId = $WorldId }
+        if ($Action -eq 'command') {
+            $arguments = @{ worldId = $WorldId; sessionId = $SessionId; runId = $RunId; revision = $Revision }
+            if ($Op -eq 'test.input') { $arguments.count = $Count }
+        }
+        $body = @{ requestId = $RequestId; op = $Op.ToLowerInvariant(); args = $arguments } | ConvertTo-Json -Compress
         $request.Content = New-Object System.Net.Http.StringContent($body, [Text.Encoding]::UTF8)
         $request.Content.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue('application/json')
     }

@@ -1,6 +1,6 @@
 # Dev Bridge MVP
 
-The [feature specification](DEV_BRIDGE_SPEC.md) describes multiple milestones. This delivery covers the opt-in, read-only local single-player slice.
+This page documents the original read-only slice and its verification. See [test automation](test-automation.md) for the additive inventory, machine and disposable fixture contracts.
 
 ## Runtime audit
 
@@ -122,4 +122,4 @@ Each quoted prompt is standalone for a later implementation task. Use the existi
 
 > If a repeatable GUI test needs it, audit `Minecraft.currentScreen`, `GuiContainer` and `creative/CreativeInventoryHook.java`, then add a read-only screen snapshot in `devbridge/`. Use the game thread and allowlisted field IDs. Keep rendered pixels and gameplay state separate, and exclude login, chat and arbitrary text fields. Test a known container alongside NEI and a non-container screen. Accept when introspection reports the active screen without changing focus or input.
 
-Inventory, machines, a general event registry, fixtures, scenarios and GUI snapshots are deferred. Multiplayer world reads, dedicated servers, alternate chunk providers and mutation routes are unsupported by this release.
+The [test automation slice](test-automation.md) covers the first inventory and machine adapters, the Hopper fixture and one shell scenario. A general event registry, GUI snapshots, alternate chunk providers, multiplayer and dedicated servers remain outside that slice.

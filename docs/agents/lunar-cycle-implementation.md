@@ -112,7 +112,10 @@ Observed in Tekkit Dev:
 - A new disposable save wrote `data/zto_lunar.dat`. A legacy save reported legacy alignment and exposed its full-moon snapshot through the [Dev Bridge](dev-bridge.md). At the title menu, the bridge rejected the lunar query with `NOT_READY`.
 - The project owner confirmed that the Lunar Debug panel worked. Runtime logs showed a phase set as `ADMIN_COMMAND` and an external time edit as `TIME_SKIP`. The owner also confirmed the temporary full-moon zombie fixture and the log recorded 120 spawned zombies from an administrative transition. The fixture was removed after the test.
 
-Still open in the client: natural full-moon night scheduling and delivery through the bridge, boundary reload and dimension round trips, real sleep, malformed data handling, the full set of panel controls, and visual comparison of the eight atlas cells with a compatible texture pack. The temporary zombie fixture exercised administrative event delivery.
+- The project owner verified all eight visible phases and the natural full-moon trigger in the panel.
+- The owner's Nether screenshots show the same calendar session (3), logical day (39), and phase (Waning Crescent) across dimensions 0 → −1 → 0. Raw time advanced from 45480 to 46201 to 46717. Scheduling was enabled in the Overworld and disabled in the Nether. The panel showed `DIMENSION_CHANGED` resyncs and suppressed the diagnostic trigger on handoff.
+
+Still open in the client: natural event delivery through the bridge, boundary reload, End travel, real sleep, malformed data handling, the full set of panel controls, and visual comparison with an alternate compatible texture pack. The temporary zombie fixture exercised administrative event delivery.
 
 | Check | Expected evidence |
 | --- | --- |

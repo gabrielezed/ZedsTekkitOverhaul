@@ -72,7 +72,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AlchemicalPowerRegistry.register();
         HopperRegistry.register(this);
         if (creativeInventoryBackport) creativeInventory.register(this);
-        DevBridge.startIfEnabled(getVersion());
+        DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
 
     @Override

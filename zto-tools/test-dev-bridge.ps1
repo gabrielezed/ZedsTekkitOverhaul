@@ -13,7 +13,8 @@ if ($JdkBin) {
     $java = Join-Path $JdkBin 'java.exe'
 }
 
-& $javac -d $output "$source/BridgeProtocol.java" "$source/BridgeDispatcher.java" "$source/BridgeServer.java" $test
+$lunar = @(Get-ChildItem (Join-Path (Split-Path $source) 'lunar') -Filter '*.java' -File | ForEach-Object FullName)
+& $javac -d $output "$source/BridgeProtocol.java" "$source/BridgeDispatcher.java" "$source/BridgeServer.java" "$source/LunarObserver.java" @lunar $test
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & $java -cp $output zed.tekkitoverhaul.devbridge.DevBridgeTest
 exit $LASTEXITCODE

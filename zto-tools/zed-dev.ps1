@@ -4,13 +4,15 @@ param(
     [ValidateSet('health', 'capabilities', 'status', 'query')]
     [string]$Action,
     [Parameter(Position = 1)]
-    [ValidateSet('world.time', 'world.block')]
+    [ValidateSet('world.time', 'world.block', 'lunar.snapshot', 'lunar.events')]
     [string]$Op,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [int]$Dimension = 0,
     [int]$X,
     [int]$Y,
     [int]$Z,
+    [long]$WorldId,
+    [long]$AfterSequence = 0,
     [switch]$Json,
     [switch]$Quiet
 )
@@ -24,6 +26,7 @@ $response = $null
 
 try {
     if (!$Discovery -or ($Action -eq 'query' -and !$Op)) { throw 'Missing argument' }
+    if ($Op -eq 'lunar.events' -and ($WorldId -le 0 -or $AfterSequence -lt 0)) { throw 'Invalid lunar cursor' }
     if ($Op -eq 'world.block') {
         foreach ($coordinate in 'X', 'Y', 'Z') {
             if (!$PSBoundParameters.ContainsKey($coordinate)) { throw 'Missing coordinate' }
@@ -50,6 +53,7 @@ try {
     if ($Action -eq 'query') {
         $arguments = @{}
         if ($Op -eq 'world.block') { $arguments = @{ dimension = $Dimension; x = $X; y = $Y; z = $Z } }
+        if ($Op -eq 'lunar.events') { $arguments = @{ worldId = $WorldId; afterSequence = $AfterSequence } }
         $body = @{ requestId = [Guid]::NewGuid().ToString('N'); op = $Op.ToLowerInvariant(); args = $arguments } | ConvertTo-Json -Compress
         $request.Content = New-Object System.Net.Http.StringContent($body, [Text.Encoding]::UTF8)
         $request.Content.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue('application/json')

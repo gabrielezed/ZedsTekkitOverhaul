@@ -38,6 +38,8 @@ $env:ZTO_DEV_BRIDGE_DISCOVERY = '<discovery path from this launch>'
 .\zto-tools\zed-dev.ps1 status -Json
 .\zto-tools\zed-dev.ps1 query world.time -Json
 .\zto-tools\zed-dev.ps1 query world.block -Dimension 0 -X -4 -Y 72 -Z 240 -Json
+.\zto-tools\zed-dev.ps1 query lunar.snapshot -Json
+.\zto-tools\zed-dev.ps1 query lunar.events -WorldId 1 -AfterSequence 0 -Json
 ```
 
 The block coordinates are examples. Use F3 for a loaded position in a disposable world. The CLI prints text by default, compact JSON with `-Json`, and suppresses normal output with `-Quiet`. Exit codes are 0 for success, 1 for a bridge error and 2 for discovery, connection or local validation errors. After `NOT_READY`, inspect status and retry when ready. Wait at least one second before retrying `RATE_LIMITED`. Retry a transient `BUSY` or `TIMEOUT` with bounded backoff.
@@ -53,6 +55,10 @@ All routes require the discovery bearer token. The CLI pins IPv4 loopback, disab
 | GET `/v1/status` | Empty body | Mod version, side, readiness state, active dimension/world ID or null, observed world callback counter and queued job count |
 | POST `/v1/query` with `world.time` | Empty object | Dimension, raw legacy world time in ticks, zero-based day, time within the 24,000-tick day and rain/thunder flags |
 | POST `/v1/query` with `world.block` | `dimension`, `x`, `y`, `z` as signed 32-bit integers | Coordinates and dimension, loaded flag, numeric block ID, metadata and presence of an existing tile entry |
+| POST `/v1/query` with `lunar.snapshot` | Empty object | Active bridge world ID, calendar session and dimension, authoritative phase and cycle, raw clock, night and scheduling flags, and latest observer sequence |
+| POST `/v1/query` with `lunar.events` | Positive `worldId` and nonnegative `afterSequence` as signed 64-bit integers | Up to eight events after the cursor in ascending order, latest sequence, and count of events dropped since the cursor |
+
+Get the current `worldId` from `lunar.snapshot`. Poll with `afterSequence=0` to read all retained events, or start from the snapshot's `latestSequence` to receive only later events. Each event has its kind, cause, before and after positions, and signed boundary deltas. Retained events cover observations after subscription. Use the snapshot as the lifecycle baseline. A reload or dimension replacement starts a new observer stream, even when the lunar save session stays the same. A mismatched world ID or a sequence beyond the active stream returns `STALE_CURSOR`. Use a fresh snapshot after that error or after restarting the client. A missing or invalid lunar datum returns `LUNAR_UNAVAILABLE`.
 
 Queries accept `Content-Type: application/json` and an object with exactly `requestId`, `op` and `args`. Identifiers use one to 64 characters from `[A-Za-z0-9_.-]` without escapes. Field order is immaterial. Responses include `apiVersion`, `requestId` (null for uncorrelated replies), `ok`, and `data` or `error`. Successful game reads also include the callback counter as `tick`. Its value can include callbacks while simulation is paused, and is distinct from the legacy world clock. A stalled client reports `stalled` and can retain the last observed dimension and ID in status until the next frame.
 
@@ -116,4 +122,4 @@ Each quoted prompt is standalone for a later implementation task. Use the existi
 
 > If a repeatable GUI test needs it, audit `Minecraft.currentScreen`, `GuiContainer` and `creative/CreativeInventoryHook.java`, then add a read-only screen snapshot in `devbridge/`. Use the game thread and allowlisted field IDs. Keep rendered pixels and gameplay state separate, and exclude login, chat and arbitrary text fields. Test a known container alongside NEI and a non-container screen. Accept when introspection reports the active screen without changing focus or input.
 
-Inventory, machines, lunar, events, fixtures, scenarios and GUI snapshots are deferred. Multiplayer world reads, dedicated servers, alternate chunk providers and mutation routes are unsupported by this release.
+Inventory, machines, a general event registry, fixtures, scenarios and GUI snapshots are deferred. Multiplayer world reads, dedicated servers, alternate chunk providers and mutation routes are unsupported by this release.

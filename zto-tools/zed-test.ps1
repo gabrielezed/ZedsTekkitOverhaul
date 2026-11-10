@@ -5,7 +5,7 @@ param(
     [string]$Action,
     [Parameter(Position = 1)]
     [ValidateSet('hopper.basic_transfer@1', 'hopper.destination_capacity@1', 'hopper.redstone_lock@1',
-        'lunar.natural_boundary@1', 'singleplayer-core')]
+        'distillation.gasoline_batch@1', 'lunar.natural_boundary@1', 'singleplayer-core')]
     [string]$Scenario,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [string]$ExpectedJarSha256,
@@ -13,7 +13,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$scenarios = @('lunar.natural_boundary@1', 'hopper.basic_transfer@1', 'hopper.destination_capacity@1', 'hopper.redstone_lock@1')
+$scenarios = @('lunar.natural_boundary@1', 'distillation.gasoline_batch@1', 'hopper.basic_transfer@1',
+    'hopper.destination_capacity@1', 'hopper.redstone_lock@1')
 if ($Action -eq 'list') {
     @{ schema = 'zto.test-list@1'; scenarios = $scenarios; suites = @{ 'singleplayer-core' = $scenarios } } |
         ConvertTo-Json -Depth 4 -Compress
@@ -165,6 +166,50 @@ function Test-LunarBoundary {
     Assert-State 'night' $after.night ($boundary -eq 13000)
 }
 
+function Test-DistillationBatch {
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        $boiler = Read-Position machine.inspect $ctx.y
+        $heater = Read-Position machine.inspect ($ctx.y - 1)
+        $result.before = @{ boiler = $boiler; heater = $heater }
+        if ($boiler.formed -and $heater.energyNetJoined) { break }
+        Start-Sleep -Milliseconds 200
+    } while ($watch.Elapsed.TotalSeconds -lt 4)
+    Assert-State 'structure_formed' $boiler.formed $true
+    Assert-State 'heater_online' $heater.energyNetJoined $true
+    Assert-State 'initial_tanks' ($boiler.crudeMB + $boiler.coolantMB + $boiler.distillateMB) 0
+    Assert-State 'initial_energy' $heater.storedEU 0
+    Assert-State 'gasoline_selected' $boiler.fractionId 0
+
+    # Independent expectations from the V1 gasoline specification.
+    $started = Invoke-Fixture distillation.start (Get-Context) ([Guid]::NewGuid().ToString('N'))
+    $result.before.input = $started
+    Assert-State 'oil_accepted_mb' $started.crudeMB 250
+    Assert-State 'water_accepted_mb' $started.coolantMB 40
+    Assert-State 'energy_accepted_eu' $started.storedEU 1280
+    $watch.Restart()
+    do {
+        Start-Sleep -Milliseconds 200
+        $boiler = Read-Position machine.inspect $ctx.y
+        $elapsed = $boiler.simulationTicks - $started.simulationTicks
+    } while ($boiler.distillateMB -eq 0 -and $elapsed -lt 200 -and $watch.Elapsed.TotalSeconds -lt 14)
+    $heater = Read-Position machine.inspect ($ctx.y - 1)
+    $result.after = @{ boiler = $boiler; heater = $heater; elapsedSimulationTicks = $elapsed }
+    Assert-State 'batch_duration_window' ($elapsed -ge 160 -and $elapsed -le 200) $true
+    Assert-State 'oil_remaining_mb' $boiler.crudeMB 0
+    Assert-State 'water_remaining_mb' $boiler.coolantMB 0
+    Assert-State 'energy_remaining_eu' $heater.storedEU 0
+    Assert-State 'product_mb' $boiler.distillateMB 250
+    Assert-State 'product_fraction' $boiler.outputTypeId 0
+    Assert-State 'progress_reset' $boiler.progressTicks 0
+    $collected = Invoke-Fixture distillation.collect (Get-Context) ([Guid]::NewGuid().ToString('N'))
+    $result.after.collection = $collected
+    Assert-State 'registered_gasoline' ($collected.gasolineId -gt 0) $true
+    Assert-State 'receiver_liquid' $collected.liquidId $collected.gasolineId
+    Assert-State 'receiver_drained_mb' $collected.drainedMB 250
+    Assert-State 'receiver_remaining_mb' $collected.remainingMB 0
+}
+
 try {
     if ($Scenario -notin $scenarios -or !$DisposableWorld -or $ExpectedJarSha256 -notmatch '^[0-9a-fA-F]{64}$') {
         throw 'PREREQUISITES: Specify the scenario, -DisposableWorld and the candidate SHA-256'
@@ -184,6 +229,11 @@ try {
     if ($scenarioId -eq 'lunar.natural_boundary@1') {
         $result.cleanup.status = 'not_applicable'
         Test-LunarBoundary
+    } elseif ($scenarioId -eq 'distillation.gasoline_batch@1') {
+        Assert-State 'initial_drops' $ctx.drops 0
+        $attemptedCreate = $true
+        $null = Invoke-Fixture distillation.create $ctx ([Guid]::NewGuid().ToString('N'))
+        Test-DistillationBatch
     } else {
     Assert-State 'initial_drops' $ctx.drops 0
     $attemptedCreate = $true

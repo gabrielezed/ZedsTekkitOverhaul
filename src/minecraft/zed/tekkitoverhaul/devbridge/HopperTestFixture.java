@@ -35,6 +35,7 @@ final class HopperTestFixture {
     private long runId;
     private TileHopper hopper;
     private TileEntityChest chest;
+    private DistillationTestFixture distillation;
     private boolean capacityPrepared;
     private boolean powered;
     private boolean dirty;
@@ -56,6 +57,7 @@ final class HopperTestFixture {
         runId = 0;
         hopper = null;
         chest = null;
+        distillation = null;
         capacityPrepared = false;
         powered = false;
         dirty = false;
@@ -97,7 +99,17 @@ final class HopperTestFixture {
             }
             if (revision != query.afterSequence) throw reject("STALE_REVISION", "Read the current test context");
             Chunk chunk = BridgeSnapshots.loaded(world, arenaX, arenaZ);
-            if ("fixture.create".equals(query.op)) {
+            String details = "";
+            if ("distillation.create".equals(query.op)) {
+                if (runId != 0) throw reject("FIXTURE_BUSY", "A test run already owns the arena");
+                validateArena(world, chunk, false);
+                DistillationTestFixture next = new DistillationTestFixture(arenaX, Y, arenaZ);
+                dirty = true;
+                next.place(world, chunk);
+                distillation = next;
+                runId = query.runId;
+                dirty = false;
+            } else if ("fixture.create".equals(query.op)) {
                 if (runId != 0) throw reject("FIXTURE_BUSY", "A test run already owns the arena");
                 if (HopperRegistry.block == null) throw reject("UNSUPPORTED", "Hopper is unavailable");
                 validateArena(world, chunk, false);
@@ -105,6 +117,25 @@ final class HopperTestFixture {
                 runId = query.runId;
             } else {
                 if (runId != query.runId) throw reject("FOREIGN_FIXTURE", "The run does not own the fixture");
+                if (distillation != null) {
+                    distillation.validate(chunk);
+                    if (drops(world) != 0) throw reject("ARENA_CHANGED", "Item drops are present in the arena");
+                    if ("distillation.start".equals(query.op)) {
+                        details = distillation.start();
+                    } else if ("distillation.collect".equals(query.op)) {
+                        details = distillation.collect();
+                    } else if ("fixture.destroy".equals(query.op)) {
+                        dirty = true;
+                        distillation.remove(world);
+                        validateArena(world, chunk, false);
+                        distillation = null;
+                        runId = 0;
+                        dirty = false;
+                    } else {
+                        throw reject("UNSUPPORTED", "Operation does not apply to this fixture");
+                    }
+                } else {
+                if (query.op.startsWith("distillation.")) throw reject("UNSUPPORTED", "Operation does not apply to this fixture");
                 validateArena(world, chunk, true);
                 if ("fixture.reset".equals(query.op)) {
                     clear(hopper);
@@ -129,10 +160,11 @@ final class HopperTestFixture {
                 } else {
                     destroy(world);
                 }
+                }
             }
             revision++;
             last = query;
-            lastReply = identity() + ",\"simulationTicks\":" + ticks + "}";
+            lastReply = identity() + ",\"simulationTicks\":" + ticks + details + "}";
             outcome = "OK";
             return lastReply;
         } catch (BridgeProtocol.Error failure) {
@@ -149,7 +181,7 @@ final class HopperTestFixture {
 
     private String identity() {
         return "{\"worldId\":" + worldId + ",\"sessionId\":" + sessionId + ",\"revision\":" + revision
-                + ",\"runId\":" + runId + ",\"fixture\":\"hopper_chest\",\"dimension\":0"
+                + ",\"runId\":" + runId + ",\"fixture\":\"" + (distillation == null ? "hopper_chest" : "distillation") + "\",\"dimension\":0"
                 + ",\"x\":" + arenaX + ",\"y\":" + Y + ",\"z\":" + arenaZ + ",\"chestY\":" + (Y - 1)
                 + ",\"inputItemId\":" + INPUT + ",\"powerX\":" + (arenaX + 1);
     }

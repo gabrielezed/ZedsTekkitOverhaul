@@ -6,7 +6,7 @@ param(
     [Parameter(Position = 1)]
     [ValidateSet('world.time', 'world.block', 'lunar.snapshot', 'lunar.events', 'inventory.player', 'inventory.container', 'machine.inspect',
         'test.context', 'fixture.create', 'fixture.reset', 'fixture.destroy', 'test.input', 'hopper.prepare_capacity',
-        'hopper.power_on', 'hopper.power_off')]
+        'hopper.power_on', 'hopper.power_off', 'distillation.create', 'distillation.start', 'distillation.collect')]
     [string]$Op,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [int]$Dimension = 0,

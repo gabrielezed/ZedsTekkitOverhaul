@@ -20,7 +20,8 @@ final class BridgeProtocol {
                 + operation("fixture.create") + "," + operation("fixture.reset") + ","
                 + operation("fixture.destroy") + "," + operation("test.input") + ","
                 + operation("hopper.prepare_capacity") + "," + operation("hopper.power_on") + ","
-                + operation("hopper.power_off") + "],\"testing\":true}";
+                + operation("hopper.power_off") + "," + operation("distillation.create") + ","
+                + operation("distillation.start") + "," + operation("distillation.collect") + "],\"testing\":true}";
     }
 
     private static String operation(String op) {
@@ -55,7 +56,9 @@ final class BridgeProtocol {
                 boolean input = "test.input".equals(op);
                 if (!input && !"fixture.create".equals(op) && !"fixture.reset".equals(op)
                         && !"fixture.destroy".equals(op) && !"hopper.prepare_capacity".equals(op)
-                        && !"hopper.power_on".equals(op) && !"hopper.power_off".equals(op)) {
+                        && !"hopper.power_on".equals(op) && !"hopper.power_off".equals(op)
+                        && !"distillation.create".equals(op) && !"distillation.start".equals(op)
+                        && !"distillation.collect".equals(op)) {
                     throw new Error(404, "UNSUPPORTED", "Unknown command operation");
                 }
                 if (values.size() != (input ? 5 : 4)) throw invalid();

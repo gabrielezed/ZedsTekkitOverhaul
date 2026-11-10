@@ -9,6 +9,8 @@ param(
     [string]$Scenario,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [string]$ExpectedJarSha256,
+    [ValidateRange(0, 720)]
+    [int]$LunarWaitSeconds = 0,
     [switch]$DisposableWorld
 )
 
@@ -27,7 +29,7 @@ if ($Action -eq 'suite') {
     $suiteExit = 0
     foreach ($scenarioId in $scenarios) {
         $raw = & $PSCommandPath run $scenarioId -Discovery $Discovery `
-            -ExpectedJarSha256 $ExpectedJarSha256 -DisposableWorld:$DisposableWorld
+            -ExpectedJarSha256 $ExpectedJarSha256 -LunarWaitSeconds $LunarWaitSeconds -DisposableWorld:$DisposableWorld
         $scenarioExit = $LASTEXITCODE
         $results += ($raw | ConvertFrom-Json)
         if ($scenarioExit -ne 0 -and ($suiteExit -eq 0 -or $scenarioExit -lt $suiteExit)) {
@@ -116,31 +118,35 @@ function Test-LunarBoundary {
     Assert-State 'overworld_schedule' $before.schedulingEligible $true
     $boundary = if ($before.timeOfDay -lt 13000) { 13000 }
         elseif ($before.timeOfDay -lt 23000) { 23000 } else { 24000 }
-    if ($boundary - $before.timeOfDay -gt 160) {
-        throw 'PREREQUISITES: Start within 160 ticks before 13000, 23000 or dawn'
+    if ($boundary - $before.timeOfDay -gt 160 -and $LunarWaitSeconds -eq 0) {
+        throw 'PREREQUISITES: Start within 160 ticks of a boundary or set -LunarWaitSeconds'
     }
     $target = $before.rawTime - $before.timeOfDay + $boundary
     $watch = [Diagnostics.Stopwatch]::StartNew()
+    $deadline = [Math]::Max(12, $LunarWaitSeconds)
+    $after = $before
     $cursor = @{ WorldId = $before.worldId; AfterSequence = $before.latestSequence }
     do {
-        Start-Sleep -Milliseconds 125
+        $interval = if ($target - $after.rawTime -gt 160) { 1000 } else { 125 }
+        Start-Sleep -Milliseconds $interval
         $after = Invoke-Bridge query lunar.snapshot
         if ($after.worldId -ne $before.worldId -or $after.sessionId -ne $before.sessionId) {
             throw 'STALE_WORLD: The lunar calendar changed ownership'
         }
         $result.after = $after
-    } while ($after.rawTime -lt $target -and $watch.Elapsed.TotalSeconds -lt 12)
+    } while ($after.rawTime -lt $target -and $watch.Elapsed.TotalSeconds -lt $deadline)
     if ($after.rawTime -lt $target) { throw 'NOT_READY: The clock did not reach the boundary' }
 
     # Observe several subsequent ticks before counting events to catch duplicate callbacks.
     $windowEnd = $after.rawTime + 5
+    $watch.Restart()
     do {
         Start-Sleep -Milliseconds 125
         $after = Invoke-Bridge query lunar.snapshot
         if ($after.worldId -ne $before.worldId -or $after.sessionId -ne $before.sessionId) {
             throw 'STALE_WORLD: The lunar calendar changed ownership'
         }
-    } while ($after.rawTime -lt $windowEnd -and $watch.Elapsed.TotalSeconds -lt 14)
+    } while ($after.rawTime -lt $windowEnd -and $watch.Elapsed.TotalSeconds -lt 2)
     if ($after.rawTime -lt $windowEnd) { throw 'NOT_READY: The clock stalled after the boundary' }
     $events = Invoke-Bridge query lunar.events $cursor
     $end = Get-Context
@@ -228,6 +234,7 @@ try {
     $result.evidenceLevel = 'live-singleplayer'
     if ($scenarioId -eq 'lunar.natural_boundary@1') {
         $result.cleanup.status = 'not_applicable'
+        if ($LunarWaitSeconds -gt 0) { $result.reproduction += " -LunarWaitSeconds $LunarWaitSeconds" }
         Test-LunarBoundary
     } elseif ($scenarioId -eq 'distillation.gasoline_batch@1') {
         Assert-State 'initial_drops' $ctx.drops 0

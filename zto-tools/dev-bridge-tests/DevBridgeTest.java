@@ -13,6 +13,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import zed.tekkitoverhaul.lunar.LunarCalendar;
+import zed.tekkitoverhaul.lunar.LunarEvent;
 
 public final class DevBridgeTest {
     private static final String QUERY = "{\"requestId\":\"check\",\"op\":\"world.time\",\"args\":{}}";
@@ -20,6 +22,7 @@ public final class DevBridgeTest {
     private static String token;
 
     public static void main(String[] args) throws Exception {
+        lunarObserver();
         BridgeDispatcher dispatcher = new BridgeDispatcher();
         BridgeServer server = new BridgeServer(0, dispatcher, "test");
         ExecutorService callers = Executors.newFixedThreadPool(2);
@@ -30,6 +33,7 @@ public final class DevBridgeTest {
             expect("/health", null, null, 401, "UNAUTHORIZED");
             expect("/health", null, token, 200, "\"alive\":true");
             expect("/capabilities", null, token, 200, "world.block@1");
+            expect("/capabilities", null, token, 200, "lunar.events@1");
             expect("/status", null, token, 200, "no_world");
             expect("/query", QUERY, token, 503, "NOT_READY");
             expect("/query", "{", token, 400, "INVALID_ARGUMENT");
@@ -80,6 +84,48 @@ public final class DevBridgeTest {
             expect("/health", null, token, 401, "UNAUTHORIZED");
         }
         System.out.println("Dev Bridge transport, dispatch, deadlines, world transitions and restart passed.");
+    }
+
+    private static void lunarObserver() throws Exception {
+        String cursor = QUERY.replace("world.time", "lunar.events")
+                .replace("{}", "{\"worldId\":1,\"afterSequence\":0}");
+        BridgeProtocol.Query query = BridgeProtocol.parse(cursor);
+        check(query.worldId == 1 && query.afterSequence == 0, "Lunar cursor parsing");
+        try {
+            BridgeProtocol.parse(cursor.replace("afterSequence\":0", "afterSequence\":-1"));
+            throw new AssertionError("Negative sequence accepted");
+        } catch (BridgeProtocol.Error expected) {
+            check("INVALID_ARGUMENT".equals(expected.code), "Unexpected cursor validation error");
+        }
+
+        LunarObserver observer = new LunarObserver();
+        LunarCalendar calendar = new LunarCalendar(1, 0, 0, 0, () -> {}, failure -> {
+            throw new AssertionError(failure);
+        });
+        calendar.rebaseline(0, 108999, LunarEvent.Cause.LOADED);
+        observer.bind(1, calendar.view());
+        observer.bind(1, calendar.view());
+        check(observer.poll(1, 0).contains("\"events\":[]"), "New cursor must start empty");
+        calendar.observe(109000);
+        String event = observer.poll(1, 0);
+        check(event.contains("\"latestSequence\":1") && event.contains("\"kind\":\"NIGHT_STARTED\"")
+                && event.contains("\"cause\":\"NATURAL\""), "Natural boundary observed exactly once");
+        check(observer.snapshot().contains("\"phase\":\"FULL_MOON\""), "Lunar phase from service");
+        check(observer.poll(1, 1).contains("\"events\":[]"), "Consumed cursor");
+        for (int index = 0; index < 8; index++) calendar.advance(1);
+        check(observer.poll(1, 0).contains("\"dropped\":1"), "Wrapped cursor gap");
+        observer.bind(2, calendar.view());
+        check(observer.poll(2, 0).contains("\"events\":[]"), "New world clears observer even with same save");
+        try {
+            observer.poll(1, 0);
+            throw new AssertionError("Previous world cursor accepted");
+        } catch (BridgeProtocol.Error expected) {
+            check("STALE_CURSOR".equals(expected.code), "Unexpected stale cursor error");
+        }
+        observer.bind(0, null);
+        calendar.advance(1);
+        observer.bind(3, calendar.view());
+        check(observer.poll(3, 0).contains("\"events\":[]"), "Detached observer retained old events");
     }
 
     private static String field(String value, String pattern) {

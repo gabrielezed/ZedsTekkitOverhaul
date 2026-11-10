@@ -1,6 +1,6 @@
 # Lunar Cycle System implementation handoff
 
-Status: design and local source audit. This milestone has no implementation or runtime verification yet. The [original lunar specification](lunar-cycle-system.md) supplies the requirements. This handoff resolves its legacy integration details and sets the single-player milestone scope. Read [AGENTS.md](../../AGENTS.md), [Project Vision §7 and §14](../../PROJECT_VISION.md), and the [MDK environment](environment.md) before editing code.
+Status: implemented with partial single-player runtime verification. The [original lunar specification](lunar-cycle-system.md) supplies the requirements. This handoff records the legacy integration decisions and acceptance criteria. Read [AGENTS.md](../../AGENTS.md), [Project Vision §7 and §14](../../PROJECT_VISION.md), and the [MDK environment](environment.md) before editing code.
 
 The sky should give players a recurring, readable signal for preparation. The milestone delivers that signal and a calendar that future directors can query. Encounter selection, timing balance beyond the eight-day baseline, sleep restrictions, spawn changes, new mobs, and ThreatLevel remain future work. Dedicated server wiring, packets, multiplayer commands, and multiplayer acceptance are deferred. Keep the authoritative service independent of the client so a later server adapter can own it.
 
@@ -104,6 +104,18 @@ A future director can subscribe to natural `NIGHT_STARTED`, inspect the snapshot
 Run the tasks sequentially by default. If assigned separately, C and D may work independently after B. C owns the debug menu and its bootstrap delegate. D owns the render bridge and tooling, with B's adapter owner or the integrator handling any shared bootstrap change. Agree on the read-only snapshot contract before either task modifies a shared interface.
 
 ## 6. Single-player verification
+
+The focused calendar, moon transformer, and Dev Bridge tests passed. The MDK client compiled, reobfuscated and packaged successfully. The transformer test checked the MCP renderer, vanilla archive, and installed Tekkit Dev overlay. The isolated runtime reports Minecraft 1.2.5, FML 2.2.106.176 and Forge 3.3.8.164. The declared Forge 3.4.9.171 runtime still needs a separate check.
+
+Observed in Tekkit Dev:
+
+- A new disposable save wrote `data/zto_lunar.dat`. A legacy save reported legacy alignment and exposed its full-moon snapshot through the [Dev Bridge](dev-bridge.md). At the title menu, the bridge rejected the lunar query with `NOT_READY`.
+- The project owner confirmed that the Lunar Debug panel worked. Runtime logs showed a phase set as `ADMIN_COMMAND` and an external time edit as `TIME_SKIP`. The owner also confirmed the temporary full-moon zombie fixture and the log recorded 120 spawned zombies from an administrative transition. The fixture was removed after the test.
+
+- The project owner verified all eight visible phases and the natural full-moon trigger in the panel.
+- The owner's Nether screenshots show the same calendar session (3), logical day (39), and phase (Waning Crescent) across dimensions 0 → −1 → 0. Raw time advanced from 45480 to 46201 to 46717. Scheduling was enabled in the Overworld and disabled in the Nether. The panel showed `DIMENSION_CHANGED` resyncs and suppressed the diagnostic trigger on handoff.
+
+Still open in the client: natural event delivery through the bridge, boundary reload, End travel, real sleep, malformed data handling, the full set of panel controls, and visual comparison with an alternate compatible texture pack. The temporary zombie fixture exercised administrative event delivery.
 
 | Check | Expected evidence |
 | --- | --- |

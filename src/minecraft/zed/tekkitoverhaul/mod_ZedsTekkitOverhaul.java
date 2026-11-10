@@ -23,6 +23,7 @@ import zed.tekkitoverhaul.integration.inventory.DragDistributionIntegration;
 import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.RenderHopper;
+import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -32,6 +33,16 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static boolean partialRecipeFill = false;
     @MLProp(info = "Optional LWJGL key code for the hovered crafting UX button (0 disables it)")
     public static int craftingUxShortcut = 0;
+    @MLProp(info = "LWJGL key code for the single-player Lunar Debug menu (0 disables it)")
+    public static int lunarDebugKey = 0;
+    @MLProp(info = "Log lunar transitions, save initialization and listener failures")
+    public static boolean lunarVerboseLogging = false;
+
+    private static final LocalLunarCalendar LUNAR = new LocalLunarCalendar();
+
+    public static zed.tekkitoverhaul.lunar.LunarService lunarService(net.minecraft.src.World world) {
+        return LUNAR.service(world);
+    }
 
     private final EE2FuelIntegration ee2Fuels = new EE2FuelIntegration();
     private final EmcIntegration emc = new EmcIntegration();
@@ -55,16 +66,20 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
+        LUNAR.register(this, lunarDebugKey, lunarVerboseLogging);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();
         HopperRegistry.register(this);
         if (creativeInventoryBackport) creativeInventory.register(this);
-        DevBridge.startIfEnabled(getVersion());
+        DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
 
     @Override
-    public void keyboardEvent(KeyBinding key) { creativeInventory.onKeyPressed(key); }
+    public void keyboardEvent(KeyBinding key) {
+        creativeInventory.onKeyPressed(key);
+        LUNAR.onKeyPressed(key);
+    }
 
     @Override
     public void registerAnimation(Minecraft minecraft) {

@@ -51,6 +51,13 @@ When completing a task, explain how the implementation supports the project visi
 - [Development workflow](docs/agents/workflow.md)
 - [Roadmap and decisions](docs/agents/roadmap.md)
 
+## Lunar calendar and local diagnostics
+
+- Read the [Lunar Cycle handoff](docs/agents/lunar-cycle-implementation.md) before changing calendar semantics, world ownership, or the native atlas hook.
+- Keep the calendar independent of Minecraft client classes. Gameplay consumers should use immutable snapshots, event causes, and scheduling windows.
+- Read the [Dev Bridge guide](docs/agents/dev-bridge.md) before extending its protocol. Keep reads allowlisted and bounded, execute game reads on the owning thread, and keep discovery credentials out of logs and repository files.
+- Use the isolated Tekkit Dev instance and disposable saves for acceptance. Record player-observed results separately from focused Java checks and MCP builds.
+
 ## Legacy external APIs
 
 - [Tekkit Classic 3.1.2 API index](docs/reference/tekkit-classic-3.1.2/README.md)

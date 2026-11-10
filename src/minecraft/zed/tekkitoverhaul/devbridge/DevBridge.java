@@ -13,20 +13,24 @@ import net.minecraft.src.ChunkProvider;
 import net.minecraft.src.IChunkProvider;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 
 /** The legacy local world is owned by Minecraft's client loop. */
 public final class DevBridge implements ITickHandler {
     private final BridgeDispatcher dispatcher;
+    private final LocalLunarCalendar lunar;
+    private final LunarObserver lunarObserver = new LunarObserver();
     private WeakReference<World> observed = new WeakReference<World>(null);
     private long worldSequence;
     private long worldId;
     private long tick;
 
-    private DevBridge(BridgeDispatcher dispatcher) {
+    private DevBridge(BridgeDispatcher dispatcher, LocalLunarCalendar lunar) {
         this.dispatcher = dispatcher;
+        this.lunar = lunar;
     }
 
-    public static void startIfEnabled(String version) {
+    public static void startIfEnabled(String version, LocalLunarCalendar lunar) {
         if (!"true".equals(System.getProperty("zto.devBridge.enabled"))
                 || !"true".equals(System.getProperty("zto.dev"))) return;
         BridgeServer server = null;
@@ -34,7 +38,7 @@ public final class DevBridge implements ITickHandler {
             int port = Integer.parseInt(System.getProperty("zto.devBridge.port", "0"));
             BridgeDispatcher dispatcher = new BridgeDispatcher();
             server = new BridgeServer(port, dispatcher, version);
-            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher));
+            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher, lunar));
             ModLoader.getLogger().info("[ZTO] Read-only Dev Bridge enabled. Discovery: " + server.discovery());
         } catch (IOException failure) {
             startupFailed(server, failure);
@@ -49,20 +53,16 @@ public final class DevBridge implements ITickHandler {
     }
 
     @Override
-    public void tickStart(EnumSet<TickType> types, Object... data) {}
+    public void tickStart(EnumSet<TickType> types, Object... data) {
+        if (types.contains(TickType.WORLDLOAD)) observeWorld(ModLoader.getMinecraftInstance());
+    }
 
     @Override
     public void tickEnd(EnumSet<TickType> types, Object... data) {
         if (types.contains(TickType.WORLD)) tick++;
         if (!types.contains(TickType.RENDER)) return;
         Minecraft game = ModLoader.getMinecraftInstance();
-        World world = game.theWorld;
-        boolean local = world != null && !game.isMultiplayerWorld() && !world.isRemote;
-        if (!local) world = null;
-        if (world != observed.get() || (world == null && worldId != 0)) {
-            observed = new WeakReference<World>(world);
-            worldId = world == null ? 0 : ++worldSequence;
-        }
+        World world = observeWorld(game);
 
         String state = "ready";
         if (world == null) state = game.theWorld == null ? "no_world" : "multiplayer";
@@ -75,10 +75,27 @@ public final class DevBridge implements ITickHandler {
             final World current = world;
             dispatcher.drain(new BridgeDispatcher.Reader() {
                 public String read(BridgeProtocol.Query query) throws BridgeProtocol.Error {
-                    return DevBridge.read(current, dimension, query);
+                    return readQuery(current, dimension, query);
                 }
             });
         }
+    }
+
+    private World observeWorld(Minecraft game) {
+        World world = game.theWorld;
+        if (world != null && (game.isMultiplayerWorld() || world.isRemote)) world = null;
+        if (world != observed.get() || (world == null && worldId != 0)) {
+            observed = new WeakReference<World>(world);
+            worldId = world == null ? 0 : ++worldSequence;
+        }
+        lunarObserver.bind(worldId, lunar.service(world));
+        return world;
+    }
+
+    private String readQuery(World world, int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
+        if ("lunar.snapshot".equals(query.op)) return lunarObserver.snapshot();
+        if ("lunar.events".equals(query.op)) return lunarObserver.poll(query.worldId, query.afterSequence);
+        return read(world, dimension, query);
     }
 
     private static String read(World world, int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
@@ -114,7 +131,7 @@ public final class DevBridge implements ITickHandler {
     }
 
     @Override
-    public EnumSet<TickType> ticks() { return EnumSet.of(TickType.WORLD, TickType.RENDER); }
+    public EnumSet<TickType> ticks() { return EnumSet.of(TickType.WORLD, TickType.WORLDLOAD, TickType.RENDER); }
 
     @Override
     public String getLabel() { return "ZTO Dev Bridge"; }

@@ -8,13 +8,15 @@ import java.util.regex.Pattern;
 final class BridgeProtocol {
     static final String CAPABILITIES = "{\"access\":\"read\",\"mode\":\"local_singleplayer\",\"operations\":["
             + "{\"op\":\"world.time\",\"schema\":\"world.time@1\"},"
-            + "{\"op\":\"world.block\",\"schema\":\"world.block@1\"}]}";
+            + "{\"op\":\"world.block\",\"schema\":\"world.block@1\"},"
+            + "{\"op\":\"lunar.snapshot\",\"schema\":\"lunar.snapshot@1\"},"
+            + "{\"op\":\"lunar.events\",\"schema\":\"lunar.events@1\"}]}";
 
     // The wire schema uses only ASCII identifiers, flat integer arguments and one nested object.
     private static final String SPACE = "[ \\r\\n\\t]*";
     private static final String STRING = "\"[A-Za-z0-9_.-]{1,64}\"";
     private static final Pattern FIELD = field(STRING + "|\\{[^{}]*\\}");
-    private static final Pattern ARG = field("-?(?:0|[1-9][0-9]{0,9})");
+    private static final Pattern ARG = field("-?(?:0|[1-9][0-9]{0,18})");
 
     private BridgeProtocol() {}
 
@@ -30,13 +32,21 @@ final class BridgeProtocol {
             String args = fields.get("args");
             if (fields.size() != 3 || args == null) throw invalid();
             Map<String, String> values = object(args, ARG);
-            if ("world.time".equals(op) && values.isEmpty()) return new Query(id, op, 0, 0, 0, 0);
+            if ("world.time".equals(op) || "lunar.snapshot".equals(op)) {
+                if (!values.isEmpty()) throw invalid();
+                return new Query(id, op, 0, 0, 0, 0, 0, 0);
+            }
             if ("world.block".equals(op)) {
                 if (values.size() != 4) throw invalid();
                 return new Query(id, op, integer(values, "dimension"), integer(values, "x"),
-                        integer(values, "y"), integer(values, "z"));
+                        integer(values, "y"), integer(values, "z"), 0, 0);
             }
-            if ("world.time".equals(op)) throw invalid();
+            if ("lunar.events".equals(op)) {
+                if (values.size() != 2) throw invalid();
+                long worldId = nonnegative(values, "worldId");
+                if (worldId == 0) throw invalid();
+                return new Query(id, op, 0, 0, 0, 0, worldId, nonnegative(values, "afterSequence"));
+            }
             throw new Error(404, "UNSUPPORTED", "Unknown query operation");
         } catch (Error failure) {
             failure.id = id;
@@ -74,6 +84,16 @@ final class BridgeProtocol {
         }
     }
 
+    private static long nonnegative(Map<String, String> args, String key) throws Error {
+        try {
+            long value = Long.parseLong(args.get(key));
+            if (value < 0) throw invalid();
+            return value;
+        } catch (NumberFormatException failure) {
+            throw invalid();
+        }
+    }
+
     static Error invalid() {
         return new Error(400, "INVALID_ARGUMENT", "The request does not match the v1 schema");
     }
@@ -106,14 +126,17 @@ final class BridgeProtocol {
         final String id;
         final String op;
         final int dimension, x, y, z;
+        final long worldId, afterSequence;
 
-        Query(String id, String op, int dimension, int x, int y, int z) {
+        Query(String id, String op, int dimension, int x, int y, int z, long worldId, long afterSequence) {
             this.id = id;
             this.op = op;
             this.dimension = dimension;
             this.x = x;
             this.y = y;
             this.z = z;
+            this.worldId = worldId;
+            this.afterSequence = afterSequence;
         }
     }
 }

@@ -96,6 +96,16 @@ public final class DevBridgeTest {
             port = Integer.parseInt(field(discovery, "\"port\":([0-9]+)"));
             token = field(discovery, "\"token\":\"([A-Za-z0-9_-]{43})\"");
             expect("/capabilities", null, token, 200, "test.input@1");
+            expect("/capabilities", null, token, 200, "hopper.prepare_capacity@1");
+            String capacity = input.replace("test.input", "hopper.prepare_capacity");
+            expect("/command", capacity, token, 400, "INVALID_ARGUMENT");
+            expect("/command", capacity.replace(",\"count\":4", ""), token, 503, "NOT_READY");
+            for (String op : new String[] {"hopper.power_on", "hopper.power_off"}) {
+                expect("/capabilities", null, token, 200, op + "@1");
+                String power = input.replace("test.input", op);
+                expect("/command", power, token, 400, "INVALID_ARGUMENT");
+                expect("/command", power.replace(",\"count\":4", ""), token, 503, "NOT_READY");
+            }
             expect("/command", input, null, 401, "UNAUTHORIZED");
             expect("/query", input, token, 404, "UNSUPPORTED");
             expect("/command", QUERY, token, 404, "UNSUPPORTED");

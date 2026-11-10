@@ -26,6 +26,7 @@ import zed.tekkitoverhaul.hopper.TileHopper;
 final class HopperTestFixture {
     private static final int Y = 180;
     private static final int INPUT = 1;
+    private static final int CHEST_FREE_SPACE = 2;
     private final String build;
     private final long sessionId = 1 + (new SecureRandom().nextLong() & ((1L << 52) - 1));
     private long worldId;
@@ -34,6 +35,8 @@ final class HopperTestFixture {
     private long runId;
     private TileHopper hopper;
     private TileEntityChest chest;
+    private boolean capacityPrepared;
+    private boolean powered;
     private boolean dirty;
     private BridgeProtocol.Query last;
     private String lastReply;
@@ -53,6 +56,8 @@ final class HopperTestFixture {
         runId = 0;
         hopper = null;
         chest = null;
+        capacityPrepared = false;
+        powered = false;
         dirty = false;
         last = null;
         lastReply = null;
@@ -105,8 +110,21 @@ final class HopperTestFixture {
                     clear(hopper);
                     clear(chest);
                     hopper.setTransferCooldown(0);
+                    capacityPrepared = false;
+                } else if ("hopper.prepare_capacity".equals(query.op)) {
+                    if (!empty(hopper) || !empty(chest)) throw reject("INPUT_PRESENT", "Reset the fixture before filling");
+                    int lastSlot = chest.getSizeInventory() - 1;
+                    int limit = chest.getInventoryStackLimit();
+                    for (int i = 0; i <= lastSlot; i++) {
+                        chest.setInventorySlotContents(i, new ItemStack(INPUT, i == lastSlot ? limit - CHEST_FREE_SPACE : limit, 0));
+                    }
+                    capacityPrepared = true;
+                } else if ("hopper.power_on".equals(query.op) || "hopper.power_off".equals(query.op)) {
+                    setPower(world, chunk, "hopper.power_on".equals(query.op));
                 } else if ("test.input".equals(query.op)) {
-                    if (!empty(hopper) || !empty(chest)) throw reject("INPUT_PRESENT", "Reset the fixture before seeding");
+                    if (!empty(hopper) || (!capacityPrepared && !empty(chest))) {
+                        throw reject("INPUT_PRESENT", "Reset the fixture before seeding");
+                    }
                     hopper.setInventorySlotContents(0, new ItemStack(INPUT, query.count, 0));
                 } else {
                     destroy(world);
@@ -133,7 +151,7 @@ final class HopperTestFixture {
         return "{\"worldId\":" + worldId + ",\"sessionId\":" + sessionId + ",\"revision\":" + revision
                 + ",\"runId\":" + runId + ",\"fixture\":\"hopper_chest\",\"dimension\":0"
                 + ",\"x\":" + arenaX + ",\"y\":" + Y + ",\"z\":" + arenaZ + ",\"chestY\":" + (Y - 1)
-                + ",\"inputItemId\":" + INPUT;
+                + ",\"inputItemId\":" + INPUT + ",\"powerX\":" + (arenaX + 1);
     }
 
     private void validateArena(World world, Chunk chunk, boolean owned) throws BridgeProtocol.Error {
@@ -145,8 +163,16 @@ final class HopperTestFixture {
                         if (y == Y) expected = HopperRegistry.block.blockID;
                         if (y == Y - 1) expected = Block.chest.blockID;
                     }
+                    if (owned && powered && x == arenaX + 1 && z == arenaZ) {
+                        if (y == Y) expected = Block.torchRedstoneActive.blockID;
+                        if (y == Y - 1) expected = Block.stone.blockID;
+                    }
                     if (chunk.getBlockID(x & 15, y, z & 15) != expected
-                            || (expected == 0 && BridgeSnapshots.tile(chunk, x, y, z) != null)) {
+                            || (expected == Block.torchRedstoneActive.blockID
+                                && chunk.getBlockMetadata(x & 15, y, z & 15) != 5)
+                            || ((expected == 0 || expected == Block.stone.blockID
+                                 || expected == Block.torchRedstoneActive.blockID)
+                                && BridgeSnapshots.tile(chunk, x, y, z) != null)) {
                         throw reject("ARENA_CHANGED", "The arena is occupied or its blocks have changed");
                     }
                 }
@@ -155,7 +181,7 @@ final class HopperTestFixture {
         if (owned && (BridgeSnapshots.tile(chunk, arenaX, Y, arenaZ) != hopper
                 || BridgeSnapshots.tile(chunk, arenaX, Y - 1, arenaZ) != chest
                 || chunk.getBlockMetadata(arenaX & 15, Y, arenaZ & 15) != 0 || !"Auto".equals(hopper.outputModeName())
-                || !testContents(hopper) || !testContents(chest))) {
+                || !testContents(hopper, 8) || !testContents(chest, capacityPrepared ? 64 : 8))) {
             throw reject("ARENA_CHANGED", "Fixture ownership, mode or contents changed");
         }
         if (drops(world) != 0) throw reject("ARENA_CHANGED", "Item drops are present in the arena");
@@ -190,16 +216,41 @@ final class HopperTestFixture {
     }
 
     private void destroy(World world) throws BridgeProtocol.Error {
+        Chunk chunk = BridgeSnapshots.loaded(world, arenaX, arenaZ);
+        setPower(world, chunk, false);
         dirty = true;
         clear(hopper);
         clear(chest);
         if (!world.setBlockWithNotify(arenaX, Y, arenaZ, 0) || !world.setBlockWithNotify(arenaX, Y - 1, arenaZ, 0)) {
             throw reject("DIRTY_FIXTURE", "Fixture removal did not complete");
         }
-        validateArena(world, BridgeSnapshots.loaded(world, arenaX, arenaZ), false);
+        validateArena(world, chunk, false);
         hopper = null;
         chest = null;
+        capacityPrepared = false;
         runId = 0;
+        dirty = false;
+    }
+
+    private void setPower(World world, Chunk chunk, boolean enabled) throws BridgeProtocol.Error {
+        if (powered == enabled) return;
+        dirty = true;
+        int x = arenaX + 1;
+        if (enabled) {
+            boolean support = world.setBlockWithNotify(x, Y - 1, arenaZ, Block.stone.blockID);
+            if (!support || !world.setBlockAndMetadataWithNotify(x, Y, arenaZ, Block.torchRedstoneActive.blockID, 5)) {
+                if (support && chunk.getBlockID(x & 15, Y, arenaZ & 15) == 0) {
+                    world.setBlockWithNotify(x, Y - 1, arenaZ, 0);
+                }
+                validateArena(world, chunk, true);
+                dirty = false;
+                throw reject("FIXTURE_SETUP_FAILED", "Could not place the fixture power source");
+            }
+        } else if (!world.setBlockWithNotify(x, Y, arenaZ, 0) || !world.setBlockWithNotify(x, Y - 1, arenaZ, 0)) {
+            throw reject("DIRTY_FIXTURE", "Fixture power source removal did not complete");
+        }
+        powered = enabled;
+        validateArena(world, chunk, true);
         dirty = false;
     }
 
@@ -210,11 +261,11 @@ final class HopperTestFixture {
         return true;
     }
 
-    private static boolean testContents(IInventory inventory) {
+    private static boolean testContents(IInventory inventory, int maxCount) {
         for (int i = 0; i < inventory.getSizeInventory(); i++) {
             ItemStack stack = inventory.getStackInSlot(i);
             if (stack != null && (stack.itemID != INPUT || stack.getItemDamage() != 0
-                    || stack.hasTagCompound() || stack.stackSize < 1 || stack.stackSize > 8)) return false;
+                    || stack.hasTagCompound() || stack.stackSize < 1 || stack.stackSize > maxCount)) return false;
         }
         return true;
     }

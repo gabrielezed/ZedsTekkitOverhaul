@@ -16,6 +16,20 @@ Run a single scenario with `run <scenario>` or all currently registered scenario
 
 `-LunarWaitSeconds` accepts up to 720 seconds. Keep the marked save open and unpaused during the wait. After Save and Quit, double-click the marked save row and confirm `zed-dev.ps1 status` reports `ready` before starting the runner.
 
+### GUI-assisted runtime checks
+
+Use the marked Tekkit Dev copy and record the running candidate hash from `test.context`. Set NEI to Survival before either test. From Creative, the first mode click selects Creative Plus and the second selects Survival. Verify hearts and hunger in the HUD. Seeded materials make these integration checks.
+
+- **Bed sleep.** Place a vanilla bed at a safe Overworld position and capture `lunar.snapshot` during the night. Enter the bed, wait to wake and capture a second snapshot. Query `lunar.events` with the initial world ID and sequence. Store the three response data objects as `before`, `after` and `events` with `buildSha256` in the report.
+- **5×5 crafting.** Stock at least 16 smooth stones, place an Advanced Crafting Table and capture `inventory.player` with an empty cursor. Open NEI uses for stone, choose Advanced Crafting and click **+** on the Foundry recipe. Verify the 16 perimeter cells, collect the Foundry and place it in inventory. Confirm the grid and cursor are empty. Capture `inventory.player` again and store both response data objects as `before` and `after` with `buildSha256`. The observation verifier uses the default Foundry ID 3001 in Tekkit Dev.
+
+~~~powershell
+.\zto-tools\test-singleplayer-observation.ps1 -Scenario bed-sleep -Evidence .\dist-zto\test-reports\milestone1-bed-sleep.json
+.\zto-tools\test-singleplayer-observation.ps1 -Scenario crafting-5x5 -Evidence .\dist-zto\test-reports\milestone1-crafting-5x5.json
+~~~
+
+The verifier recomputes the assertions from the bridge snapshots and exits 1 if an assertion fails. The bed interaction, recipe placement and output collection are performed in the actual GUI.
+
 ## Audit and implementation map
 
 | Capability | Evidence and owner | Delivery |

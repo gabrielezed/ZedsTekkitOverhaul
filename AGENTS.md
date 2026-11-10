@@ -39,6 +39,7 @@ When completing a task, explain how the implementation supports the project visi
 3. Review diffs and run available checks. On the Windows MDK environment, compile with `recompile.bat`; reobfuscate with `reobfuscate.bat` before packaging.
 4. For integrated testing use `zto-tools/build-and-deploy.bat` and the isolated Prism `Tekkit Dev` instance, **not** the owner's ordinary play instance.
 5. Report **what was actually tested**, where and how. Never claim in-game success based only on reading code, stubs or compilation.
+   Add focused automated runtime coverage for new gameplay behavior where the isolated Tekkit Dev client can exercise it reliably. Document any manual boundary and keep runtime, portable and owner evidence separate.
 6. Use focused English commit messages (`feat(crafting): ...`, `fix(legacy): ...`, `docs(agents): ...`). Do not commit unrelated generated output.
 
 ## Handbook

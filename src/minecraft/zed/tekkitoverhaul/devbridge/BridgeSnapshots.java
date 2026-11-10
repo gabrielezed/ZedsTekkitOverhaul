@@ -12,6 +12,7 @@ import net.minecraft.src.TileEntityChest;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.distillation.FractionationProcess;
 import zed.tekkitoverhaul.distillation.TileEntityDistillationBoiler;
+import zed.tekkitoverhaul.distillation.TileEntityDistillationHeater;
 import zed.tekkitoverhaul.hopper.TileHopper;
 
 /** Copies allowlisted state on the game thread without creating tiles or loading chunks. */
@@ -62,9 +63,22 @@ final class BridgeSnapshots {
         if ("inventory.container".equals(query.op) && tile != null && tile.getClass() == TileEntityChest.class) {
             return prefix + ",\"type\":\"chest\",\"stackLimit\":64,\"slots\":" + slots((IInventory) tile, 27) + "}";
         }
-        if ("machine.inspect".equals(query.op) && tile != null
-                && "zed.tekkitoverhaul.distillation.TileEntityDistillationBoiler".equals(tile.getClass().getName())) {
-            TileEntityDistillationBoiler boiler = (TileEntityDistillationBoiler) tile;
+        if ("machine.inspect".equals(query.op) && tile != null) {
+            // Guard by exact class name before linking any optional integration type.
+            String className = tile.getClass().getName();
+            if ("zed.tekkitoverhaul.distillation.TileEntityDistillationBoiler".equals(className)) {
+                return boiler(prefix, (TileEntityDistillationBoiler) tile);
+            }
+            if ("zed.tekkitoverhaul.distillation.TileEntityDistillationHeater".equals(className)) {
+                TileEntityDistillationHeater heater = (TileEntityDistillationHeater) tile;
+                return prefix + ",\"type\":\"distillation.heater\",\"storedEU\":" + heater.getStoredEnergy()
+                        + ",\"energyNetJoined\":" + heater.isAddedToEnergyNet() + "}";
+            }
+        }
+        throw new BridgeProtocol.Error(409, "UNSUPPORTED", "No snapshot adapter for the loaded tile");
+    }
+
+    private static String boiler(String prefix, TileEntityDistillationBoiler boiler) {
             FractionationProcess process = boiler.getProcess();
             return prefix + ",\"type\":\"distillation.boiler\",\"formed\":" + boiler.isFormed()
                     + ",\"missingParts\":" + boiler.getMissingParts() + ",\"crudeMB\":" + process.getCrudeMB()
@@ -72,8 +86,6 @@ final class BridgeSnapshots {
                     + ",\"tankCapacityMB\":" + FractionationProcess.TANK_CAPACITY_MB
                     + ",\"fractionId\":" + process.getSelectedTypeId() + ",\"outputTypeId\":" + process.getOutputTypeId()
                     + ",\"progressTicks\":" + process.getProgressTicks() + "}";
-        }
-        throw new BridgeProtocol.Error(409, "UNSUPPORTED", "No snapshot adapter for the loaded tile");
     }
 
     private static String slots(IInventory inventory, int limit) {

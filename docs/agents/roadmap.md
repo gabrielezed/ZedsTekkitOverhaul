@@ -26,6 +26,8 @@ This is a **directional design plan**, not a list of already implemented feature
 
 ## Verified foundations and current prototype
 
+The Hopper backport, crafting and storage controls, fractional distillation prototype and local lunar calendar are implemented. Acceptance is tracked per workflow in the [singleplayer acceptance matrix](singleplayer-acceptance.md). Prioritize repeatable runtime coverage, save/reopen and pack integration before expanding progression or adding new gameplay systems.
+
 - **Confirmed in Tekkit Dev by the owner:** OBJ mesh rendering, a rotating rotor, right-click pause/resume, NBT persistence for multiple Foundry blocks, and the corrected full-bright OBJ colors.
 - **Under development on a feature branch:** a reusable relative-offset structure pattern with a provisional flat 3×3 Stone ring around the Foundry controller. This is **not** the final multiblock design and still requires a real-game check. See [multiblock validator](multiblock-validator.md).
 
@@ -33,7 +35,7 @@ This is a **directional design plan**, not a list of already implemented feature
 
 - Hardening the working OBJ prototype for production (world-aware lighting, asset error handling and performance tests).
 - Full IC2/EE2 deobfuscated development libraries.
-- A production-safe bytecode transformer for inventory drag.
+- Broader live compatibility and gesture coverage for the existing opt-in inventory drag agent.
 - Multiplayer networking and container synchronization.
 - Standardized machine energy/heat/fluid adapter interfaces.
 

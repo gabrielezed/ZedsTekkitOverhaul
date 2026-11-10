@@ -138,6 +138,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
             diagnostics = new LunarDiagnostics(verbose);
             calendar.view().subscribe(diagnostics);
         }
+        if (LunarZombieTest.enabled(active)) calendar.view().subscribe(new LunarZombieTest(game));
         LunarEvent.Cause cause = state.initializedHere ? LunarEvent.Cause.INITIALIZED : LunarEvent.Cause.LOADED;
         calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), cause);
     }

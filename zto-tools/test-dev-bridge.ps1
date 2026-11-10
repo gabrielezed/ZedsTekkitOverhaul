@@ -1,0 +1,19 @@
+param([string]$JdkBin)
+
+$ErrorActionPreference = 'Stop'
+$root = Split-Path $PSScriptRoot
+$source = Join-Path $root 'src/minecraft/zed/tekkitoverhaul/devbridge'
+$test = Join-Path $PSScriptRoot 'dev-bridge-tests/DevBridgeTest.java'
+$output = Join-Path $root 'dist-zto/dev-bridge-tests'
+New-Item -ItemType Directory -Force $output | Out-Null
+$javac = 'javac'
+$java = 'java'
+if ($JdkBin) {
+    $javac = Join-Path $JdkBin 'javac.exe'
+    $java = Join-Path $JdkBin 'java.exe'
+}
+
+& $javac -d $output "$source/BridgeProtocol.java" "$source/BridgeDispatcher.java" "$source/BridgeServer.java" $test
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& $java -cp $output zed.tekkitoverhaul.devbridge.DevBridgeTest
+exit $LASTEXITCODE

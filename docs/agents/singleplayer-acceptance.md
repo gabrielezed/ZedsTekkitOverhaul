@@ -5,6 +5,7 @@
 - **Date:** 2026-11-10. Local `main` and `origin/main` both pointed to `73cdf9c1f462ff71c99075bdfc4738b7964447db`, the PR #17 merge. The acceptance candidate includes the local bridge changes over that baseline.
 - **Candidate:** `b2929d8db30d655c2cd13d49e4763c071701b06a196218b1de52c1f419440163`. MCP client compilation and reobfuscation passed under Adoptium JDK 8.0.504.1, and the ZIP verifier read 219 entries. The staged and deployed file hashes matched the code-source hash returned by the running bridge. Build log at `dist-zto/milestone1-build.log`.
 - **Redstone follow-up:** `56baf284f645c301d9643c7b1cb5d596e52dbfc472582961608fe1c90b374a30`. MCP client compilation, reobfuscation and streaming verification passed. Build log at `dist-zto/milestone1-redstone-build.log`. The live scenario results below identify the earlier build.
+- **Distillation follow-up:** `e8b9b398d658f130cc5c73959139365c4ad8f15c975f4bd13c07f45641c29201`. The running bridge matched the deployed MCP-compiled and reobfuscated candidate. Build log at `dist-zto/milestone1-distillation-build.log`. Distillation and GUI observations below use this build.
 - **Runtime:** isolated PrismLauncher 11.1.1 Tekkit Dev, Minecraft 1.2.5, FML 2.2.106.176, Forge 3.3.8.164, Java 8u51. Installed artifacts identify IC2 1.97, BuildCraft 2.2.14, RedPower 2 PR5B2, EE2 1.4.6.5, IronChests 3.8.0.40 and Inventory Tweaks 1.41b. The core overlay contains NEI 1.2.2.4 per the pinned local pack audit. MCP initialized Forge 3.4.9.171 during the headless crafting check. Tekkit Dev uses its own modpack overlay.
 
 ## Coverage matrix
@@ -20,12 +21,14 @@ Live results in this table refer to the candidate and runtime above. Owner obser
 | Hopper | HOPPER-05 furnace, IC2 Generator, IronChest and BuildCraft wooden item pipe | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Portable furnace and chest rules only. Earlier owner observations reported IC2/EE2 interoperability and an IronChest failure before the adapter follow-up. |
 | Hopper | HOPPER-06 placement, pickup, GUI, breaking, model and collision | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Manual checklist and prior reported issues in the [Hopper handoff](../engineering/hopper-backport.md). |
 | Distillation | DIST-01 formation, orientation, independent layout | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | 44 layout assertions. Prior owner observed formation. Live negative/revalidation cases remain open. |
-| Distillation | DIST-02–04 batch, starvation and fractions | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | 197 process assertions. Prior owner observed LV intake and product. Live conservation and all starvation/fraction cases remain open. |
+| Distillation | DIST-02 gasoline batch | PASS | PASS | PASS | NOT_APPLICABLE | MANUAL_ACCEPTED | `160717546507312.json`. Seven real components formed. In 162 observed ticks, 250 mB oil, 40 mB coolant and 1280 EU were consumed. The receiver delivered 250 mB of gasoline (liquid ID 3017). Cleanup complete. Integration coverage is limited to direct BuildCraft liquid and IC2 LV endpoint calls. |
+| Distillation | DIST-03–04 starvation and other fractions | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Covered by the portable process harness. Live cases remain open. |
 | Distillation | DIST-05 BuildCraft fluid transport | NOT_RUN | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Requires physical oil/water pipe input and receiver extraction. |
 | Distillation | DIST-06 partial batch across reload | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Portable state restoration. Real NBT and multiblock rebind remain open. |
 | Distillation | DIST-07 panels and inspector parity | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | 31770 model assertions apply to assets. Heater inspector is built and deployed. Live machine snapshot and panel comparison remain open. |
-| Crafting | CRAFT-01–03 vanilla transfer, missing ingredients and batches | PASS | NOT_RUN | NOT_RUN | NOT_RUN | MANUAL_ACCEPTED | MCP workbench slots and result preview, missing ingredient refusal and planner quantities. Owner previously accepted the crafting feature set. |
-| Crafting | CRAFT-04 advanced 5×5 | PASS | NOT_RUN | NOT_RUN | MANUAL_ACCEPTED | MANUAL_ACCEPTED | Real MCP container valid/invalid matching and ingredient recovery. Headless output pickup needs initialized FML. Owner previously crafted the Foundry in the 5×5 GUI. |
+| Crafting | CRAFT-01 3×3 result collection | PASS | PASS | PASS | PASS | MANUAL_ACCEPTED | In the disposable Creative save, NEI supplied 64 vanilla workbenches. Four were placed in the 3×3 grid and consumed to collect one Advanced Crafting Table. The bridge then reported 60 workbenches and one advanced table in `milestone1-before-reload.json`. Integration here covers NEI item search and provisioning. |
+| Crafting | CRAFT-02–03 recipe transfer, missing ingredients and batches | PASS | NOT_RUN | NOT_RUN | NOT_RUN | MANUAL_ACCEPTED | MCP workbench slots and result preview, missing ingredient refusal and planner quantities. |
+| Crafting | CRAFT-04 advanced 5×5 | PASS | BLOCKED | PASS | PASS | MANUAL_ACCEPTED | The live table opened and NEI showed the Foundry recipe. Both prepare attempts returned `Requires a local survival world` in the Creative fixture. Live output collection and Inventory Tweaks compatibility remain open. Earlier owner crafting evidence is preserved. |
 | Inventory | CRAFT-05–06 slot protection, storage and overflow | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Protection rules and storage planner checks. Live Inventory Tweaks locks and full NBT-preserving transfers remain open. |
 | Inventory | CRAFT-07 drag distribution | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Planner and slot policy checks plus drag-agent bytecode probe against Tekkit Dev archives. Actual mouse gesture coverage remains open. |
 | Inventory | CRAFT-08 IC2, RedPower and other modded containers | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Portable target policy only. Live clicks and per-container compatibility remain open. |
@@ -33,13 +36,15 @@ Live results in this table refer to the candidate and runtime above. Owner obser
 | Lunar | LUNAR-04 and LUNAR-09 natural boundary and listener | PASS | PASS | NOT_APPLICABLE | NOT_APPLICABLE | MANUAL_ACCEPTED | `milestone1-lunar-observed.json` verified retained live events for one night end and dawn phase change, without overflow or duplicate events. The forward-observation runner, natural full-moon arrival and disposable listener registration remain open. Owner observed the natural full-moon diagnostic. |
 | Lunar | LUNAR-05 clock edits and suppression | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | Portable time manipulation. Earlier logs recorded admin and external time changes. |
 | Lunar | LUNAR-06 real bed sleep | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | Bed-based advancement still open. |
-| Lunar | LUNAR-07 persistence and world switching | PASS | NOT_RUN | NOT_APPLICABLE | NOT_APPLICABLE | MANUAL_ACCEPTED | Calendar lifecycle assertions and owner-observed Nether handoff. Boundary reload and listener isolation remain open. |
+| Lunar | LUNAR-07 persistence and world switching | PASS | BLOCKED | NOT_APPLICABLE | NOT_APPLICABLE | MANUAL_ACCEPTED | After Save and Quit, two attempts to open the selected disposable save left the client on Select World. Bridge returned `NOT_READY` with no active local world. See `milestone1-lunar-reload.json`. The result does not establish a calendar persistence defect. |
 | Lunar | LUNAR-08 native atlas | PASS | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | MANUAL_ACCEPTED | Transformer probe against actual overlay. Owner visual pass on earlier build. |
 | Cross-system | Disabled bridge, unmarked save, wrong build and ordinary gameplay | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Transport, command schema and dispatch checks passed. PR #17 records earlier disabled/unmarked evidence. |
 | Cross-system | NEI, Inventory Tweaks, Hopper restrictions, EE2/IC2, distillation and sleep | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Pack startup reached a disposable Creative save. Combined gameplay workflows remain open. |
 | Survival | Unassisted smoke path | NOT_APPLICABLE | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | The seeded Hopper scenario counts as a runtime fixture. |
 
 Runtime artifacts are under the ignored `dist-zto/test-reports/` directory. Portable commands were `test-dev-bridge.ps1`, `test-hopper.ps1`, `test-crafting-ux.bat`, `test-drag-agent.ps1`, `test-distillation-core.bat`, `test-distillation-layout.bat`, `test-distillation-models.bat`, `test-lunar-calendar.bat` and `test-lunar-agent.bat`, all under `zto-tools/`.
+
+The final `singleplayer-core` invocation exited 2 because the client had no active world after the reload attempt. Every member returned `NOT_READY` before creating a fixture. See `milestone1-distillation-suite.json`.
 
 ## Survival smoke path
 
@@ -52,7 +57,7 @@ Runtime artifacts are under the ignored `dist-zto/test-reports/` directory. Port
 
 ## Open risks and readiness
 
-- Live distillation conservation, pipe behavior and partial-batch persistence remain release risks. Owner observations establish that earlier formation, heating and output workflows were playable.
+- Live gasoline conservation passed through the real machine endpoints. Physical pipes, an external EU source and partial-batch persistence remain release risks.
 - Hopper capacity evidence covers the vanilla chest. Redstone, persistence of a loaded tile and per-mod slot restrictions still need live evidence.
 - Portable crafting checks do not initialize the installed FML mods. Live output collection, Inventory Tweaks protections and drag gestures remain separate acceptance work.
 - Lunar sleep and cross-save listener behavior still need live checks. The Forge 3.4.9.171 compile profile has no equivalent full Tekkit runtime run in this record.

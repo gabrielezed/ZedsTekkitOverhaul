@@ -1,6 +1,6 @@
 # Fractional distillation agent handoff
 
-The [singleplayer acceptance matrix](singleplayer-acceptance.md) tracks current portable coverage, earlier owner observations and open live tests. The Dev Bridge can read boiler process values and heater EU and EnergyNet membership. Live batch conservation and BuildCraft transfer still need runtime scenarios.
+The [singleplayer acceptance matrix](singleplayer-acceptance.md) records the passing gasoline batch through the actual liquid and energy endpoints in Tekkit Dev. The Dev Bridge reads boiler process values, heater EU and EnergyNet membership. Physical BuildCraft pipe transport, external EU delivery and partial-batch persistence remain open.
 
 **Implementation:** [engineering specification](../engineering/fractional-distillation-v1.md) and [rotated binding / visual pass](../engineering/distillation-rendering-and-binding-v2.md).
 

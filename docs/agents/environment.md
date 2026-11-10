@@ -16,6 +16,8 @@ The Git repository is initialized **inside the existing `MDK-1.2.5` directory** 
 
 ## Two test environments
 
+The MCP client identifies its Forge sources as **3.4.9.171**. The isolated Prism Tekkit Dev manifest installs a legacy modpack JAR overlay, and the running title screen reports **3.3.8.164**. Both use Minecraft 1.2.5 and the tested Prism runtime reports FML 2.2.106.176. Keep the compile and runtime versions separate in reports. See the [singleplayer acceptance record](singleplayer-acceptance.md) for the effective pack versions.
+
 **MCP/Eclipse**: deobfuscated Minecraft with original project code. Use it for rapid development and API checks. It is not equivalent to the distributed Tekkit classpath.
 
 **PrismLauncher / Tekkit Dev**: isolated complete Tekkit Classic instance with IC2, EE2 and BuildCraft. Use it for integration testing after reobfuscation; never deploy over an ordinary gameplay instance.

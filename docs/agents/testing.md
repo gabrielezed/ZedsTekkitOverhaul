@@ -1,5 +1,7 @@
 # Validation and definition of done
 
+Use the [singleplayer acceptance matrix](singleplayer-acceptance.md) for current scenario results, candidate provenance and the Survival smoke path. The [automation guide](test-automation.md) records runner setup and the earlier PR #17 evidence.
+
 ## Evidence currently available
 
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.
@@ -41,8 +43,8 @@ A documentation-only commit does not require claiming a successful Minecraft bui
 
 ## Fractional distillation V1 prototype (feature branch)
 
-The fluid state core and six OBJ models have portable Java tests. Before a merge, run `zto-tools/test-distillation-core.bat` and `zto-tools/test-distillation-models.bat` in the MDK workspace; compile using the actual MCP/Forge sources, then deploy to the isolated Prism instance. Check IC2 1.97 LV energy input, seven placement offsets, four thermometer setpoints, 1000 mB bucket transactions, NBT persistence and existing Foundry/GUI regressions. This feature is **not** runtime verified. See [engineering specification](../engineering/fractional-distillation-v1.md).
+Run the core, layout and model checks before deploying to Tekkit Dev. The owner observed formation, LV EU intake and product output on an earlier build. The current acceptance record separates those observations from live batch conservation, BuildCraft transport, NBT and GUI checks. See the [engineering specification](../engineering/fractional-distillation-v1.md) and [distillation handoff](distillation.md).
 
 ## Distillation binding and visual update
 
-The owner confirmed recipe registration and NEI compatibility in Tekkit Dev, but reported controller binding failures, an incomplete structure and visually translucent saturated machine components. PR #5 now includes four-way layout resolution, exact missing-part diagnostics, opaque 64×32 atlas and 288-triangle connecting fittings. **No real MCP compile or Prism re-test has yet been reported for these changes.** Run `zto-tools/test-distillation-layout.bat` and `zto-tools/test-distillation-models.bat`, then the usual build/deploy and the [visual acceptance checklist](../engineering/distillation-rendering-and-binding-v2.md).
+PR #5 added four-way layout resolution, missing-part diagnostics, an opaque atlas and connecting fittings after the owner reported binding and rendering problems. Follow the [visual acceptance checklist](../engineering/distillation-rendering-and-binding-v2.md) for current in-game checks.

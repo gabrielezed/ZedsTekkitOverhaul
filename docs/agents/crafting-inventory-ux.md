@@ -1,5 +1,7 @@
 # Crafting and inventory UX implementation checklist
 
+The [singleplayer acceptance matrix](singleplayer-acceptance.md) records current portable coverage and live gaps. The MCP harness exercises workbench and advanced-table slot updates, result matching and input recovery. Live result collection, NEI and Inventory Tweaks interactions remain separate checks.
+
 Baseline at `main` / `f8ee800`. See [execution record](#execution-record) for implementation, build evidence and outstanding acceptance checks.
 
 ## Workspace and evidence

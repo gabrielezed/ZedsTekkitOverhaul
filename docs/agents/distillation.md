@@ -1,5 +1,7 @@
 # Fractional distillation agent handoff
 
+The [singleplayer acceptance matrix](singleplayer-acceptance.md) tracks current portable coverage, earlier owner observations and open live tests. The Dev Bridge can read boiler process values and heater EU and EnergyNet membership. Live batch conservation and BuildCraft transfer still need runtime scenarios.
+
 **Implementation:** [engineering specification](../engineering/fractional-distillation-v1.md) and [rotated binding / visual pass](../engineering/distillation-rendering-and-binding-v2.md).
 
 This is the first ZTO refinery machine and exercises the existing OBJ model parser, lightmap renderer, generic structure validator and TileEntity NBT patterns.

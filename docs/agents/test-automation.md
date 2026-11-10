@@ -2,6 +2,17 @@
 
 The first scenario exercises the registered ZTO Hopper and vanilla chest in the authoritative Tekkit Dev singleplayer world. The bridge makes a narrow fixture and seeds four stone items. The actual Hopper performs all transfers through its usual inventory adapters.
 
+## Singleplayer core suite
+
+| Scenario | Setup and assertions |
+| --- | --- |
+| `hopper.basic_transfer@1` | Transfers four stones downward to an empty chest. Checks identities, counts, replay, sampled drops, reset and cleanup. |
+| `hopper.destination_capacity@1` | Seeds an owned chest with two units of free capacity, then supplies four stones to the Hopper. After at least 80 simulation ticks the chest must be full and the Hopper must retain two stones. Checks conservation, sampled drops, reset and cleanup. |
+| `hopper.redstone_lock@1` | Places an owned vanilla redstone torch on a stone support beside the Hopper. Checks that four stones stay in the source for at least 40 simulation ticks, then removes power and checks normal transfer and cleanup. |
+| `lunar.natural_boundary@1` | Read-only. Start within 160 ticks before 13000, 23000 or dawn. Let the world run normally. The runner checks the exact event sequence, natural cause, tick, phase, night state and absence of cursor overflow. It observes several ticks after the boundary to detect repeated events. |
+
+Run a single scenario with `run <scenario>` or all currently registered scenarios with `suite singleplayer-core`, using the flags in the setup below. The suite starts with the time-sensitive lunar check. It runs each scenario serially, includes each report path in its JSON summary and returns nonzero if any member fails or skips. The suite covers the registered workflows only. See the [acceptance matrix](singleplayer-acceptance.md) for remaining cases and current evidence.
+
 ## Audit and implementation map
 
 | Capability | Evidence and owner | Delivery |
@@ -24,11 +35,13 @@ Requests keep the existing envelope with ASCII requestId, op and a flat args obj
 | --- | --- | --- |
 | Query inventory.player@1 | Empty | World ID, selected hotbar slot, up to 40 slots in vanilla order, and the cursor stack. Slots 0–8 are the hotbar, 9–35 are storage, and 36–39 are armor. |
 | Query inventory.container@1 | worldId, dimension, x, y, z | Loaded Hopper or vanilla chest tile, slot array and stack limit. A chest position returns the physical half. |
-| Query machine.inspect@1 | worldId, dimension, x, y, z | Hopper slots, facing (legacy side index), lock and output mode, or boiler formation, missing part count, fluid amounts and capacity in mB, fraction IDs and progress in ticks. |
+| Query machine.inspect@1 | worldId, dimension, x, y, z | Hopper slots, facing (legacy side index), lock and output mode. Boiler formation, missing part count, fluid amounts and capacity in mB, fraction IDs and progress in ticks. Heater stored EU and IC2 EnergyNet membership. |
 | Query test.context@1 | Empty | Test gate state, world/session/revision, fixed arena, owner/run, dirty flag, observed simulation ticks, local arena item-entity count or null, and startup code-source JAR SHA-256 or null. With testing disabled it returns allowed=false. |
 | Command fixture.create@1 | sessionId, worldId, runId, revision | Place one registered Hopper pointing down into one empty vanilla chest. Verify the reserved volume and record exact tile ownership. |
 | Command fixture.reset@1 | Same | Empty the owned inventories and restore Hopper cooldown to zero. |
-| Command test.input@1 | Same plus count (1–8) | Seed untagged stone (ID 1, damage 0) into the Hopper's first slot when both owned inventories are empty. |
+| Command hopper.prepare_capacity@1 | Same as fixture.create | Fill the empty owned chest with untagged stone, leaving two units of room in the final slot. Requires both inventories to be empty. |
+| Commands hopper.power_on@1 and hopper.power_off@1 | Same as fixture.create | Place or remove the vanilla redstone torch and its stone support at the two reserved cells immediately east of the fixture. |
+| Command test.input@1 | Same as fixture.create plus count (1–8) | Seed untagged stone (ID 1, damage 0) into the empty Hopper. The chest must be empty unless the capacity operation prepared it. |
 | Command fixture.destroy@1 | Same | Empty owned inventories before block removal, remove the two owned blocks and check the arena. |
 
 Send queries to POST /v1/query and commands to POST /v1/command. Successful commands return fixture identity, the new revision and simulation ticks at execution. Snapshot stacks are null or have itemId, damage, count and tagged. The tag-presence bit lets this scenario require untagged stone. It does not distinguish two tagged stacks with different payloads. Unknown tiles return UNSUPPORTED. Reads use all slots for supported tile types. There is no caller-supplied slot index. Hopper power inspection requires the relevant neighboring chunks to be loaded.

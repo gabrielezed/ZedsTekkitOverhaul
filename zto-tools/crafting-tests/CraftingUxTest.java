@@ -7,6 +7,7 @@ import java.util.Arrays;
 import net.minecraft.src.Block;
 import net.minecraft.src.CompressedStreamTools;
 import net.minecraft.src.Container;
+import net.minecraft.src.ContainerWorkbench;
 import net.minecraft.src.CraftingManager;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.InventoryCrafting;
@@ -17,6 +18,11 @@ import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagList;
 import net.minecraft.src.ShapedRecipes;
 import net.minecraft.src.Slot;
+import net.minecraft.src.SaveHandlerMP;
+import net.minecraft.src.World;
+import net.minecraft.src.WorldProvider;
+import net.minecraft.src.WorldSettings;
+import net.minecraft.src.WorldType;
 import zed.tekkitoverhaul.distillation.DistillateType;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.ItemDistillateBucket;
@@ -32,10 +38,56 @@ public final class CraftingUxTest {
         storageAndBookmarks();
         dragDistribution();
         hotbarRecipeSource();
+        containerCrafting();
         check(!DistillationRegistry.isBuildCraftOilBucket(new ItemStack(
                 new ItemDistillateBucket(20000, DistillateType.HEAVY_GAS_OIL))),
                 "Heavy Gas Oil is not a BuildCraft crude oil bucket");
         System.out.println("Crafting UX transaction checks passed.");
+    }
+
+    private static void containerCrafting() {
+        World world = new World(new SaveHandlerMP(), "Crafting check", WorldProvider.getProviderForDimension(0),
+                new WorldSettings(0L, 0, false, false, WorldType.DEFAULT));
+        EntityPlayer player = new EntityPlayer(world) {
+            @Override
+            public void func_6420_o() {}
+        };
+        ContainerWorkbench workbench = new ContainerWorkbench(player.inventory, world, 0, 64, 0);
+        Slot[] slots = new Slot[45];
+        for (int i = 0; i < slots.length; i++) slots[i] = workbench.getSlot(i + 1);
+        ItemStack[] sticks = new ItemStack[9];
+        sticks[1] = new ItemStack(Block.planks, 1);
+        sticks[4] = new ItemStack(Block.planks, 1);
+        ItemStack output = new ItemStack(Item.stick, 4);
+        CraftingFill fill = new CraftingFill(slots, 3);
+        player.inventory.setInventorySlotContents(9, new ItemStack(Block.planks, 1));
+        check(fill.prepare(sticks, output, 1, false).plan == null, "missing planks refuse a complete transfer");
+        check(workbench.getSlot(0).getStack() == null && player.inventory.getStackInSlot(9).stackSize == 1,
+                "missing recipe preserves source and output");
+        player.inventory.setInventorySlotContents(9, new ItemStack(Block.planks, 2));
+        check(fill.prepare(sticks, output, 1, false).plan.commit(workbench), "prepare sticks in real workbench slots");
+        check(workbench.craftMatrix.getStackInSlot(1).stackSize == 1
+                && workbench.craftMatrix.getStackInSlot(4).stackSize == 1
+                && player.inventory.getStackInSlot(9) == null, "exact ingredient placement and debit");
+        check(ItemStack.areItemStacksEqual(workbench.getSlot(0).getStack(), output), "real vanilla result slot matches");
+
+        AdvancedCraftingManager.register(new ItemStack(Block.brick), new String[] {
+            "S   S", "     ", "     ", "     ", "S   S"
+        }, Character.valueOf('S'), Block.stone);
+        ContainerAdvancedCraftingTable advanced = new ContainerAdvancedCraftingTable(player.inventory, world, 0, 64, 0);
+        for (int i : new int[] {0, 4, 20}) advanced.craftMatrix.setInventorySlotContents(i, new ItemStack(Block.stone));
+        advanced.craftMatrix.setInventorySlotContents(23, new ItemStack(Block.stone));
+        check(advanced.getSlot(0).getStack() == null, "reject misplaced 5x5 ingredient");
+        advanced.craftMatrix.setInventorySlotContents(23, null);
+        advanced.craftMatrix.setInventorySlotContents(24, new ItemStack(Block.stone, 2));
+        check(ItemStack.areItemStacksEqual(advanced.getSlot(0).getStack(), new ItemStack(Block.brick)),
+                "real advanced result slot matches");
+        Slot[] advancedSlots = new Slot[61];
+        for (int i = 0; i < advancedSlots.length; i++) advancedSlots[i] = advanced.getSlot(i + 1);
+        check(new CraftingFill(advancedSlots, 5).returnInputs().plan.commit(advanced), "return remaining input");
+        check(advanced.getSlot(0).getStack() == null && advanced.craftMatrix.getStackInSlot(24) == null
+                && ItemStack.areItemStacksEqual(player.inventory.getStackInSlot(9), new ItemStack(Block.stone, 5)),
+                "recover all five stones and clear the advanced result");
     }
 
     private static void hotbarRecipeSource() {

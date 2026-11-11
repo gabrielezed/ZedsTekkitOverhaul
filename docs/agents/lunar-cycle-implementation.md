@@ -107,7 +107,7 @@ Run the tasks sequentially by default. If assigned separately, C and D may work 
 
 ## 6. Single-player verification
 
-The focused calendar, moon transformer, and Dev Bridge tests passed. The MDK client compiled, reobfuscated and packaged successfully. The transformer test checked the MCP renderer, vanilla archive, and installed Tekkit Dev overlay. The isolated runtime reports Minecraft 1.2.5, FML 2.2.106.176 and Forge 3.3.8.164. The declared Forge 3.4.9.171 runtime still needs a separate check.
+The focused calendar, moon transformer, and Dev Bridge tests passed. The MDK client compiled, reobfuscated and packaged successfully. The transformer test checked the MCP renderer, vanilla archive, and installed Tekkit Dev overlay. The isolated runtime reports Minecraft 1.2.5, FML 2.2.106.176 and Forge 3.3.8.164. Forge 3.4.9.171 is the MCP compile profile.
 
 Observed in Tekkit Dev:
 

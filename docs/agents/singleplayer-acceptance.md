@@ -103,5 +103,5 @@ The live release-gate audit used the same JAR, Java 8u51 and the same Prism-asse
 
 - Deferred industrial cases include a physical coolant inlet, IC2 cable loss, alternate fractions and Hopper restrictions across additional modded inventories.
 - Deferred GUI and inventory cases include NEI recipe transfer and missing-ingredient display on the final candidate, explicit Inventory Tweaks locks, sorting and refill, mouse drag gestures, machine panels and real bed use on the final candidate. Earlier GUI-assisted evidence covers the 5×5 NEI transfer and bed interaction.
-- Deferred environment cases include cross-save lunar listener behavior and a full Tekkit runtime run on the Forge 3.4.9.171 compile profile.
+- Cross-save lunar listener behavior remains a deferred environment case. The pack Forge runtime and MCP compile profile are intentionally different.
 - Development now moves to the Survival Gameplay Vertical Slice, starting with the first lunar siege prototype under [Project Vision](../../PROJECT_VISION.md). Use the Survival smoke path above for gameplay acceptance. Extend the Dev Bridge only when a concrete gameplay feature requires an additional diagnostic or assertion.

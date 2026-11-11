@@ -33,11 +33,13 @@ Candidate tested on 2026-11-11: **0.1.0-alpha.1**, Git `399d7b0001d5cb92ae79c978
 | Portable moon transformer | PASS | Tested against MCP, vanilla and the installed pack overlay. |
 | Live natural full moon and placement | PASS | One start at raw tick 181,000. Three skeletons inserted in three pulses and 66 attempts over 420 simulation ticks. All three columns were loaded, supported and clear at feet/head, with measured horizontal distances of approximately 11.9–14.4 blocks. Ended with `PULSES_COMPLETE`. |
 | Live resolved Save/Quit/Reload | PASS | A different Java process and bridge session reopened the same night with boundary 181,000, zero new starts and zero new spawns. Both shutdowns were graceful. |
+| Live interrupted Save/Quit/Reload | PASS | On fresh copy `ZTO-Test-b60cc964865e43eebaa6a1eab20fcf35`, saved while `ACTIVE` after one skeleton and two pulses. Reopened that night as `ABORTED / INTERRUPTED_ON_REOPEN`, with the same consumed boundary, zero new starts and zero new spawns. Both shutdowns were graceful. |
 | Live `singleplayer-core` | PASS | Natural lunar boundary, distillation gasoline batch, Hopper transfer, capacity and redstone. Crafting 3×3, 5×5 and hotbar lock also passed; the current Inventory Tweaks profile blocked the separate hard-protection check. |
-| New candidate with bridge disabled, live bed/NEI/portal and ordinary-night assault denial | BLOCKED | No live run for these specific cases on this JAR. The portable gate covers their corresponding event causes. A one-tick external time write is indistinguishable from natural progress to the existing calendar sampler. |
+| Bridge disabled on this candidate | BLOCKED | Prism's running launcher did not inherit the process override, so the first launch still had the bridge enabled and shut down normally. The direct launch with the flag explicitly disabled failed before Minecraft startup because its standalone classpath lacked vanilla class `aiz`. Neither launch opened a save; neither establishes bridge-disabled runtime behavior. |
+| Live bed/NEI/portal and ordinary-night assault denial | BLOCKED | No live run for these specific cases on this JAR. The portable gate covers their corresponding event causes. A one-tick external time write is indistinguishable from natural progress to the existing calendar sampler. |
 | Human Survival trial | BLOCKED | Owner assessment pending. Unattended tests did not judge audio, combat, doors, walls, pathfinding or the mixed Normal encounter. |
 
-Local reports: `dist-zto/test-reports/autonomy-ZTO-Test-dd978bafe3bb4254b8504f5d313f7bea.json` and `609813737575974.json`. The lifecycle links all five core reports. Build log: `dist-zto/assault-build.log`.
+Local reports: `dist-zto/test-reports/autonomy-ZTO-Test-dd978bafe3bb4254b8504f5d313f7bea.json` (resolution and five core scenarios), `autonomy-ZTO-Test-b60cc964865e43eebaa6a1eab20fcf35.json` (interruption), and assault scenario reports `609813737575974.json` and `984963422727045.json`. Bridge-disabled launch attempts are in `assault-disabled-gate.json` and `assault-disabled-direct.json`. Build log: `dist-zto/assault-build.log`.
 
 ## Owner playtest
 

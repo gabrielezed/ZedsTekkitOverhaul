@@ -46,7 +46,7 @@ Live results in this table refer to the 2026-11-10 candidates and runtime above.
 | Lunar | LUNAR-06 real bed sleep | NOT_RUN | PASS | NOT_APPLICABLE | PASS | NOT_RUN | In Survival the player entered a real bed at night and woke at dawn. The bridge reported one `RESYNC/TIME_SKIP` at raw tick 168001, day and phase 6 → 7, with no dropped or duplicate events. See `milestone1-bed-sleep.json`. |
 | Lunar | LUNAR-07 persistence and world switching | PASS | PASS | NOT_APPLICABLE | NOT_APPLICABLE | MANUAL_ACCEPTED | After Save and Quit, automated clicks on Play Selected World left the client at Select World. Double-clicking the marked save row successfully reopened it. The bridge preserved logical day 5 and phase 5, assigned world/session 2, and rejected the old cursor with `STALE_CURSOR`. See `milestone1-lunar-reopen.json`. |
 | Lunar | LUNAR-08 native atlas | PASS | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | MANUAL_ACCEPTED | Transformer probe against actual overlay. Owner visual pass on earlier build. |
-| Cross-system | Disabled bridge, unmarked save, wrong build and ordinary gameplay | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Transport, command schema and dispatch checks passed. PR #17 records earlier disabled/unmarked evidence. |
+| Cross-system | Disabled bridge, unmarked save, wrong build and ordinary gameplay | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Transport, command schema and dispatch checks passed. See the PR #19 final review verification for current live release gates. |
 | Cross-system | NEI, Inventory Tweaks, Hopper restrictions, EE2/IC2, distillation and sleep | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Pack startup reached a disposable Creative save. Combined gameplay workflows remain open. |
 | Survival | Unassisted smoke path | NOT_APPLICABLE | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | The seeded Hopper scenario counts as a runtime fixture. |
 
@@ -75,6 +75,19 @@ The verified candidate SHA-256 is `c3aa20585057ac20eae04517a898ba6d30d5e5fbe848e
 
 Portable checks also passed for bridge transport and dispatch, the 21 Hopper inventory and NBT assertions, crafting transactions and drag policy, and the 197 distillation core assertions. The unattended runs add no owner acceptance.
 
+## PR #19 final review verification
+
+The final review ran the existing `singleplayer-core` suite once on the same `c3aa20585057ac20eae04517a898ba6d30d5e5fbe848ed476cb45be713d8195b` JAR in Tekkit Dev. All five scenarios passed. The runner also verified Hopper persistence across two Java processes and bridge sessions. Both clients exited normally. See `autonomy-ZTO-Test-e342fcb52a694abca6b19dda42f62ce0.json` and its scenario reports `127692015345927.json`, `168001427109018.json`, `62922365354059.json`, `839151396963949.json` and `391332132417160.json`. The existing portable bridge harness passed again.
+
+The live release-gate audit used the same JAR, Java 8u51 and the same Prism-assembled Minecraft and Forge runtime. The temporary audit launch omitted JVM flags without editing the instance configuration. Evidence is in `pr19-release-gates.json`.
+
+| Gate | Result | Evidence |
+| --- | --- | --- |
+| All development flags absent | PASS | Client reached the title screen. The valid launch request was ignored and no bridge discovery was published. The orchestrator hit the expected startup timeout, removed its request and closed the identified Java process. |
+| Read bridge enabled, testing flag absent | PASS | The request was ignored, bridge status stayed `no_world` and the authenticated fixture command returned `UNSUPPORTED`. The expected startup timeout left neither the request nor the Java process. |
+| Unmarked disposable copy with testing flags enabled | PASS | The bootstrap returned `TEST_WORLD_REQUIRED` and consumed the request without changing any file in the copy. After opening that copy through the normal singleplayer menu, `test.context` returned `allowed=false`, `fixture.create` returned `TEST_WORLD_REQUIRED`, the arena block stayed empty and the stop request was ignored. The operator closed this audit through the GUI. |
+| Client failure before the launch announcement | PASS | During audit setup the Minecraft main thread failed before bridge startup because the temporary launch lacked its native libraries. The runner identified and closed the remaining Java process and removed the request. See `autonomy-ZTO-Test-3dcf864c8d90495995b146a790bd693b.json`. Final inspection found no Tekkit Dev Java process and no pending autoload request. |
+
 ## Survival smoke path
 
 1. Start a fresh disposable Survival save in Tekkit Dev with test writes disabled. Record seed, build hash and runtime versions.
@@ -84,10 +97,9 @@ Portable checks also passed for bridge transport and dispatch, the 21 Hopper inv
 5. Observe a natural lunar transition. Record the phase and use a bed on a later night to check advancement.
 6. Save and reopen. Check the Hopper stack, facing and mode, machine state and lunar phase. Record any stuck interactions and any item count differences.
 
-## Open risks and readiness
+## Deferred coverage and next milestone
 
-- The physical batch covers oil input, gasoline extraction and an adjacent IC2 Generator. A physical coolant inlet, cable loss and alternative fractions remain outside this sample.
-- Hopper capacity and redstone lock/resume passed against a vanilla chest in the live suite. See the later evidence for loaded-tile persistence. Per-mod slot restrictions remain open.
-- The 2026-11-10 live crafting evidence includes actual result collection in both grids and NEI recipe transfer for 5×5. Inventory Tweaks hard-lock rules, its own sorting and refill behavior, and real drag gestures require their own evidence.
-- Cross-save listener behavior still needs a live check. The Forge 3.4.9.171 compile profile has no equivalent full Tekkit runtime run in this record.
-- The next milestone is the unassisted Survival smoke path in Tekkit Dev. Keep the remaining visual and interaction checks in the GUI, including NEI's actual recipe transfer and missing-ingredient display, Inventory Tweaks sorting and refill, drag gestures, machine panels and real bed use. The existing GUI-assisted observations cover the 5×5 NEI transfer and bed interaction on the earlier candidate.
+- Deferred industrial cases include a physical coolant inlet, IC2 cable loss, alternate fractions and Hopper restrictions across additional modded inventories.
+- Deferred GUI and inventory cases include NEI recipe transfer and missing-ingredient display on the final candidate, explicit Inventory Tweaks locks, sorting and refill, mouse drag gestures, machine panels and real bed use on the final candidate. Earlier GUI-assisted evidence covers the 5×5 NEI transfer and bed interaction.
+- Deferred environment cases include cross-save lunar listener behavior and a full Tekkit runtime run on the Forge 3.4.9.171 compile profile.
+- Development now moves to the Survival Gameplay Vertical Slice, starting with the first lunar siege prototype under [Project Vision](../../PROJECT_VISION.md). Use the Survival smoke path above for gameplay acceptance. Extend the Dev Bridge only when a concrete gameplay feature requires an additional diagnostic or assertion.

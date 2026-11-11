@@ -19,6 +19,7 @@ $root = Split-Path $PSScriptRoot
 $prismData = Join-Path $env:APPDATA 'PrismLauncher'
 $instance = Join-Path $prismData 'instances/Tekkit Dev'
 $game = Join-Path $instance 'minecraft'
+$nativeArgument = [regex]::Escape('-Djava.library.path=' + (Join-Path $instance 'natives').Replace('\', '/'))
 $log = Join-Path $game 'ForgeModLoader-0.log'
 $request = Join-Path $game 'zto-dev-autoload.request'
 $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
@@ -65,12 +66,38 @@ function Get-OwnedClient {
     if ($process.Path) { $launch.javaVersion = (Get-Item -LiteralPath $process.Path).VersionInfo.ProductVersion }
 }
 
+function Get-TekkitDevJava {
+    Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" | Where-Object {
+        $_.CommandLine -and $_.CommandLine -match '\borg\.prismlauncher\.EntryPoint(?:\s|$)' -and
+            $_.CommandLine.Replace('\', '/') -match ('(?:^|[\s"])' + $nativeArgument + '(?:[\s"]|$)')
+    }
+}
+
+function Remove-OwnedRequest {
+    if (!$payload -or !(Test-Path -LiteralPath $request)) { return }
+    try {
+        if ([IO.File]::ReadAllText($request) -ceq $payload) { Remove-Item -LiteralPath $request }
+    } catch [IO.FileNotFoundException] {
+        # The game consumed this request before cleanup.
+    }
+}
+
 function Stop-DevClient {
     if (!$launch -or $launch.stop) { return }
     Get-OwnedClient
     if (!$client) {
-        $launch.stop = 'unidentified'
-        throw 'CLIENT_UNIDENTIFIED: Check the Tekkit Dev launcher log before retrying.'
+        # A client with disabled flags or a failed bootstrap never announces a nonce.
+        Remove-OwnedRequest
+        $children = @(Get-TekkitDevJava | Where-Object { $_.CreationDate -ge $launch.started })
+        if ($children.Count -eq 0) { $launch.stop = 'no_game_process'; return }
+        if ($children.Count -ne 1) {
+            $launch.stop = 'ambiguous'
+            throw 'CLIENT_UNIDENTIFIED: Multiple new Tekkit Dev Java processes were found.'
+        }
+        $script:client = Get-Process -Id $children[0].ProcessId -ErrorAction SilentlyContinue
+        if (!$client) { $launch.stop = 'exited_before_shutdown'; return }
+        $null = $client.Handle
+        $launch.pid = $client.Id
     }
     $client.Refresh()
     if ($client.HasExited) {
@@ -87,7 +114,8 @@ function Stop-DevClient {
     $launch.exitCode = if ($client.HasExited) { $client.ExitCode } else { $null }
     $acknowledged = !$requested -or (Select-String -LiteralPath $log -Quiet -Pattern (
         '\[ZTO\] Autoload ' + $launch.nonce + ' STOP_REQUESTED$'))
-    if ($stopped -and $launch.exitCode -eq 0 -and $acknowledged -and !(Test-Path -LiteralPath $discovery)) {
+    if ($stopped -and $launch.exitCode -eq 0 -and $acknowledged -and
+        (!$discovery -or !(Test-Path -LiteralPath $discovery))) {
         $launch.stop = 'graceful'
         # Prism's CLI launcher can still be winding down after the Java child exits.
         if ($launcher -and !$launcher.WaitForExit(3000)) { $launch.launcherStillRunning = $true }
@@ -269,6 +297,7 @@ try {
     try { $locked = $mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $locked = $true }
     if (!$locked) { throw 'INSTANCE_BUSY: A Tekkit Dev lifecycle is already in progress.' }
     if (Test-Path -LiteralPath $request) { throw 'REQUEST_PRESENT: Inspect the pending Tekkit Dev autoload request before retrying.' }
+    if (Get-TekkitDevJava) { throw 'INSTANCE_BUSY: Close the running Tekkit Dev client before starting the lifecycle.' }
     $report.buildSha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
     $installed = Join-Path $game 'mods/ZedsTekkitOverhaul.jar'
     if ((Get-FileHash -LiteralPath $installed -Algorithm SHA256).Hash -ne $report.buildSha256) {
@@ -331,9 +360,7 @@ try {
     if ($launch -and !$launch.stop) {
         try { Stop-DevClient } catch { $launch.diagnostics += $_.Exception.Message }
     }
-    if ($payload -and (Test-Path -LiteralPath $request) -and [IO.File]::ReadAllText($request) -ceq $payload) {
-        Remove-Item -LiteralPath $request
-    }
+    try { Remove-OwnedRequest } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     if ($report.status -ne 'PASS' -and $launch -and (Test-Path -LiteralPath $log)) {
         $launch.diagnostics += @(Select-String -LiteralPath $log -Pattern '\[ZTO\] Disposable world autoload|\[SEVERE\]|Exception in thread' |
             Select-Object -Last 12 | ForEach-Object { $_.Line })

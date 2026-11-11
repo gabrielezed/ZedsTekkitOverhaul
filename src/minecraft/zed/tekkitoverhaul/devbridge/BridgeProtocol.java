@@ -10,7 +10,7 @@ final class BridgeProtocol {
             + "{\"op\":\"world.time\",\"schema\":\"world.time@1\"},"
             + "{\"op\":\"world.block\",\"schema\":\"world.block@1\"},"
             + "{\"op\":\"lunar.snapshot\",\"schema\":\"lunar.snapshot@1\"},"
-            + operation("lunar.events") + "," + operation("inventory.player") + ","
+            + operation("lunar.events") + "," + operation("assault.snapshot") + "," + operation("inventory.player") + ","
             + operation("inventory.container") + "," + operation("machine.inspect") + ","
             + operation("test.context") + "]}";
 
@@ -23,7 +23,7 @@ final class BridgeProtocol {
                 + operation("hopper.power_off") + "," + operation("distillation.create") + ","
                 + operation("distillation.start") + "," + operation("distillation.start_partial") + ","
                 + operation("distillation.collect") + "," + operation("distillation.transport") + ","
-                + operation("crafting.transactions") + "],\"testing\":true}";
+                + operation("crafting.transactions") + "," + operation("assault.prepare_full_moon") + "],\"testing\":true}";
     }
 
     private static String operation(String op) {
@@ -62,7 +62,7 @@ final class BridgeProtocol {
                         && !"distillation.create".equals(op) && !"distillation.start".equals(op)
                         && !"distillation.start_partial".equals(op)
                         && !"distillation.collect".equals(op) && !"distillation.transport".equals(op)
-                        && !"crafting.transactions".equals(op)) {
+                        && !"crafting.transactions".equals(op) && !"assault.prepare_full_moon".equals(op)) {
                     throw new Error(404, "UNSUPPORTED", "Unknown command operation");
                 }
                 if (values.size() != (input ? 5 : 4)) throw invalid();
@@ -72,7 +72,7 @@ final class BridgeProtocol {
                         nonnegative(values, "revision"), positive(values, "sessionId"), positive(values, "runId"), count);
             }
             if ("world.time".equals(op) || "lunar.snapshot".equals(op)
-                    || "inventory.player".equals(op) || "test.context".equals(op)) {
+                    || "inventory.player".equals(op) || "test.context".equals(op) || "assault.snapshot".equals(op)) {
                 if (!values.isEmpty()) throw invalid();
                 return new Query(id, op, 0, 0, 0, 0, 0, 0);
             }

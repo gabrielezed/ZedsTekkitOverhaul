@@ -3,6 +3,7 @@
 ## API and naming
 
 - This is **Minecraft 1.2.5**. Look up signatures in the actual MCP source, not modern Forge tutorials.
+- Verify reobfuscated signatures against the Tekkit Classic 3.1.2 overlay and vanilla client in that order. The runtime is Forge **3.3.8.164** / FML **2.2.106.176**; Forge **3.4.9.171** is the MCP compile profile.
 - `ContainerAdvancedCraftingTable` must override `canInteractWith(EntityPlayer)`, **not** `isUsableByPlayer(EntityPlayer)`. The latter caused an actual Eclipse compile error and was corrected.
 - No modern registries, capabilities, `BlockPos`, GUI handler assumptions from newer Forge or JSON recipes.
 - The current advanced crafting GUI is a **singleplayer-oriented** implementation using `ModLoader.openGUI`. Multiplayer synchronization has **not** been implemented or tested.

@@ -5,20 +5,22 @@ param(
     [string]$Action,
     [Parameter(Position = 1)]
     [ValidateSet('hopper.basic_transfer@1', 'hopper.destination_capacity@1', 'hopper.redstone_lock@1',
-        'distillation.gasoline_batch@1', 'lunar.natural_boundary@1', 'singleplayer-core')]
+        'distillation.gasoline_batch@1', 'lunar.natural_boundary@1', 'assault.natural_full_moon@1', 'singleplayer-core')]
     [string]$Scenario,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [string]$ExpectedJarSha256,
     [ValidateRange(0, 720)]
     [int]$LunarWaitSeconds = 0,
-    [switch]$DisposableWorld
+    [switch]$DisposableWorld,
+    [long]$AssaultBoundary,
+    [switch]$InterruptAssault
 )
 
 $ErrorActionPreference = 'Stop'
 $scenarios = @('lunar.natural_boundary@1', 'distillation.gasoline_batch@1', 'hopper.basic_transfer@1',
     'hopper.destination_capacity@1', 'hopper.redstone_lock@1')
 if ($Action -eq 'list') {
-    @{ schema = 'zto.test-list@1'; scenarios = $scenarios; suites = @{ 'singleplayer-core' = $scenarios } } |
+    @{ schema = 'zto.test-list@1'; scenarios = $scenarios + 'assault.natural_full_moon@1'; suites = @{ 'singleplayer-core' = $scenarios } } |
         ConvertTo-Json -Depth 4 -Compress
     exit 0
 }
@@ -180,6 +182,52 @@ function Test-LunarBoundary {
     Assert-State 'night' $after.night ($boundary -eq 13000)
 }
 
+function Test-Assault {
+    $before = Invoke-Bridge query lunar.snapshot
+    $target = $AssaultBoundary
+    if (!$target) {
+        if ($before.timeOfDay -gt 12900) { throw 'PREREQUISITES: Start in daytime before tick 12900' }
+        $null = Invoke-Fixture assault.prepare_full_moon $ctx ([Guid]::NewGuid().ToString('N'))
+        $target = $before.rawTime - $before.timeOfDay + 13000
+        Assert-State 'alignment_did_not_start_assault' (Invoke-Bridge query assault.snapshot).starts 0
+        Assert-State 'aligned_phase' (Invoke-Bridge query lunar.snapshot).phaseId 4
+    }
+    $result.before = $before
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        $after = Invoke-Bridge query assault.snapshot
+        $result.after = $after
+        if ($after.worldId -ne $ctx.worldId) { throw 'STALE_WORLD: The assault changed ownership' }
+        if ($after.boundary -eq $target -and
+            ($after.state -ne 'ACTIVE' -or ($InterruptAssault -and $after.spawns.Count -gt 0))) { break }
+        Start-Sleep -Milliseconds $(if ($after.state -eq 'ACTIVE') { 125 } else { 800 })
+    } while ($watch.Elapsed.TotalSeconds -lt [Math]::Max(55, $LunarWaitSeconds + 55))
+
+    Assert-State 'natural_boundary' $after.boundary $target
+    Assert-State 'event_kind' $after.kind 'PLAYER_ASSAULT'
+    Assert-State 'player_target' $after.target 'PLAYER_VICINITY'
+    Assert-State 'overworld' $after.dimension 0
+    Assert-State 'exactly_one_start' $after.starts 1
+    Assert-State 'event_state' $after.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
+    Assert-State 'bounded_pulses' ($after.pulses -ge 1 -and $after.pulses -le 3) $true
+    Assert-State 'bounded_attempts' ($after.attempts -ge $after.spawns.Count -and $after.attempts -le (24 * $after.pulses)) $true
+    Assert-State 'bounded_spawns' ($after.spawns.Count -ge 1 -and $after.spawns.Count -le $after.budget -and
+        $after.spawns.Count -le (2 * $after.pulses) -and $after.budget -le 6) $true
+    foreach ($spawn in $after.spawns) {
+        Assert-State 'vanilla_mob' ($spawn.mob -in 'ZOMBIE', 'SKELETON') $true
+        Assert-State 'spawn_annulus' ($spawn.horizontalSquared -ge 100 -and $spawn.horizontalSquared -le 225) $true
+        $position = @{ X = [Math]::Floor($spawn.x); Y = $spawn.y; Z = [Math]::Floor($spawn.z) }
+        $ground = $position.Clone()
+        $ground.Y--
+        $head = $position.Clone()
+        $head.Y++
+        Assert-State 'loaded_spawn_column' (Invoke-Bridge query world.block $position).loaded $true
+        Assert-State 'air_at_feet' (Invoke-Bridge query world.block $position).blockId 0
+        Assert-State 'air_at_head' (Invoke-Bridge query world.block $head).blockId 0
+        Assert-State 'supported' ((Invoke-Bridge query world.block $ground).blockId -gt 0) $true
+    }
+}
+
 function Test-DistillationBatch {
     $watch = [Diagnostics.Stopwatch]::StartNew()
     do {
@@ -225,7 +273,7 @@ function Test-DistillationBatch {
 }
 
 try {
-    if ($Scenario -notin $scenarios -or !$DisposableWorld -or $ExpectedJarSha256 -notmatch '^[0-9a-fA-F]{64}$') {
+    if ($Scenario -notin ($scenarios + 'assault.natural_full_moon@1') -or !$DisposableWorld -or $ExpectedJarSha256 -notmatch '^[0-9a-fA-F]{64}$') {
         throw 'PREREQUISITES: Specify the scenario, -DisposableWorld and the candidate SHA-256'
     }
     $ctx = Invoke-Bridge query test.context
@@ -244,6 +292,12 @@ try {
         $result.cleanup.status = 'not_applicable'
         if ($LunarWaitSeconds -gt 0) { $result.reproduction += " -LunarWaitSeconds $LunarWaitSeconds" }
         Test-LunarBoundary
+    } elseif ($scenarioId -eq 'assault.natural_full_moon@1') {
+        $result.cleanup.status = 'keep_disposable_copy'
+        if ($LunarWaitSeconds -gt 0) { $result.reproduction += " -LunarWaitSeconds $LunarWaitSeconds" }
+        if ($AssaultBoundary) { $result.reproduction += " -AssaultBoundary $AssaultBoundary" }
+        if ($InterruptAssault) { $result.reproduction += ' -InterruptAssault' }
+        Test-Assault
     } elseif ($scenarioId -eq 'distillation.gasoline_batch@1') {
         Assert-State 'initial_drops' $ctx.drops 0
         $attemptedCreate = $true

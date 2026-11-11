@@ -1,5 +1,7 @@
 # Milestone 1 singleplayer acceptance
 
+The [Survival 0.1 assault record](survival-assault-acceptance.md) tracks the later candidate separately. The historical results below apply only to their original build hashes.
+
 ## Provenance
 
 - **Date:** 2026-11-10. Local `main` and `origin/main` both pointed to `73cdf9c1f462ff71c99075bdfc4738b7964447db`, the PR #17 merge. The acceptance candidate includes the local bridge changes over that baseline.

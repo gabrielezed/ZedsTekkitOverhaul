@@ -24,6 +24,7 @@ import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
+import zed.tekkitoverhaul.assault.SiegeDirector;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -37,6 +38,12 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static int lunarDebugKey = 0;
     @MLProp(info = "Log lunar transitions, save initialization and listener failures")
     public static boolean lunarVerboseLogging = false;
+    @MLProp(info = "Enable natural full-moon player assaults in local Survival")
+    public static boolean playerAssault = true;
+    @MLProp(info = "Maximum enemies per assault (1 to 6)")
+    public static int assaultSpawnBudget = 6;
+    @MLProp(info = "Simulation ticks between assault pulses (80 to 400)")
+    public static int assaultPulseInterval = 160;
 
     private static final LocalLunarCalendar LUNAR = new LocalLunarCalendar();
 
@@ -66,7 +73,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
-        LUNAR.register(this, lunarDebugKey, lunarVerboseLogging);
+        LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
+                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultPulseInterval));
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();

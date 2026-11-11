@@ -1,11 +1,12 @@
 # ZedsTekkitOverhaul — Versioning, Build Identity & Release Policy
 
-**Status:** Proposed v1.0 policy. Apply after PR #19 is merged and before the next feature release.  
+**Status:** Adopted for Survival 0.1 after PR #19 merged.
+
 **Initial release line:** `0.1.0-alpha.1` — first Survival gameplay vertical slice.
 
 ## 1. Why the version changes
 
-The current ModLoader `getVersion()` in `mod_ZedsTekkitOverhaul.java` returns `0.7.0-distillation-prototype`. This was a prototype identifier, not a product-wide release scheme. The transition to `0.1.0-alpha.1` is a deliberate **version-line reset**, not a binary or save-data downgrade. Preserve the old identifier in the changelog/history. Do not change block IDs, TileEntity registration names, NBT field names or compatibility data merely due to reversioning.
+The former ModLoader version `0.7.0-distillation-prototype` was a prototype identifier. The transition to `0.1.0-alpha.1` resets the product version line; it does not downgrade binaries or save data. See the [changelog](../../CHANGELOG.md). Do not change block IDs, TileEntity registration names, NBT field names or compatibility data merely due to reversioning.
 
 ## 2. Version scheme
 
@@ -42,11 +43,9 @@ A clean release build should come from a fixed commit. Dirty builds are for test
 
 ## 4. Single source of truth
 
-Create a repository-level version declaration (`version.properties`, `VERSION`, or an existing equivalent), selected after inspecting the real build chain. Derive `getVersion()`, `mcmod.info`, log banner, release artifact label, test report version field and release notes from this source without requiring a modern build system.
+`BuildVersion.VERSION` is canonical. ModLoader and the startup banner use it directly. The canonical `zto-tools/build-and-deploy.bat` checks `mcmod.info` against it before compiling. Update both together and add an entry to the changelog for a version change.
 
-If generated metadata needs precompile creation, make its process deterministic and integrate it into `zto-tools/build-and-deploy.bat`. Preserve old Java/ModLoader syntax. Keep the bootstrap thin.
-
-If the existing legacy pipeline cannot safely generate all metadata without invasive changes, select one canonical constant plus a documented validation script; **consistency matters more than build-system complexity**.
+The build embeds `zto-build.properties` with the product version, full Git SHA, dirty state, UTC timestamp and compiler profile. The adjacent `ZedsTekkitOverhaul.jar.build.json` includes those values plus the SHA-256 of the finished archive. Keep the stable deployed JAR name. The Tekkit Dev lifecycle verifies the archive hash against the running code source and compares the running ModLoader version with the build record. Its report records pack Forge/FML from the current launch log and the Java version from the owned process.
 
 ## 5. Compatibility contract
 

@@ -16,6 +16,7 @@ if defined ZTO_PRISM_MODS set "MODS_DIR=%ZTO_PRISM_MODS%"
 set "JAR_NAME=ZedsTekkitOverhaul.jar"
 set "BUILD_JAR=dist-zto\ZedsTekkitOverhaul.building.jar"
 set "DEPLOY_JAR=%MODS_DIR%\%JAR_NAME%"
+set "BUILD_METADATA=dist-zto\zto-build.properties"
 
 if not exist "recompile.bat" (
     echo [ZTO] ERROR: recompile.bat was not found in the MDK root.
@@ -86,6 +87,9 @@ call "zto-tools\prepare-ee2-dev-stubs.bat"
 if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
+if not exist "dist-zto\" mkdir "dist-zto"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%"
+if errorlevel 1 goto :fail
 call "recompile.bat"
 if errorlevel 1 (
     echo [ZTO] ERROR: recompile.bat failed.
@@ -145,6 +149,8 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
     goto :fail
 )
+jar uf "%BUILD_JAR%" -C "dist-zto" zto-build.properties
+if errorlevel 1 goto :fail
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.
@@ -211,6 +217,8 @@ if errorlevel 1 goto :fail
 move /Y "%BUILD_JAR%" "dist-zto\%JAR_NAME%" >nul
 if errorlevel 1 goto :fail
 set "BUILD_JAR=dist-zto\%JAR_NAME%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%BUILD_JAR%"
+if errorlevel 1 goto :fail
 
 copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
 if errorlevel 1 (

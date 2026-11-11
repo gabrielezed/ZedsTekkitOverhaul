@@ -51,7 +51,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     private int petroleumModel;
 
     @Override
-    public String getVersion() { return "0.7.0-distillation-prototype"; }
+    public String getVersion() { return BuildVersion.VERSION; }
 
     @Override
     public void load() {

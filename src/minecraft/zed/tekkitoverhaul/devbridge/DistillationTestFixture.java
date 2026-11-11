@@ -70,7 +70,7 @@ final class DistillationTestFixture {
         }
     }
 
-    String start() throws BridgeProtocol.Error {
+    String start(boolean partial) throws BridgeProtocol.Error {
         TileEntityDistillationBoiler boiler = (TileEntityDistillationBoiler) tiles[0];
         TileEntityDistillationHeater heater = (TileEntityDistillationHeater) tiles[1];
         TileEntityDistillationCondenser condenser = (TileEntityDistillationCondenser) tiles[4];
@@ -86,7 +86,9 @@ final class DistillationTestFixture {
         started = true;
         int crude = boiler.fill(Orientations.XNeg, FractionationProcess.BATCH_INPUT_MB, oilId, true);
         int water = condenser.fill(Orientations.YPos, DistillateType.GASOLINE.coolantPerBatchMB, Block.waterStill.blockID, true);
-        int remaining = DistillateType.GASOLINE.durationTicks * FractionationProcess.EU_PER_TICK;
+        int ticks = DistillateType.GASOLINE.durationTicks;
+        if (partial) ticks /= 2;
+        int remaining = ticks * FractionationProcess.EU_PER_TICK;
         while (remaining > 0) {
             int packet = Math.min(remaining, LvHeaterBuffer.MAX_PACKET_EU);
             if (heater.injectEnergy(Direction.XN, packet) != 0) {
@@ -94,7 +96,8 @@ final class DistillationTestFixture {
             }
             remaining -= packet;
         }
-        return ",\"crudeMB\":" + crude + ",\"coolantMB\":" + water + ",\"storedEU\":" + heater.getStoredEnergy();
+        return ",\"crudeMB\":" + crude + ",\"coolantMB\":" + water + ",\"storedEU\":" + heater.getStoredEnergy()
+                + ",\"poweredTicks\":" + ticks;
     }
 
     String collect() throws BridgeProtocol.Error {

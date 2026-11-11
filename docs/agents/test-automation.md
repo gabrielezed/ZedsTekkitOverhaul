@@ -14,7 +14,27 @@ The first scenario exercises the registered ZTO Hopper and vanilla chest in the 
 
 Run a single scenario with `run <scenario>` or all currently registered scenarios with `suite singleplayer-core`, using the flags in the setup below. The suite starts with the time-sensitive lunar check. It runs each scenario serially, includes each report path in its JSON summary and returns nonzero if any member fails or skips. The suite covers the registered workflows only. See the [acceptance matrix](singleplayer-acceptance.md) for remaining cases and current evidence.
 
-`-LunarWaitSeconds` accepts up to 720 seconds. Keep the marked save open and unpaused during the wait. After Save and Quit, double-click the marked save row and confirm `zed-dev.ps1 status` reports `ready` before starting the runner.
+`-LunarWaitSeconds` accepts up to 720 seconds. The lifecycle runner below keeps the simulation ticking without window focus. When running `zed-test.ps1` directly, leave the marked save open and unpaused during the wait.
+
+## Unattended Tekkit Dev lifecycle
+
+Prepare one marked disposable Overworld as described below. Keep its player near spawn, its fixture arena empty and the source save closed. Deploy the candidate with `zto-tools/build-and-deploy.bat`. In **Tekkit Dev** only, enable the three bridge flags from the setup below and configure a Prism account and Java installation that can already launch the pack. Close any existing Tekkit Dev client.
+
+From the MDK root, run this command with the folder name of the authorized save.
+
+```powershell
+.\zto-tools\test-tekkit-dev.ps1 -DisposableSave 'ZTO-Test-0123456789abcdef0123456789abcdef'
+```
+
+The script uses the standard Windows Prism data directory and launches `Tekkit Dev` by its instance ID. Use `-PrismExe` if Prism is installed outside the per-user program directory. It copies the marked save to a new marked folder, verifies the deployed candidate, launches and identifies the game process, then checks the running JAR SHA-256 through the authenticated bridge. It runs `singleplayer-core` and the live crafting transactions, stages a loaded Hopper, stops and restarts the client, and verifies that the same inventory, facing and mode survived in a new bridge session. It stops the second client when assertions finish. The natural lunar transition can take several minutes. `-StartupSeconds` bounds each launch and `-LunarWaitSeconds` bounds the lunar wait.
+
+- `-SkipCore -Persistence Distillation` runs the crafting checks and the partial-batch persistence case on a separate copy. The fixture supplies only enough EU for half a batch. After the buffer runs out, the restart must preserve progress, fluids and fraction selection, and the parts must bind again.
+- `-SkipCore -PhysicalDistillation` runs the crafting checks and one physical gasoline batch on a separate copy. A powered wooden waterproof pipe draws crude from a BuildCraft tank into the boiler, a coal-fueled IC2 Generator supplies the adjacent heater, and a second powered wooden waterproof pipe draws the gasoline into a BuildCraft tank. Cooling water is seeded directly into the condenser. The report records measured liquid and EU observations.
+- `-SkipCore` alone runs crafting and Hopper restart without repeating the already-covered transfer scenarios. The 3×3 and 5×5 transaction check uses the installed recipes, the production fill planner and real result-slot and deposit clicks. It checks missing ingredients, conservation and the active Inventory Tweaks protections. Protection assertions that require a rule absent from the active profile are reported `BLOCKED`. NEI and mouse input are covered separately by actual GUI checks.
+
+The script prints a compact JSON result and saves a report under `dist-zto/test-reports/`. Exit codes are 0 for `PASS`, 1 for an assertion `FAIL`, and 2 for `BLOCKED`. Individual checks can be blocked by the active Inventory Tweaks profile even when the lifecycle passes. Reports include the running build hash, runtime log provenance, child process and bridge session IDs, per-scenario evidence and bounded failure diagnostics. Fixture copies are retained for inspection and each invocation starts from a fresh copy of the named source. The script never adopts an old fixture. Remove retained copies through the usual disposable-save cleanup when their evidence is no longer needed.
+
+The game bootstrap consumes a local request once at the title screen and requires the test flags, a matching candidate hash, an existing canonical save and a marker that matches the saved seed. It uses the vanilla singleplayer loading path and a non-pausing screen during the run. A second local request with the same launch nonce can ask that specific world session to shut down using the normal Minecraft save path. There is no world selection or process administration route on the bridge. A crash or forced stop blocks the persistence result. The runner refuses to start while Tekkit Dev is already running. On startup failure before the nonce announcement, it withdraws its pending request and can stop a single new Prism Java process whose native-library path matches the exact Tekkit Dev instance. Ambiguous matches require inspecting the launcher log before retrying.
 
 ### GUI-assisted runtime checks
 
@@ -59,7 +79,12 @@ Requests keep the existing envelope with ASCII requestId, op and a flat args obj
 | Command hopper.prepare_capacity@1 | Same as fixture.create | Fill the empty owned chest with untagged stone, leaving two units of room in the final slot. Requires both inventories to be empty. |
 | Commands hopper.power_on@1 and hopper.power_off@1 | Same as fixture.create | Place or remove the vanilla redstone torch and its stone support at the two reserved cells immediately east of the fixture. |
 | Command test.input@1 | Same as fixture.create plus count (1–8) | Seed untagged stone (ID 1, damage 0) into the empty Hopper. The chest must be empty unless the capacity operation prepared it. |
-| Command fixture.destroy@1 | Same | Empty owned inventories before block removal, remove the two owned blocks and check the arena. |
+| Command fixture.destroy@1 | Same | Empty Hopper fixture inventories before block removal, or remove the owned endpoint-test distillation parts, then check the arena. |
+| Command hopper.stage_reload@1 | Same as fixture.create | Place a north-facing Hopper in Input mode with four stones. The fresh fixture stays in the disposable copy for restart assertions. |
+| Commands distillation.create@1, distillation.start@1 and distillation.collect@1 | Same as fixture.create | Place and own the seven-part layout, feed one full batch through the machine entry points, and collect the gasoline from the receiver. |
+| Command distillation.start_partial@1 | Same as fixture.create | Seed the same fluids and supply half the batch's EU. Returns the number of process ticks the heater can power. |
+| Command distillation.transport@1 | Same as fixture.create | Place and start the fixed physical BuildCraft/IC2 layout. Leave the fixture in its disposable copy. `machine.inspect` reads liquid amount and identity from the installed BuildCraft tank tile. |
+| Command crafting.transactions@1 | Same as fixture.create | In an idle marked world, use the real containers and a temporary inventory on the game thread. Restore the live inventory before returning. Report both recipe assertions and active protection checks. |
 
 Send queries to POST /v1/query and commands to POST /v1/command. Successful commands return fixture identity, the new revision and simulation ticks at execution. Snapshot stacks are null or have itemId, damage, count and tagged. The tag-presence bit lets this scenario require untagged stone. It does not distinguish two tagged stacks with different payloads. Unknown tiles return UNSUPPORTED. Reads use all slots for supported tile types. There is no caller-supplied slot index. Hopper power inspection requires the relevant neighboring chunks to be loaded.
 
@@ -72,7 +97,7 @@ Send queries to POST /v1/query and commands to POST /v1/command. Successful comm
 | Unauthenticated or oversized input | Existing bearer authentication, byte caps, worker count, queue depth and rate limit apply to both routes. |
 | Remote, paused or unloaded world | Existing dispatcher refuses or cancels jobs. Execution rechecks test session and world identity. |
 | Ordinary save, wrong seed or non-overworld | Commands require the test flag plus the exact canonical disposable folder and marker bytes. The bridge does not create markers. |
-| Arbitrary coordinates, item, NBT, entity or action | The command schema contains none of those selectors. The single arena uses the center of the spawn chunk at Y=180 and checks a 5×7×5 volume. All command work stays in that loaded chunk and only modifies the Hopper and chest cells. |
+| Arbitrary coordinates, item, NBT, entity or action | The command schema contains none of those selectors. The single arena uses the center of the spawn chunk at Y=180 and checks a 5×7×5 volume. Block writes stay in that loaded chunk and target the cells owned by the selected fixture. |
 | Foreign, stale or repeated write | Require current session, world and revision. Non-create operations require the current run ID and the exact live tiles. The most recent successful request can be replayed with the same request ID and arguments. Older revisions fail. |
 | Arena changed or partial placement/removal | Refuse changed blocks, replaced tiles, tagged or unexpected inventory contents and item entities in the arena. Attempt bounded rollback of recognized, empty setup tiles. If cleanup is uncertain, require a fresh disposable copy. |
 | Audit | Each dispatched command logs operation, world/run, observed simulation tick and outcome. Discovery credentials stay out of evidence. |
@@ -103,7 +128,7 @@ $hash = (Get-FileHash .\dist-zto\ZedsTekkitOverhaul.jar -Algorithm SHA256).Hash
 .\zto-tools\zed-test.ps1 run hopper.basic_transfer@1 -DisposableWorld -ExpectedJarSha256 $hash
 ~~~
 
-The runner checks the runtime hash before creating the fixture. It captures empty pre-state and exact post-transfer quantities independently of command replies, tests an identical input retry, checks sampled drops, verifies reset, and checks both cells after cleanup. It allows up to 80 observed simulation ticks and a 10-second polling budget. Paused/stalled sessions fail within the transport or polling deadline. The terminal returns compact JSON, with bounded full snapshots under dist-zto/test-reports. Exit codes are 0 for PASS, 1 for assertion FAIL, 2 for ERROR or ABORTED and 3 for SKIP. Test output is evidence about state and inventory transfer. Graphics, GUI interaction, multiplayer and automated launch/restart require separate acceptance.
+The runner checks the runtime hash before creating the fixture. It captures empty pre-state and exact post-transfer quantities independently of command replies, tests an identical input retry, checks sampled drops, verifies reset, and checks both cells after cleanup. It allows up to 80 observed simulation ticks and a 10-second polling budget. Reads can retry a short stall within a bounded window. Paused or unloaded worlds and failed writes are surfaced to the caller. The terminal returns compact JSON, with full snapshots under `dist-zto/test-reports`. Exit codes are 0 for PASS, 1 for assertion FAIL, 2 for ERROR or ABORTED and 3 for SKIP. The unattended lifecycle runner wraps these existing scenario reports.
 
 ## Tekkit Dev run report
 
@@ -121,11 +146,10 @@ Verified on 2026-11-10 in the isolated Prism 11.1.1 Tekkit Dev instance. Its men
 | Preliminary JAR with fixed-origin arena | A disposable copy with no marker returned TEST_WORLD_REQUIRED. A distant tile read returned CHUNK_NOT_LOADED. This run used the earlier JAR and established the need for a spawn-chunk anchor. | Console |
 | Candidate restarted with zto.devBridge.enabled=false | The client reached the title screen with 44 mods loaded, no discovery announcement and zero listening TCP sockets in its process. Original Prism JVM arguments were restored after testing. | Forge log and netstat |
 
-The Hopper tests exercised actual singleplayer ticks, including the reopened save. Computer Use opened and closed the world around the runs. Shell commands performed fixture setup, assertions and cleanup. The boiler snapshot compiled and was packaged, but was not exercised on a live boiler. No visual or multiplayer acceptance, missing-mod boot, deliberate partial-placement fault, performance benchmark or automatic client restart was run. A generic event stream and fingerprinting tagged stacks remain follow-ups. The single typed item input was sufficient for this scenario, so a redstone action was not added.
+The 2026-11-10 Hopper runs exercised actual singleplayer ticks. Computer Use opened and closed the world around these historical runs, and shell commands performed fixture setup, assertions and cleanup. Subsequent runtime evidence covers redstone and the live gasoline batch. See the [singleplayer acceptance matrix](singleplayer-acceptance.md) for build-specific results and remaining gaps.
 
 ## Follow-up implementation prompts
 
 - **Distillation batch.** Extend the existing boiler read adapter with the owned heater and receiver fields. Audit the pinned IC2 and BuildCraft contracts. Add one disposable layout and use the legitimate power and fluid entry points to seed exactly one documented batch. Assert crude and coolant usage, EU consumption, output identity and volume, progress and failure reasons using independent reads. Keep runtime, structure and rendering evidence separate.
 - **Natural lunar boundary.** Prepare a disposable save at the desired pre-boundary position through the existing calendar service. Use lunar.snapshot and lunar.events, let ordinary ticks cross the boundary, and assert FULL_MOON and exactly one natural NIGHT_STARTED. Record cursor, dropped count and separate administrative transitions.
-- **Build and restart.** Add an opt-in Tekkit Dev workflow that records Git SHA and worktree state, builds and deploys the candidate, checks its exact JAR hash, performs a controlled restart when necessary, and waits for a suitable disposable world. Preserve the current runner's build mismatch failure.
 - **Typed events.** Add a bounded world/run-scoped stream for a specific domain transition when a scenario needs it. Reuse the lunar observer's cursor and overflow semantics. Use existing game-thread hooks and require explicit coverage for stale cursors and lifecycle reset.

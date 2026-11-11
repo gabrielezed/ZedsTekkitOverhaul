@@ -62,9 +62,17 @@ $exitCode = 2
 
 function Invoke-Bridge([string]$Verb, [string]$Op, [hashtable]$Arguments = @{}) {
     $cli = Join-Path $PSScriptRoot 'zed-dev.ps1'
-    if ($Op) { $raw = & $cli $Verb $Op -Discovery $Discovery -Json @Arguments }
-    else { $raw = & $cli $Verb -Discovery $Discovery -Json }
-    $reply = $raw | ConvertFrom-Json
+    for ($attempt = 0; $attempt -lt 4; $attempt++) {
+        if ($Op) { $raw = & $cli $Verb $Op -Discovery $Discovery -Json @Arguments }
+        else { $raw = & $cli $Verb -Discovery $Discovery -Json }
+        $reply = $raw | ConvertFrom-Json
+        if ($reply.ok -or $Verb -ne 'query' -or $reply.error.code -notin 'NOT_READY', 'BUSY', 'TIMEOUT') { break }
+        if ($reply.error.code -eq 'NOT_READY') {
+            $state = (& $cli status -Discovery $Discovery -Json | ConvertFrom-Json).data.state
+            if ($state -notin 'stalled', 'ready') { break }
+        }
+        if ($attempt -lt 3) { Start-Sleep -Milliseconds 750 }
+    }
     if (!$reply.ok) { throw ('{0}: {1}' -f $reply.error.code, $reply.error.message) }
     $reply.data
 }

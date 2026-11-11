@@ -10,26 +10,34 @@
 
 ## Coverage matrix
 
-Live results in this table refer to the candidate and runtime above. Owner observations refer to earlier builds. A portable PASS applies to the specific assertions named in the evidence column. All four gameplay subsystems are implemented. Scenario-specific gaps are listed below.
+Live results in this table refer to the 2026-11-10 candidates and runtime above. The unattended evidence section records later runs separately. Owner observations refer to earlier builds and remain unpinned where the source report omits a hash. A portable PASS applies to the specific assertions named in the evidence column.
+
+| Evidence level | Meaning |
+| --- | --- |
+| Portable | Shell or Java assertions outside a running Tekkit client, including tests using MCP classes. |
+| Live runtime | Assertions observed in an actual Tekkit Dev world. Setup may be assisted. |
+| GUI-assisted | A real GUI action was performed before or during runtime assertions. The NEI recipe transfer and bed-sleep observations are in this category. |
+| Fully unattended | Shell invocation, world opening, scenario execution and shutdown complete without GUI input. Persistence additionally requires a new client session opening the same disposable copy. |
+| Owner-accepted | The owner observed and accepted the behavior. Applies only to the scope and build recorded for that observation. |
 
 | Feature | Scenario | Portable | Live | Pack integration | Visual | Owner | Evidence and limits |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Hopper | HOPPER-01 downward transfer | PASS | PASS | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | `954256515276138.json`. Four stones transferred in 26 simulation ticks, zero sampled drops, reset and cleanup verified. Baseline JAR also passed in `344264174459423.json`. |
 | Hopper | HOPPER-02 redstone lock and resume | NOT_RUN | PASS | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | `303938030476879.json`. The reopened suite verified lock, resume, conservation and cleanup on the distillation candidate. |
 | Hopper | HOPPER-03 partial then full destination | PASS | PASS | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | `909610751355446.json`. Chest 1726 → 1728, two of four stones retained in the Hopper after 82 ticks, zero sampled drops, cleanup complete. |
-| Hopper | HOPPER-04 loaded inventory, facing and mode across reload | PASS | NOT_RUN | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | Portable NBT round trip. Reopening a save with an already cleaned arena only checks that the next fixture can run. |
+| Hopper | HOPPER-04 loaded inventory, facing and mode across reload | PASS | NOT_RUN | NOT_APPLICABLE | NOT_APPLICABLE | NOT_RUN | Portable NBT round trip. The earlier reopen used a cleaned arena. See the unattended lifecycle evidence for the loaded fixture. |
 | Hopper | HOPPER-05 furnace, IC2 Generator, IronChest and BuildCraft wooden item pipe | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Portable furnace and chest rules only. Earlier owner observations reported IC2/EE2 interoperability and an IronChest failure before the adapter follow-up. |
 | Hopper | HOPPER-06 placement, pickup, GUI, breaking, model and collision | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Manual checklist and prior reported issues in the [Hopper handoff](../engineering/hopper-backport.md). |
 | Distillation | DIST-01 formation, orientation, independent layout | PASS | PASS | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | 44 layout assertions. `160717546507312.json` verifies the formed east-facing layout. Live negative/revalidation cases and independent layouts remain open. |
 | Distillation | DIST-02 gasoline batch | PASS | PASS | PASS | NOT_APPLICABLE | MANUAL_ACCEPTED | `160717546507312.json`. Seven real components formed. In 162 observed ticks, 250 mB oil, 40 mB coolant and 1280 EU were consumed. The receiver delivered 250 mB of gasoline (liquid ID 3017). Cleanup complete. Integration coverage is limited to direct BuildCraft liquid and IC2 LV endpoint calls. |
 | Distillation | DIST-03–04 starvation and other fractions | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Covered by the portable process harness. Live cases remain open. |
-| Distillation | DIST-05 BuildCraft fluid transport | NOT_RUN | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Requires physical oil/water pipe input and receiver extraction. |
-| Distillation | DIST-06 partial batch across reload | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Portable state restoration. Real NBT and multiblock rebind remain open. |
+| Distillation | DIST-05 BuildCraft fluid transport | NOT_RUN | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | See the unattended evidence for physical oil input and receiver extraction. A physical coolant inlet remains open. |
+| Distillation | DIST-06 partial batch across reload | PASS | NOT_RUN | NOT_RUN | NOT_APPLICABLE | NOT_RUN | Portable state restoration. See the unattended evidence for real NBT and multiblock rebind. |
 | Distillation | DIST-07 panels and inspector parity | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | The batch scenario exercised live boiler and heater snapshots. Comparison against GUI panels remains open. |
 | Crafting | CRAFT-01 3×3 result collection | PASS | PASS | PASS | PASS | MANUAL_ACCEPTED | In the disposable Creative save, NEI supplied 64 vanilla workbenches. Four were placed in the 3×3 grid and consumed to collect one Advanced Crafting Table. The bridge then reported 60 workbenches and one advanced table in `milestone1-before-reload.json`. Integration here covers NEI item search and provisioning. |
 | Crafting | CRAFT-02–03 recipe transfer, missing ingredients and batches | PASS | NOT_RUN | NOT_RUN | NOT_RUN | MANUAL_ACCEPTED | MCP workbench slots and result preview, missing ingredient refusal and planner quantities. |
 | Crafting | CRAFT-04 advanced 5×5 | PASS | PASS | PASS | PASS | MANUAL_ACCEPTED | In Survival, NEI prepared 16 smooth stones around the grid perimeter. Collecting one Foundry emptied the grid. Bridge snapshots showed 65 → 49 stones, 0 → 1 Foundry and an empty cursor after deposit. Inventory Tweaks 1.41b was loaded. Its sorting and slot protection require separate verification. See `milestone1-crafting-5x5.json`. |
-| Inventory | CRAFT-05–06 slot protection, storage and overflow | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Protection rules and storage planner checks. Live Inventory Tweaks locks and full NBT-preserving transfers remain open. |
+| Inventory | CRAFT-05–06 slot protection, storage and overflow | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Protection rules and storage planner checks. See the unattended evidence for the hotbar row rule. Full NBT-preserving transfers remain open. |
 | Inventory | CRAFT-07 drag distribution | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Planner and slot policy checks plus drag-agent bytecode probe against Tekkit Dev archives. Actual mouse gesture coverage remains open. |
 | Inventory | CRAFT-08 IC2, RedPower and other modded containers | PASS | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Portable target policy only. Live clicks and per-container compatibility remain open. |
 | Lunar | LUNAR-01–03 phase order, fresh and legacy alignment | PASS | NOT_RUN | NOT_APPLICABLE | MANUAL_ACCEPTED | MANUAL_ACCEPTED | Calendar harness. Earlier Tekkit Dev showed new-save data and legacy alignment. Owner verified all visible phases. |
@@ -46,6 +54,27 @@ Runtime artifacts are under the ignored `dist-zto/test-reports/` directory. Port
 
 The first `singleplayer-core` invocation exited 2 at world selection before creating any fixture. After reopening the marked save, `suite singleplayer-core -LunarWaitSeconds 120` passed all five registered scenarios and exited 0 on the distillation candidate. See `milestone1-lunar-suite-reopened.json` for the per-scenario results and report paths.
 
+## Unattended evidence on 2026-11-11
+
+The lifecycle work started from `5f44018` (merge of PR #18). Live runs used the isolated Prism 11.1.1 Tekkit Dev, Minecraft 1.2.5, FML 2.2.106.176, Forge 3.3.8.164 and Java 8u51. BuildCraft 2.2.14, IC2 1.97 and Inventory Tweaks 1.41b were present. The MCP compilation profile and portable crafting tests used Forge 3.4.9.171 under Adoptium JDK 8.0.504.1. The report files named below are under `dist-zto/test-reports/`.
+
+- The first unattended core attempt used `b5fa41d985b76902718c7562bccca49a9a9403902701435cadd4fc8d83d282c8`. `787400144027926.json` passed a natural night boundary. The bridge returned `NOT_READY` during the following distillation batch and the remaining scenarios did not start. The client was shut down by the runner. See `autonomy-ZTO-Test-788459eeb3f14a6d8034d818b51b53da.json`.
+- The first distillation restart used `5746139b0ca5a09a6afc4997ba29c68127cea535d72167a3c828561c108e33c6`. It verified two separate client sessions and reached 80 ticks of progress before shutdown. The boiler was missing after restart. The legacy shutdown path tried to unload with the main loop already stopped. The bootstrap now saves and unloads before shutdown and waits for pending chunk I/O. See `autonomy-ZTO-Test-e10a8c17600a449ea0a0c53b860d7682.json`.
+
+The verified candidate SHA-256 is `c3aa20585057ac20eae04517a898ba6d30d5e5fbe848ed476cb45be713d8195b`. MCP client compilation, reobfuscation and streaming verification of 224 archive entries passed. See `dist-zto/autonomy-final-build.log`.
+
+| Case | Fully unattended | Evidence |
+| --- | --- | --- |
+| Complete `singleplayer-core` lifecycle | PASS | `autonomy-ZTO-Test-f7f85e0e8cdb4a7998eaad100d960d32.json`. The runner opened the authorized copy, verified the JAR, passed all five core scenarios, ran crafting, restarted for Hopper persistence and shut down both clients with exit 0. Core reports: `348504318111747.json` (lunar), `76295289328409.json` (distillation), `18193651766776.json` (Hopper transfer), `303807655731504.json` (capacity), `229521781509103.json` (redstone). |
+| HOPPER-04 loaded inventory, facing and mode across client restart | PASS | The same lifecycle report verified four stones in slot 0, north-facing metadata 2 and Input mode before and after reopening the same copy in a new Java process and bridge session. |
+| DIST-06 partial batch across client restart | PASS | `autonomy-ZTO-Test-55ec07a1710646098b08f26da780130d.json`. Separate Java PIDs and bridge sessions opened the same copy. The apparatus re-formed with 80 progress ticks, 250 mB of crude, 40 mB of coolant, the same selected fraction and no product. Both clients exited cleanly. |
+| DIST-05 physical BuildCraft transport and external IC2 energy | PASS | `autonomy-ZTO-Test-a5b4d185ac7f40f1b777dac5ac83c21e.json`. Two redstone engines powered two wooden waterproof pipes. The input tank emptied and the output tank received 250 mB of gasoline (ID 3017) after 315 observed simulation ticks. The adjacent coal-fueled IC2 Generator delivered energy through EnergyNet, with up to 1870 EU observed in the heater. The coolant was seeded through the condenser inlet. |
+| CRAFT-01 and CRAFT-04 transaction paths and missing ingredients | PASS | The same two reports cover installed 3×3 and 5×5 recipes, insufficient ingredient refusal, real result-slot pickup, inventory deposit and exact conservation. |
+| CRAFT-05 active Inventory Tweaks hotbar row rule | PASS | The same reports verify the active rule allowed recipe sourcing from the hotbar and kept returned ingredients out of that row. |
+| CRAFT-05 explicit slot lock or frozen slot in Inventory Tweaks | BLOCKED | The active ruleset had no such slot. The portable protection check passed. |
+
+Portable checks also passed for bridge transport and dispatch, the 21 Hopper inventory and NBT assertions, crafting transactions and drag policy, and the 197 distillation core assertions. The unattended runs add no owner acceptance.
+
 ## Survival smoke path
 
 1. Start a fresh disposable Survival save in Tekkit Dev with test writes disabled. Record seed, build hash and runtime versions.
@@ -57,8 +86,8 @@ The first `singleplayer-core` invocation exited 2 at world selection before crea
 
 ## Open risks and readiness
 
-- Live gasoline conservation passed through the real machine endpoints. Physical pipes, an external EU source and partial-batch persistence remain release risks.
-- Hopper capacity evidence covers the vanilla chest. Redstone, persistence of a loaded tile and per-mod slot restrictions still need live evidence.
-- Portable crafting checks do not initialize the installed FML mods. Live output collection, Inventory Tweaks protections and drag gestures remain separate acceptance work.
+- The physical batch covers oil input, gasoline extraction and an adjacent IC2 Generator. A physical coolant inlet, cable loss and alternative fractions remain outside this sample.
+- Hopper capacity and redstone lock/resume passed against a vanilla chest in the live suite. See the later evidence for loaded-tile persistence. Per-mod slot restrictions remain open.
+- The 2026-11-10 live crafting evidence includes actual result collection in both grids and NEI recipe transfer for 5×5. Inventory Tweaks hard-lock rules, its own sorting and refill behavior, and real drag gestures require their own evidence.
 - Cross-save listener behavior still needs a live check. The Forge 3.4.9.171 compile profile has no equivalent full Tekkit runtime run in this record.
-- The candidate is suitable for an exploratory Survival smoke run in Tekkit Dev. Functional milestone acceptance and subjective Survival acceptance remain open.
+- The next milestone is the unassisted Survival smoke path in Tekkit Dev. Keep the remaining visual and interaction checks in the GUI, including NEI's actual recipe transfer and missing-ingredient display, Inventory Tweaks sorting and refill, drag gestures, machine panels and real bed use. The existing GUI-assisted observations cover the 5×5 NEI transfer and bed interaction on the earlier candidate.

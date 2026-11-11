@@ -19,9 +19,11 @@ final class BridgeProtocol {
         return CAPABILITIES.substring(0, CAPABILITIES.length() - 2) + ","
                 + operation("fixture.create") + "," + operation("fixture.reset") + ","
                 + operation("fixture.destroy") + "," + operation("test.input") + ","
-                + operation("hopper.prepare_capacity") + "," + operation("hopper.power_on") + ","
+                + operation("hopper.prepare_capacity") + "," + operation("hopper.stage_reload") + "," + operation("hopper.power_on") + ","
                 + operation("hopper.power_off") + "," + operation("distillation.create") + ","
-                + operation("distillation.start") + "," + operation("distillation.collect") + "],\"testing\":true}";
+                + operation("distillation.start") + "," + operation("distillation.start_partial") + ","
+                + operation("distillation.collect") + "," + operation("distillation.transport") + ","
+                + operation("crafting.transactions") + "],\"testing\":true}";
     }
 
     private static String operation(String op) {
@@ -55,10 +57,12 @@ final class BridgeProtocol {
             if (command) {
                 boolean input = "test.input".equals(op);
                 if (!input && !"fixture.create".equals(op) && !"fixture.reset".equals(op)
-                        && !"fixture.destroy".equals(op) && !"hopper.prepare_capacity".equals(op)
+                        && !"fixture.destroy".equals(op) && !"hopper.prepare_capacity".equals(op) && !"hopper.stage_reload".equals(op)
                         && !"hopper.power_on".equals(op) && !"hopper.power_off".equals(op)
                         && !"distillation.create".equals(op) && !"distillation.start".equals(op)
-                        && !"distillation.collect".equals(op)) {
+                        && !"distillation.start_partial".equals(op)
+                        && !"distillation.collect".equals(op) && !"distillation.transport".equals(op)
+                        && !"crafting.transactions".equals(op)) {
                     throw new Error(404, "UNSUPPORTED", "Unknown command operation");
                 }
                 if (values.size() != (input ? 5 : 4)) throw invalid();

@@ -9,6 +9,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import net.minecraft.client.Minecraft;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.Block;
 import net.minecraft.src.Chunk;
@@ -19,6 +20,7 @@ import net.minecraft.src.ModLoader;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.TileEntityChest;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.crafting.CraftingTransactionCheck;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.TileHopper;
 
@@ -36,8 +38,10 @@ final class HopperTestFixture {
     private TileHopper hopper;
     private TileEntityChest chest;
     private DistillationTestFixture distillation;
+    private boolean transport;
     private boolean capacityPrepared;
     private boolean powered;
+    private boolean hopperReload;
     private boolean dirty;
     private BridgeProtocol.Query last;
     private String lastReply;
@@ -58,8 +62,10 @@ final class HopperTestFixture {
         hopper = null;
         chest = null;
         distillation = null;
+        transport = false;
         capacityPrepared = false;
         powered = false;
+        hopperReload = false;
         dirty = false;
         last = null;
         lastReply = null;
@@ -81,14 +87,14 @@ final class HopperTestFixture {
         return result + "}";
     }
 
-    String command(File gameDir, World world, int dimension, long ticks, BridgeProtocol.Query query)
+    String command(Minecraft game, World world, int dimension, long ticks, BridgeProtocol.Query query)
             throws BridgeProtocol.Error {
         String outcome = "INTERNAL_ERROR";
         try {
             if (worldId != query.worldId || sessionId != query.sessionId) {
                 throw reject("STALE_WORLD", "The test session or world has changed");
             }
-            if (!marked(gameDir, world, dimension)) {
+            if (!marked(game.mcDataDir, world, dimension)) {
                 throw reject("TEST_WORLD_REQUIRED", "An explicitly marked disposable overworld is required");
             }
             if (dirty) throw reject("DIRTY_FIXTURE", "Use a fresh disposable save");
@@ -100,28 +106,50 @@ final class HopperTestFixture {
             if (revision != query.afterSequence) throw reject("STALE_REVISION", "Read the current test context");
             Chunk chunk = BridgeSnapshots.loaded(world, arenaX, arenaZ);
             String details = "";
-            if ("distillation.create".equals(query.op)) {
+            if ("crafting.transactions".equals(query.op)) {
+                if (runId != 0 || !game.thePlayer.isEntityAlive() || game.thePlayer.inventory.getItemStack() != null
+                        || game.thePlayer.craftingInventory != game.thePlayer.inventorySlots) {
+                    throw reject("FIXTURE_BUSY", "Use an idle player with an empty cursor and no open container");
+                }
+                try {
+                    details = CraftingTransactionCheck.run(game.thePlayer, world, arenaX, Y, arenaZ);
+                } catch (ReflectiveOperationException failure) {
+                    throw reject("CRAFTING_UNAVAILABLE", "Inventory Tweaks protection state could not be read");
+                } catch (IllegalStateException failure) {
+                    throw reject("CRAFTING_UNAVAILABLE", "The live inventory or recipe state is unsupported");
+                }
+            } else if ("distillation.create".equals(query.op) || "distillation.transport".equals(query.op)) {
                 if (runId != 0) throw reject("FIXTURE_BUSY", "A test run already owns the arena");
                 validateArena(world, chunk, false);
                 DistillationTestFixture next = new DistillationTestFixture(arenaX, Y, arenaZ);
+                transport = "distillation.transport".equals(query.op);
                 dirty = true;
                 next.place(world, chunk);
+                if (transport) {
+                    try {
+                        details = new DistillationTransportCheck().place(world, chunk, game.thePlayer, arenaX, Y, arenaZ);
+                    } catch (ReflectiveOperationException failure) {
+                        throw reject("UNSUPPORTED", "The installed BuildCraft or IC2 fixture types are unavailable");
+                    }
+                }
                 distillation = next;
                 runId = query.runId;
                 dirty = false;
-            } else if ("fixture.create".equals(query.op)) {
+            } else if ("fixture.create".equals(query.op) || "hopper.stage_reload".equals(query.op)) {
                 if (runId != 0) throw reject("FIXTURE_BUSY", "A test run already owns the arena");
                 if (HopperRegistry.block == null) throw reject("UNSUPPORTED", "Hopper is unavailable");
                 validateArena(world, chunk, false);
+                hopperReload = "hopper.stage_reload".equals(query.op);
                 create(world, chunk);
                 runId = query.runId;
             } else {
                 if (runId != query.runId) throw reject("FOREIGN_FIXTURE", "The run does not own the fixture");
+                if (transport) throw reject("UNSUPPORTED", "Keep the physical fixture in its disposable copy");
                 if (distillation != null) {
                     distillation.validate(chunk);
                     if (drops(world) != 0) throw reject("ARENA_CHANGED", "Item drops are present in the arena");
-                    if ("distillation.start".equals(query.op)) {
-                        details = distillation.start();
+                    if ("distillation.start".equals(query.op) || "distillation.start_partial".equals(query.op)) {
+                        details = distillation.start("distillation.start_partial".equals(query.op));
                     } else if ("distillation.collect".equals(query.op)) {
                         details = distillation.collect();
                     } else if ("fixture.destroy".equals(query.op)) {
@@ -212,7 +240,8 @@ final class HopperTestFixture {
         }
         if (owned && (BridgeSnapshots.tile(chunk, arenaX, Y, arenaZ) != hopper
                 || BridgeSnapshots.tile(chunk, arenaX, Y - 1, arenaZ) != chest
-                || chunk.getBlockMetadata(arenaX & 15, Y, arenaZ & 15) != 0 || !"Auto".equals(hopper.outputModeName())
+                || chunk.getBlockMetadata(arenaX & 15, Y, arenaZ & 15) != (hopperReload ? 2 : 0)
+                || !(hopperReload ? "Input" : "Auto").equals(hopper.outputModeName())
                 || !testContents(hopper, 8) || !testContents(chest, capacityPrepared ? 64 : 8))) {
             throw reject("ARENA_CHANGED", "Fixture ownership, mode or contents changed");
         }
@@ -228,7 +257,8 @@ final class HopperTestFixture {
     private void create(World world, Chunk chunk) throws BridgeProtocol.Error {
         dirty = true;
         boolean placedChest = world.setBlockWithNotify(arenaX, Y - 1, arenaZ, Block.chest.blockID);
-        boolean placedHopper = placedChest && world.setBlockAndMetadataWithNotify(arenaX, Y, arenaZ, HopperRegistry.block.blockID, 0);
+        boolean placedHopper = placedChest && world.setBlockAndMetadataWithNotify(
+                arenaX, Y, arenaZ, HopperRegistry.block.blockID, hopperReload ? 2 : 0);
         TileEntity lower = BridgeSnapshots.tile(chunk, arenaX, Y - 1, arenaZ);
         TileEntity upper = BridgeSnapshots.tile(chunk, arenaX, Y, arenaZ);
         if (!placedHopper || !(upper instanceof TileHopper) || !(lower instanceof TileEntityChest)) {
@@ -244,6 +274,10 @@ final class HopperTestFixture {
         }
         hopper = (TileHopper) upper;
         chest = (TileEntityChest) lower;
+        if (hopperReload) {
+            hopper.cycleOutputMode();
+            hopper.setInventorySlotContents(0, new ItemStack(INPUT, 4, 0));
+        }
         dirty = false;
     }
 
@@ -260,6 +294,7 @@ final class HopperTestFixture {
         hopper = null;
         chest = null;
         capacityPrepared = false;
+        hopperReload = false;
         runId = 0;
         dirty = false;
     }
@@ -310,15 +345,22 @@ final class HopperTestFixture {
 
     private static boolean marked(File gameDir, World world, int dimension) {
         if (dimension != 0 || world.isRemote || gameDir == null) return false;
-        String name = world.getSaveHandler().getSaveDirectoryName();
-        if (name == null || !name.matches("ZTO-Test-[a-f0-9]{32}")) return false;
+        return markedSave(gameDir, world.getSaveHandler().getSaveDirectoryName(), world.getWorldInfo().getSeed());
+    }
+
+    static Path saveDirectory(File gameDir, String name) throws IOException {
+        if (name == null || !name.matches("ZTO-Test-[a-f0-9]{32}")) throw new IOException("Invalid save name");
+        Path saves = new File(gameDir, "saves").toPath().toRealPath();
+        Path dir = saves.resolve(name);
+        if (!dir.equals(dir.toRealPath())) throw new IOException("Save directory is linked");
+        return dir;
+    }
+
+    static boolean markedSave(File gameDir, String name, long seed) {
         try {
-            Path saves = new File(gameDir, "saves").toPath().toRealPath();
-            Path dir = saves.resolve(name);
-            if (!dir.equals(dir.toRealPath())) return false;
-            Path marker = dir.resolve(".zto-disposable-test");
+            Path marker = saveDirectory(gameDir, name).resolve(".zto-disposable-test");
             if (!Files.isRegularFile(marker, LinkOption.NOFOLLOW_LINKS)) return false;
-            byte[] expected = (name + " " + world.getWorldInfo().getSeed() + "\n").getBytes(StandardCharsets.US_ASCII);
+            byte[] expected = (name + " " + seed + "\n").getBytes(StandardCharsets.US_ASCII);
             InputStream in = Files.newInputStream(marker, LinkOption.NOFOLLOW_LINKS);
             try {
                 for (byte value : expected) {
@@ -331,6 +373,10 @@ final class HopperTestFixture {
         } catch (IOException failure) {
             return false;
         }
+    }
+
+    boolean matchesBuild(String sha256) {
+        return build.equals("\"" + sha256 + "\"");
     }
 
     private static String runtimeJarHash() {

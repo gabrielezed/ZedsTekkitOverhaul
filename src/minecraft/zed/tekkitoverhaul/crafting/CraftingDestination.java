@@ -8,6 +8,7 @@ import net.minecraft.src.Container;
 import net.minecraft.src.ContainerChest;
 import net.minecraft.src.ContainerPlayer;
 import net.minecraft.src.ContainerWorkbench;
+import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.GuiContainer;
 import net.minecraft.src.IInventory;
 import net.minecraft.src.ItemStack;
@@ -36,14 +37,17 @@ public final class CraftingDestination {
     }
 
     static CraftingFill crafting(Minecraft game, GuiContainer screen) throws ReflectiveOperationException {
-        Container container = screen.inventorySlots;
+        return crafting(screen.inventorySlots, game.thePlayer);
+    }
+
+    static CraftingFill crafting(Container container, EntityPlayer player) throws ReflectiveOperationException {
         int width = gridWidth(container);
         if (width == 0) return null;
         int cells = width * width;
         List<Slot> slots = new ArrayList<Slot>();
         for (int index = 1; index <= cells; index++) slots.add(container.getSlot(index));
         List<Slot> recipeOnly = new ArrayList<Slot>();
-        slots.addAll(ProtectedSlots.playerSlots(container, game.thePlayer, width == 2 ? 9 : cells + 1, true, recipeOnly));
+        slots.addAll(ProtectedSlots.playerSlots(container, player, width == 2 ? 9 : cells + 1, true, recipeOnly));
         int returnEnd = slots.size();
         slots.addAll(recipeOnly);
         return new CraftingFill(slots.toArray(new Slot[slots.size()]), width, returnEnd);

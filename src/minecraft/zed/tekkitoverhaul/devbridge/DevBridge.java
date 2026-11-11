@@ -24,11 +24,14 @@ public final class DevBridge implements ITickHandler {
     private long tick;
     private long simulationTicks;
     private final HopperTestFixture fixture;
+    private final DisposableWorldBootstrap bootstrap;
 
-    private DevBridge(BridgeDispatcher dispatcher, LocalLunarCalendar lunar, HopperTestFixture fixture) {
+    private DevBridge(BridgeDispatcher dispatcher, LocalLunarCalendar lunar, HopperTestFixture fixture,
+            DisposableWorldBootstrap bootstrap) {
         this.fixture = fixture;
         this.dispatcher = dispatcher;
         this.lunar = lunar;
+        this.bootstrap = bootstrap;
     }
 
     public static void startIfEnabled(String version, LocalLunarCalendar lunar) {
@@ -41,7 +44,8 @@ public final class DevBridge implements ITickHandler {
             boolean testing = "true".equals(System.getProperty("zto.devBridge.testing"));
             HopperTestFixture fixture = testing ? new HopperTestFixture() : null;
             server = new BridgeServer(port, dispatcher, version, testing);
-            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher, lunar, fixture));
+            DisposableWorldBootstrap bootstrap = testing ? new DisposableWorldBootstrap(server.discovery(), fixture) : null;
+            FMLCommonHandler.instance().registerTickHandler(new DevBridge(dispatcher, lunar, fixture, bootstrap));
             ModLoader.getLogger().info("[ZTO] Read-only Dev Bridge enabled. Discovery: " + server.discovery());
         } catch (IOException failure) {
             startupFailed(server, failure);
@@ -71,6 +75,7 @@ public final class DevBridge implements ITickHandler {
         }
         if (!types.contains(TickType.RENDER)) return;
         final Minecraft game = ModLoader.getMinecraftInstance();
+        if (bootstrap != null) bootstrap.tick(game);
         World world = observeWorld(game);
 
         String state = "ready";
@@ -109,7 +114,7 @@ public final class DevBridge implements ITickHandler {
             return fixture == null ? "{\"allowed\":false}" : fixture.context(game.mcDataDir, world, dimension, simulationTicks);
         }
         if (query.sessionId != 0 && fixture != null) {
-            return fixture.command(game.mcDataDir, world, dimension, simulationTicks, query);
+            return fixture.command(game, world, dimension, simulationTicks, query);
         }
         if ("inventory.container".equals(query.op) || "machine.inspect".equals(query.op)) {
             if (query.worldId != worldId) throw new BridgeProtocol.Error(409, "STALE_WORLD", "The active world has changed");

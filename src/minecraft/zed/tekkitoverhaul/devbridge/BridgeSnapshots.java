@@ -74,6 +74,11 @@ final class BridgeSnapshots {
                 return prefix + ",\"type\":\"distillation.heater\",\"storedEU\":" + heater.getStoredEnergy()
                         + ",\"energyNetJoined\":" + heater.isAddedToEnergyNet() + "}";
             }
+            if ("buildcraft.factory.TileTank".equals(className)) {
+                buildcraft.api.ILiquidContainer tank = (buildcraft.api.ILiquidContainer) tile;
+                return prefix + ",\"type\":\"buildcraft.tank\",\"liquidMB\":" + tank.getLiquidQuantity()
+                        + ",\"liquidId\":" + tank.getLiquidId() + "}";
+            }
         }
         throw new BridgeProtocol.Error(409, "UNSUPPORTED", "No snapshot adapter for the loaded tile");
     }

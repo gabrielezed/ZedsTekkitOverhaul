@@ -3,6 +3,7 @@
 ## 0.1.0-alpha.4 — Lunar pressure candidate
 
 - Add small vanilla-mob patrols at natural first-quarter and waxing-gibbous dusks, with an independent `lunarPatrols` switch and counts in Survival Debug. Full-moon assaults retain their own schedule and settings.
+- Pause and resume patrols with the singleplayer simulation. Retry placements in a short window later at night while retaining vanilla light and the existing terrain and population checks.
 
 ## 0.1.0-alpha.3 — Mob equipment candidate
 

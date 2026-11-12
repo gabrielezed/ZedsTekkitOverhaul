@@ -10,20 +10,22 @@
 
 Patrols are enabled by default. Set `lunarPatrols=false` in `config/mod_ZedsTekkitOverhaul.cfg` while the client is closed to turn them off independently of `playerAssault`. New worlds still start at new moon (day index 0), with the full moon on day five (index 4).
 
-Natural dusk at tick 13,000 schedules one patrol in the local Overworld. An awake Survival player must remain available on the same non-Peaceful difficulty for the 240-tick lead-in. A paused simulation tick during that lead-in cancels the patrol. The patrol then samples at most 24 sites 12–16 blocks from the player, using the assault's loaded-chunk, surface, roof, collision, light and local hostile checks. It can finish with fewer mobs or none. Zombies and skeletons use their normal equipment and AI. Hard uses skeletons to avoid vanilla wooden-door breaking by zombies. Existing hostiles stay in the world under vanilla rules.
+Natural dusk at tick 13,000 schedules one patrol in the local Overworld. The patrol is pending for 800 simulation ticks. An ordinary pause freezes its timer and suppresses placement until play resumes. Player loss, Peaceful, a difficulty change, a world or dimension change, night end and calendar resync discard pending work.
+
+Placement begins around tick 13,800. The patrol checks up to four candidates every 20 simulation ticks for a 240-tick window, with at most 12 rounds and 48 candidates. Filling the allocation or reaching the local hostile cap closes the window early. Any unfilled slots are skipped. Each round samples 12–16 blocks from the player's current position and uses the existing loaded-chunk, surface, roof, collision, vanilla light and local population checks. Zombies and skeletons use their normal equipment and AI. Hard uses skeletons to avoid vanilla wooden-door breaking by zombies. Spawned hostiles stay in the world under vanilla rules.
 
 `SiegeDirector` receives the lunar event and ticks the patrol on the same simulation thread as the assault. The lunar service already persists its replay watermark, including the dusk boundary. Save and Quit abandons a queued patrol. Reopening, rewinding, skipping time or changing phase cannot replay that boundary. The patrol adds no save record. A phase selected in daylight can still encounter the next natural dusk. Both encounters target the player's vicinity, which keeps site targeting and territorial systems available as separate future work.
 
-Survival Debug shows the current phase, patrol-night eligibility, encounter state, successful insertions and the outcome. The latest patrol's count remains visible until the next attempt or world change. The Forge log and optional Survival Debug history report one outcome per attempt, with aggregated spawn rejections.
+Survival Debug shows the current phase, patrol-night eligibility, pending or spawning state, pause, elapsed time, candidate attempts, successful insertions, remaining or skipped allocation and grouped rejection reasons. The latest outcome remains visible until the next patrol or world change. The Forge log and optional Survival Debug history report a bounded terminal summary.
 
 ## Reproduce in Tekkit Dev
 
 1. Run `zto-tools/test-lunar-calendar.bat` and `zto-tools/build-and-deploy.bat`.
 2. For an interactive trial, run `zto-tools/new-assault-playtest.ps1 -Name 'First Quarter Playtest' -LunarPhase FIRST_QUARTER`. Open the generated world in Normal, stay on the open surface through dusk and inspect F10 with `survivalDebugHud=true`.
-3. For an automated run, [enable the existing test flags and mark a disposable save](test-automation.md#enable-and-prepare-a-save). Generate it with the same playtest script using `-Name "Test-$id"` where `$id = [Guid]::NewGuid().ToString('N')`. The folder is `ZTO-Test-$id` and the generated seed is `-7184827518270584220`. Run `zto-tools/test-tekkit-dev.ps1 -DisposableSave "ZTO-Test-$id" -Persistence Patrol -SkipCore`. Use `FIRST_QUARTER` or `WAXING_GIBBOUS` for the positive and reload checks, and `NEW_MOON` for the quiet-night check. Use `FULL_MOON` with `-Persistence Assault -SkipCore` for the existing assault regression.
+3. For an automated run, [enable the existing test flags and mark a disposable save](test-automation.md#enable-and-prepare-a-save). Generate it with the same playtest script using `-Name "Test-$id"` where `$id = [Guid]::NewGuid().ToString('N')`. The folder is `ZTO-Test-$id` and the generated seed is `-7184827518270584220`. Run `zto-tools/test-tekkit-dev.ps1 -DisposableSave "ZTO-Test-$id" -Persistence Patrol -SkipCore`. Use `FIRST_QUARTER` or `WAXING_GIBBOUS` for the positive and reload checks, and `NEW_MOON` for the quiet-night check. Use `-InterruptPatrol` for an early Save and Quit, or `-ProtectedPatrol` with a glass roof spanning the entire spawn annulus. Use `FULL_MOON` with `-Persistence Assault -SkipCore` for the existing assault regression.
 4. Restore the Tekkit Dev flags and launch once with the bridge, Lunar Debug and Survival Debug off.
 
-## Candidate evidence
+## Original single-burst evidence
 
 Portable checks passed for the new-world phase alignment, all eight natural night gates, non-Overworld rejection, reload and rewind suppression, a sleep-like time jump, and administrative phase alignment. `AssaultDiagnosticsSelfTest` also passed. The time jumps were exercised in Java, with physical bed use left for an in-game playtest.
 
@@ -38,4 +40,36 @@ MCP 6.2 compiled and reobfuscated the client with JDK 8 and Forge 3.4.9.171. The
 | Full moon, interrupted reload | The existing assault scenario passed with `-InterruptAssault`. One zombie inserted in wave one, with zero patrols. Save and Quit preserved boundary 13,000. Reopen reported `INTERRUPTED_ON_REOPEN` with zero new assault starts or insertions. |
 | Diagnostics disabled | The isolated instance launched with the Dev Bridge and both debug interfaces disabled. FML reported startup complete with 44 mods loaded. |
 
-Next playtest: repeat the waxing-gibbous scenario on open terrain and compare the rejection counts with a lit or covered shelter. If daylight at the current spawn tick still dominates, try a later spawn tick while retaining the vanilla light rule. Verify the HUD in open play and sleep through an eligible night using a bed.
+The original two placement runs reported 33 vanilla-light rejections, 14 covered-column rejections and one insertion across 48 candidates. These counts motivated moving placement further into the night and distributing candidates over several rounds. The comparison does not isolate timing from random candidate selection.
+
+## Follow-up verification
+
+The portable lunar suite passed the eight-phase gate, replay prevention, paused clock and retry-bound checks. The MCP-side `LunarPatrolSelfTest` passed with the real patrol tick entry point. It checks pause in the lead-in, resume, no placement on a paused tick at the threshold, and Peaceful termination. `AssaultDiagnosticsSelfTest` passed.
+
+```powershell
+.\zto-tools\test-lunar-calendar.bat
+javac -cp bin/minecraft -d dist-zto/lunar-tests zto-tools/assault-tests/*.java
+java -cp 'dist-zto/lunar-tests;bin/minecraft;jars/bin/minecraft.jar;jars/bin/lwjgl.jar;jars/bin/lwjgl_util.jar;jars/bin/jinput.jar' zed.tekkitoverhaul.assault.LunarPatrolSelfTest
+java -cp 'dist-zto/lunar-tests;bin/minecraft' zed.tekkitoverhaul.assault.AssaultDiagnosticsSelfTest
+```
+
+MCP 6.2 compiled and reobfuscated the client with JDK 8 and Forge 3.4.9.171. The build verified 255 archive entries. The Tekkit Dev runs used Minecraft 1.2.5, Tekkit Classic 3.1.2, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The tested JAR SHA-256 was `697eb1924a756b2243edeae6adc6bc174b4eaf0a0762bf419dc41fe54773d2d7`. It was built from a working tree at `4e4ba8a` with the production Java changes subsequently committed as `19f2b49`.
+
+| Tekkit Dev check | Observation |
+| --- | --- |
+| First quarter, generated terrain | One natural dusk. Inserted 2/2 by tick 13,840 in 12 attempts, with seven vanilla-light and three covered-column rejections. No assault and no patrol on same-night reload. |
+| Waxing gibbous, generated terrain | One natural dusk. Inserted 3/3 by tick 13,940 in 29 attempts, with 18 vanilla-light and eight covered-column rejections. No assault and no patrol on same-night reload. |
+| Waxing gibbous, illuminated glass-roofed annulus | Timed out at tick 14,040 with 0/3 inserted, 48 covered-column rejections and three skipped slots. Same-night reload produced no patrol. |
+| First quarter, vanilla pause menu | A GUI-driven probe in a separate Tekkit Dev copy held pending elapsed time at nine ticks with zero attempts for two seconds. It observed the paused flag in the patrol, resumed at ten ticks and resolved at elapsed tick 920 with 2/2 insertions in 25 attempts. |
+| First quarter, pending Save and Quit | The vanilla menu logged `ABORTED / WORLD_UNLOADED` at elapsed tick nine with zero attempts. The reopened world kept the patrol idle through tick 14,076. The separate-process lifecycle also reopened the same night and produced no patrol through tick 14,156. |
+| New moon | One natural dusk. Zero patrol outcomes and zero assault starts. |
+| Full moon, interrupted reload | Only `PLAYER_ASSAULT` started. Wave one inserted one zombie before Save and Quit. Reopen retained boundary 13,000 and reported `ABORTED / INTERRUPTED_ON_REOPEN` with zero new starts or insertions. |
+| Full moon, three waves in the covered arena | The assault scenario passed with `RESOLVED / WAVES_COMPLETE` at elapsed tick 1,280. Each wave rejected 112 covered candidates, and there was no patrol. Inventory Tweaks threw in `cloneHotbar` during automated shutdown, so this run could not verify reload after resolution. |
+| Equipment backport | The existing live equipment probe passed for native Skeleton arrows, Zombie sword damage, armor protection, persisted loadouts, one-time drops and ordinary comparison mobs. |
+| Diagnostics disabled | The separate copy reached the title screen with 44 mods loaded, Lunar Debug and Survival Debug off, and the Dev Bridge disabled. |
+
+The lifecycle report filenames end with `7832ce7df99d4915a1d97ab277748249` (first quarter), `69a370e39d8b4282ba4ee628e37ebef4` (waxing gibbous), `72a60089a705494896fd0d30d15ccc63` (shelter), `df5c0f8bd3524d5eb3cde346faa299bd` (interrupted patrol), `c4eda3316fb94c63a5183a91de8be8be` (new moon), `3bed987288db4f65bf438ffcc9e6e4d3` (interrupted assault) and `f4e116d07416485c8f9212aa817dab14` (covered assault) under `dist-zto/test-reports/`. The GUI checks used the vanilla menu on the game thread. Owner playtesting and physical bed use remain separate.
+
+## Deferred design
+
+The revised [Project Vision](../../PROJECT_VISION.md) calls for meaningful fortifications and the possibility of threats in illuminated open areas. This release keeps vanilla hostile light validation and the existing open-column requirement. A roof check is a placement constraint. Recognizing protected interiors, adapted caves and open fortified yards requires separate evidence and design. Future illuminated exterior encounters need a tested placement boundary that protects interiors. Territorial threat, encounter-specific equipment distribution, settlement recognition and persistent `SITE_SIEGE` targets remain separate milestones.

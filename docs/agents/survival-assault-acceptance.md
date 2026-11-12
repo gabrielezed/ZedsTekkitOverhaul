@@ -1,5 +1,7 @@
 # Survival 0.1: Lunar Player Assault
 
+This record describes the alpha.1 implementation and its historical builds. See the [alpha.2 gameplay pass](survival-assault-alpha2.md) for current tuning and verification.
+
 ## Playable rules
 
 - The existing lunar service schedules the encounter. Natural `NIGHT_STARTED` at tick 13,000 on a full moon is the only trigger. Newly aligned worlds reach their first full moon on lunar day 4. The active player must be alive, awake, in Survival and in the local Overworld on a non-Peaceful difficulty.

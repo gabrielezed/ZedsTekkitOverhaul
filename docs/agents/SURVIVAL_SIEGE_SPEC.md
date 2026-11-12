@@ -1,6 +1,6 @@
 # ZedsTekkitOverhaul — Survival Threats & Lunar Assaults
 
-- **Status:** Design contract for the first implemented gameplay slice. See [acceptance evidence and limits](survival-assault-acceptance.md).
+- **Status:** Design contract for the first implemented gameplay slice. See [alpha.1 evidence](survival-assault-acceptance.md) and the [alpha.2 gameplay pass](survival-assault-alpha2.md) for subsequent tuning.
 - **Target:** Minecraft Java 1.2.5, Tekkit Classic 3.1.2, singleplayer-first.
 - **Release line:** `0.1.0-alpha.1`, following the [versioning policy](VERSIONING_POLICY.md).
 - **Primary milestone:** Lunar `PLAYER_ASSAULT`.

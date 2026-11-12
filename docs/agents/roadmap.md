@@ -44,8 +44,9 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 ## Survival gameplay
 
 - **Implemented for 0.1:** [lunar player assault](survival-assault-acceptance.md) follows the active player's vicinity. Tune the warning, distance and pulse cadence with a short Survival playtest. The longer-term effect of sleep on threat remains open.
-- **Confirmed direction, deferred:** `SITE_SIEGE` targets a persistent settlement inferred from long-term construction and activity. Support caves, treehouses, castles, outdoor industry and multiple outposts. Doors, beds and machines can contribute evidence; none is required. No claims or marker blocks.
-- **Confirmed direction, deferred:** backport hand and armor slots for zombies and skeletons, including NBT, rendering, combat effects and drops. Preserve the existing 1.2.5 skeleton bow, pigman weapon and other special-case held items. The current encounter uses only vanilla equipment.
+- **Implemented in `0.1.0-alpha.3`:** opt-in hand and armor slots for vanilla Zombies and Skeletons with rendering, combat effects, entity NBT and death drops. The current assault uses the usual vanilla loadouts. [Specification](MOB_EQUIPMENT_BACKPORT_SPEC.md) · [Tekkit Dev evidence](mob-equipment-acceptance.md)
+- **Planned for the rest of 0.1:** first tactical enemy roles and defenses. Future encounters can assign a loadout at mob creation.
+- **Later release lines:** territorial activity and threat in 0.2, settlement recognition in 0.3, and `SITE_SIEGE` in 0.4. A site siege targets a persistent settlement inferred from long-term construction and activity. Doors, beds and machines are optional evidence. The plan supports caves, treehouses, castles, outdoor industry and multiple outposts without claims or marker blocks.
 - **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
 
 ## Fractional distillation prototype

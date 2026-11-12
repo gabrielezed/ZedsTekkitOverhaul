@@ -1,6 +1,6 @@
 # Milestone 1 singleplayer acceptance
 
-The [Survival 0.1 assault record](survival-assault-acceptance.md) tracks the later candidate separately. The historical results below apply only to their original build hashes.
+Later Survival results are tracked in the [alpha.1 assault record](survival-assault-acceptance.md), the [alpha.2 assault gameplay pass](survival-assault-alpha2.md) and the [alpha.3 mob equipment acceptance record](mob-equipment-acceptance.md). The historical results below apply only to their original build hashes.
 
 ## Provenance
 

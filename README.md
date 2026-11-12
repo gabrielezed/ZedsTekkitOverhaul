@@ -7,7 +7,8 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 ### World and automation
 
 - **Lunar Cycle** persists eight phases per single-player save. New worlds begin at new moon, and existing worlds retain their initial vanilla phase. An optional launch agent displays the calendar phase in the native sky. Gameplay modules can read snapshots and subscribe to transitions. [Lunar Cycle guide](docs/agents/lunar-cycle-implementation.md)
-- **Lunar Player Assault (Survival alpha.2 gameplay)** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a lit shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
+- **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a lit shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
+- **Mob equipment (Survival alpha.3)** supports opt-in loadouts for vanilla Zombies and Skeletons in local play. Zombie swords increase melee damage, armor provides visible protection, and Skeletons retain their native bow. Assigned gear persists across saves and drops once on death. Ordinary spawns and lunar assault mobs use their usual loadouts. [Tekkit Dev results and screenshots](docs/agents/mob-equipment-acceptance.md)
 - **Hopper** adds five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI. The backport includes support for selected IC2 and BuildCraft inventory interactions. [Asset setup and compatibility](docs/engineering/hopper-backport.md)
 - **Fractional distillation** uses an IC2 LV heater to process oil, with BuildCraft oil and water intake, four placeable petroleum fractions and live component panels. [Distillation guide](docs/agents/distillation.md)
 
@@ -25,7 +26,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The current build identifier is **0.1.0-alpha.2**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
+The current build identifier is **0.1.0-alpha.3**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
 
 ```powershell
 .\zto-tools\build-and-deploy.bat
@@ -42,6 +43,10 @@ With Tekkit Dev closed and the MCP client compiled, run the generator.
 ```
 
 Open **Lunar Assault - Playtest** in Normal difficulty. It starts in Survival on open terrain with a stone sword, bow, arrows, leather armor, food and shelter supplies. The full-moon assault is due in about 1 minute 50 seconds at 20 TPS. Use `-Name 'Lunar Assault - Shelter'` to create a separate trial. [Setup and playtest checklist](docs/agents/survival-assault-alpha2.md#owner-playtest-world)
+
+### Try mob equipment
+
+The opt-in viewing pen in **Tekkit Dev** puts equipped Zombies and Skeletons beside ordinary ones in a marked disposable save. Use the fixture setup to inspect the gear, observe combat and try Save and Quit followed by reopening the world. [Disposable viewing pen setup](docs/agents/MOB_EQUIPMENT_BACKPORT_SPEC.md#disposable-viewing-pen)
 
 ### Optional features
 

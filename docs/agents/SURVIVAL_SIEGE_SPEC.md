@@ -4,7 +4,7 @@
 - **Target:** Minecraft Java 1.2.5, Tekkit Classic 3.1.2, singleplayer-first.
 - **Release line:** `0.1.0-alpha.1`, following the [versioning policy](VERSIONING_POLICY.md).
 - **Primary milestone:** Lunar `PLAYER_ASSAULT`.
-- **Deferred systems:** Settlement inference, `SITE_SIEGE`, equipment backport, advanced enemy roles.
+- **Deferred from alpha.1:** Settlement inference, `SITE_SIEGE` and advanced enemy roles. The standalone equipment backport landed in [alpha.3](MOB_EQUIPMENT_BACKPORT_SPEC.md).
 - **Authority:** `PROJECT_VISION.md` takes precedence on game-design intent; confirm implementation and ABI in the workspace.
 
 ---
@@ -236,22 +236,11 @@ None of this belongs in the first implementation. Do not build a temporary settl
 
 ---
 
-## 6. Mob equipment backport — required later, not now
+## 6. Mob equipment backport in alpha.3
 
-Minecraft 1.2.5 contains special-case held items on selected mobs (e.g., skeleton bow, zombie pigman weapon), but predates the generalized 1.4-era equipment system used for varied zombie/skeleton armor and weapons. Agents must verify exact class members and rendering hooks in the local 1.2.5 MCP and overlay before implementing a backport.
+The [alpha.3 equipment backport](MOB_EQUIPMENT_BACKPORT_SPEC.md) adds opt-in hand and armor slots to vanilla Zombies and Skeletons. The [Tekkit Dev acceptance record](mob-equipment-acceptance.md) covers rendering, combat, save and reopen, drops and the native Skeleton bow.
 
-**Confirmed future design direction:** backport a carefully scoped mob equipment capability supporting held weapon and armor slots, equipment-dependent stats, rendering, damage reduction and appropriate drops for chosen hostile entities.
-
-Recommended future development sequence:
-
-1. Audit vanilla/entity renderer, combat, ItemStack, NBT and held-item behavior in installed 1.2.5.
-2. Define a small equipment-slot state model (hand, head, chest, legs, feet), not necessarily a full general inventory.
-3. Implement NBT persistence and rendering without breaking existing skeleton/pigman behavior.
-4. Add equipment generation profiles and drop chances only after slot behavior is correct.
-5. Attach equipped roles to lunar assault archetypes and later site sieges.
-6. Add Dev Bridge equipment snapshots and combat assertions when this work starts.
-
-**Do not implement the backport as part of `0.1.0-alpha.1`.** Current assault mobs remain vanilla; variation initially comes from timing, numbers, positions and mixed mob roles.
+The current assault still uses the usual vanilla loadouts. Future encounter roles can assign equipment when creating a mob. The mob owns its equipment state, while the encounter decides which loadout to request.
 
 ---
 
@@ -388,6 +377,6 @@ Do not let a single failed corner case consume the whole milestone: after two fo
 - The real Tekkit Dev runtime passes a focused assault scenario and relevant existing regression tests, with build hashes and runtime provenance recorded.
 - Version metadata is coherent, with a documented reset from the old prototype label.
 - Owner can play a short Survival trial and evaluate tension, fairness and freedom of building.
-- Future `SITE_SIEGE`, settlement recognition, equipment backport and optional in-game Dev Bridge status overlay remain explicitly recorded, not accidentally implemented.
+- Future `SITE_SIEGE`, settlement recognition, encounter loadout selection and the optional in-game Dev Bridge status overlay remain deferred.
 
 **Design test:** if the first implementation forces the player to declare a base, builds a generic settlement detector, or treats a mob wave following the player as a true site siege, it has deviated from this specification.

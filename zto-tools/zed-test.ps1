@@ -197,8 +197,15 @@ function Test-Assault {
     $result.before = $before
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $peakLocal = -1
+    $after = $null
     do {
-        $after = Invoke-Bridge query assault.snapshot
+        try {
+            $after = Invoke-Bridge query assault.snapshot
+        } catch {
+            if ($_.Exception.Message -notmatch '^(NOT_READY|BUSY|TIMEOUT):') { throw }
+            Start-Sleep -Milliseconds 500
+            continue
+        }
         $peakLocal = [Math]::Max($peakLocal, $after.localHostiles)
         $result.after = $after
         if ($after.worldId -ne $ctx.worldId) { throw 'STALE_WORLD: The assault changed ownership' }

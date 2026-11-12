@@ -2,6 +2,8 @@
 
 Use the [singleplayer acceptance matrix](singleplayer-acceptance.md) for current scenario results, candidate provenance and the Survival smoke path. The [automation guide](test-automation.md) records runner setup and the earlier PR #17 evidence.
 
+For Survival 0.1 use the [assault acceptance record](survival-assault-acceptance.md). The existing lunar batch exercises the portable event gate and the existing Tekkit Dev lifecycle runs the full-moon encounter and reopen assertions. Record a human Survival fortification trial separately.
+
 ## Evidence currently available
 
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.

@@ -1,6 +1,6 @@
 # Tekkit Classic 3.1.2 — legacy API reference
 
-**Scope:** Minecraft 1.2.5, FoxyRetroMDK 1.3.6 / MCP 6.2, Forge 3.4.9.171, FML 2.2.106.176. This directory contains original project documentation **only**, not redistributed dependencies.
+**Scope:** Minecraft 1.2.5, Tekkit Classic pack Forge 3.3.8.164 and FML 2.2.106.176. The FoxyRetroMDK 1.3.6 / MCP 6.2 build uses Forge 3.4.9.171. This directory contains original project documentation **only**, not redistributed dependencies.
 
 The documents are a version-pinned reference for ZedsTekkitOverhaul and its coding agents. The actual local MCP source, original mod release archives, and tested Tekkit Dev runtime remain the authorities when a signature or behavior is disputed.
 

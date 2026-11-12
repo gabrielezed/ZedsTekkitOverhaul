@@ -8,10 +8,11 @@ param(
     [int]$StartupSeconds = 120,
     [ValidateRange(1, 720)]
     [int]$LunarWaitSeconds = 720,
-    [ValidateSet('Hopper', 'Distillation')]
+    [ValidateSet('Hopper', 'Distillation', 'Assault')]
     [string]$Persistence = 'Hopper',
     [switch]$PhysicalDistillation,
-    [switch]$SkipCore
+    [switch]$SkipCore,
+    [switch]$InterruptAssault
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,8 +30,8 @@ $reportPath = Join-Path $reportDir "autonomy-$copyName.json"
 $report = [ordered]@{
     schema = 'zto.tekkit-dev-lifecycle@1'; status = 'BLOCKED'; evidenceLevel = 'unattended'
     gitHead = (& git -C $root rev-parse HEAD); gitChanges = @(& git -C $root status --porcelain)
-    buildSha256 = $null; sourceSave = $DisposableSave; testSave = $copyName
-    launches = @(); suite = $null; crafting = $null; physicalDistillation = $null
+    buildSha256 = $null; build = $null; sourceSave = $DisposableSave; testSave = $copyName; worldSeed = $null
+    launches = @(); suite = $null; crafting = $null; physicalDistillation = $null; assault = $null
     persistence = [ordered]@{ scenario = $Persistence; status = 'NOT_RUN'; checks = @() }
     error = $null; reportPath = $reportPath
 }
@@ -173,6 +174,10 @@ function Start-DevClient {
                         if (!$context.allowed -or $context.modJarSha256 -ne $report.buildSha256) {
                             throw 'TEST_CONTEXT_REJECTED: The loaded disposable world or runtime JAR failed verification.'
                         }
+                        $launch.modVersion = $status.modVersion
+                        if ($report.build -and $launch.modVersion -cne $report.build.productVersion) {
+                            throw 'BUILD_MISMATCH: Running product version differs from the packaged version.'
+                        }
                         $launch.sessionId = $context.sessionId
                         $launch.worldId = $context.worldId
                         return $context
@@ -291,14 +296,48 @@ function Test-Restart($Context, [long]$RunId) {
     $report.persistence.status = 'PASS'
 }
 
+function Test-AssaultRestart($Context, [long]$Boundary) {
+    $report.persistence.status = 'BLOCKED'
+    $raw = & (Join-Path $PSScriptRoot 'zed-test.ps1') run 'assault.natural_full_moon@1' -Discovery $discovery `
+        -DisposableWorld -ExpectedJarSha256 $report.buildSha256 -LunarWaitSeconds $LunarWaitSeconds `
+        -AssaultBoundary $Boundary -InterruptAssault:$InterruptAssault
+    $report.assault = $raw | ConvertFrom-Json
+    if ($report.assault.status -ne 'PASS') { throw "ASSAULT_SCENARIO_FAILED: $($report.assault.error)" }
+    $before = Invoke-Bridge query assault.snapshot
+    $report.persistence.before = $before
+    Assert-Persistence 'pre_shutdown_state' $before.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
+    Stop-DevClient
+    $reopened = Start-DevClient
+    $after = Invoke-Bridge query assault.snapshot
+    $report.persistence.after = $after
+    Assert-Persistence 'new_session' ($reopened.sessionId -ne $Context.sessionId) $true
+    Assert-Persistence 'consumed_boundary' $after.boundary $before.boundary
+    Assert-Persistence 'same_night' (Invoke-Bridge query lunar.snapshot).night $true
+    Assert-Persistence 'no_new_assault' $after.starts 0
+    Assert-Persistence 'no_new_spawns' $after.spawns.Count 0
+    Assert-Persistence 'reopen_state' $after.state $(if ($InterruptAssault) { 'ABORTED' } else { 'RESOLVED' })
+    Assert-Persistence 'reopen_reason' $after.reason $(if ($InterruptAssault) { 'INTERRUPTED_ON_REOPEN' } else { 'NIGHT_CONSUMED' })
+    $report.persistence.status = 'PASS'
+}
+
 $mutex = [Threading.Mutex]::new($false, 'Local\ZTO-Tekkit-Dev-Lifecycle')
 $locked = $false
 try {
+    if ($InterruptAssault -and ($Persistence -ne 'Assault' -or !$SkipCore)) {
+        throw 'PREREQUISITES: InterruptAssault requires -Persistence Assault -SkipCore.'
+    }
+    if ($PhysicalDistillation -and $Persistence -eq 'Assault') {
+        throw 'PREREQUISITES: Use a separate disposable run for physical distillation.'
+    }
     try { $locked = $mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $locked = $true }
     if (!$locked) { throw 'INSTANCE_BUSY: A Tekkit Dev lifecycle is already in progress.' }
     if (Test-Path -LiteralPath $request) { throw 'REQUEST_PRESENT: Inspect the pending Tekkit Dev autoload request before retrying.' }
     if (Get-TekkitDevJava) { throw 'INSTANCE_BUSY: Close the running Tekkit Dev client before starting the lifecycle.' }
     $report.buildSha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+    $report.build = Get-Content -LiteralPath "$candidate.build.json" -Raw | ConvertFrom-Json
+    if ($report.build.jarSha256 -cne $report.buildSha256) {
+        throw 'BUILD_MISMATCH: The build provenance does not match the archive.'
+    }
     $installed = Join-Path $game 'mods/ZedsTekkitOverhaul.jar'
     if ((Get-FileHash -LiteralPath $installed -Algorithm SHA256).Hash -ne $report.buildSha256) {
         throw 'BUILD_MISMATCH: Deploy the candidate to Tekkit Dev before running the lifecycle.'
@@ -320,10 +359,17 @@ try {
         throw 'TEST_WORLD_REQUIRED: The source needs its exact disposable marker.'
     }
     $seed = $Matches[1]
+    $report.worldSeed = $seed
     Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
     [IO.File]::WriteAllText((Join-Path $target '.zto-disposable-test'), "$copyName $seed`n", [Text.Encoding]::ASCII)
 
     $context = Start-DevClient
+    $assaultBoundary = 0
+    if ($Persistence -eq 'Assault' -and !$SkipCore) {
+        $before = Invoke-Bridge query lunar.snapshot
+        $null = Invoke-Fixture 'assault.prepare_full_moon' $context (Get-Random -Minimum 1 -Maximum ([long]1e15))
+        $assaultBoundary = $before.rawTime - $before.timeOfDay + 13000
+    }
     if (!$SkipCore) {
         $raw = & (Join-Path $PSScriptRoot 'zed-test.ps1') suite singleplayer-core -Discovery $discovery `
             -DisposableWorld -ExpectedJarSha256 $report.buildSha256 -LunarWaitSeconds $LunarWaitSeconds
@@ -341,6 +387,8 @@ try {
     $context = Invoke-Bridge query test.context
     if ($PhysicalDistillation) {
         Test-PhysicalDistillation $context $run
+    } elseif ($Persistence -eq 'Assault') {
+        Test-AssaultRestart $context $assaultBoundary
     } else {
         Test-Restart $context $run
     }
@@ -351,7 +399,7 @@ try {
 } catch {
     $report.error = $_.Exception.Message
     if ($report.persistence.status -eq 'FAIL' -or $report.physicalDistillation.status -eq 'FAIL' -or
-        ($report.suite.results.status -contains 'FAIL') -or
+        ($report.suite.results.status -contains 'FAIL') -or $report.assault.status -eq 'FAIL' -or
         ($report.crafting.Values -contains 'FAIL')) {
         $report.status = 'FAIL'
         $exitCode = 1

@@ -19,8 +19,10 @@ import net.minecraft.src.WorldClient;
 import net.minecraft.src.forge.ISaveEventHandler;
 import net.minecraft.src.forge.MinecraftForge;
 import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarEvent;
+import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
@@ -33,16 +35,18 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private LunarWorldState state;
     private LunarCalendar calendar;
     private LunarDiagnostics diagnostics;
+    private SiegeDirector assault;
     private long sessionId;
     private boolean verbose;
     private KeyBinding key;
     private long lastKeyEvent;
     private String storageStatus = "No active local save";
 
-    public void register(BaseMod mod, int keyCode, boolean verbose) {
+    public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
+        this.assault = assault;
         if (keyCode > 0 && keyCode < 256) {
             key = new KeyBinding("Open ZTO Lunar Debug", keyCode);
             ModLoader.registerKey(mod, key, false);
@@ -62,6 +66,19 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     public LunarService service(World context) {
         return context != null && context == world && context == game.theWorld && calendar != null
                 ? calendar.view() : null;
+    }
+
+    public SiegeDirector.Snapshot assaultSnapshot(World context) {
+        return context != null && context == game.theWorld ? assault.snapshot(context) : null;
+    }
+
+    /** Aligns a future night without touching vanilla time or replaying crossed boundaries. */
+    public boolean alignBeforeNight(World context, LunarPhase phase, int latestTick) {
+        LunarCalendar authority = authority(context);
+        if (authority == null || !authority.view().snapshot().schedulingEligible
+                || authority.view().snapshot().timeOfDay > latestTick) return false;
+        authority.setPhase(phase);
+        return true;
     }
 
     LunarSnapshot snapshot(World context) {
@@ -101,8 +118,10 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         save = handler;
         if (sameSave) {
             if (calendar != null) {
+                assault.bind(null, null);
                 active.setItemData(LunarWorldState.KEY, state);
                 calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), LunarEvent.Cause.DIMENSION_CHANGED);
+                assault.bind(active, calendar.view());
             }
             return;
         }
@@ -140,9 +159,11 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         }
         LunarEvent.Cause cause = state.initializedHere ? LunarEvent.Cause.INITIALIZED : LunarEvent.Cause.LOADED;
         calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), cause);
+        assault.bind(active, calendar.view());
     }
 
     private void detach() {
+        assault.bind(null, null);
         if (calendar != null) calendar.detach();
         calendar = null;
         diagnostics = null;
@@ -171,7 +192,10 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     public void tickEnd(EnumSet<TickType> ticks, Object... data) {
         if (!ticks.contains(TickType.WORLD)) return;
         bind(game.theWorld);
-        if (calendar != null) calendar.observe(world.getWorldTime());
+        if (calendar != null) {
+            calendar.observe(world.getWorldTime());
+            assault.tick(game.thePlayer, game.isGamePaused);
+        }
     }
 
     @Override

@@ -35,6 +35,7 @@ public final class DevBridgeTest {
             expect("/health", null, token, 200, "\"alive\":true");
             expect("/capabilities", null, token, 200, "world.block@1");
             expect("/capabilities", null, token, 200, "lunar.events@1");
+            expect("/capabilities", null, token, 200, "assault.snapshot@1");
             expect("/status", null, token, 200, "no_world");
             expect("/query", QUERY, token, 503, "NOT_READY");
             expect("/query", "{", token, 400, "INVALID_ARGUMENT");
@@ -97,6 +98,7 @@ public final class DevBridgeTest {
             token = field(discovery, "\"token\":\"([A-Za-z0-9_-]{43})\"");
             expect("/capabilities", null, token, 200, "test.input@1");
             expect("/capabilities", null, token, 200, "hopper.prepare_capacity@1");
+            expect("/capabilities", null, token, 200, "assault.prepare_full_moon@1");
             String capacity = input.replace("test.input", "hopper.prepare_capacity");
             expect("/command", capacity, token, 400, "INVALID_ARGUMENT");
             expect("/command", capacity.replace(",\"count\":4", ""), token, 503, "NOT_READY");

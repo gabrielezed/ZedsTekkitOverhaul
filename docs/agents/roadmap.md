@@ -41,6 +41,13 @@ The Hopper backport, crafting and storage controls, fractional distillation prot
 
 Avoid prematurely implementing frameworks for untested requirements. Prove each shared abstraction through one machine before broad adoption.
 
+## Survival gameplay
+
+- **Implemented for 0.1:** [lunar player assault](survival-assault-acceptance.md) follows the active player's vicinity. Tune the warning, distance and pulse cadence with a short Survival playtest. The longer-term effect of sleep on threat remains open.
+- **Confirmed direction, deferred:** `SITE_SIEGE` targets a persistent settlement inferred from long-term construction and activity. Support caves, treehouses, castles, outdoor industry and multiple outposts. Doors, beds and machines can contribute evidence; none is required. No claims or marker blocks.
+- **Confirmed direction, deferred:** backport hand and armor slots for zombies and skeletons, including NBT, rendering, combat effects and drops. Preserve the existing 1.2.5 skeleton bow, pigman weapon and other special-case held items. The current encounter uses only vanilla equipment.
+- **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
+
 ## Fractional distillation prototype
 
 The seven-placement prototype has original OBJ meshes, a thermometer selector, cooling-water tank and an IC2 1.97 low-voltage heater. Gasoline, Kerosene, Diesel and Heavy Gas Oil have placeable world blocks, buckets and BuildCraft liquid identities. See the [engineering specification](../engineering/fractional-distillation-v1.md) for setpoints, batch rules, IDs and structure.

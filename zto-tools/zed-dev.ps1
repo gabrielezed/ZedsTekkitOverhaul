@@ -7,7 +7,7 @@ param(
     [ValidateSet('world.time', 'world.block', 'lunar.snapshot', 'lunar.events', 'inventory.player', 'inventory.container', 'machine.inspect',
         'test.context', 'fixture.create', 'fixture.reset', 'fixture.destroy', 'test.input', 'hopper.prepare_capacity', 'hopper.stage_reload',
         'hopper.power_on', 'hopper.power_off', 'distillation.create', 'distillation.start', 'distillation.start_partial',
-        'distillation.collect', 'distillation.transport', 'crafting.transactions')]
+        'distillation.collect', 'distillation.transport', 'crafting.transactions', 'assault.snapshot', 'assault.prepare_full_moon')]
     [string]$Op,
     [string]$Discovery = $env:ZTO_DEV_BRIDGE_DISCOVERY,
     [int]$Dimension = 0,

@@ -1,5 +1,7 @@
 # ZTO test automation bridge
 
+The [Survival 0.1 acceptance record](survival-assault-acceptance.md) documents the `assault.natural_full_moon@1` scenario and its Save/Quit/Reload options in the same lifecycle runner. The fixture changes only lunar alignment in a marked disposable Overworld. A real natural boundary must follow.
+
 The first scenario exercises the registered ZTO Hopper and vanilla chest in the authoritative Tekkit Dev singleplayer world. The bridge makes a narrow fixture and seeds four stone items. The actual Hopper performs all transfers through its usual inventory adapters.
 
 ## Singleplayer core suite

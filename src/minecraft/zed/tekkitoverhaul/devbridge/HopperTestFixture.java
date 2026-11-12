@@ -1,5 +1,9 @@
 package zed.tekkitoverhaul.devbridge;
 
+import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
+import zed.tekkitoverhaul.lunar.LunarPhase;
+import zed.tekkitoverhaul.lunar.LunarSnapshot;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,7 +91,7 @@ final class HopperTestFixture {
         return result + "}";
     }
 
-    String command(Minecraft game, World world, int dimension, long ticks, BridgeProtocol.Query query)
+    String command(Minecraft game, World world, int dimension, long ticks, BridgeProtocol.Query query, LocalLunarCalendar lunar)
             throws BridgeProtocol.Error {
         String outcome = "INTERNAL_ERROR";
         try {
@@ -106,7 +110,12 @@ final class HopperTestFixture {
             if (revision != query.afterSequence) throw reject("STALE_REVISION", "Read the current test context");
             Chunk chunk = BridgeSnapshots.loaded(world, arenaX, arenaZ);
             String details = "";
-            if ("crafting.transactions".equals(query.op)) {
+            if ("assault.prepare_full_moon".equals(query.op)) {
+                if (runId != 0) throw reject("FIXTURE_BUSY", "Use an idle disposable arena");
+                if (!lunar.alignBeforeNight(world, LunarPhase.FULL_MOON, LunarSnapshot.NIGHT_START - 100)) {
+                    throw reject("LUNAR_UNAVAILABLE", "Prepare the encounter before dusk in the local Overworld");
+                }
+            } else if ("crafting.transactions".equals(query.op)) {
                 if (runId != 0 || !game.thePlayer.isEntityAlive() || game.thePlayer.inventory.getItemStack() != null
                         || game.thePlayer.craftingInventory != game.thePlayer.inventorySlots) {
                     throw reject("FIXTURE_BUSY", "Use an idle player with an empty cursor and no open container");

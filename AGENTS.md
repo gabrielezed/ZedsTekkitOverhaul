@@ -10,7 +10,7 @@ This is a **legacy Minecraft 1.2.5** project. Read this file before modifying co
 
 ## Compatibility and source rules
 
-- Target: Tekkit Classic **3.1.2**, Minecraft **1.2.5**, MCP **6.2**, Forge **3.4.9.171**, FML **2.2.106.176**, JDK **8**, Eclipse, FoxyRetroMDK **1.3.6**.
+- Runtime target: Tekkit Classic **3.1.2**, Minecraft **1.2.5**, pack Forge **3.3.8.164**, FML **2.2.106.176**. Development: MCP **6.2**, Forge **3.4.9.171**, JDK **8**, Eclipse, FoxyRetroMDK **1.3.6**. Verify new legacy calls against the pack's installed ABI.
 - Write code compatible with the legacy Java and Minecraft APIs. Do not use modern Minecraft systems (BlockPos, capabilities, DeferredRegister, JSON recipes, ForgeGradle).
 - Original mod sources belong under `src/minecraft/zed/`. Do not commit or overwrite vanilla Minecraft, Forge, mod JARs, decompilations, reobfuscated Minecraft classes, saves or local config files.
 - Avoid editing core game classes. If an unavoidable hook is needed, isolate and validate a patch/transformer; never silently replace NEI-patched `gb.class` or other shared classes.
@@ -51,11 +51,13 @@ When completing a task, explain how the implementation supports the project visi
 - [Validation and acceptance](docs/agents/testing.md)
 - [Development workflow](docs/agents/workflow.md)
 - [Roadmap and decisions](docs/agents/roadmap.md)
+- [Versioning and build provenance](docs/agents/VERSIONING_POLICY.md)
 
 ## Lunar calendar and local diagnostics
 
 - Read the [Lunar Cycle handoff](docs/agents/lunar-cycle-implementation.md) before changing calendar semantics, world ownership, or the native atlas hook.
 - Keep the calendar independent of Minecraft client classes. Gameplay consumers should use immutable snapshots, event causes, and scheduling windows.
+- For the player assault, read the [Survival specification](docs/agents/SURVIVAL_SIEGE_SPEC.md) and [acceptance record](docs/agents/survival-assault-acceptance.md). Keep scheduling, vanilla spawning, and diagnostics separate. A player assault does not register or infer a settlement.
 - Read the [Dev Bridge guide](docs/agents/dev-bridge.md) before extending its protocol. Keep reads allowlisted and bounded, execute game reads on the owning thread, and keep discovery credentials out of logs and repository files.
 - Use the isolated Tekkit Dev instance and disposable saves for acceptance. Record player-observed results separately from focused Java checks and MCP builds.
 

@@ -6,7 +6,8 @@
 | --- | --- |
 | Game | Minecraft **1.2.5**, Tekkit Classic **3.1.2** |
 | Development kit | FoxyRetroMDK **1.3.6**, MCP **6.2** |
-| Forge / FML | MinecraftForge **3.4.9.171**, FML **2.2.106.176** |
+| Pack runtime Forge / FML | MinecraftForge **3.3.8.164**, FML **2.2.106.176** |
+| MCP compile profile | MinecraftForge **3.4.9.171**, MCP **6.2** |
 | Java | **JDK 8** for the local toolchain; use legacy-compatible source constructs |
 | IDE | Eclipse, Client project |
 | Development source | `MDK-1.2.5/src/minecraft/zed/` |
@@ -36,7 +37,7 @@ Close the game and, from the MDK root, run:
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script calls `recompile.bat`, removes only stale `reobf/minecraft/zed/` output, calls `reobfuscate.bat`, packages the reobfuscated `zed/` classes and `zed/gui/` texture, and deploys the finished JAR. It aborts if required tools or assets are absent and if competing old `ZedsTekkitOverhaul*.jar` names are detected.
+The script validates the product version, calls `recompile.bat`, removes only stale `reobf/minecraft/zed/` output, calls `reobfuscate.bat`, and packages the reobfuscated `zed/` classes, assets and build metadata. It writes the archive SHA-256 to the sidecar before deploying the stable JAR. It aborts if required tools or assets are absent or if competing old `ZedsTekkitOverhaul*.jar` names are detected. See the [versioning policy](VERSIONING_POLICY.md).
 
 For a different Prism instance, set `ZTO_PRISM_MODS` before calling it. See [../deploy-prism.md](../deploy-prism.md) for the exact command and limitations.
 

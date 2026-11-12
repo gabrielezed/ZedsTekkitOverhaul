@@ -4,6 +4,7 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/CHANGELOG.md
 !/AGENTS.md
 !/.github/
 !/docs/

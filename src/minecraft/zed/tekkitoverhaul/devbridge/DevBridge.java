@@ -114,7 +114,7 @@ public final class DevBridge implements ITickHandler {
             return fixture == null ? "{\"allowed\":false}" : fixture.context(game.mcDataDir, world, dimension, simulationTicks);
         }
         if (query.sessionId != 0 && fixture != null) {
-            return fixture.command(game, world, dimension, simulationTicks, query);
+            return fixture.command(game, world, dimension, simulationTicks, query, lunar);
         }
         if ("inventory.container".equals(query.op) || "machine.inspect".equals(query.op)) {
             if (query.worldId != worldId) throw new BridgeProtocol.Error(409, "STALE_WORLD", "The active world has changed");
@@ -123,6 +123,7 @@ public final class DevBridge implements ITickHandler {
         }
         if ("lunar.snapshot".equals(query.op)) return lunarObserver.snapshot();
         if ("lunar.events".equals(query.op)) return lunarObserver.poll(query.worldId, query.afterSequence);
+        if ("assault.snapshot".equals(query.op)) return AssaultObservation.read(worldId, lunar.assaultSnapshot(world));
         return read(world, dimension, query);
     }
 

@@ -1,5 +1,9 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.4 — Lunar pressure candidate
+
+- Add small vanilla-mob patrols at natural first-quarter and waxing-gibbous dusks, with an independent `lunarPatrols` switch and counts in Survival Debug. Full-moon assaults retain their own schedule and settings.
+
 ## 0.1.0-alpha.3 — Mob equipment candidate
 
 - Allow explicit loadouts for vanilla Zombies and Skeletons in local play. Zombie swords affect melee damage, armor provides visible protection, and Skeletons retain their native ranged attack.

@@ -48,6 +48,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static boolean lunarVerboseLogging = false;
     @MLProp(info = "Enable natural full-moon player assaults in local Survival")
     public static boolean playerAssault = true;
+    @MLProp(info = "Enable natural first-quarter and waxing-gibbous patrols in local Survival")
+    public static boolean lunarPatrols = true;
     @MLProp(info = "Maximum enemies per assault (1 to 24)")
     public static int assaultSpawnBudget = 15;
     @MLProp(info = "Simulation ticks between assault waves while enemies remain (400 to 1200)")
@@ -93,7 +95,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void modsLoaded() {
         LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
-                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius),
+                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultWaveInterval, assaultActiveCap,
+                        assaultOuterRadius, lunarPatrols),
                 survivalDebugHud, survivalDebugHudKey, survivalDebugLogCapacity);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();

@@ -144,6 +144,9 @@ final class GuiSurvivalDebug extends GuiScreen {
                 : AssaultDiagnostics.label(diagnostics.lunarCause().name())), width);
         String dusk = eligibility == Eligibility.DUSK ? " in " + (LunarSnapshot.NIGHT_START - moon.timeOfDay) + "t" : "";
         append(rows, "Eligibility: " + eligibility.label + dusk, width);
+        append(rows, "PATROL | " + assault.patrol.state + " | " + AssaultDiagnostics.label(assault.patrol.reason), width);
+        append(rows, "Patrol night: " + (assault.patrol.eligibleNight ? "Eligible" : "Ineligible")
+                + " | Last patrol spawns: " + assault.patrol.spawned + "/" + assault.patrol.budget, width);
         append(rows, "Trigger: " + AssaultDiagnostics.label(assault.trigger) + " | Elapsed: " + assault.elapsed + "t", width);
         append(rows, "Wave: " + assault.currentWave + "/" + assault.waves.size() + " | Next in "
                 + (assault.nextWaveTicks < 0 ? "N/A" : assault.nextWaveTicks + "t") + " | Candidate attempts: " + assault.attempts, width);

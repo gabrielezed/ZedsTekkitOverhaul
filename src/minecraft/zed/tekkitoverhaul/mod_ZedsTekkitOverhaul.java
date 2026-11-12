@@ -41,10 +41,14 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static boolean lunarVerboseLogging = false;
     @MLProp(info = "Enable natural full-moon player assaults in local Survival")
     public static boolean playerAssault = true;
-    @MLProp(info = "Maximum enemies per assault (1 to 6)")
-    public static int assaultSpawnBudget = 6;
-    @MLProp(info = "Simulation ticks between assault pulses (80 to 400)")
-    public static int assaultPulseInterval = 160;
+    @MLProp(info = "Maximum enemies per assault (1 to 24)")
+    public static int assaultSpawnBudget = 15;
+    @MLProp(info = "Simulation ticks between assault waves while enemies remain (400 to 1200)")
+    public static int assaultWaveInterval = 900;
+    @MLProp(info = "Maximum active assault enemies (2 to 12)")
+    public static int assaultActiveCap = 8;
+    @MLProp(info = "Maximum horizontal assault spawn distance in blocks (14 to 28)")
+    public static int assaultOuterRadius = 16;
     @MLProp(info = "Enable the local single-player Survival Debug HUD")
     public static boolean survivalDebugHud = false;
     @MLProp(info = "LWJGL key code for Survival Debug (0 disables its shortcut)")
@@ -81,7 +85,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void modsLoaded() {
         LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
-                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultPulseInterval),
+                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius),
                 survivalDebugHud, survivalDebugHudKey, survivalDebugLogCapacity);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();

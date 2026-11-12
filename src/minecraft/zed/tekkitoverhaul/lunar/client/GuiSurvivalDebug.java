@@ -12,6 +12,7 @@ import zed.tekkitoverhaul.assault.AssaultDiagnostics;
 import zed.tekkitoverhaul.assault.SiegeDirector.Eligibility;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.Spawn;
+import zed.tekkitoverhaul.assault.SiegeDirector.WaveSnapshot;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
 final class GuiSurvivalDebug extends GuiScreen {
@@ -144,15 +145,27 @@ final class GuiSurvivalDebug extends GuiScreen {
         String dusk = eligibility == Eligibility.DUSK ? " in " + (LunarSnapshot.NIGHT_START - moon.timeOfDay) + "t" : "";
         append(rows, "Eligibility: " + eligibility.label + dusk, width);
         append(rows, "Trigger: " + AssaultDiagnostics.label(assault.trigger) + " | Elapsed: " + assault.elapsed + "t", width);
-        append(rows, "Pulses: " + assault.pulses + "/" + assault.scheduledPulses + " | Candidate attempts: " + assault.attempts, width);
+        append(rows, "Wave: " + assault.currentWave + "/" + assault.waves.size() + " | Next in "
+                + (assault.nextWaveTicks < 0 ? "N/A" : assault.nextWaveTicks + "t") + " | Candidate attempts: " + assault.attempts, width);
         int skeletons = 0;
         for (Spawn spawn : assault.spawns) if ("SKELETON".equals(spawn.mob)) skeletons++;
         int spawned = assault.spawns.size();
         append(rows, "Assault spawns: " + spawned + "/" + assault.budget + " | Skeletons: " + skeletons
                 + " | Zombies: " + (spawned - skeletons), width);
-        append(rows, "Assault mobs alive: N/A | Ordinary hostiles: N/A", width);
+        append(rows, "Active assault: " + assault.active + "/" + assault.activeCap + " | Peak: " + assault.peakActive
+                + " | Nearby hostiles: " + (assault.localHostiles < 0 ? "N/A" : assault.localHostiles + "/" + assault.localCap), width);
+        append(rows, "Deferred: " + assault.deferred + " | Skipped: " + assault.skipped, width);
+        append(rows, "Deaths observed: " + assault.observedDeaths + " | Removed: " + assault.removed
+                + " | Unloaded: " + assault.unloaded, width);
         append(rows, "Last rejection: " + AssaultDiagnostics.label(assault.lastRejection), width);
-        append(rows, "Rejections: " + diagnostics.rejectionSummary(), width);
+        if (assault.starts > 0) for (WaveSnapshot wave : assault.waves) {
+            append(rows, "Wave " + wave.number + " | " + wave.state + " | " + AssaultDiagnostics.label(wave.outcome), width);
+            append(rows, "  Inserted: " + wave.inserted + "/" + wave.allocation + " | Attempts: " + wave.attempts
+                    + " | Deferred: " + wave.deferred + " | Skipped: " + wave.skipped + " | Active: " + wave.active, width);
+            append(rows, "  Nearby: " + (wave.localHostiles < 0 ? "N/A" : wave.localHostiles) + " | Peak active assault: "
+                    + wave.peakActive + " | Carry in/out: " + wave.carriedIn + "/" + wave.carriedOut, width);
+            if (!wave.rejections.isEmpty()) append(rows, "  Constraints: " + AssaultDiagnostics.counts(wave.rejections), width);
+        }
         if (spawned != 0) {
             Spawn last = assault.spawns.get(spawned - 1);
             append(rows, "Last spawn: " + AssaultDiagnostics.label(last.mob) + " at " + AssaultDiagnostics.position(last), width);

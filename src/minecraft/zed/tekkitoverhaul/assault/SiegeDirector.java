@@ -2,7 +2,10 @@ package zed.tekkitoverhaul.assault;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.EntitySkeleton;
@@ -26,8 +29,12 @@ public final class SiegeDirector implements LunarService.Listener {
     private final boolean enabled;
     private final int budget;
     private final int interval;
-    private final SpawnController spawns = new SpawnController();
+    private final int activeCap;
+    private final int outerRadius;
+    private final SpawnController spawns;
     private final List<Spawn> evidence = new ArrayList<Spawn>();
+    private final List<TrackedMob> tracked = new ArrayList<TrackedMob>();
+    private AssaultWave[] waves = AssaultWave.plan(0);
     private World world;
     private LunarService lunar;
     private AssaultDiagnostics diagnostics;
@@ -37,23 +44,26 @@ public final class SiegeDirector implements LunarService.Listener {
     private State state = State.IDLE;
     private String reason = "NO_WORLD";
     private int elapsed;
-    private int pulses;
-    private int attempts;
+    private int waveIndex = -1;
+    private int localHostiles = -1;
+    private int peakActive;
+    private int observedDeaths;
+    private int removed;
+    private int unloaded;
     private int starts;
     private int difficulty;
-    private static final int FIRST_PULSE = 100;
-    private static final int MAX_PULSES = 3;
-
-    public SiegeDirector(boolean enabled, int budget, int interval) {
+    public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius) {
         this.enabled = enabled;
-        this.budget = Math.max(1, Math.min(6, budget));
-        this.interval = Math.max(80, Math.min(400, interval));
+        this.budget = Math.max(1, Math.min(24, budget));
+        this.interval = Math.max(400, Math.min(1200, interval));
+        this.activeCap = Math.max(2, Math.min(12, activeCap));
+        this.outerRadius = Math.max(14, Math.min(28, outerRadius));
+        spawns = new SpawnController(this.outerRadius);
     }
 
     public void bind(World incoming, LunarService service) {
         if (diagnostics != null) {
             if (state == State.ACTIVE) diagnostics.assault(world.getWorldTime(), "Interrupted by world change");
-            diagnostics.resetEncounter();
         }
         if (lunar != null) lunar.unsubscribe(this);
         world = incoming;
@@ -62,8 +72,11 @@ public final class SiegeDirector implements LunarService.Listener {
         pending = null;
         target = null;
         evidence.clear();
+        tracked.clear();
+        waves = AssaultWave.plan(0);
         state = State.IDLE;
-        elapsed = pulses = attempts = starts = 0;
+        elapsed = starts = peakActive = observedDeaths = removed = unloaded = 0;
+        waveIndex = localHostiles = -1;
         spawns.rejection = null;
         reason = !enabled ? "DISABLED" : "NO_OVERWORLD";
         if (!enabled || world == null || lunar == null || world.isRemote || world.worldProvider.worldType != 0) return;
@@ -124,57 +137,127 @@ public final class SiegeDirector implements LunarService.Listener {
             reason = "NATURAL_FULL_MOON";
             target = player;
             difficulty = world.difficultySetting;
-            elapsed = attempts = pulses = 0;
+            elapsed = observedDeaths = removed = unloaded = 0;
+            waveIndex = -1;
+            localHostiles = -1;
+            peakActive = tracked.size();
+            waves = AssaultWave.plan(budget);
             starts++;
             evidence.clear();
             spawns.rejection = null;
             if (diagnostics != null) {
-                diagnostics.resetEncounter();
                 diagnostics.assault(boundary.rawTime, "Eligibility accepted: natural full moon");
                 diagnostics.assault(boundary.rawTime, "Player assault started");
             }
             world.playSoundEffect(player.posX, player.posY, player.posZ, "ambient.cave.cave", 0.5F, 0.85F);
             return;
         }
-        if (state != State.ACTIVE) return;
+        if (state != State.ACTIVE) {
+            if (!tracked.isEmpty() && world.getWorldTime() % AssaultWave.RETRY_INTERVAL == 0) refreshPopulation(player);
+            return;
+        }
         if (!available(player) || player != target) {
             end(State.ABORTED, "PLAYER_UNAVAILABLE");
         } else if (world.difficultySetting != difficulty) {
             end(State.ABORTED, world.difficultySetting == 0 ? "PEACEFUL" : "DIFFICULTY_CHANGED");
         } else if (!AssaultSchedule.WINDOW.matches(lunar.snapshot())) {
             end(State.RESOLVED, "NIGHT_ENDED");
-        } else if (++elapsed >= FIRST_PULSE && (elapsed - FIRST_PULSE) % interval == 0) {
-            pulse(player);
-            if (evidence.size() == budget) end(State.RESOLVED, "BUDGET_EXHAUSTED");
-            else if (pulses == MAX_PULSES) end(State.RESOLVED, evidence.isEmpty() ? "NO_VALID_POSITION" : "PULSES_COMPLETE");
+        } else {
+            advanceWaves(player);
         }
     }
 
-    private void pulse(EntityPlayer player) {
-        pulses++;
-        int placed = 0;
-        int previousAttempts = attempts;
-        long time = diagnostics == null ? 0 : world.getWorldTime();
-        if (diagnostics != null) diagnostics.beginPulse(time, pulses);
-        for (int tries = 0; placed < 2 && tries < SpawnController.ATTEMPTS && evidence.size() < budget; tries++) {
-            if (!spawns.belowLocalCap(world, player)) {
-                spawns.rejection = "LOCAL_MOB_CAP";
-                if (diagnostics != null) diagnostics.reject(spawns.rejection);
-                break;
-            }
-            attempts++;
-            // Vanilla Hard zombies can break wooden doors. Keep vanilla AI and use skeletons there.
-            EntityMob mob = spawns.trySpawn(world, player, difficulty == 3 || evidence.size() % 3 == 2);
-            if (mob != null) {
-                Spawn spawn = new Spawn(mob, player);
-                evidence.add(spawn);
-                if (diagnostics != null) diagnostics.spawned(time, pulses, spawn);
-                placed++;
-            } else if (diagnostics != null) {
-                diagnostics.reject(spawns.rejection);
-            }
+    private void advanceWaves(EntityPlayer player) {
+        elapsed++;
+        if (elapsed % AssaultWave.RETRY_INTERVAL == 0) refreshPopulation(player);
+        if (waveIndex + 1 < waves.length && elapsed >= nextWaveAt()) {
+            AssaultWave wave = waves[++waveIndex];
+            wave.startedAt = elapsed;
+            if (diagnostics != null) diagnostics.beginWave(world.getWorldTime(), wave);
         }
-        if (diagnostics != null) diagnostics.endPulse(time, pulses, placed, attempts - previousAttempts);
+        if (waveIndex < 0) return;
+        AssaultWave wave = waves[waveIndex];
+        if (wave.closedAt < 0) {
+            int age = elapsed - wave.startedAt;
+            if (age >= AssaultWave.WINDOW) {
+                closeWave(wave, "SPAWN_WINDOW_EXPIRED", true);
+            } else if (wave.unspent() > 0 && age % AssaultWave.RETRY_INTERVAL == 0) {
+                if (elapsed % AssaultWave.RETRY_INTERVAL != 0) refreshPopulation(player);
+                retry(wave, player);
+            }
+            if (wave.closedAt < 0 && wave.unspent() == 0) closeWave(wave, "ALLOCATION_EXHAUSTED", false);
+        }
+        if (wave.closedAt < 0) return;
+        for (int i = waveIndex + 1; i < waves.length; i++) {
+            if (waves[i].unspent() > 0) return;
+        }
+        if (tracked.isEmpty()) end(State.RESOLVED, "WAVES_COMPLETE");
+        else if (elapsed >= wave.closedAt + AssaultWave.FINAL_ENGAGEMENT) end(State.RESOLVED, "ENCOUNTER_TIMEOUT");
+    }
+
+    private int nextWaveAt() {
+        if (waveIndex < 0) return AssaultWave.FIRST_START;
+        AssaultWave current = waves[waveIndex];
+        if (current.closedAt < 0) return current.startedAt + interval;
+        for (int i = waveIndex + 1; i < waves.length; i++) {
+            if (waves[i].unspent() > 0) return current.nextStart(interval, tracked.size());
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private void retry(AssaultWave wave, EntityPlayer player) {
+        wave.localHostiles = localHostiles;
+        wave.peakActive = Math.max(wave.peakActive, tracked.size());
+        if (tracked.size() >= activeCap || localHostiles >= SpawnController.LOCAL_CAP) {
+            spawns.rejection = tracked.size() >= activeCap ? "ASSAULT_CAP" : "LOCAL_MOB_CAP";
+            wave.reject(spawns.rejection);
+            return;
+        }
+        for (int tries = 0; tries < AssaultWave.CANDIDATES_PER_RETRY; tries++) {
+            wave.attempts++;
+            // Vanilla Hard zombies can break wooden doors. Keep vanilla AI and use skeletons there.
+            boolean skeleton = difficulty == 3 || (wave.number == 3 ? wave.inserted % 2 == 0 : wave.inserted % 3 == 2);
+            EntityMob mob = spawns.trySpawn(world, player, skeleton);
+            if (mob != null) {
+                Spawn spawn = new Spawn(mob, player, wave.number, elapsed);
+                evidence.add(spawn);
+                tracked.add(new TrackedMob(mob, wave));
+                wave.inserted++;
+                wave.active++;
+                wave.localHostiles = ++localHostiles;
+                wave.peakActive = Math.max(wave.peakActive, tracked.size());
+                peakActive = Math.max(peakActive, tracked.size());
+                if (diagnostics != null) diagnostics.spawned(world.getWorldTime(), spawn);
+                return;
+            }
+            wave.reject(spawns.rejection);
+        }
+    }
+
+    private void closeWave(AssaultWave wave, String outcome, boolean carry) {
+        if (carry && wave.number < waves.length && wave.unspent() > 0) {
+            wave.carriedOut = 1;
+            waves[wave.number].carriedIn = 1;
+        }
+        wave.closedAt = elapsed;
+        wave.outcome = outcome;
+        if (diagnostics != null) diagnostics.endWave(world.getWorldTime(), wave);
+    }
+
+    private void refreshPopulation(EntityPlayer player) {
+        Iterator<TrackedMob> mobs = tracked.iterator();
+        while (mobs.hasNext()) {
+            TrackedMob entry = mobs.next();
+            EntityMob mob = entry.mob;
+            if (mob.getHealth() <= 0) observedDeaths++;
+            else if (mob.isDead || mob.worldObj != world) removed++;
+            else if (!world.blockExists((int) Math.floor(mob.posX), 64, (int) Math.floor(mob.posZ))) unloaded++;
+            else if (world.getEntitiesWithinAABB(EntityMob.class, mob.boundingBox).contains(mob)) continue;
+            else removed++;
+            entry.wave.active--;
+            mobs.remove();
+        }
+        localHostiles = player == null || player.worldObj != world ? -1 : spawns.localHostiles(world, player);
     }
 
     private boolean available(EntityPlayer player) {
@@ -183,6 +266,9 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     private void end(State terminal, String cause) {
+        for (AssaultWave wave : waves) {
+            if (wave.closedAt < 0) closeWave(wave, wave.unspent() == 0 ? "NO_ALLOCATION" : cause, false);
+        }
         state = terminal;
         reason = cause;
         target = null;
@@ -213,8 +299,11 @@ public final class SiegeDirector implements LunarService.Listener {
     public static final class Spawn {
         public final String mob;
         public final double x, y, z, horizontalSquared;
+        public final int wave, tick;
 
-        private Spawn(EntityMob entity, EntityPlayer target) {
+        private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick) {
+            this.wave = wave;
+            this.tick = tick;
             mob = entity instanceof EntitySkeleton ? "SKELETON" : "ZOMBIE";
             x = entity.posX;
             y = entity.posY;
@@ -224,14 +313,53 @@ public final class SiegeDirector implements LunarService.Listener {
         }
     }
 
+    private static final class TrackedMob {
+        final EntityMob mob;
+        final AssaultWave wave;
+
+        TrackedMob(EntityMob mob, AssaultWave wave) {
+            this.mob = mob;
+            this.wave = wave;
+        }
+    }
+
+    public static final class WaveSnapshot {
+        public final int number, planned, allocation, inserted, attempts, deferred, skipped, active;
+        public final int startedAt, closedAt, carriedIn, carriedOut, localHostiles, peakActive;
+        public final String state, outcome;
+        public final Map<String, Integer> rejections;
+
+        private WaveSnapshot(AssaultWave wave) {
+            number = wave.number;
+            planned = wave.planned;
+            allocation = wave.allocation();
+            inserted = wave.inserted;
+            attempts = wave.attempts;
+            deferred = wave.deferred();
+            skipped = wave.skipped();
+            active = wave.active;
+            startedAt = wave.startedAt;
+            closedAt = wave.closedAt;
+            carriedIn = wave.carriedIn;
+            carriedOut = wave.carriedOut;
+            localHostiles = wave.localHostiles;
+            peakActive = wave.peakActive;
+            state = wave.state();
+            outcome = wave.outcome;
+            rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(wave.rejections));
+        }
+    }
+
     public static final class Snapshot {
         public final State state;
         public final String reason, lastRejection;
         public final long boundary, lunarSession;
-        public final int dimension, starts, pulses, attempts, elapsed, budget;
-        public final int scheduledPulses = MAX_PULSES;
+        public final int dimension, starts, currentWave, nextWaveTicks, attempts, elapsed, budget, deferred, skipped;
+        public final int active, peakActive, localHostiles, observedDeaths, removed, unloaded;
+        public final int activeCap, localCap, innerRadius, outerRadius;
         public final String trigger;
         public final List<Spawn> spawns;
+        public final List<WaveSnapshot> waves;
 
         private Snapshot(SiegeDirector director) {
             state = director.state;
@@ -241,8 +369,31 @@ public final class SiegeDirector implements LunarService.Listener {
             lunarSession = director.lunar == null ? 0 : director.lunar.snapshot().sessionId;
             dimension = director.world.worldProvider.worldType;
             starts = director.starts;
-            pulses = director.pulses;
-            attempts = director.attempts;
+            currentWave = director.waveIndex + 1;
+            int next = currentWave == AssaultWave.COUNT || state != State.ACTIVE ? Integer.MAX_VALUE : director.nextWaveAt();
+            nextWaveTicks = next == Integer.MAX_VALUE ? -1 : next - director.elapsed;
+            List<WaveSnapshot> summaries = new ArrayList<WaveSnapshot>(AssaultWave.COUNT);
+            int tried = 0, waiting = 0, lost = 0;
+            for (AssaultWave wave : director.waves) {
+                summaries.add(new WaveSnapshot(wave));
+                tried += wave.attempts;
+                waiting += wave.deferred();
+                lost += wave.skipped();
+            }
+            waves = Collections.unmodifiableList(summaries);
+            attempts = tried;
+            deferred = waiting;
+            skipped = lost;
+            active = director.tracked.size();
+            peakActive = director.peakActive;
+            localHostiles = director.localHostiles;
+            observedDeaths = director.observedDeaths;
+            removed = director.removed;
+            unloaded = director.unloaded;
+            activeCap = director.activeCap;
+            localCap = SpawnController.LOCAL_CAP;
+            innerRadius = SpawnController.INNER_RADIUS;
+            outerRadius = director.outerRadius;
             elapsed = director.elapsed;
             budget = director.budget;
             trigger = starts == 0 ? null : "NATURAL_FULL_MOON";

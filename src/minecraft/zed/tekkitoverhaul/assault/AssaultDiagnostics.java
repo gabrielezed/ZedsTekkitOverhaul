@@ -3,7 +3,6 @@ package zed.tekkitoverhaul.assault;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -14,8 +13,6 @@ import zed.tekkitoverhaul.lunar.LunarService;
 public final class AssaultDiagnostics implements LunarService.Listener {
     private final int capacity;
     private final ArrayDeque<String> events = new ArrayDeque<String>();
-    private final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
-    private final Map<String, Integer> pulseRejections = new LinkedHashMap<String, Integer>();
     private List<String> history;
     private String lastAssaultEvent = "Waiting for full moon";
     private LunarEvent.Cause lunarCause;
@@ -40,37 +37,28 @@ public final class AssaultDiagnostics implements LunarService.Listener {
         }
     }
 
-    void resetEncounter() {
-        rejections.clear();
-        pulseRejections.clear();
-    }
-
     void assault(long time, String message) {
         lastAssaultEvent = message;
         record(time, "ASSAULT", message);
     }
 
-    void beginPulse(long time, int pulse) {
-        pulseRejections.clear();
-        record(time, "PULSE", "Pulse " + pulse + " started");
+    void beginWave(long time, AssaultWave wave) {
+        assault(time, "Wave " + wave.number + " started with " + wave.allocation() + " planned spawns");
     }
 
-    void reject(String reason) {
-        increment(rejections, reason);
-        increment(pulseRejections, reason);
-    }
-
-    void spawned(long time, int pulse, SiegeDirector.Spawn spawn) {
+    void spawned(long time, SiegeDirector.Spawn spawn) {
         lastAssaultEvent = label(spawn.mob) + " spawned";
-        record(time, "SPAWN", "Pulse " + pulse + ": " + lastAssaultEvent + " at "
+        record(time, "SPAWN", "Wave " + spawn.wave + ": " + lastAssaultEvent + " at "
                 + position(spawn) + ", " + distance(spawn) + " blocks away (horizontal)");
     }
 
-    void endPulse(long time, int pulse, int spawned, int attempts) {
-        lastAssaultEvent = "Pulse " + pulse + ": +" + spawned + " assault mobs";
-        String message = lastAssaultEvent + " in " + attempts + " attempts";
-        if (!pulseRejections.isEmpty()) message += " / " + counts(pulseRejections);
-        record(time, "PULSE", message);
+    void endWave(long time, AssaultWave wave) {
+        lastAssaultEvent = "Wave " + wave.number + ": " + label(wave.outcome);
+        String message = lastAssaultEvent + " | Inserted " + wave.inserted + "/" + wave.allocation()
+                + " in " + wave.attempts + " attempts | Skipped " + wave.skipped() + " | Carried " + wave.carriedOut
+                + " | Nearby " + (wave.localHostiles < 0 ? "N/A" : wave.localHostiles) + " | Peak active " + wave.peakActive;
+        if (!wave.rejections.isEmpty()) message += " | " + counts(wave.rejections);
+        record(time, "WAVE", message);
     }
 
     public List<String> history() {
@@ -80,14 +68,7 @@ public final class AssaultDiagnostics implements LunarService.Listener {
 
     public String lastAssaultEvent() { return lastAssaultEvent; }
     public LunarEvent.Cause lunarCause() { return lunarCause; }
-    public String rejectionSummary() { return rejections.isEmpty() ? "None" : counts(rejections); }
-
-    private static void increment(Map<String, Integer> counts, String key) {
-        Integer count = counts.get(key);
-        counts.put(key, count == null ? 1 : count + 1);
-    }
-
-    private static String counts(Map<String, Integer> counts) {
+    public static String counts(Map<String, Integer> counts) {
         StringBuilder text = new StringBuilder();
         for (Map.Entry<String, Integer> entry : counts.entrySet()) {
             if (text.length() > 0) text.append(", ");

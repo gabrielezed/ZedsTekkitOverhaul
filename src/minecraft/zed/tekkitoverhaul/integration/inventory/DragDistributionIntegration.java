@@ -109,6 +109,11 @@ public final class DragDistributionIntegration {
             }
             boolean overWidget = (Boolean) widgetContains.invoke(null, x, y);
             Slot slot = overWidget ? null : (Slot) slotAt.invoke(gui, x, y);
+            if (pressed && button == 0 && !Mouse.isButtonDown(1) && shiftDown() && !otherModifier(game)
+                    && ArmorQuickEquip.transfer(game.thePlayer, gui.inventorySlots, slot)) {
+                session = null;
+                return true;
+            }
             if (pressed) return begin(game, gui, slot, button, x, y);
             return advance(game, gui, slot, button);
         } catch (Exception failure) {
@@ -238,9 +243,16 @@ public final class DragDistributionIntegration {
     }
 
     private static boolean modified(Minecraft game) {
+        return shiftDown() || otherModifier(game);
+    }
+
+    private static boolean shiftDown() {
+        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT);
+    }
+
+    private static boolean otherModifier(Minecraft game) {
         int drop = game.gameSettings.keyBindDrop.keyCode;
-        return Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)
-                || Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)
+        return Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) || Keyboard.isKeyDown(Keyboard.KEY_RCONTROL)
                 || Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU)
                 || (drop > 0 && drop < Keyboard.KEYBOARD_SIZE && Keyboard.isKeyDown(drop));
     }

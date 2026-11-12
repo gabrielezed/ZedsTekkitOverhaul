@@ -19,6 +19,7 @@ public final class MobEquipment {
     }
 
     private static final String KEY = "zed.tekkitoverhaul.equipment";
+    private static final String NO_DROP = "NoDrop";
     private static final int VERSION = 1;
 
     private MobEquipment() {}
@@ -30,6 +31,15 @@ public final class MobEquipment {
 
     /** Assigns one stack, copying its metadata and tags. A successful assignment replaces the old slot. */
     public static boolean assign(EntityLiving mob, Slot slot, ItemStack stack) {
+        return assign(mob, slot, stack, false);
+    }
+
+    /** Assigns encounter equipment with a drop policy persisted alongside that stack. */
+    public static boolean assignWithoutDrop(EntityLiving mob, Slot slot, ItemStack stack) {
+        return assign(mob, slot, stack, true);
+    }
+
+    private static boolean assign(EntityLiving mob, Slot slot, ItemStack stack, boolean noDrop) {
         if (!supports(mob) || !mob.isEntityAlive() || !valid(mob, slot, stack)) return false;
         NBTTagCompound data = mob.getEntityData();
         NBTTagCompound slots = slots(data);
@@ -39,8 +49,17 @@ public final class MobEquipment {
             slots.setInteger("Version", VERSION);
             data.setCompoundTag(KEY, slots);
         }
-        slots.setCompoundTag(slot.name(), stack.copy().writeToNBT(new NBTTagCompound()));
+        NBTTagCompound tag = stack.copy().writeToNBT(new NBTTagCompound());
+        if (noDrop) tag.setBoolean(NO_DROP, true);
+        slots.setCompoundTag(slot.name(), tag);
         return true;
+    }
+
+    static boolean dropsOnDeath(EntityLiving mob, Slot slot) {
+        NBTTagCompound slots = slots(mob);
+        if (slots == null || !(slots.getTag(slot.name()) instanceof NBTTagCompound)) return true;
+        NBTTagCompound stack = slots.getCompoundTag(slot.name());
+        return !(stack.getTag(NO_DROP) instanceof NBTTagByte) || !stack.getBoolean(NO_DROP);
     }
 
     /** Returns a detached snapshot of owned equipment. The skeleton's native bow is implicit. */

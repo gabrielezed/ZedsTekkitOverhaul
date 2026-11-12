@@ -311,6 +311,13 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $before = Invoke-Bridge query assault.snapshot
     $report.persistence.before = $before
     Assert-Persistence 'pre_shutdown_state' $before.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
+    Assert-Persistence 'assault_loadout_phase' $before.loadouts.phase 'FULL_MOON'
+    Assert-Persistence 'assault_loadout_failures' $before.loadouts.failures 0
+    Assert-Persistence 'assault_loadout_cap' ($before.loadouts.equipped -le 5) $true
+    Assert-Persistence 'assault_loadout_accounting' ($before.loadouts.equipped + $before.loadouts.unmodified) $before.spawns.Count
+    foreach ($wave in $before.waves) {
+        Assert-Persistence "wave_$($wave.number)_loadout_cap" ($wave.equipped -le $wave.equipmentCap) $true
+    }
     Assert-Persistence 'no_full_moon_patrol' (Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[' -Quiet) $false
     Stop-DevClient
     $reopened = Start-DevClient
@@ -354,7 +361,11 @@ function Test-PatrolRestart($Context) {
     $wait = if ($InterruptPatrol) { 80 } elseif ($budget) { 1060 } else { 260 }
     $night = Wait-LunarTick ($boundary + $wait)
     $events = Invoke-Bridge query lunar.events @{ WorldId = $before.worldId; AfterSequence = $before.latestSequence }
-    Assert-Persistence 'no_assault' (Invoke-Bridge query assault.snapshot).starts 0
+    $encounters = Invoke-Bridge query assault.snapshot
+    Assert-Persistence 'no_assault' $encounters.starts 0
+    $report.persistence.loadouts = $encounters.patrolLoadouts
+    Assert-Persistence 'patrol_loadout_failures' $encounters.patrolLoadouts.failures 0
+    Assert-Persistence 'patrol_loadout_cap' ($encounters.patrolLoadouts.equipped -le 1) $true
     if ($InterruptPatrol) { Stop-DevClient }
     $entries = @(Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[')
     $report.persistence.before = $before
@@ -378,6 +389,10 @@ function Test-PatrolRestart($Context) {
         Assert-Persistence 'patrol_summary' $match.Success $true
         $outcome = $match.Groups[3].Value
         $spawned = [int]$match.Groups[4].Value
+        if (!$InterruptPatrol) {
+            $counted = $encounters.patrolLoadouts.equipped + $encounters.patrolLoadouts.unmodified
+            Assert-Persistence 'patrol_loadout_accounting' $counted $spawned
+        }
         $attempts = [int]$match.Groups[6].Value
         $elapsed = [int]$match.Groups[8].Value
         Assert-Persistence 'patrol_budget' ([int]$match.Groups[5].Value) $budget

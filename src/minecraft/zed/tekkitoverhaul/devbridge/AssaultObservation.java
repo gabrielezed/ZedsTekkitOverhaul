@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.devbridge;
 
 import java.util.Map;
+import zed.tekkitoverhaul.assault.SiegeDirector.LoadoutSnapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.Spawn;
 import zed.tekkitoverhaul.assault.SiegeDirector.WaveSnapshot;
@@ -25,7 +26,11 @@ final class AssaultObservation {
                 .append(",\"innerRadius\":").append(view.innerRadius).append(",\"outerRadius\":").append(view.outerRadius)
                 .append(",\"observedDeaths\":").append(view.observedDeaths).append(",\"removed\":").append(view.removed)
                 .append(",\"unloaded\":").append(view.unloaded).append(",\"lastRejection\":")
-                .append(code(view.lastRejection)).append(",\"waves\":[");
+                .append(code(view.lastRejection)).append(",\"loadouts\":");
+        loadouts(json, view.loadouts);
+        json.append(",\"patrolLoadouts\":");
+        loadouts(json, view.patrol.loadouts);
+        json.append(",\"waves\":[");
         for (WaveSnapshot wave : view.waves) {
             if (wave.number > 1) json.append(',');
             json.append("{\"number\":").append(wave.number).append(",\"state\":").append(code(wave.state))
@@ -33,6 +38,7 @@ final class AssaultObservation {
                     .append(",\"closedAt\":").append(wave.closedAt).append(",\"planned\":").append(wave.planned)
                     .append(",\"allocation\":").append(wave.allocation).append(",\"attempts\":").append(wave.attempts)
                     .append(",\"inserted\":").append(wave.inserted).append(",\"active\":").append(wave.active)
+                    .append(",\"equipped\":").append(wave.equipped).append(",\"equipmentCap\":").append(wave.equipmentCap)
                     .append(",\"deferred\":").append(wave.deferred).append(",\"skipped\":").append(wave.skipped)
                     .append(",\"carriedIn\":").append(wave.carriedIn).append(",\"carriedOut\":").append(wave.carriedOut)
                     .append(",\"localHostiles\":").append(wave.localHostiles).append(",\"peakActive\":").append(wave.peakActive)
@@ -50,11 +56,25 @@ final class AssaultObservation {
             Spawn spawn = view.spawns.get(i);
             if (i > 0) json.append(',');
             json.append("{\"mob\":\"").append(spawn.mob).append("\",\"wave\":").append(spawn.wave)
+                    .append(",\"profile\":").append(code(spawn.profile))
                     .append(",\"tick\":").append(spawn.tick).append(",\"x\":").append(spawn.x)
                     .append(",\"y\":").append(spawn.y).append(",\"z\":").append(spawn.z)
                     .append(",\"horizontalSquared\":").append(spawn.horizontalSquared).append('}');
         }
         return json.append("]}").toString();
+    }
+
+    private static void loadouts(StringBuilder json, LoadoutSnapshot loadouts) {
+        json.append("{\"phase\":").append(code(loadouts.phase.name())).append(",\"cap\":").append(loadouts.cap)
+                .append(",\"equipped\":").append(loadouts.equipped).append(",\"unmodified\":").append(loadouts.unmodified)
+                .append(",\"failures\":").append(loadouts.failures).append(",\"selected\":{");
+        boolean first = true;
+        for (Map.Entry<String, Integer> selected : loadouts.selected.entrySet()) {
+            if (!first) json.append(',');
+            first = false;
+            json.append(code(selected.getKey())).append(':').append(selected.getValue());
+        }
+        json.append("}}");
     }
 
     private static String code(String value) {

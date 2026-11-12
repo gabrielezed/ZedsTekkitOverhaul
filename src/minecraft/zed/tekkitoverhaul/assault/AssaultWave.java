@@ -5,6 +5,7 @@ import java.util.Map;
 
 /** Per-wave accounting in simulation ticks. Carry-over transfers existing budget. */
 final class AssaultWave {
+    int equipped;
     static final int COUNT = 3;
     static final int FIRST_START = 100;
     static final int WINDOW = 280;

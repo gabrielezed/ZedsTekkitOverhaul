@@ -2,7 +2,9 @@
 param(
     [ValidatePattern('^[A-Za-z0-9](?:[A-Za-z0-9 -]{0,62}[A-Za-z0-9])?$')]
     [string]$Name = 'Lunar Assault - Playtest',
-    [string]$SavesDirectory = (Join-Path $env:APPDATA 'PrismLauncher/instances/Tekkit Dev/minecraft/saves')
+    [string]$SavesDirectory = (Join-Path $env:APPDATA 'PrismLauncher/instances/Tekkit Dev/minecraft/saves'),
+    [ValidateSet('NEW_MOON', 'FIRST_QUARTER', 'WAXING_GIBBOUS', 'FULL_MOON')]
+    [string]$LunarPhase = 'FULL_MOON'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,5 +26,6 @@ if (Test-Path -LiteralPath $target) { throw "Save already exists: $target. Choos
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 & javac -source 8 -target 8 -cp $classes -d $output $source
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& java -cp "$output;$classes" AssaultPlaytestSave $target $Name
+$phase = @{ NEW_MOON = 0; FIRST_QUARTER = 2; WAXING_GIBBOUS = 3; FULL_MOON = 4 }[$LunarPhase]
+& java -cp "$output;$classes" AssaultPlaytestSave $target $Name $phase
 exit $LASTEXITCODE

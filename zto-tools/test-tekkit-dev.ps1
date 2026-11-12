@@ -8,7 +8,7 @@ param(
     [int]$StartupSeconds = 120,
     [ValidateRange(1, 720)]
     [int]$LunarWaitSeconds = 720,
-    [ValidateSet('Hopper', 'Distillation', 'Assault')]
+    [ValidateSet('Hopper', 'Distillation', 'Assault', 'Patrol')]
     [string]$Persistence = 'Hopper',
     [switch]$PhysicalDistillation,
     [switch]$SkipCore,
@@ -180,6 +180,7 @@ function Start-DevClient {
                         if ($report.build -and $launch.modVersion -cne $report.build.productVersion) {
                             throw 'BUILD_MISMATCH: Running product version differs from the packaged version.'
                         }
+                        if ($Persistence -in 'Assault', 'Patrol') { $null = Invoke-Bridge query lunar.snapshot }
                         $launch.sessionId = $context.sessionId
                         $launch.worldId = $context.worldId
                         return $context
@@ -308,6 +309,7 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $before = Invoke-Bridge query assault.snapshot
     $report.persistence.before = $before
     Assert-Persistence 'pre_shutdown_state' $before.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
+    Assert-Persistence 'no_full_moon_patrol' (Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[' -Quiet) $false
     Stop-DevClient
     $reopened = Start-DevClient
     $after = Invoke-Bridge query assault.snapshot
@@ -322,9 +324,69 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $report.persistence.status = 'PASS'
 }
 
+function Wait-LunarTick([long]$Tick) {
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        try {
+            $moon = Invoke-Bridge query lunar.snapshot
+            if ($moon.rawTime -ge $Tick) { return $moon }
+        } catch {
+            if ($_.Exception.Message -notmatch '^(NOT_READY|BUSY|TIMEOUT):') { throw }
+        }
+        Start-Sleep -Milliseconds 500
+    } while ($watch.Elapsed.TotalSeconds -lt $LunarWaitSeconds)
+    throw "LUNAR_TIMEOUT: Did not reach tick $Tick."
+}
+
+function Test-PatrolRestart($Context) {
+    $before = Wait-LunarTick 0
+    $budget = switch ($before.phaseId) { 0 { 0 }; 2 { 2 }; 3 { 3 } }
+    if ($null -eq $budget -or $before.timeOfDay -ge 13000) {
+        throw 'PREREQUISITES: Start before dusk on a new moon, first quarter or waxing gibbous.'
+    }
+    $boundary = $before.rawTime - $before.timeOfDay + 13000
+    $pattern = '\[ZTO\] PATROL \[(\d+)\] RESOLVED \| \w+ \| Spawned (\d+)/(\d+) \| Attempts (\d+)'
+    $night = Wait-LunarTick ($boundary + 260)
+    $events = Invoke-Bridge query lunar.events @{ WorldId = $before.worldId; AfterSequence = $before.latestSequence }
+    $entries = @(Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[')
+    $report.persistence.before = $before
+    $report.persistence.night = $night
+    $report.persistence.lunarEvents = $events
+    $report.persistence.patrol = @($entries | ForEach-Object { $_.Line })
+    Assert-Persistence 'no_cursor_loss' $events.dropped 0
+    Assert-Persistence 'one_night_started' ($events.events.kind -join ',') 'NIGHT_STARTED'
+    Assert-Persistence 'natural_boundary' ($events.events[0].cause -eq 'NATURAL' -and
+        $events.events[0].after.rawTime -eq $boundary) $true
+    Assert-Persistence 'same_phase_at_night' $night.phaseId $before.phaseId
+    Assert-Persistence 'no_assault' (Invoke-Bridge query assault.snapshot).starts 0
+    Assert-Persistence 'patrol_outcomes' $entries.Count $(if ($budget -gt 0) { 1 } else { 0 })
+    if ($budget -gt 0) {
+        $match = [regex]::Match($entries[0].Line, $pattern)
+        Assert-Persistence 'resolved_patrol' $match.Success $true
+        Assert-Persistence 'natural_dusk_and_delay' ([long]$match.Groups[1].Value) ($boundary + 240)
+        $spawned = [int]$match.Groups[2].Value
+        $attempts = [int]$match.Groups[4].Value
+        Assert-Persistence 'patrol_budget' ([int]$match.Groups[3].Value) $budget
+        Assert-Persistence 'bounded_spawns_and_attempts' ($spawned -gt 0 -and $spawned -le $budget -and
+            $attempts -ge $spawned -and $attempts -le 24) $true
+        Stop-DevClient
+        $reopened = Start-DevClient
+        $reload = Wait-LunarTick 0
+        $report.persistence.after = Wait-LunarTick ($reload.rawTime + 260)
+        Assert-Persistence 'new_session' ($reopened.sessionId -ne $Context.sessionId) $true
+        Assert-Persistence 'same_night' ($report.persistence.after.night -and
+            $report.persistence.after.rawTime -lt ($boundary + 10000)) $true
+        Assert-Persistence 'no_replayed_patrol' (Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[' -Quiet) $false
+    }
+    $report.persistence.status = 'PASS'
+}
+
 $mutex = [Threading.Mutex]::new($false, 'Local\ZTO-Tekkit-Dev-Lifecycle')
 $locked = $false
 try {
+    if ($Persistence -eq 'Patrol' -and (!$SkipCore -or $PhysicalDistillation)) {
+        throw 'PREREQUISITES: Patrol requires -SkipCore and its own disposable run.'
+    }
     if ($InterruptAssault -and ($Persistence -ne 'Assault' -or !$SkipCore)) {
         throw 'PREREQUISITES: InterruptAssault requires -Persistence Assault -SkipCore.'
     }
@@ -381,7 +443,7 @@ try {
     }
 
     $run = Get-Random -Minimum 1 -Maximum ([long]1e15)
-    if (!$SkipCore -or $Persistence -ne 'Assault') {
+    if (!$SkipCore -or $Persistence -notin 'Assault', 'Patrol') {
         $craft = Invoke-Fixture 'crafting.transactions' $context $run
         $report.crafting = [ordered]@{}
         foreach ($field in 'craft3', 'craft5', 'hotbarLock', 'hardProtection') {
@@ -393,6 +455,8 @@ try {
         Test-PhysicalDistillation $context $run
     } elseif ($Persistence -eq 'Assault') {
         Test-AssaultRestart $context $assaultBoundary
+    } elseif ($Persistence -eq 'Patrol') {
+        Test-PatrolRestart $context
     } else {
         Test-Restart $context $run
     }

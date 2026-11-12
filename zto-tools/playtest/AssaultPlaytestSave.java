@@ -20,7 +20,7 @@ public final class AssaultPlaytestSave {
         Path target = Paths.get(args[0]);
         Files.createDirectory(target);
         Path data = Files.createDirectory(target.resolve("data"));
-        Files.write(data.resolve("zto_lunar.dat"), CompressedStreamTools.compress(lunarState()));
+        Files.write(data.resolve("zto_lunar.dat"), CompressedStreamTools.compress(lunarState(Integer.parseInt(args[2]))));
         Files.write(target.resolve("level.dat"), CompressedStreamTools.compress(worldState(args[1])));
         System.out.println("Created " + args[1] + " at " + target);
     }
@@ -64,11 +64,11 @@ public final class AssaultPlaytestSave {
         return player;
     }
 
-    private static NBTTagCompound lunarState() {
+    private static NBTTagCompound lunarState(int phase) {
         NBTTagCompound state = new NBTTagCompound();
         state.setInteger("Schema", 1);
         state.setLong("Baseline", 0);
-        state.setLong("Adjustment", 4);
+        state.setLong("Adjustment", phase);
         state.setLong("Watermark", START_TICK);
         NBTTagCompound root = new NBTTagCompound();
         root.setCompoundTag("data", state);

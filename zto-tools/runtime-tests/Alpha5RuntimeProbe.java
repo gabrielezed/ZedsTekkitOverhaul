@@ -102,6 +102,7 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
                 }
                 if (game.f.w() < time + 110) return;
                 check(game.f.w() < time + 160 && !game.h.az(), "night advances by ordinary ticks past sleep threshold");
+                verifyBedSafety(game);
                 verifyGear(game);
                 verifyInventory(game);
                 saveQuit(game);
@@ -111,6 +112,7 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
                 open(game);
                 checkAnchor(game);
                 verifyArmor(game);
+                game.h.aT.a = false;
                 game.h.a(md.i, 1000);
                 stage++;
             } else if (stage == 4 && game.s instanceof uy) {
@@ -121,6 +123,7 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
                         "native respawn selected the persisted bed exit");
                 game.f.g(x, y, z, 0);
                 check(yw.a(game.f, game.h.aC()) == null, "destroyed bed rejected by native resolver");
+                game.h.aT.a = false;
                 game.h.a(md.i, 1000);
                 stage++;
             } else if (stage == 5 && game.s instanceof uy) {
@@ -145,7 +148,8 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
         game.f.b(x, y, z - 1, 26, 0);
         game.f.b(x, y, z, 26, 8);
         game.h.b(x - .5, y + 1.62, z + .5, 0, 0);
-        game.h.aT.a = false;
+        game.h.r = game.h.s = game.h.t = 0;
+        game.h.aT.a = true;
         game.f.q = 0;
     }
 
@@ -156,6 +160,28 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
     private void checkAnchor(Minecraft game) {
         uh anchor = game.h.aC();
         check(anchor != null && anchor.a == x && anchor.b == y && anchor.c == z, "vanilla anchor stores bed head");
+    }
+
+    private void verifyBedSafety(Minecraft game) {
+        game.h.b(x - .5, y + 1.62, z + .5, 0, 0);
+        uh original = game.h.aC();
+        uh previous = new uh(x + 10, y, z);
+        game.h.a(previous);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
+            game.f.g(x + dx, y + 1, z + dz, 1);
+        }
+        activate(game, true);
+        check(game.h.aC().a == previous.a && !game.h.az(), "blocked bed preserved the previous anchor");
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
+            game.f.g(x + dx, y + 1, z + dz, 0);
+        }
+        ajg threat = new ajg(game.f);
+        threat.c(x + 1.5, y, z + .5, 0, 0);
+        check(game.f.a(threat), "nearby hostile inserted for the bed safety check");
+        activate(game, true);
+        check(game.h.aC().a == previous.a && !game.h.az(), "nearby hostile prevented rebinding the anchor");
+        threat.A();
+        game.h.a(original);
     }
 
     private static void verifyGear(Minecraft game) throws Exception {
@@ -201,27 +227,47 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
         game.a(gui);
         check(gui.controller != null && game.h.aq == gui.d, "NEI player inventory opened on the original container");
         for (int type = 0; type < ARMOR.length; type++) {
-            yu source = gui.d.b(9 + type);
+            int sourceIndex = type < 2 ? 9 + type : 36 + type;
+            yu source = gui.d.b(sourceIndex);
             gui.d.a(5 + type, null);
             aan stack = new aan(ARMOR[type], 1, type + 1);
             stack.d = new ady();
             stack.o().a("Alpha5", "persisted");
-            gui.d.a(9 + type, stack);
+            gui.d.a(sourceIndex, stack);
             shiftClick(game, gui, source);
             check(source.b() == null && gui.d.b(5 + type).b() == stack,
-                    "equipped one armor item from slot " + (9 + type));
+                    "equipped one armor item from slot " + sourceIndex);
             shiftClick(game, gui, source);
             check(source.b() == null && gui.d.b(5 + type).b() == stack, "repeated click preserved the armor");
         }
         verifyArmor(game);
+        gui.d.a(36, null);
         gui.d.a(9, new aan(298, 1, 0));
         shiftClick(game, gui, gui.d.b(9));
-        check(gui.d.b(9).b() == null, "NEI normal shift transfer moved the spare helmet");
+        check(gui.d.b(9).b() == null && gui.d.b(36).b() != null && gui.d.b(36).b().c == 298,
+                "NEI normal shift transfer moved the spare helmet to the hotbar");
         verifyArmor(game);
+        gui.d.a(36, null);
         gui.d.a(9, new aan(1, 4, 0));
         shiftClick(game, gui, gui.d.b(9));
-        check(gui.d.b(9).b() == null, "ordinary stack used normal shift transfer");
+        check(gui.d.b(9).b() == null && gui.d.b(36).b() != null && gui.d.b(36).b().c == 1
+                && gui.d.b(36).b().a == 4, "ordinary stack used normal shift transfer");
         game.a((vp) null);
+
+        aan helmet = gui.d.b(5).b();
+        gui.d.a(5, null);
+        me chestInventory = new me("Alpha 5 chest", 27);
+        zn chest = new zn(game.h.ap, chestInventory);
+        game.h.ar = chest.d;
+        game.a(chest);
+        chest.d.a(27, new aan(298, 1, 0));
+        shiftClick(game, chest, chest.d.b(27));
+        aan moved = chestInventory.k_(0);
+        check(chest.d.b(27).b() == null && moved != null && moved.c == 298 && moved.a == 1
+                && gui.d.b(5).b() == null, "chest shift transfer used its storage instead of the armor slot");
+        game.a((vp) null);
+        game.h.ar = game.h.aq;
+        gui.d.a(5, helmet);
     }
 
     // Stage the current LWJGL event and dispatch through NEI's real GuiContainer override.
@@ -237,6 +283,12 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
             field(Mouse.class, "event_x").setInt(null, x);
             field(Mouse.class, "event_y").setInt(null, y);
             field(Mouse.class, "event_dwheel").setInt(null, 0);
+            Method pick = gb.class.getDeclaredMethod("a", int.class, int.class);
+            pick.setAccessible(true);
+            int guiX = Mouse.getEventX() * gui.q / game.d;
+            int guiY = gui.r - Mouse.getEventY() * gui.r / game.e - 1;
+            check(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) && pick.invoke(gui, guiX, guiY) == slot,
+                    "staged Shift event hits slot " + slot.c + " at " + guiX + "," + guiY);
             gui.f();
             field(Mouse.class, "eventState").setBoolean(null, false);
             gui.f();

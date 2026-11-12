@@ -13,6 +13,8 @@ import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.assault.AssaultDiagnostics;
 import zed.tekkitoverhaul.assault.SiegeDirector.Eligibility;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
+import zed.tekkitoverhaul.assault.SiegeDirector.State;
+import zed.tekkitoverhaul.assault.SiegeDirector.WaveSnapshot;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
 final class SurvivalDebugHud extends Gui {
@@ -70,14 +72,19 @@ final class SurvivalDebugHud extends Gui {
         if (moon == null || assault == null) return;
         Eligibility eligibility = local.assaultEligibility(world);
         String state = stateLabel(assault, moon, eligibility);
-        String trigger = assault.trigger == null ? "" : " / Natural";
+        WaveSnapshot wave = assault.currentWave == 0 ? null : assault.waves.get(assault.currentWave - 1);
+        String next = assault.nextWaveTicks < 0 ? "" : " | Next " + ((assault.nextWaveTicks + 19) / 20) + "s";
         String[] lines = {
             "ZTO | Survival Debug",
             moon.phase.label + " | " + moon.timeOfDay + "t",
-            "Assault: " + state + trigger,
-            "Pulse " + assault.pulses + "/" + assault.scheduledPulses + " | Spawned " + assault.spawns.size() + "/" + assault.budget,
-            "Assault mobs alive: N/A",
-            "Last: " + diagnostics.lastAssaultEvent()
+            "Assault: " + state,
+            "Wave " + assault.currentWave + "/" + assault.waves.size() + next,
+            wave == null ? "Planned " + assault.budget : "Wave " + wave.inserted + "/" + wave.allocation
+                    + " | Tried " + wave.attempts,
+            "Total " + assault.spawns.size() + "/" + assault.budget + " | Active " + assault.active,
+            "Deferred " + assault.deferred + " | Skipped " + assault.skipped,
+            "Last: " + (assault.state == State.ACTIVE && assault.lastRejection != null
+                    ? AssaultDiagnostics.label(assault.lastRejection) : diagnostics.lastAssaultEvent())
         };
         FontRenderer font = game.fontRenderer;
         ScaledResolution scale = new ScaledResolution(game.gameSettings, game.displayWidth, game.displayHeight);

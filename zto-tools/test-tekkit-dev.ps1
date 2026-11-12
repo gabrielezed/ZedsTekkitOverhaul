@@ -12,7 +12,9 @@ param(
     [string]$Persistence = 'Hopper',
     [switch]$PhysicalDistillation,
     [switch]$SkipCore,
-    [switch]$InterruptAssault
+    [switch]$InterruptAssault,
+    [ValidateRange(0, 24)]
+    [int]$AssaultMinimumSpawns = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -300,7 +302,7 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $report.persistence.status = 'BLOCKED'
     $raw = & (Join-Path $PSScriptRoot 'zed-test.ps1') run 'assault.natural_full_moon@1' -Discovery $discovery `
         -DisposableWorld -ExpectedJarSha256 $report.buildSha256 -LunarWaitSeconds $LunarWaitSeconds `
-        -AssaultBoundary $Boundary -InterruptAssault:$InterruptAssault
+        -AssaultBoundary $Boundary -InterruptAssault:$InterruptAssault -AssaultMinimumSpawns $AssaultMinimumSpawns
     $report.assault = $raw | ConvertFrom-Json
     if ($report.assault.status -ne 'PASS') { throw "ASSAULT_SCENARIO_FAILED: $($report.assault.error)" }
     $before = Invoke-Bridge query assault.snapshot
@@ -379,12 +381,14 @@ try {
     }
 
     $run = Get-Random -Minimum 1 -Maximum ([long]1e15)
-    $craft = Invoke-Fixture 'crafting.transactions' $context $run
-    $report.crafting = [ordered]@{}
-    foreach ($field in 'craft3', 'craft5', 'hotbarLock', 'hardProtection') {
-        $report.crafting[$field] = if ($null -eq $craft.$field) { 'BLOCKED' } elseif ($craft.$field) { 'PASS' } else { 'FAIL' }
+    if (!$SkipCore -or $Persistence -ne 'Assault') {
+        $craft = Invoke-Fixture 'crafting.transactions' $context $run
+        $report.crafting = [ordered]@{}
+        foreach ($field in 'craft3', 'craft5', 'hotbarLock', 'hardProtection') {
+            $report.crafting[$field] = if ($null -eq $craft.$field) { 'BLOCKED' } elseif ($craft.$field) { 'PASS' } else { 'FAIL' }
+        }
+        $context = Invoke-Bridge query test.context
     }
-    $context = Invoke-Bridge query test.context
     if ($PhysicalDistillation) {
         Test-PhysicalDistillation $context $run
     } elseif ($Persistence -eq 'Assault') {

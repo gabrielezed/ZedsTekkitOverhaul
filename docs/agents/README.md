@@ -14,7 +14,7 @@ This directory is the **project-specific technical reference** for coding agents
 | Building, deploying or fixing a crash | [Environment](environment.md), [Testing](testing.md) |
 | Planning multiblocks or custom rendering | [Roadmap](roadmap.md), [Architecture](architecture.md), [OBJ prototype](obj-renderer.md), [Legacy lightmap](lightmap-diagnostics.md), [Multiblock validator](multiblock-validator.md) |
 | Implementing the lunar calendar, moon rendering or debug menu | [Lunar implementation handoff](lunar-cycle-implementation.md), [Original lunar specification](lunar-cycle-system.md) |
-| Changing Survival encounters | [Player assault specification](SURVIVAL_SIEGE_SPEC.md), [Player assault acceptance](survival-assault-acceptance.md), [Lunar implementation handoff](lunar-cycle-implementation.md) |
+| Changing Survival encounters | [Player assault gameplay pass](survival-assault-alpha2.md), [Owner playtest generator](survival-assault-alpha2.md#owner-playtest-world), [Player assault specification](SURVIVAL_SIEGE_SPEC.md), [Alpha.1 acceptance](survival-assault-acceptance.md), [Lunar implementation handoff](lunar-cycle-implementation.md) |
 | Inspecting Survival encounters in-game | [Survival Debug HUD](survival-debug-hud.md) |
 | Using or extending the Dev Bridge | [Read-only diagnostics](dev-bridge.md), [Opt-in test automation](test-automation.md), [Singleplayer acceptance](singleplayer-acceptance.md) |
 | Making a Git commit or pull request | [Workflow](workflow.md), [Testing](testing.md) |

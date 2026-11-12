@@ -13,7 +13,9 @@ param(
     [int]$LunarWaitSeconds = 0,
     [switch]$DisposableWorld,
     [long]$AssaultBoundary,
-    [switch]$InterruptAssault
+    [switch]$InterruptAssault,
+    [ValidateRange(0, 24)]
+    [int]$AssaultMinimumSpawns = 1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -194,14 +196,17 @@ function Test-Assault {
     }
     $result.before = $before
     $watch = [Diagnostics.Stopwatch]::StartNew()
+    $peakLocal = -1
     do {
         $after = Invoke-Bridge query assault.snapshot
+        $peakLocal = [Math]::Max($peakLocal, $after.localHostiles)
         $result.after = $after
         if ($after.worldId -ne $ctx.worldId) { throw 'STALE_WORLD: The assault changed ownership' }
         if ($after.boundary -eq $target -and
             ($after.state -ne 'ACTIVE' -or ($InterruptAssault -and $after.spawns.Count -gt 0))) { break }
         Start-Sleep -Milliseconds $(if ($after.state -eq 'ACTIVE') { 125 } else { 800 })
-    } while ($watch.Elapsed.TotalSeconds -lt [Math]::Max(55, $LunarWaitSeconds + 55))
+    } while ($watch.Elapsed.TotalSeconds -lt ($LunarWaitSeconds + 220))
+    $result.peakSampledLocalHostiles = $peakLocal
 
     Assert-State 'natural_boundary' $after.boundary $target
     Assert-State 'event_kind' $after.kind 'PLAYER_ASSAULT'
@@ -209,13 +214,36 @@ function Test-Assault {
     Assert-State 'overworld' $after.dimension 0
     Assert-State 'exactly_one_start' $after.starts 1
     Assert-State 'event_state' $after.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
-    Assert-State 'bounded_pulses' ($after.pulses -ge 1 -and $after.pulses -le 3) $true
-    Assert-State 'bounded_attempts' ($after.attempts -ge $after.spawns.Count -and $after.attempts -le (24 * $after.pulses)) $true
-    Assert-State 'bounded_spawns' ($after.spawns.Count -ge 1 -and $after.spawns.Count -le $after.budget -and
-        $after.spawns.Count -le (2 * $after.pulses) -and $after.budget -le 6) $true
+    Assert-State 'three_wave_plan' $after.waves.Count 3
+    Assert-State 'first_wave_at_100_ticks' $after.waves[0].startedAt 100
+    Assert-State 'bounded_duration' ($after.elapsed -le 3680) $true
+    Assert-State 'bounded_active_population' ($after.peakActive -le $after.activeCap -and $after.active -le $after.peakActive) $true
+    Assert-State 'bounded_spawns' ($after.spawns.Count -ge $AssaultMinimumSpawns -and
+        $after.spawns.Count -le $after.budget -and $after.budget -le 24) $true
+    Assert-State 'budget_conservation' ($after.spawns.Count + $after.deferred + $after.skipped) $after.budget
+    Assert-State 'mob_lifecycle_accounting' ($after.active + $after.observedDeaths + $after.removed + $after.unloaded) $after.spawns.Count
+    $previousStart = -1
+    foreach ($wave in $after.waves) {
+        $insertions = @($after.spawns | Where-Object { $_.wave -eq $wave.number })
+        Assert-State "wave_$($wave.number)_insertions" $wave.inserted $insertions.Count
+        Assert-State "wave_$($wave.number)_attempts" ($wave.attempts -ge $wave.inserted -and $wave.attempts -le 112) $true
+        Assert-State "wave_$($wave.number)_carry_cap" ($wave.carriedIn -le 1 -and $wave.carriedOut -le 1) $true
+        if ($wave.startedAt -lt 0) { continue }
+        if ($previousStart -ge 0) {
+            Assert-State "wave_$($wave.number)_spacing" ($wave.startedAt - $previousStart -ge 360) $true
+        }
+        $previousStart = $wave.startedAt
+        if ($wave.closedAt -ge 0) {
+            Assert-State "wave_$($wave.number)_window" ($wave.closedAt - $wave.startedAt -le 280) $true
+        }
+    }
+    $previousSpawn = -20
     foreach ($spawn in $after.spawns) {
         Assert-State 'vanilla_mob' ($spawn.mob -in 'ZOMBIE', 'SKELETON') $true
-        Assert-State 'spawn_annulus' ($spawn.horizontalSquared -ge 100 -and $spawn.horizontalSquared -le 225) $true
+        Assert-State 'spawn_annulus' ($spawn.horizontalSquared -ge [Math]::Pow($after.innerRadius, 2) -and
+            $spawn.horizontalSquared -le [Math]::Pow($after.outerRadius, 2)) $true
+        Assert-State 'no_retry_burst' ($spawn.tick - $previousSpawn -ge 20) $true
+        $previousSpawn = $spawn.tick
         $position = @{ X = [Math]::Floor($spawn.x); Y = $spawn.y; Z = [Math]::Floor($spawn.z) }
         $ground = $position.Clone()
         $ground.Y--

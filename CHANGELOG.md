@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## Unreleased — Survival alpha.2 gameplay
+
+- Stage full-moon player assaults in three waves with bounded retries, active mob tracking and a separate nearby-hostile limit.
+- Show wave timing, insertions, active mobs, skipped allocation and spawn constraints in Survival Debug.
+- Add a repeatable [assault playtest world](docs/agents/survival-assault-alpha2.md#owner-playtest-world) with starter equipment and a natural full moon approaching dusk.
+
 ## 0.1.0-alpha.1 — Survival candidate
 
 - Introduce the singleplayer full-moon player assault: bounded vanilla enemies, a short audible cue, and no automatic replay after a save is reopened.

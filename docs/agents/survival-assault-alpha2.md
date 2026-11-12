@@ -73,7 +73,28 @@ Local evidence is under `dist-zto/test-reports/`. The lifecycle report filenames
 
 These observations support keeping the cap and retry window for the first owner trial. The start of dusk cost most of the open run's candidates to vanilla light, yet retrying placed mobs in the first wave. If survivors occupy all slots, the final wave can place few or no reinforcements. Owner play should establish whether the climax is recognizable when the earlier waves are cleared and whether enemies reach the player in real terrain. The unattended tests establish placement and budget behavior. They did not instrument chunk generation, measure sound audibility or exercise every portal, bed and clock-resync case.
 
-## Verification and owner playtest
+## Owner playtest world
+
+With the Tekkit Dev client closed, run the generator from the MDK root after a client build. It uses JDK 8 and the MCP NBT classes in `bin/minecraft`.
+
+```powershell
+.\zto-tools\new-assault-playtest.ps1
+.\zto-tools\new-assault-playtest.ps1 -Name 'Lunar Assault - Shelter'
+```
+
+By default it writes a new save under the Prism **Tekkit Dev** instance. Use `-SavesDirectory` for an existing scratch directory or a custom Tekkit Dev save location. Choose a different name if the destination folder already exists. The generator writes the Minecraft 1.2.5 Anvil save header and lunar state. The game generates terrain on first open.
+
+The preset starts on open terrain at X 34.5, Z 215.5, with seed `-7184827518270584220`. It starts in Survival at tick 10,800 with a full moon aligned for natural dusk at tick 13,000, about 110 seconds later at 20 TPS. The hotbar contains a stone sword, bow, 24 arrows, 12 bread, 32 torches, 64 cobblestone, a stone pickaxe and a wooden door. Leather armor is equipped.
+
+Difficulty is a client setting. In **Tekkit Dev**, select **Normal** and set `playerAssault=true`, `assaultSpawnBudget=15` and `survivalDebugHud=true` in `config/mod_ZedsTekkitOverhaul.cfg` for the comparison. The generator leaves client settings alone. Use F10 for details and Shift+F10 to toggle the overlay. The Dev Bridge is optional for a manual trial.
+
+1. Fight in the open. Compare with an ordinary night. Note when each wave actually arrives, how many mobs reach or shoot at you, how long the gaps feel, and whether the final wave reads as a climax. Record attempts, insertions, active mobs and missed allocation from F10.
+2. Use a fresh copy to build a modest lit shelter with a roof, door and retreat route before dusk. Compare interior safety, roof and perimeter spawns, and whether the shelter buys recovery time. Try a wall or moat, a simple trap, or retreat.
+3. Use another copy on a shoreline or hillside. Check that the HUD explains rejected placements. Record whether the encounter feels distinct, readable, threatening and fair with the starter equipment.
+
+## Automated verification
+
+The generator was verified with the [test build](#test-build) in a copy of Tekkit Dev on Normal. The client loaded the preset at tick 10,800 in full moon, started one natural assault at tick 13,000 and inserted its first mob at tick 13,200. All 12 starter stacks were still present after Save and Quit. A second generator call with the same name refused to replace the existing save.
 
 Run the existing lifecycle on a marked daytime fixture in the isolated Tekkit Dev instance.
 
@@ -86,9 +107,3 @@ java -cp 'dist-zto/lunar-tests;bin/minecraft' zed.tekkitoverhaul.assault.Assault
 ```
 
 Use a separate copy for each terrain setup. Use `-AssaultMinimumSpawns 0` for deliberately protected or unsuitable terrain. Use `-InterruptAssault` with the open fixture to exercise interruption before normal resolution. The runner verifies the running archive hash, one natural boundary, spawn and retry bounds, per-wave accounting, and the consumed night across a graceful restart.
-
-1. Set Normal difficulty, use disposable Survival saves and enable Survival Debug. Align to full moon before dusk in Lunar Debug, then let the night begin naturally. Take early-game gear (food, stone or iron weapon, ordinary armor) and avoid changing the clock mid-encounter.
-2. Fight in an open area. Compare with an ordinary night. Note when each wave actually arrives, how many mobs reach or shoot at you, how long the gaps feel, and whether the final wave reads as a climax. Record attempts, insertions, active mobs and missed allocation from F10.
-3. Repeat near a modest lit shelter with a roof, doors and a retreat route. Compare interior safety, roof and perimeter spawns, and whether the shelter buys recovery time. Try a wall or moat, a simple trap, and retreat. Note any easy defense that reliably makes open terrain safe too.
-4. Use an irregular shoreline or hillside for another encounter. Check that rejected opportunities appear in the HUD and combat still feels fair. In a separate run pause between waves, resume and compare countdowns. Save/Quit mid-wave and reopen, then try the developer-tools-disabled startup.
-5. Record whether the encounter feels distinct, readable, threatening and fair. Include approximate timings and whether enemies ever reached the player. The unattended tests measure placement and lifecycle, while these observations establish combat balance.

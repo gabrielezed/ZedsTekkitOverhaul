@@ -13,6 +13,8 @@ param(
     [switch]$PhysicalDistillation,
     [switch]$SkipCore,
     [switch]$InterruptAssault,
+    [switch]$InterruptPatrol,
+    [switch]$ProtectedPatrol,
     [ValidateRange(0, 24)]
     [int]$AssaultMinimumSpawns = 1
 )
@@ -345,9 +347,15 @@ function Test-PatrolRestart($Context) {
         throw 'PREREQUISITES: Start before dusk on a new moon, first quarter or waxing gibbous.'
     }
     $boundary = $before.rawTime - $before.timeOfDay + 13000
-    $pattern = '\[ZTO\] PATROL \[(\d+)\] RESOLVED \| \w+ \| Spawned (\d+)/(\d+) \| Attempts (\d+)'
-    $night = Wait-LunarTick ($boundary + 260)
+    if (($InterruptPatrol -or $ProtectedPatrol) -and !$budget) {
+        throw 'PREREQUISITES: Use a first-quarter or waxing-gibbous fixture.'
+    }
+    $pattern = '\[ZTO\] PATROL \[(\d+)\] (RESOLVED|ABORTED) \| (\w+) \| Spawned (\d+)/(\d+) \| Attempts (\d+) \| Skipped (\d+) \| Elapsed (\d+)'
+    $wait = if ($InterruptPatrol) { 80 } elseif ($budget) { 1060 } else { 260 }
+    $night = Wait-LunarTick ($boundary + $wait)
     $events = Invoke-Bridge query lunar.events @{ WorldId = $before.worldId; AfterSequence = $before.latestSequence }
+    Assert-Persistence 'no_assault' (Invoke-Bridge query assault.snapshot).starts 0
+    if ($InterruptPatrol) { Stop-DevClient }
     $entries = @(Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[')
     $report.persistence.before = $before
     $report.persistence.night = $night
@@ -358,21 +366,48 @@ function Test-PatrolRestart($Context) {
     Assert-Persistence 'natural_boundary' ($events.events[0].cause -eq 'NATURAL' -and
         $events.events[0].after.rawTime -eq $boundary) $true
     Assert-Persistence 'same_phase_at_night' $night.phaseId $before.phaseId
-    Assert-Persistence 'no_assault' (Invoke-Bridge query assault.snapshot).starts 0
-    Assert-Persistence 'patrol_outcomes' $entries.Count $(if ($budget -gt 0) { 1 } else { 0 })
-    if ($budget -gt 0) {
+    if ($InterruptPatrol) {
+        # The bootstrap can close the client before the next render callback logs the unload.
+        Assert-Persistence 'quit_during_lead_in' ($night.rawTime -lt $boundary + 800) $true
+        Assert-Persistence 'no_finished_patrol_before_quit' ($entries.Count -le 1) $true
+    } else {
+        Assert-Persistence 'patrol_outcomes' $entries.Count $(if ($budget -gt 0) { 1 } else { 0 })
+    }
+    if ($entries.Count -eq 1) {
         $match = [regex]::Match($entries[0].Line, $pattern)
-        Assert-Persistence 'resolved_patrol' $match.Success $true
-        Assert-Persistence 'natural_dusk_and_delay' ([long]$match.Groups[1].Value) ($boundary + 240)
-        $spawned = [int]$match.Groups[2].Value
-        $attempts = [int]$match.Groups[4].Value
-        Assert-Persistence 'patrol_budget' ([int]$match.Groups[3].Value) $budget
-        Assert-Persistence 'bounded_spawns_and_attempts' ($spawned -gt 0 -and $spawned -le $budget -and
-            $attempts -ge $spawned -and $attempts -le 24) $true
-        Stop-DevClient
+        Assert-Persistence 'patrol_summary' $match.Success $true
+        $outcome = $match.Groups[3].Value
+        $spawned = [int]$match.Groups[4].Value
+        $attempts = [int]$match.Groups[6].Value
+        $elapsed = [int]$match.Groups[8].Value
+        Assert-Persistence 'patrol_budget' ([int]$match.Groups[5].Value) $budget
+        Assert-Persistence 'skipped_allocation' ([int]$match.Groups[7].Value) ($budget - $spawned)
+        if ($InterruptPatrol) {
+            Assert-Persistence 'interrupted_pending_patrol' ($match.Groups[2].Value -eq 'ABORTED' -and
+                $outcome -eq 'WORLD_UNLOADED' -and $elapsed -lt 800 -and $attempts -eq 0 -and $spawned -eq 0) $true
+        } else {
+            Assert-Persistence 'resolved_patrol' $match.Groups[2].Value 'RESOLVED'
+            Assert-Persistence 'retry_window' ($elapsed -ge 800 -and $elapsed -le 1040 -and
+                ($elapsed - 800) % 20 -eq 0 -and [long]$match.Groups[1].Value -ge ($boundary + $elapsed)) $true
+            $retryCount = [Math]::Min(12, 1 + ($elapsed - 800) / 20)
+            Assert-Persistence 'bounded_spawns_and_attempts' ($spawned -le $budget -and
+                $attempts -ge $spawned -and $attempts -le (4 * $retryCount)) $true
+            if ($ProtectedPatrol) {
+                Assert-Persistence 'protected_patrol' ($spawned -eq 0 -and $attempts -eq 48 -and
+                    $outcome -eq 'SPAWN_WINDOW_EXPIRED' -and $entries[0].Line -match '48 Not open to sky') $true
+            } else {
+                Assert-Persistence 'positive_insertion' ($spawned -gt 0) $true
+            }
+            Stop-DevClient
+        }
+    }
+    if ($budget -gt 0) {
         $reopened = Start-DevClient
         $reload = Wait-LunarTick 0
-        $report.persistence.after = Wait-LunarTick ($reload.rawTime + 260)
+        $observation = if ($InterruptPatrol) { $reload.rawTime + 1060 } else {
+            [Math]::Max($reload.rawTime + 20, $boundary + 1060)
+        }
+        $report.persistence.after = Wait-LunarTick $observation
         Assert-Persistence 'new_session' ($reopened.sessionId -ne $Context.sessionId) $true
         Assert-Persistence 'same_night' ($report.persistence.after.night -and
             $report.persistence.after.rawTime -lt ($boundary + 10000)) $true
@@ -389,6 +424,9 @@ try {
     }
     if ($InterruptAssault -and ($Persistence -ne 'Assault' -or !$SkipCore)) {
         throw 'PREREQUISITES: InterruptAssault requires -Persistence Assault -SkipCore.'
+    }
+    if (($InterruptPatrol -or $ProtectedPatrol) -and ($Persistence -ne 'Patrol' -or ($InterruptPatrol -and $ProtectedPatrol))) {
+        throw 'PREREQUISITES: Select at most one patrol variant and use -Persistence Patrol -SkipCore.'
     }
     if ($PhysicalDistillation -and $Persistence -eq 'Assault') {
         throw 'PREREQUISITES: Use a separate disposable run for physical distillation.'

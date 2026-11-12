@@ -3,16 +3,19 @@ package zed.tekkitoverhaul.assault;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.EntityMob;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.assault.SiegeDirector.State;
 import zed.tekkitoverhaul.lunar.LunarEvent;
+import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
 /** A single dusk patrol in the local player's vicinity. */
 final class LunarPatrol {
     final boolean enabled;
     private final SpawnController spawns = new SpawnController(16);
+    final EncounterLoadouts loadouts = new EncounterLoadouts();
     final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
     private EntityPlayer target;
     private int difficulty;
@@ -31,6 +34,7 @@ final class LunarPatrol {
         reason = enabled ? "WAITING_FOR_NATURAL_DUSK" : "DISABLED";
         target = null;
         budget = 0;
+        loadouts.reset(LunarPhase.NEW_MOON);
         clearProgress();
     }
 
@@ -51,6 +55,7 @@ final class LunarPatrol {
             state = State.ACTIVE;
             reason = "NATURAL_DUSK";
             budget = PatrolSchedule.budget(event.after.phase);
+            loadouts.reset(event.after.phase);
             clearProgress();
         }
     }
@@ -91,7 +96,9 @@ final class LunarPatrol {
                 && spawned < budget && localHostiles < SpawnController.LOCAL_CAP; tried++) {
             attempts++;
             // Vanilla Hard zombies can break wooden doors.
-            if (spawns.trySpawn(world, player, difficulty == 3 || spawned % 2 == 1) != null) {
+            EntityMob mob = spawns.trySpawn(world, player, difficulty == 3 || spawned % 2 == 1);
+            if (mob != null) {
+                loadouts.apply(mob, 0, 0);
                 spawned++;
                 localHostiles++;
             } else {
@@ -116,6 +123,7 @@ final class LunarPatrol {
                 + " | Attempts " + attempts + " | Skipped " + (budget - spawned) + " | Elapsed " + elapsed
                 + (rejections.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(rejections));
         ModLoader.getLogger().info("[ZTO] PATROL [" + time + "] " + message);
-        if (diagnostics != null) diagnostics.record(time, "PATROL", message);
+        if (diagnostics != null) diagnostics.record(time, "PATROL",
+                message + " | " + new SiegeDirector.LoadoutSnapshot(loadouts, spawned).summary());
     }
 }

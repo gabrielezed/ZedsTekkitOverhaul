@@ -41,8 +41,9 @@ public final class MobEquipmentHooks extends EntityLivingHandlerAdaptor {
                                     int looting, boolean recentlyHit, int specialDrop) {
         if (!MobEquipment.hasEquipment(mob)) return;
         for (Slot slot : SLOTS) {
+            boolean dropsOnDeath = MobEquipment.dropsOnDeath(mob, slot);
             ItemStack stack = MobEquipment.remove(mob, slot);
-            if (stack == null) continue;
+            if (stack == null || !dropsOnDeath) continue;
             EntityItem drop = new EntityItem(mob.worldObj, mob.posX, mob.posY, mob.posZ, stack);
             drop.delayBeforeCanPickup = 10;
             drops.add(drop);

@@ -151,6 +151,8 @@ final class GuiSurvivalDebug extends GuiScreen {
                 + " | Attempts: " + assault.patrol.attempts, width);
         append(rows, "Patrol elapsed: " + assault.patrol.elapsed + "t | Remaining: " + assault.patrol.remaining
                 + " | Skipped: " + assault.patrol.skipped, width);
+        if (assault.patrol.budget > 0) append(rows, assault.patrol.loadouts.summary(), width);
+        if (assault.starts > 0) append(rows, assault.loadouts.summary(), width);
         if (!assault.patrol.rejections.isEmpty()) {
             append(rows, "Patrol rejections: " + AssaultDiagnostics.counts(assault.patrol.rejections), width);
         }

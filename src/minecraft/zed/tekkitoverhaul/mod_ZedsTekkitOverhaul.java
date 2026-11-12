@@ -33,6 +33,7 @@ import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
+import zed.tekkitoverhaul.survival.BedRespawn;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -50,6 +51,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static boolean playerAssault = true;
     @MLProp(info = "Enable natural first-quarter and waxing-gibbous patrols in local Survival")
     public static boolean lunarPatrols = true;
+    @MLProp(info = "Use Overworld beds as respawn anchors without sleeping or advancing the night")
+    public static boolean disableNightSkipping = true;
     @MLProp(info = "Maximum enemies per assault (1 to 24)")
     public static int assaultSpawnBudget = 15;
     @MLProp(info = "Simulation ticks between assault waves while enemies remain (400 to 1200)")
@@ -84,6 +87,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void load() {
         AdvancedCraftingRegistry.register();
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
+        if (disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
         DistillationRegistry.register();

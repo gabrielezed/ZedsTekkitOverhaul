@@ -11,6 +11,7 @@ import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.lunar.LunarEvent;
+import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
@@ -33,6 +34,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private final int outerRadius;
     private final SpawnController spawns;
     private final LunarPatrol patrol;
+    private final EncounterLoadouts loadouts = new EncounterLoadouts();
     private final List<Spawn> evidence = new ArrayList<Spawn>();
     private final List<TrackedMob> tracked = new ArrayList<TrackedMob>();
     private AssaultWave[] waves = AssaultWave.plan(0);
@@ -81,6 +83,7 @@ public final class SiegeDirector implements LunarService.Listener {
         pending = null;
         target = null;
         evidence.clear();
+        loadouts.reset(LunarPhase.NEW_MOON);
         tracked.clear();
         waves = AssaultWave.plan(0);
         state = State.IDLE;
@@ -156,6 +159,7 @@ public final class SiegeDirector implements LunarService.Listener {
             localHostiles = -1;
             peakActive = tracked.size();
             waves = AssaultWave.plan(budget);
+            loadouts.reset(boundary.phase);
             starts++;
             evidence.clear();
             spawns.rejection = null;
@@ -233,7 +237,10 @@ public final class SiegeDirector implements LunarService.Listener {
             boolean skeleton = difficulty == 3 || (wave.number == 3 ? wave.inserted % 2 == 0 : wave.inserted % 3 == 2);
             EntityMob mob = spawns.trySpawn(world, player, skeleton);
             if (mob != null) {
-                Spawn spawn = new Spawn(mob, player, wave.number, elapsed);
+                int equippedBefore = loadouts.equipped;
+                String profile = loadouts.apply(mob, wave.number, wave.equipped).name();
+                wave.equipped += loadouts.equipped - equippedBefore;
+                Spawn spawn = new Spawn(mob, player, wave.number, elapsed, profile);
                 evidence.add(spawn);
                 tracked.add(new TrackedMob(mob, wave));
                 wave.inserted++;
@@ -311,14 +318,15 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public static final class Spawn {
-        public final String mob;
+        public final String mob, profile;
         public final double x, y, z, horizontalSquared;
         public final int wave, tick;
 
-        private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick) {
+        private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick, String profile) {
             this.wave = wave;
             this.tick = tick;
             mob = entity instanceof EntitySkeleton ? "SKELETON" : "ZOMBIE";
+            this.profile = profile;
             x = entity.posX;
             y = entity.posY;
             z = entity.posZ;
@@ -338,12 +346,15 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public static final class WaveSnapshot {
+        public final int equipped, equipmentCap;
         public final int number, planned, allocation, inserted, attempts, deferred, skipped, active;
         public final int startedAt, closedAt, carriedIn, carriedOut, localHostiles, peakActive;
         public final String state, outcome;
         public final Map<String, Integer> rejections;
 
         private WaveSnapshot(AssaultWave wave) {
+            equipped = wave.equipped;
+            equipmentCap = LoadoutPolicy.assaultWaveCap(wave.number);
             number = wave.number;
             planned = wave.planned;
             allocation = wave.allocation();
@@ -364,6 +375,27 @@ public final class SiegeDirector implements LunarService.Listener {
         }
     }
 
+    public static final class LoadoutSnapshot {
+        public final LunarPhase phase;
+        public final int equipped, unmodified, failures, cap;
+        public final Map<String, Integer> selected;
+
+        LoadoutSnapshot(EncounterLoadouts loadouts, int inserted) {
+            phase = loadouts.phase;
+            equipped = loadouts.equipped;
+            unmodified = inserted - equipped;
+            failures = loadouts.failures;
+            cap = LoadoutPolicy.cap(phase);
+            selected = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(loadouts.selected));
+        }
+
+        public String summary() {
+            return phase + " | Equipped " + equipped + "/" + cap + " | Unmodified " + unmodified
+                    + " | Assignment failures " + failures
+                    + (selected.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(selected));
+        }
+    }
+
     public static final class Snapshot {
         public final State state;
         public final String reason, lastRejection;
@@ -375,6 +407,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final List<Spawn> spawns;
         public final List<WaveSnapshot> waves;
         public final PatrolSnapshot patrol;
+        public final LoadoutSnapshot loadouts;
 
         private Snapshot(SiegeDirector director) {
             state = director.state;
@@ -414,6 +447,7 @@ public final class SiegeDirector implements LunarService.Listener {
             trigger = starts == 0 ? null : "NATURAL_FULL_MOON";
             spawns = Collections.unmodifiableList(new ArrayList<Spawn>(director.evidence));
             patrol = new PatrolSnapshot(director);
+            loadouts = new LoadoutSnapshot(director.loadouts, spawns.size());
         }
     }
 
@@ -424,6 +458,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final String stage;
         public final int spawned, budget, attempts, elapsed, remaining, skipped;
         public final Map<String, Integer> rejections;
+        public final LoadoutSnapshot loadouts;
 
         private PatrolSnapshot(SiegeDirector director) {
             LunarPatrol patrol = director.patrol;
@@ -441,6 +476,7 @@ public final class SiegeDirector implements LunarService.Listener {
             remaining = state == State.ACTIVE ? budget - spawned : 0;
             skipped = state == State.ACTIVE ? 0 : budget - spawned;
             rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(patrol.rejections));
+            loadouts = new LoadoutSnapshot(patrol.loadouts, spawned);
         }
     }
 }

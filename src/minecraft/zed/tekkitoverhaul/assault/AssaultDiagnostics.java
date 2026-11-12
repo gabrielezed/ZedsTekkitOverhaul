@@ -47,7 +47,7 @@ public final class AssaultDiagnostics implements LunarService.Listener {
     }
 
     void spawned(long time, SiegeDirector.Spawn spawn) {
-        lastAssaultEvent = label(spawn.mob) + " spawned";
+        lastAssaultEvent = label(spawn.mob) + " spawned | " + label(spawn.profile);
         record(time, "SPAWN", "Wave " + spawn.wave + ": " + lastAssaultEvent + " at "
                 + position(spawn) + ", " + distance(spawn) + " blocks away (horizontal)");
     }
@@ -56,6 +56,7 @@ public final class AssaultDiagnostics implements LunarService.Listener {
         lastAssaultEvent = "Wave " + wave.number + ": " + label(wave.outcome);
         String message = lastAssaultEvent + " | Inserted " + wave.inserted + "/" + wave.allocation()
                 + " in " + wave.attempts + " attempts | Skipped " + wave.skipped() + " | Carried " + wave.carriedOut
+                + " | Equipped " + wave.equipped + "/" + LoadoutPolicy.assaultWaveCap(wave.number)
                 + " | Nearby " + (wave.localHostiles < 0 ? "N/A" : wave.localHostiles) + " | Peak active " + wave.peakActive;
         if (!wave.rejections.isEmpty()) message += " | " + counts(wave.rejections);
         record(time, "WAVE", message);

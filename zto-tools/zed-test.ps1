@@ -70,12 +70,14 @@ function Invoke-Bridge([string]$Verb, [string]$Op, [hashtable]$Arguments = @{}) 
         if ($Op) { $raw = & $cli $Verb $Op -Discovery $Discovery -Json @Arguments }
         else { $raw = & $cli $Verb -Discovery $Discovery -Json }
         $reply = $raw | ConvertFrom-Json
-        if ($reply.ok -or $Verb -ne 'query' -or $reply.error.code -notin 'NOT_READY', 'BUSY', 'TIMEOUT') { break }
+        if ($reply.ok -or $Verb -ne 'query' -or $reply.error.code -notin 'NOT_READY', 'BUSY', 'TIMEOUT', 'RATE_LIMITED') { break }
         if ($reply.error.code -eq 'NOT_READY') {
             $state = (& $cli status -Discovery $Discovery -Json | ConvertFrom-Json).data.state
             if ($state -notin 'stalled', 'ready') { break }
         }
-        if ($attempt -lt 3) { Start-Sleep -Milliseconds 750 }
+        if ($attempt -lt 3) {
+            Start-Sleep -Milliseconds $(if ($reply.error.code -eq 'RATE_LIMITED') { 1100 } else { 750 })
+        }
     }
     if (!$reply.ok) { throw ('{0}: {1}' -f $reply.error.code, $reply.error.message) }
     $reply.data

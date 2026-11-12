@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.5 — Encounter composition and nocturnal survival candidate
+
+- Give selected lunar patrol and assault enemies a single piece of gear, with phase and wave limits. Encounter gear carries no added loot.
+- Use eligible Overworld beds to set a respawn point by day or night. Set `disableNightSkipping=false` to restore legacy sleep.
+- With the existing inventory launch agent, Shift+Click armor into an empty matching slot in the local Survival inventory.
+
 ## 0.1.0-alpha.4 — Lunar pressure candidate
 
 - Add small vanilla-mob patrols at natural first-quarter and waxing-gibbous dusks, with an independent `lunarPatrols` switch and counts in Survival Debug. Full-moon assaults retain their own schedule and settings.

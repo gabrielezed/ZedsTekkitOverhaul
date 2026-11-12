@@ -4,6 +4,8 @@ Use the [singleplayer acceptance matrix](singleplayer-acceptance.md) for current
 
 For Survival 0.1 use the [assault acceptance record](survival-assault-acceptance.md). The existing lunar batch exercises the portable event gate and the existing Tekkit Dev lifecycle runs the full-moon encounter and reopen assertions. Record a human Survival fortification trial separately.
 
+For the alpha.3 equipment backport, use the [disposable viewing pen](MOB_EQUIPMENT_BACKPORT_SPEC.md#disposable-viewing-pen) in isolated Tekkit Dev. The [equipment acceptance record](mob-equipment-acceptance.md) identifies the tested JAR, observed combat and persistence cases, screenshots and the scope of the assault regression.
+
 ## Evidence currently available
 
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.

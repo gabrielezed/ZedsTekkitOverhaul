@@ -1,6 +1,6 @@
 # ZedsTekkitOverhaul — Legacy Mob Equipment Backport
 
-**Status:** Implemented on the feature branch. See the [runtime acceptance record](mob-equipment-acceptance.md) for the candidate gate.
+**Status:** Integrated in `main` for the Survival alpha.3 candidate. See the [runtime acceptance record](mob-equipment-acceptance.md) for the tested build and owner playtest status.
 
 **Target:** `0.1.0-alpha.3` (within the Survival 0.1 release line).
 

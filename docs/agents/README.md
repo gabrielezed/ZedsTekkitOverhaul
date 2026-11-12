@@ -15,6 +15,7 @@ This directory is the **project-specific technical reference** for coding agents
 | Planning multiblocks or custom rendering | [Roadmap](roadmap.md), [Architecture](architecture.md), [OBJ prototype](obj-renderer.md), [Legacy lightmap](lightmap-diagnostics.md), [Multiblock validator](multiblock-validator.md) |
 | Implementing the lunar calendar, moon rendering or debug menu | [Lunar implementation handoff](lunar-cycle-implementation.md), [Original lunar specification](lunar-cycle-system.md) |
 | Changing Survival encounters | [Player assault gameplay pass](survival-assault-alpha2.md), [Owner playtest generator](survival-assault-alpha2.md#owner-playtest-world), [Player assault specification](SURVIVAL_SIEGE_SPEC.md), [Alpha.1 acceptance](survival-assault-acceptance.md), [Lunar implementation handoff](lunar-cycle-implementation.md) |
+| Working on vanilla mob equipment | [Equipment contract and disposable fixture](MOB_EQUIPMENT_BACKPORT_SPEC.md), [Alpha.3 API audit, runtime acceptance and screenshots](mob-equipment-acceptance.md) |
 | Inspecting Survival encounters in-game | [Survival Debug HUD](survival-debug-hud.md) |
 | Using or extending the Dev Bridge | [Read-only diagnostics](dev-bridge.md), [Opt-in test automation](test-automation.md), [Singleplayer acceptance](singleplayer-acceptance.md) |
 | Making a Git commit or pull request | [Workflow](workflow.md), [Testing](testing.md) |

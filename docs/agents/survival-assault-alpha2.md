@@ -30,7 +30,7 @@ These choices give shelter, light, walls, elevation and retreat mechanical value
 - Tested source commit `52231aad91d422d5906be34c3a365951b417e657`.
 - Built and deployed JAR SHA-256 `b8d23affdf2409aa6b620d2ad958f39f98700cb331c7be743ada788f7c27c93d`.
 - Build timestamp `2026-11-12T08:39:11.2258402Z`.
-- This historical test build reported product version `0.1.0-alpha.1` and a dirty tree because of the pre-existing untracked `docs/agents/TEST_AUTOMATION_SPEC.md`. The tracked code used the tested commit. The current build identifier is `0.1.0-alpha.2`.
+- This historical test build reported product version `0.1.0-alpha.1` and a dirty tree because of the pre-existing untracked `docs/agents/TEST_AUTOMATION_SPEC.md`. The tracked code used the tested commit. The assault gameplay pass subsequently received the `0.1.0-alpha.2` identifier.
 - MCP 6.2 client compile and reobfuscation succeeded under JDK 8, with Forge 3.4.9.171 in the MDK. The build streamed all 244 archive entries successfully. Portable calendar, assault scheduling and wave/HUD recorder checks passed.
 - The same JAR loaded in a separate copy of the Tekkit Dev profile with the HUD off and all Dev Bridge flags false. Forge completed startup, the client opened no TCP listener, and it shut down normally.
 

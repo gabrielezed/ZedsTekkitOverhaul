@@ -1,6 +1,6 @@
 # ZedsTekkitOverhaul changelog
 
-## Unreleased — Survival alpha.2 gameplay
+## 0.1.0-alpha.2 — Lunar Assault gameplay
 
 - Stage full-moon player assaults in three waves with bounded retries, active mob tracking and a separate nearby-hostile limit.
 - Show wave timing, insertions, active mobs, skipped allocation and spawn constraints in Survival Debug.

@@ -25,7 +25,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The alpha.2 gameplay pass is in development under the current **0.1.0-alpha.1** build identifier. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
+The current build identifier is **0.1.0-alpha.2**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
 
 ```powershell
 .\zto-tools\build-and-deploy.bat

@@ -9,6 +9,7 @@ import net.minecraft.src.ModLoader;
 import net.minecraft.src.MLProp;
 import net.minecraft.src.RenderBlocks;
 import net.minecraft.client.Minecraft;
+import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
@@ -44,6 +45,12 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static int assaultSpawnBudget = 6;
     @MLProp(info = "Simulation ticks between assault pulses (80 to 400)")
     public static int assaultPulseInterval = 160;
+    @MLProp(info = "Enable the local single-player Survival Debug HUD")
+    public static boolean survivalDebugHud = false;
+    @MLProp(info = "LWJGL key code for Survival Debug (0 disables its shortcut)")
+    public static int survivalDebugHudKey = Keyboard.KEY_F10;
+    @MLProp(info = "Survival Debug history entries per save session (20 to 300)")
+    public static int survivalDebugLogCapacity = 250;
 
     private static final LocalLunarCalendar LUNAR = new LocalLunarCalendar();
 
@@ -74,7 +81,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void modsLoaded() {
         LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
-                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultPulseInterval));
+                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultPulseInterval),
+                survivalDebugHud, survivalDebugHudKey, survivalDebugLogCapacity);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();

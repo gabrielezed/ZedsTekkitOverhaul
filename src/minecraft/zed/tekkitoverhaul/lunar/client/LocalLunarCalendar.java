@@ -19,6 +19,7 @@ import net.minecraft.src.WorldClient;
 import net.minecraft.src.forge.ISaveEventHandler;
 import net.minecraft.src.forge.MinecraftForge;
 import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.assault.AssaultDiagnostics;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarEvent;
@@ -36,13 +37,17 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private LunarCalendar calendar;
     private LunarDiagnostics diagnostics;
     private SiegeDirector assault;
+    private SurvivalDebugHud survivalHud;
+    private AssaultDiagnostics survivalDiagnostics;
+    private int survivalLogCapacity;
     private long sessionId;
     private boolean verbose;
     private KeyBinding key;
     private long lastKeyEvent;
     private String storageStatus = "No active local save";
 
-    public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault) {
+    public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
+                         boolean survivalDebug, int survivalKey, int logCapacity) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
@@ -51,12 +56,17 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
             key = new KeyBinding("Open ZTO Lunar Debug", keyCode);
             ModLoader.registerKey(mod, key, false);
         }
+        if (survivalDebug) {
+            survivalHud = new SurvivalDebugHud(this, game, mod, survivalKey, keyCode);
+            survivalLogCapacity = logCapacity;
+        }
         MinecraftForge.registerSaveHandler(this);
         FMLCommonHandler.instance().registerTickHandler(this);
         LunarMoonRenderer.register(this);
     }
 
     public void onKeyPressed(KeyBinding pressed) {
+        if (survivalHud != null) survivalHud.onKeyPressed(pressed);
         if (key != null && key == pressed && game.currentScreen == null && local(game.theWorld)) {
             lastKeyEvent = Keyboard.getEventNanoseconds();
             game.displayGuiScreen(new GuiLunarDebug(this, game.theWorld));
@@ -70,6 +80,15 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public SiegeDirector.Snapshot assaultSnapshot(World context) {
         return context != null && context == game.theWorld ? assault.snapshot(context) : null;
+    }
+
+    AssaultDiagnostics survivalDiagnostics(World context) {
+        return context != null && context == world && context == game.theWorld
+                && context.worldProvider.worldType == 0 && local(context) ? survivalDiagnostics : null;
+    }
+
+    SiegeDirector.Eligibility assaultEligibility(World context) {
+        return assault.eligibility(context, game.thePlayer);
     }
 
     /** Aligns a future night without touching vanilla time or replaying crossed boundaries. */
@@ -119,6 +138,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (sameSave) {
             if (calendar != null) {
                 assault.bind(null, null);
+                if (survivalDiagnostics != null) survivalDiagnostics.record(active.getWorldTime(), "WORLD",
+                        "Entered dimension " + active.worldProvider.worldType);
                 active.setItemData(LunarWorldState.KEY, state);
                 calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), LunarEvent.Cause.DIMENSION_CHANGED);
                 assault.bind(active, calendar.view());
@@ -157,6 +178,12 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
             diagnostics = new LunarDiagnostics(verbose);
             calendar.view().subscribe(diagnostics);
         }
+        if (survivalHud != null) {
+            survivalDiagnostics = new AssaultDiagnostics(survivalLogCapacity);
+            survivalDiagnostics.record(active.getWorldTime(), "WORLD", "Loaded dimension " + active.worldProvider.worldType);
+            calendar.view().subscribe(survivalDiagnostics);
+            assault.setDiagnostics(survivalDiagnostics);
+        }
         LunarEvent.Cause cause = state.initializedHere ? LunarEvent.Cause.INITIALIZED : LunarEvent.Cause.LOADED;
         calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), cause);
         assault.bind(active, calendar.view());
@@ -164,6 +191,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     private void detach() {
         assault.bind(null, null);
+        assault.setDiagnostics(null);
+        survivalDiagnostics = null;
         if (calendar != null) calendar.detach();
         calendar = null;
         diagnostics = null;
@@ -186,10 +215,12 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                 if (key.keyCode > 0 && Keyboard.getEventKey() == key.keyCode) onKeyPressed(key);
             }
         }
+        if (survivalHud != null) survivalHud.pollKey();
     }
 
     @Override
     public void tickEnd(EnumSet<TickType> ticks, Object... data) {
+        if (survivalHud != null && ticks.contains(TickType.RENDER)) survivalHud.render();
         if (!ticks.contains(TickType.WORLD)) return;
         bind(game.theWorld);
         if (calendar != null) {

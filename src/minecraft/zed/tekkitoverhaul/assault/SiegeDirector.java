@@ -14,6 +14,14 @@ import zed.tekkitoverhaul.lunar.LunarSnapshot;
 /** One local player encounter. All methods run on the owning simulation thread. */
 public final class SiegeDirector implements LunarService.Listener {
     public enum State { IDLE, ACTIVE, RESOLVED, ABORTED }
+    public enum Eligibility {
+        UNAVAILABLE("Unavailable"), ACTIVE("Encounter active"), PEACEFUL("Peaceful difficulty"),
+        PLAYER("Requires an awake Survival player"), PHASE("Waiting for full moon"),
+        NIGHT("Requires a natural dusk"), CONSUMED("Night already consumed"), DUSK("Eligible at natural dusk");
+
+        public final String label;
+        Eligibility(String label) { this.label = label; }
+    }
 
     private final boolean enabled;
     private final int budget;
@@ -22,6 +30,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private final List<Spawn> evidence = new ArrayList<Spawn>();
     private World world;
     private LunarService lunar;
+    private AssaultDiagnostics diagnostics;
     private AssaultWorldState storage;
     private LunarSnapshot pending;
     private EntityPlayer target;
@@ -42,6 +51,10 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void bind(World incoming, LunarService service) {
+        if (diagnostics != null) {
+            if (state == State.ACTIVE) diagnostics.assault(world.getWorldTime(), "Interrupted by world change");
+            diagnostics.resetEncounter();
+        }
         if (lunar != null) lunar.unsubscribe(this);
         world = incoming;
         lunar = service;
@@ -63,6 +76,7 @@ public final class SiegeDirector implements LunarService.Listener {
             state = State.ABORTED;
             reason = "INTERRUPTED_ON_REOPEN";
             storage.close();
+            if (diagnostics != null) diagnostics.assault(world.getWorldTime(), "Interrupted on reopen");
         } else if (storage.consumed != Long.MIN_VALUE) {
             state = State.RESOLVED;
             reason = "NIGHT_CONSUMED";
@@ -70,6 +84,10 @@ public final class SiegeDirector implements LunarService.Listener {
             reason = "WAITING_FOR_FULL_MOON";
         }
         lunar.subscribe(this);
+    }
+
+    public void setDiagnostics(AssaultDiagnostics diagnostics) {
+        this.diagnostics = diagnostics;
     }
 
     @Override
@@ -81,6 +99,9 @@ public final class SiegeDirector implements LunarService.Listener {
             end(State.RESOLVED, "NIGHT_ENDED");
         } else if (state != State.ACTIVE && AssaultSchedule.canStart(event, storage.consumed)) {
             pending = event.after;
+        } else if (diagnostics != null && event.kind == LunarEvent.Kind.NIGHT_STARTED
+                && AssaultSchedule.WINDOW.matches(event.after)) {
+            diagnostics.assault(event.after.rawTime, "Eligibility rejected: night already consumed or active");
         }
     }
 
@@ -88,10 +109,14 @@ public final class SiegeDirector implements LunarService.Listener {
         if (storage == null) return;
         LunarSnapshot boundary = pending;
         pending = null;
-        if (paused) return;
+        if (paused) {
+            if (diagnostics != null && boundary != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: paused");
+            return;
+        }
         if (boundary != null) {
             if (world.difficultySetting <= 0 || !available(player)) {
                 reason = world.difficultySetting <= 0 ? "PEACEFUL" : "PLAYER_UNAVAILABLE";
+                if (diagnostics != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: " + AssaultDiagnostics.label(reason));
                 return;
             }
             storage.start(boundary.rawTime);
@@ -103,6 +128,11 @@ public final class SiegeDirector implements LunarService.Listener {
             starts++;
             evidence.clear();
             spawns.rejection = null;
+            if (diagnostics != null) {
+                diagnostics.resetEncounter();
+                diagnostics.assault(boundary.rawTime, "Eligibility accepted: natural full moon");
+                diagnostics.assault(boundary.rawTime, "Player assault started");
+            }
             world.playSoundEffect(player.posX, player.posY, player.posZ, "ambient.cave.cave", 0.5F, 0.85F);
             return;
         }
@@ -122,19 +152,29 @@ public final class SiegeDirector implements LunarService.Listener {
 
     private void pulse(EntityPlayer player) {
         pulses++;
-        for (int placed = 0, tries = 0; placed < 2 && tries < SpawnController.ATTEMPTS && evidence.size() < budget; tries++) {
+        int placed = 0;
+        int previousAttempts = attempts;
+        long time = diagnostics == null ? 0 : world.getWorldTime();
+        if (diagnostics != null) diagnostics.beginPulse(time, pulses);
+        for (int tries = 0; placed < 2 && tries < SpawnController.ATTEMPTS && evidence.size() < budget; tries++) {
             if (!spawns.belowLocalCap(world, player)) {
                 spawns.rejection = "LOCAL_MOB_CAP";
+                if (diagnostics != null) diagnostics.reject(spawns.rejection);
                 break;
             }
             attempts++;
             // Vanilla Hard zombies can break wooden doors. Keep vanilla AI and use skeletons there.
             EntityMob mob = spawns.trySpawn(world, player, difficulty == 3 || evidence.size() % 3 == 2);
             if (mob != null) {
-                evidence.add(new Spawn(mob, player));
+                Spawn spawn = new Spawn(mob, player);
+                evidence.add(spawn);
+                if (diagnostics != null) diagnostics.spawned(time, pulses, spawn);
                 placed++;
+            } else if (diagnostics != null) {
+                diagnostics.reject(spawns.rejection);
             }
         }
+        if (diagnostics != null) diagnostics.endPulse(time, pulses, placed, attempts - previousAttempts);
     }
 
     private boolean available(EntityPlayer player) {
@@ -147,11 +187,27 @@ public final class SiegeDirector implements LunarService.Listener {
         reason = cause;
         target = null;
         storage.close();
+        if (diagnostics != null) diagnostics.assault(world.getWorldTime(),
+                (terminal == State.ABORTED ? "Interrupted: " : "Completed: ") + AssaultDiagnostics.label(cause));
     }
 
     public Snapshot snapshot(World context) {
         if (context == null || context != world) return null;
         return new Snapshot(this);
+    }
+
+    /** Current start conditions, independent of the recorded outcome of the previous encounter. */
+    public Eligibility eligibility(World context, EntityPlayer player) {
+        if (context == null || context != world || storage == null) return Eligibility.UNAVAILABLE;
+        if (state == State.ACTIVE) return Eligibility.ACTIVE;
+        if (world.difficultySetting <= 0) return Eligibility.PEACEFUL;
+        if (!available(player)) return Eligibility.PLAYER;
+        LunarSnapshot view = lunar.snapshot();
+        if (!view.isFullMoon()) return Eligibility.PHASE;
+        if (view.timeOfDay >= LunarSnapshot.NIGHT_START) return Eligibility.NIGHT;
+        long untilDusk = LunarSnapshot.NIGHT_START - view.timeOfDay;
+        if (view.rawTime > Long.MAX_VALUE - untilDusk) return Eligibility.UNAVAILABLE;
+        return view.rawTime + untilDusk <= storage.consumed ? Eligibility.CONSUMED : Eligibility.DUSK;
     }
 
     public static final class Spawn {
@@ -173,6 +229,8 @@ public final class SiegeDirector implements LunarService.Listener {
         public final String reason, lastRejection;
         public final long boundary, lunarSession;
         public final int dimension, starts, pulses, attempts, elapsed, budget;
+        public final int scheduledPulses = MAX_PULSES;
+        public final String trigger;
         public final List<Spawn> spawns;
 
         private Snapshot(SiegeDirector director) {
@@ -187,6 +245,7 @@ public final class SiegeDirector implements LunarService.Listener {
             attempts = director.attempts;
             elapsed = director.elapsed;
             budget = director.budget;
+            trigger = starts == 0 ? null : "NATURAL_FULL_MOON";
             spawns = Collections.unmodifiableList(new ArrayList<Spawn>(director.evidence));
         }
     }

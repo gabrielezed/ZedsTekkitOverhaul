@@ -8,11 +8,13 @@ param(
     [int]$StartupSeconds = 120,
     [ValidateRange(1, 720)]
     [int]$LunarWaitSeconds = 720,
-    [ValidateSet('Hopper', 'Distillation', 'Assault')]
+    [ValidateSet('Hopper', 'Distillation', 'Assault', 'Patrol')]
     [string]$Persistence = 'Hopper',
     [switch]$PhysicalDistillation,
     [switch]$SkipCore,
     [switch]$InterruptAssault,
+    [switch]$InterruptPatrol,
+    [switch]$ProtectedPatrol,
     [ValidateRange(0, 24)]
     [int]$AssaultMinimumSpawns = 1
 )
@@ -180,6 +182,7 @@ function Start-DevClient {
                         if ($report.build -and $launch.modVersion -cne $report.build.productVersion) {
                             throw 'BUILD_MISMATCH: Running product version differs from the packaged version.'
                         }
+                        if ($Persistence -in 'Assault', 'Patrol') { $null = Invoke-Bridge query lunar.snapshot }
                         $launch.sessionId = $context.sessionId
                         $launch.worldId = $context.worldId
                         return $context
@@ -308,6 +311,7 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $before = Invoke-Bridge query assault.snapshot
     $report.persistence.before = $before
     Assert-Persistence 'pre_shutdown_state' $before.state $(if ($InterruptAssault) { 'ACTIVE' } else { 'RESOLVED' })
+    Assert-Persistence 'no_full_moon_patrol' (Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[' -Quiet) $false
     Stop-DevClient
     $reopened = Start-DevClient
     $after = Invoke-Bridge query assault.snapshot
@@ -322,11 +326,107 @@ function Test-AssaultRestart($Context, [long]$Boundary) {
     $report.persistence.status = 'PASS'
 }
 
+function Wait-LunarTick([long]$Tick) {
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    do {
+        try {
+            $moon = Invoke-Bridge query lunar.snapshot
+            if ($moon.rawTime -ge $Tick) { return $moon }
+        } catch {
+            if ($_.Exception.Message -notmatch '^(NOT_READY|BUSY|TIMEOUT):') { throw }
+        }
+        Start-Sleep -Milliseconds 500
+    } while ($watch.Elapsed.TotalSeconds -lt $LunarWaitSeconds)
+    throw "LUNAR_TIMEOUT: Did not reach tick $Tick."
+}
+
+function Test-PatrolRestart($Context) {
+    $before = Wait-LunarTick 0
+    $budget = switch ($before.phaseId) { 0 { 0 }; 2 { 2 }; 3 { 3 } }
+    if ($null -eq $budget -or $before.timeOfDay -ge 13000) {
+        throw 'PREREQUISITES: Start before dusk on a new moon, first quarter or waxing gibbous.'
+    }
+    $boundary = $before.rawTime - $before.timeOfDay + 13000
+    if (($InterruptPatrol -or $ProtectedPatrol) -and !$budget) {
+        throw 'PREREQUISITES: Use a first-quarter or waxing-gibbous fixture.'
+    }
+    $pattern = '\[ZTO\] PATROL \[(\d+)\] (RESOLVED|ABORTED) \| (\w+) \| Spawned (\d+)/(\d+) \| Attempts (\d+) \| Skipped (\d+) \| Elapsed (\d+)'
+    $wait = if ($InterruptPatrol) { 80 } elseif ($budget) { 1060 } else { 260 }
+    $night = Wait-LunarTick ($boundary + $wait)
+    $events = Invoke-Bridge query lunar.events @{ WorldId = $before.worldId; AfterSequence = $before.latestSequence }
+    Assert-Persistence 'no_assault' (Invoke-Bridge query assault.snapshot).starts 0
+    if ($InterruptPatrol) { Stop-DevClient }
+    $entries = @(Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[')
+    $report.persistence.before = $before
+    $report.persistence.night = $night
+    $report.persistence.lunarEvents = $events
+    $report.persistence.patrol = @($entries | ForEach-Object { $_.Line })
+    Assert-Persistence 'no_cursor_loss' $events.dropped 0
+    Assert-Persistence 'one_night_started' ($events.events.kind -join ',') 'NIGHT_STARTED'
+    Assert-Persistence 'natural_boundary' ($events.events[0].cause -eq 'NATURAL' -and
+        $events.events[0].after.rawTime -eq $boundary) $true
+    Assert-Persistence 'same_phase_at_night' $night.phaseId $before.phaseId
+    if ($InterruptPatrol) {
+        # The bootstrap can close the client before the next render callback logs the unload.
+        Assert-Persistence 'quit_during_lead_in' ($night.rawTime -lt $boundary + 800) $true
+        Assert-Persistence 'no_finished_patrol_before_quit' ($entries.Count -le 1) $true
+    } else {
+        Assert-Persistence 'patrol_outcomes' $entries.Count $(if ($budget -gt 0) { 1 } else { 0 })
+    }
+    if ($entries.Count -eq 1) {
+        $match = [regex]::Match($entries[0].Line, $pattern)
+        Assert-Persistence 'patrol_summary' $match.Success $true
+        $outcome = $match.Groups[3].Value
+        $spawned = [int]$match.Groups[4].Value
+        $attempts = [int]$match.Groups[6].Value
+        $elapsed = [int]$match.Groups[8].Value
+        Assert-Persistence 'patrol_budget' ([int]$match.Groups[5].Value) $budget
+        Assert-Persistence 'skipped_allocation' ([int]$match.Groups[7].Value) ($budget - $spawned)
+        if ($InterruptPatrol) {
+            Assert-Persistence 'interrupted_pending_patrol' ($match.Groups[2].Value -eq 'ABORTED' -and
+                $outcome -eq 'WORLD_UNLOADED' -and $elapsed -lt 800 -and $attempts -eq 0 -and $spawned -eq 0) $true
+        } else {
+            Assert-Persistence 'resolved_patrol' $match.Groups[2].Value 'RESOLVED'
+            Assert-Persistence 'retry_window' ($elapsed -ge 800 -and $elapsed -le 1040 -and
+                ($elapsed - 800) % 20 -eq 0 -and [long]$match.Groups[1].Value -ge ($boundary + $elapsed)) $true
+            $retryCount = [Math]::Min(12, 1 + ($elapsed - 800) / 20)
+            Assert-Persistence 'bounded_spawns_and_attempts' ($spawned -le $budget -and
+                $attempts -ge $spawned -and $attempts -le (4 * $retryCount)) $true
+            if ($ProtectedPatrol) {
+                Assert-Persistence 'protected_patrol' ($spawned -eq 0 -and $attempts -eq 48 -and
+                    $outcome -eq 'SPAWN_WINDOW_EXPIRED' -and $entries[0].Line -match '48 Not open to sky') $true
+            } else {
+                Assert-Persistence 'positive_insertion' ($spawned -gt 0) $true
+            }
+            Stop-DevClient
+        }
+    }
+    if ($budget -gt 0) {
+        $reopened = Start-DevClient
+        $reload = Wait-LunarTick 0
+        $observation = if ($InterruptPatrol) { $reload.rawTime + 1060 } else {
+            [Math]::Max($reload.rawTime + 20, $boundary + 1060)
+        }
+        $report.persistence.after = Wait-LunarTick $observation
+        Assert-Persistence 'new_session' ($reopened.sessionId -ne $Context.sessionId) $true
+        Assert-Persistence 'same_night' ($report.persistence.after.night -and
+            $report.persistence.after.rawTime -lt ($boundary + 10000)) $true
+        Assert-Persistence 'no_replayed_patrol' (Select-String -LiteralPath $log -Pattern '\[ZTO\] PATROL \[' -Quiet) $false
+    }
+    $report.persistence.status = 'PASS'
+}
+
 $mutex = [Threading.Mutex]::new($false, 'Local\ZTO-Tekkit-Dev-Lifecycle')
 $locked = $false
 try {
+    if ($Persistence -eq 'Patrol' -and (!$SkipCore -or $PhysicalDistillation)) {
+        throw 'PREREQUISITES: Patrol requires -SkipCore and its own disposable run.'
+    }
     if ($InterruptAssault -and ($Persistence -ne 'Assault' -or !$SkipCore)) {
         throw 'PREREQUISITES: InterruptAssault requires -Persistence Assault -SkipCore.'
+    }
+    if (($InterruptPatrol -or $ProtectedPatrol) -and ($Persistence -ne 'Patrol' -or ($InterruptPatrol -and $ProtectedPatrol))) {
+        throw 'PREREQUISITES: Select at most one patrol variant and use -Persistence Patrol -SkipCore.'
     }
     if ($PhysicalDistillation -and $Persistence -eq 'Assault') {
         throw 'PREREQUISITES: Use a separate disposable run for physical distillation.'
@@ -381,7 +481,7 @@ try {
     }
 
     $run = Get-Random -Minimum 1 -Maximum ([long]1e15)
-    if (!$SkipCore -or $Persistence -ne 'Assault') {
+    if (!$SkipCore -or $Persistence -notin 'Assault', 'Patrol') {
         $craft = Invoke-Fixture 'crafting.transactions' $context $run
         $report.crafting = [ordered]@{}
         foreach ($field in 'craft3', 'craft5', 'hotbarLock', 'hardProtection') {
@@ -393,6 +493,8 @@ try {
         Test-PhysicalDistillation $context $run
     } elseif ($Persistence -eq 'Assault') {
         Test-AssaultRestart $context $assaultBoundary
+    } elseif ($Persistence -eq 'Patrol') {
+        Test-PatrolRestart $context
     } else {
         Test-Restart $context $run
     }

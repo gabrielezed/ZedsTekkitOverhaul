@@ -77,14 +77,17 @@ final class SurvivalDebugHud extends Gui {
         String[] lines = {
             "ZTO | Survival Debug",
             moon.phase.label + " | " + moon.timeOfDay + "t",
-            "Assault: " + state,
+            "PLAYER_ASSAULT | " + state,
             "Wave " + assault.currentWave + "/" + assault.waves.size() + next,
             wave == null ? "Planned " + assault.budget : "Wave " + wave.inserted + "/" + wave.allocation
                     + " | Tried " + wave.attempts,
             "Total " + assault.spawns.size() + "/" + assault.budget + " | Active " + assault.active,
             "Deferred " + assault.deferred + " | Skipped " + assault.skipped,
             "Last: " + (assault.state == State.ACTIVE && assault.lastRejection != null
-                    ? AssaultDiagnostics.label(assault.lastRejection) : diagnostics.lastAssaultEvent())
+                    ? AssaultDiagnostics.label(assault.lastRejection) : diagnostics.lastAssaultEvent()),
+            "PATROL | " + assault.patrol.stage + " | " + assault.patrol.spawned + "/" + assault.patrol.budget,
+            "Patrol night: " + (assault.patrol.eligibleNight ? "Eligible" : "Ineligible"),
+            assault.patrol.paused ? "Paused" : AssaultDiagnostics.label(assault.patrol.reason)
         };
         FontRenderer font = game.fontRenderer;
         ScaledResolution scale = new ScaledResolution(game.gameSettings, game.displayWidth, game.displayHeight);

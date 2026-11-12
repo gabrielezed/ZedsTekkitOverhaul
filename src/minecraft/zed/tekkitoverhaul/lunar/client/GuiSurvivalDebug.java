@@ -144,6 +144,16 @@ final class GuiSurvivalDebug extends GuiScreen {
                 : AssaultDiagnostics.label(diagnostics.lunarCause().name())), width);
         String dusk = eligibility == Eligibility.DUSK ? " in " + (LunarSnapshot.NIGHT_START - moon.timeOfDay) + "t" : "";
         append(rows, "Eligibility: " + eligibility.label + dusk, width);
+        append(rows, "PATROL | " + assault.patrol.stage + (assault.patrol.paused ? " | Paused" : "")
+                + " | " + AssaultDiagnostics.label(assault.patrol.reason), width);
+        append(rows, "Patrol night: " + (assault.patrol.eligibleNight ? "Eligible" : "Ineligible")
+                + " | Inserted: " + assault.patrol.spawned + "/" + assault.patrol.budget
+                + " | Attempts: " + assault.patrol.attempts, width);
+        append(rows, "Patrol elapsed: " + assault.patrol.elapsed + "t | Remaining: " + assault.patrol.remaining
+                + " | Skipped: " + assault.patrol.skipped, width);
+        if (!assault.patrol.rejections.isEmpty()) {
+            append(rows, "Patrol rejections: " + AssaultDiagnostics.counts(assault.patrol.rejections), width);
+        }
         append(rows, "Trigger: " + AssaultDiagnostics.label(assault.trigger) + " | Elapsed: " + assault.elapsed + "t", width);
         append(rows, "Wave: " + assault.currentWave + "/" + assault.waves.size() + " | Next in "
                 + (assault.nextWaveTicks < 0 ? "N/A" : assault.nextWaveTicks + "t") + " | Candidate attempts: " + assault.attempts, width);

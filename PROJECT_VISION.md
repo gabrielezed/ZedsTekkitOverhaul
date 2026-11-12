@@ -1,10 +1,18 @@
 # ZedsTekkitOverhaul — Project Vision & Game Design Charter
 
-> **Documento guida permanente per sviluppatori e agenti LLM.**
-> 
-> **Target:** Minecraft Java Edition 1.2.5, ecosistema Tekkit Classic.
-> **Scopo:** mantenere una visione coerente durante lo sviluppo di singole feature. Questo documento descrive **perché** e **come** il progetto deve evolvere; non sostituisce le specifiche tecniche delle singole funzionalità.
-> **Stato:** visione di prodotto. I requisiti marcati **[DIREZIONE]** sono intenti progettuali consolidati; **[PROPOSTA]** sono soluzioni da prototipare e validare; **[DA DECIDERE]** sono questioni deliberatamente aperte. Le feature menzionate non sono automaticamente da considerare implementate.
+> **Documento guida permanente per sviluppatori e agenti LLM.**  
+> **Revisione progettuale:** 12 novembre 2026.  
+> **Target:** Minecraft Java Edition 1.2.5, Tekkit Classic 3.1.2.  
+> **Scopo:** descrivere *perché* il progetto esiste, quale esperienza deve offrire e quali limiti non deve oltrepassare. Le specifiche delle singole feature definiscono il *come*; il codice e le prove runtime definiscono ciò che è effettivamente implementato.
+>
+> **Legenda normativa:**
+> - **[DIREZIONE APPROVATA]**: scelta di prodotto confermata dal project owner; vincola nuove proposte, salvo revisione esplicita.
+> - **[PROPOSTA DA VALIDARE]**: soluzione promettente, non ancora approvata come comportamento definitivo.
+> - **[DECISIONE APERTA]**: domanda sostanziale che gli agenti non devono risolvere autonomamente introducendo nuove meccaniche.
+> - **[PROTOTIPO SOTTO REVISIONE]**: codice o contenuto sperimentale che non costituisce un impegno per la release finale.
+> - **[STATO IMPLEMENTATIVO]**: fotografia informativa, soggetta a verifica nel repository; non sostituisce test e documentazione tecnica.
+>
+> **Precedenza:** visione di prodotto e decisioni approvate > proposte e default provvisori > preferenze implementative dell'agente. Non interpretare una feature citata in questo file come autorizzazione a implementarla immediatamente.
 
 ---
 
@@ -12,429 +20,487 @@
 
 **ZedsTekkitOverhaul vuole essere la Tekkit classica che ricordiamo, ma inserita in un Minecraft più vivo, ostile, misterioso e degno della potenza che il giocatore può raggiungere.**
 
-Il cuore del progetto non è la complessità tecnologica. È la libertà di costruire, esplorare, sperimentare, difendersi e diventare straordinariamente potenti. La tecnologia, l'alchimia e l'automazione sono **strumenti**, non il fine ultimo. Una piccola farm intelligente deve essere una strada legittima; una grande fabbrica deve essere un'opportunità, mai un pedaggio obbligatorio.
+Il cuore del progetto non è la complessità tecnologica. È la libertà di costruire, esplorare, sperimentare, difendersi e diventare straordinariamente potenti. IC2, RedPower, BuildCraft, EE2 e le eventuali aggiunte ZTO devono offrire strumenti per affrontare un mondo più significativo, non diventare il contenuto principale per il solo fatto di esistere.
 
-Minecraft vanilla offre una sandbox eccezionale ma, soprattutto in Tekkit 1.2.5, il mondo finisce per opporre poca resistenza alla crescita del giocatore. IC2, RedPower, BuildCraft ed EE2 ampliano enormemente le possibilità produttive; la pressione esercitata dai nemici e dall'ambiente non cresce in misura comparabile. Il risultato è che parte del grinding porta a oggetti potentissimi senza una ragione concreta per usarli.
+Una piccola farm intelligente deve essere una scelta legittima; una fabbrica enorme può essere un'opportunità, mai un pedaggio obbligatorio. Il giocatore che conosce Tekkit Classic deve riconoscerla immediatamente e trovare nuove ragioni per usare ciò che già conosce.
 
-**Il progetto deve correggere questa asimmetria senza sacrificare lo spirito del Minecraft di quell'epoca: “fai un po' come vuoi”.**
+**[DIREZIONE APPROVATA] ZTO è un overhaul selettivo, non un'espansione quantitativa.** Non aggiungere 200 materiali, cento macchinari e nuove catene produttive soltanto per aumentare la durata o il volume del contenuto. Ogni novità deve aprire una possibilità significativa di gameplay, interazione o narrazione ambientale; preferire la reinterpretazione di sistemi esistenti quando è sufficiente.
 
-### La promessa al giocatore
+### Promessa al giocatore
 
-- Puoi iniziare senza conoscere a fondo le mod tecniche. Il gioco ti suggerisce possibilità, non ti impone una sequenza di quest.
-- Una casa improvvisata può bastare all'inizio; col tempo avrai veri motivi per costruire e migliorare una **fortezza**.
-- Il mondo contiene zone e minacce davanti alle quali è sensato ritirarsi, prepararsi e tornare.
-- Puoi affrontare i problemi con combattimento, costruzione, equipaggiamento, ingegno, alchimia o automazione, spesso combinandoli.
-- I macchinari devono renderti capace di fare cose nuove o di farle meglio, non obbligarti a eseguire centinaia di microcrafting.
-- La progressione avanzata deve sentirsi potente. Red Matter Armor, QuantumSuit e sistemi produttivi evoluti devono avere un peso reale.
-- Sotto la superficie del mondo esiste un mistero progressivamente riconducibile all'**End**, agli Enderman e al drago, raccontato soprattutto tramite gameplay e ambiente.
+- Puoi iniziare senza conoscere a fondo ogni mod tecnica. Il gioco suggerisce possibilità, non impone una sequenza di quest.
+- La casa improvvisata può bastare all'inizio; minacce leggibili e progressivamente articolate danno motivi reali per costruire e migliorare una fortezza.
+- Esplorare luoghi nuovi può essere pericoloso, utile e misterioso; prepararsi, ritirarsi e tornare sono strategie legittime.
+- Puoi rispondere alle sfide con combattimento, costruzione, equipaggiamento, ingegno, alchimia, automazione oppure combinazioni di questi approcci.
+- La potenza avanzata deve essere percepibile: QuantumSuit, Red Matter Armor e industria matura permettono di dominare rischi prima importanti.
+- La progressione verso l'End nasce da scoperte e fenomeni nel mondo, non da una lunga lista di ricette o miniboss obbligatori.
+- Il gioco conserva il senso di libertà, familiarità e mistero del Minecraft classico.
 
-## 2. Identità: cosa siamo e cosa non siamo
+## 2. Identità, selettività e controllo dello scope
 
-### Siamo
+### Siamo [DIREZIONE APPROVATA]
 
-- **Una sandbox survival-industriale**, con minacce crescenti e molte soluzioni valide.
-- **Una reinterpretazione rispettosa di Tekkit Classic**, non un totale cambio di genere.
-- **Un overhaul integrato**, in cui le meccaniche delle varie mod si incontrano e si potenziano a vicenda.
-- **Un'esperienza technical-light-friendly**: accessibile a chi ama creare qualche farm RedPower/EE2 e giocare con IC2, ma con profondità per chi desidera costruire impianti maggiori.
-- **Un Minecraft atmosferico e sistemico**: il mondo reagisce, il giocatore comprende i segnali e prende decisioni.
+- Una **sandbox survival-industriale**, non un percorso lineare di crafting.
+- Una reinterpretazione rispettosa di **Minecraft 1.2.5 e Tekkit Classic**, con estetica e interazioni riconoscibili.
+- Un **overhaul integrato**: il mondo dà nuovi significati alle mod già presenti.
+- Un'esperienza **technical-light-friendly**: profondità disponibile, complessità tecnica non obbligatoria.
+- Un gioco **atmosferico e sistemico**: il mondo reagisce, il giocatore osserva, interpreta e decide.
 
-### Non siamo
+### Non siamo [DIREZIONE APPROVATA]
 
-- Un quest pack con percorso obbligatorio di crafting.
-- Un GregTech più semplice: non vogliamo che la tecnologia diventi il contenuto principale e autosufficiente.
-- Un modpack *skyblock*, *stoneblock*, *oceanblock* o un'esperienza artificialmente confinata per forzare la progressione.
-- Un kitchen sink che accumula contenuti scollegati.
-- Un survival basato soltanto su mob con HP e danni moltiplicati.
-- Un gioco che punisce continuamente chi vuole costruire con calma.
-- Un sistema dove la difficoltà cresce indefinitamente in proporzione al tempo trascorso o alla ricchezza posseduta.
+- Un quest pack o una progressione a ricette forzate.
+- Un GregTech più accessibile, un kitchen sink o una collezione di prototipi senza una funzione comune.
+- Un survival di mob con HP e danno progressivamente moltiplicati.
+- Un mondo che punisce la lentezza, la creatività edilizia o le fabbriche grandi per il solo fatto di esistere.
+- Un'esperienza che richiede una base di forma predeterminata, marker di proprietà, macchine obbligatorie o percorsi unici.
+- Una Twilight Forest con una sequenza esplicita di miniboss, barre della salute e ricompense obbligate.
 
-**Test di identità:** se una feature aggiunge soltanto una nuova ricetta costosa, una nuova valuta, una nuova schermata o un requisito artificiale senza ampliare le possibilità del giocatore, probabilmente non appartiene al progetto.
+### Politica dei prototipi [DIREZIONE APPROVATA]
 
-## 3. Feeling e atmosfera
+**Il codice realizzato non conferisce automaticamente a una feature il diritto di rimanere nel prodotto.** I prototipi sono esperimenti, anche quando la loro implementazione è costata molto lavoro.
 
-### Familiarità prima della novità
+- **Distillazione frazionata:** [PROTOTIPO SOTTO REVISIONE]. La sua permanenza nell'esperienza finale è esplicitamente incerta.
+- **Advanced Crafting Table e crafting 5×5:** [PROTOTIPO SOTTO REVISIONE]. Il progetto non deve progettare nuove catene di ricette intorno alla griglia 5×5 come se fosse un requisito approvato.
+- **Foundry e altre grandi architetture industriali:** il valore va verificato rispetto al gameplay, non presunto dalla complessità tecnica.
+- Non cancellare silenziosamente blocchi, TileEntity, ID o NBT già presenti nei salvataggi. L'eventuale rimozione richiede un piano di compatibilità, migrazione o dismissione deliberata.
 
-Il primo impatto deve ricordare Minecraft 1.2.5 e Tekkit Classic: estetica riconoscibile, interfacce sobrie, esplorazione libera, scoperta casuale e costruzioni create con blocchi concreti. Le aggiunte moderne devono sembrare **evoluzioni naturali**, non l'importazione di un altro modpack.
+**Filtro di prodotto:** una feature deve rispondere alla domanda «Quale esperienza non potremmo ottenere in modo soddisfacente usando già Minecraft e Tekkit?». Una nuova macchina è giustificata quando offre una capacità concreta: per esempio un compressore IC2 che ricarica bombole e rende praticabile l'esplorazione subacquea.
 
-### Tensione intermittente, non stress continuo
+## 3. Feeling, atmosfera e narrazione
 
-Il mondo deve alternare **calma, esplorazione, preparazione, presagi, assedio e ripresa**. La tensione funziona se il giocatore ha tempo per anticiparla e comprenderla. Gli eventi più violenti devono essere telegraphed, con segnali leggibili e contromisure praticabili. La notte ordinaria non deve diventare sempre una luna piena.
+### Familiarità prima della novità [DIREZIONE APPROVATA]
 
-### Mistero dell'End
+Il primo impatto deve ricordare Minecraft 1.2.5. Interfacce sobrie, esplorazione libera, strutture di blocchi concreti, scoperte spontanee e nessuna esposizione narrativa obbligatoria. Nuove meccaniche devono sembrare evoluzioni naturali del mondo, non sistemi importati da un altro modpack.
 
-Gli Enderman sono il volto riconoscibile di una minaccia anomala: osservano, appaiono in luoghi inattesi, spostano blocchi, manipolano il territorio, talvolta si coordinano. L'inquietudine nasce da **comportamenti e conseguenze** più che da jumpscare, lore esplicita o statistiche enormi.
+### Tensione intermittente [DIREZIONE APPROVATA]
 
-L'End deve mantenere la sua estraneità e ambiguità. Non è necessario spiegare tutto, né stabilire immediatamente se gli Enderman siano semplicemente malvagi. Il drago e la dimensione dell'End costituiscono il punto di convergenza del percorso, con un omaggio al finale originale di Minecraft.
+Il mondo alterna **calma → esplorazione → presagi → preparazione → pericolo → recupero**. La difficoltà non è una pressione costante. Le notti ordinarie non devono equivalere tutte alla luna piena, ma neppure essere universalmente irrilevanti.
 
-### Narrazione ambientale
+### Narrazione non narrata [DIREZIONE APPROVATA]
 
-Preferire: strutture anomale, regioni alterate, rovine, segnali nella natura, incontri rari, comportamenti dei mob, effetti sulle basi, indizi che il giocatore collega da sé.
+Preferire fenomeni, comportamenti dei mob, anomalie ambientali, rovine, trasformazioni locali, tracce e conseguenze osservabili. Il giocatore collega indizi senza che il gioco debba annunciare «evento iniziato», «mini-boss» o «missione completata».
 
-Evitare: lunghi libri obbligatori, dialoghi espositivi, NPC che assegnano missioni sequenziali, lore che interrompe il gioco o spiega ogni mistero.
+**Gli eventi possono essere rigorosamente codificati internamente e restare misteriosi nell'interfaccia normale.** Gli strumenti diagnostici devono invece consentire agli sviluppatori di comprenderne cause, limiti e stato.
 
-## 4. I pilastri di game design
+Evitare esposizioni obbligatorie, lunghe sequenze di dialoghi, quest marker e barre boss introdotte soltanto per nominare un incontro.
 
-### 4.1 Libertà di approccio [DIREZIONE]
+### Mistero dell'End [DIREZIONE APPROVATA]
 
-La progressione è **aperta**, ma il mondo non è privo di pericoli. È legittimo che una regione o il boss finale siano praticamente proibitivi senza preparazione; non è legittimo imporre una sola macchina, un'unica armatura o una catena di crafting arbitraria come risposta.
+Gli Enderman e le anomalie nell'Overworld costituiscono un filo conduttore verso l'End, ma non devono essere spiegati completamente. Il drago è il punto di convergenza tematico, con un omaggio al finale originale del gioco.
 
-Per ogni ostacolo importante cercare più soluzioni: equipaggiamento, strategia, ingegneria ambientale, difesa, automazione, alleanze fra sistemi. Alcune capacità possono essere eccezionalmente utili senza diventare formalmente obbligatorie.
+## 4. Pilastri di game design
 
-### 4.2 Tecnologia come mezzo [DIREZIONE]
+### 4.1 Libertà di approccio [DIREZIONE APPROVATA]
 
-Una macchina deve rispondere a un bisogno del mondo: produzione, difesa, mobilità, approvvigionamento, controllo del territorio, esplorazione, sicurezza, gestione dell'energia. Sviluppare capacità tecniche dà libertà; non deve somigliare a un esame di ingegneria.
+La progressione può essere difficile e contenere luoghi praticamente proibitivi senza preparazione; non deve prescrivere un'unica armatura, macchina o ordine di attività. Per ogni ostacolo importante valutare più soluzioni ragionevoli: combattimento, equipaggiamento, costruzione, automazione, vie alternative, ingegneria ambientale, preparazione o ritirata.
 
-### 4.3 Fortezza del giocatore [DIREZIONE]
+**Attenzione:** più di un percorso non significa necessariamente che ogni risorsa sia disponibile ovunque. Una scoperta o una regione speciale può restare importante senza trasformare il gioco in una checklist.
 
-**La base fortificata è un elemento centrale e riconoscibile del loop di gioco.** Non prescriverne la forma: possono esistere un castello, un bunker, una fabbrica cinta da mura, una base sotterranea o un avamposto automatizzato.
+### 4.2 Tecnologia come mezzo [DIREZIONE APPROVATA]
 
-Le scelte edilizie devono avere conseguenze funzionali: accessi, barriere, illuminazione, percorsi, fossati, punti di fuoco, ridondanza energetica, aree vulnerabili. Il giocatore deve desiderare di migliorare la fortezza dopo un assedio, non essere costretto a ricostruire integralmente ciò che ha perso.
+Le macchine risolvono problemi e aprono possibilità: difesa, approvvigionamento, mobilità, esplorazione, ossigeno, energia, logistica e produzione utile. Non introdurre una nuova tecnologia soltanto per trasformare materiali già ottenibili in un ingrediente intermedio.
 
-### 4.4 Difficoltà significativa, non attrito [DIREZIONE]
+### 4.3 Fortezza e costruzione [DIREZIONE APPROVATA]
 
-La difficoltà giusta nasce da decisioni, rischi, tattica, conoscenza, risorse, progettazione e adattamento. Non da 200 click ripetuti, 864 componenti intermedi o continue operazioni di svuotamento degli inventari.
+La base fortificata è una possibilità centrale, non un obbligo formale. Castelli, bunker, case sugli alberi, caverne adattate, laboratori all'aperto e avamposti lontani devono essere tutti legittimi.
 
-**Eliminare i microcrafting non significa eliminare la necessità di pianificare una produzione.**
+Gli accessi, le barriere, i fossati, la posizione delle macchine, la luce, le trappole e i percorsi difensivi devono modificare realmente gli incontri. La protezione non deve dipendere esclusivamente dall'aver disseminato torce.
 
-### 4.5 Progressione di potenza percepibile [DIREZIONE]
+### 4.4 Difficoltà significativa [DIREZIONE APPROVATA]
 
-Un giocatore con armatura avanzata deve dominare minacce che prima erano pericolose. Evitare scaling globale che annulli ogni conquista. Le minacce di late game possono cambiare *tipo* di sfida — teletrasporto, sabotaggio, controllo del territorio, attacchi coordinati — senza rendere ogni zombie un boss.
+Difficoltà significa decisioni, rischio, tattica, conoscenza e adattamento, non spesa artificiale di risorse, distruzione indiscriminata o moltiplicatori infiniti di salute. Il giocatore avanzato deve diventare davvero potente; i problemi late game possono cambiare natura anziché limitarsi a numeri più grandi.
 
-## 5. Loop di gioco desiderato
+### 4.5 Scarsità significativa [DIREZIONE APPROVATA]
 
-**Esplora → scopri pericoli e risorse → torna e prepara la base → migliora strumenti/produzione/difese → affronta eventi → ottieni nuove possibilità → esplora più lontano.**
+Le risorse che rappresentano scoperte eccezionali possono essere intenzionalmente rare, non trasmutabili e associate a luoghi o eventi. La scarsità deve promuovere l'esplorazione, non il grinding ripetitivo né una catena di macchine obbligatorie.
 
-L'alternanza non deve essere forzata da quest. È il mondo a rendere desiderabile il passaggio da una fase all'altra.
+## 5. Loop di gioco e progressione
 
-### Progressione indicativa, non sequenza obbligatoria
+**Esplora → scopri rischi e risorse → prepara rifugi/equipaggiamento → costruisci o migliori difese e produzione → affronta nuovi pericoli → ottieni possibilità → esplora ancora.**
 
-- **Inizio:** sopravvivenza familiare, rifugio, primi esperimenti tecnici, anomalie rare.
-- **Early-mid:** prime farm e macchine, miglioramento della base, regioni che richiedono preparazione, incursioni contenute.
-- **Mid:** automazione più utile, difese efficaci, esplorazione di zone ostili, crescente attività dell'End.
-- **Late:** QuantumSuit, Red Matter e altre soluzioni potenti, grandi capacità produttive e difensive, preparazione alle minacce maggiori.
-- **Endgame:** accesso all'End più impegnativo, drago profondamente rielaborato, confronto finale che premi equipaggiamento e strategia.
+Questa sequenza descrive una dinamica emergente, non una quest line. Un giocatore può costruire molto, esplorare a lungo, usare poche macchine o privilegiare il combattimento.
 
-Queste etichette non devono trasformarsi in *gates* rigidi.
+- **Inizio:** rifugio, sopravvivenza familiare, prime notti diversificate e primi indizi anomali.
+- **Early-mid:** base e logistica più robuste, pattuglie, mobilità, esplorazione rischiosa ma accessibile.
+- **Mid:** difese e strumenti più sofisticati, luoghi insoliti, minacce con ruoli tattici.
+- **Late:** equipaggiamento potente, territori anomali, capacità di controllare il rischio e preparazione all'End.
+- **Endgame:** accesso all'End fondato su esplorazione significativa e affrontamento del drago rielaborato.
 
-## 6. Minacce, biomi e mob
+Queste etichette non sono livelli minimi rigidi e non autorizzano blocchi artificialmente «vietati finché non hai sbloccato X».
 
-### Biomi pericolosi [DIREZIONE]
+## 6. Mondo, biomi pericolosi e nemici
 
-Alcune regioni devono scoraggiare l'ingresso prematuro attraverso nemici, ambiente, visibilità, stato del territorio o altri rischi. Il giocatore deve poter tentare, comprendere perché è in difficoltà, ritirarsi e tornare preparato.
+### Regioni pericolose [DIREZIONE APPROVATA]
 
-**[PROPOSTA]** Zone glaciali con esigenze termiche, paludi contaminate, regioni segnate dall'End, aree con mob specializzati. Non sono definizioni definitive né un obbligo di introdurre sistemi survival complessi come fame/sete aggiuntive.
+Il mondo deve contenere luoghi che suggeriscano cautela e richiedano preparazione. Gli ostacoli devono essere leggibili, diegetici e aggirabili con ingegno, non muri invisibili di livello.
 
-**Regola:** evitare i muri invisibili basati su level gating. Preferire ostacoli diegetici e aggirabili creativamente.
+### Regione sottomarina anomala [PROPOSTA DA VALIDARE]
 
-### Enderman e varianti [DIREZIONE + PROPOSTE]
+Direzione creativa proposta dal project owner: una grande regione sottomarina con fauna ostile, possibili Enderman adattati all'ambiente e risorse/scoperte rilevanti anche per l'endgame.
 
-Ampliare il ruolo degli Enderman: furto di blocchi più significativo, apparizioni inquietanti, stalker occasionali, capacità di interferire con strutture e attacchi coordinati.
+- **Ossigeno:** bombole con riserva comprensibile e un compressore alimentato tramite IC2 per ricaricarle.
+- **Logistica:** possibilità di organizzare un piccolo punto di rifornimento presso il luogo d'esplorazione; non imporre necessariamente una grande fabbrica.
+- **Equipaggiamento:** valutare integrazione con armature esistenti e avanzate, evitando di invalidare automaticamente la QuantumSuit.
+- **Contenimento dello scope:** non aggiungere di default simulatori completi di pressione, decompressione, temperatura o altri bisogni fisiologici.
+- **Generazione:** [DECISIONE APERTA] vero bioma, struttura/regione speciale o altra soluzione compatibile con mondi nuovi ed esistenti.
 
-Possibili archetipi **[PROPOSTA]**: osservatore/stalker, razziatore, cacciatore, sabotatore, esemplare corrotto, araldo o coordinatore. Non trasformare ogni variante in un semplice aumento di HP.
+La bombola e il compressore sono esempi approvati come *motivazione di gameplay* per nuove tecnologie, non una specifica già definita.
 
-### Nemici per ruolo durante gli assedi [PROPOSTA]
+### Regione enderica distorta superficiale [PROPOSTA DA VALIDARE]
 
-- Fanteria per pressione numerica.
-- Assaltatori per porte e strutture vulnerabili.
-- Scalatori o aggiratori per rendere i muri semplici non infallibili.
-- Sabotatori/Enderman contro difese periferiche.
-- Supporti e nemici d'élite come priorità tattiche.
+Una regione dell'Overworld molto ostile, indicativamente mid/late game, caratterizzata da ambiente, segnali e comportamenti enderici anomali. Deve evocare l'End senza spiegarne tutto, offrendo scoperte utili all'endgame.
 
-Ogni nuova capacità nemica dovrebbe suggerire una contromisura leggibile e una nuova possibilità costruttiva.
+Non ridurla a un normale bioma con zombie più resistenti. Preferire teletrasporto, osservazione, alterazioni ambientali, rischi di posizione e incontri inconsueti.
 
-### Griefing controllato [DIREZIONE]
+### Altre grandi regioni [DECISIONE APERTA]
 
-Gli Enderman e gli assalitori possono rappresentare una minaccia concreta alle difese. Non devono distruggere indiscriminatamente macchinari costosi o cancellare ore di lavoro senza preavviso. Distinguere fra danno recuperabile, perdita significativa e distruzione irreversibile.
+Il numero di regioni speciali (per esempio quattro o cinque), le loro identità, l'ordine di scoperta e i materiali associati non sono definiti. Zone glaciali, paludi contaminate e altre idee precedenti restano ipotesi, non impegni.
 
-Le strategie di fortificazione e automazione devono essere premiate; nessuna difesa dovrebbe essere perfetta in ogni circostanza.
+### Enderman [DIREZIONE APPROVATA + PROPOSTE]
 
-## 7. Calendario lunare e assedi
+Ampliare il loro ruolo nel mondo: apparizioni insolite, osservazione, interferenze mirate, spostamento di blocchi, fenomeni locali e talvolta attacchi coordinati.
 
-### Sistema lunare [DIREZIONE]
+Archetipi come stalker, razziatore, cacciatore, sabotatore e varianti adattate a specifiche regioni rimangono [PROPOSTA DA VALIDARE]. Non trasformare ogni variante in semplice aumento di HP.
 
-La luna è il **segnale naturale** attorno al quale organizzare il ritmo di eventi e assedi. Minecraft 1.2.5 ha già fasi lunari: riutilizzare il più possibile la base vanilla e dotarla di servizi interni affidabili.
+### Ruoli ostili [PROPOSTA DA VALIDARE]
 
-**[PROPOSTA DI BASELINE]** Otto fasi in otto giorni Minecraft (circa 2 h 40 min a 20 TPS); nuovi mondi iniziano in luna nuova; luna piena come notte del principale evento ciclico. Il bilanciamento finale della frequenza resta aperto: non trattare la durata come dogma.
+Fanteria, assaltatori, aggiratori, supporti e sabotatori possono creare contromisure edilizie e tattiche differenti. Ogni comportamento significativo deve poter essere osservato e contrastato, senza distruggere gratuitamente le strutture.
 
-### Assedi [DIREZIONE]
+### Griefing controllato [DIREZIONE APPROVATA]
 
-Durante determinate notti devono presentarsi ondate ostili, inizialmente moderate e più avanti articolate. La luna piena può ospitare l'assedio principale; fasi intermedie possono contenere pattuglie, incursioni leggere e presagi. Gli assedi devono incentivare pianificazione, difesa della base e sperimentazione tecnologica.
+Minacce speciali possono interferire con difese e infrastrutture, ma evitare la distruzione irreversibile arbitraria di macchine costose e ore di costruzione. Distinguere danni recuperabili, conseguenze rilevanti e perdita permanente. L'eventuale sabotaggio deve essere anticipabile e tecnicamente limitato.
 
-**Importante:** il calendario definisce *quando* una finestra è possibile; un sistema separato deciderà *se*, *dove*, *quanto* e *con quali mob* si verifica un evento.
+## 7. Calendario lunare, notte e incontri ostili
 
-La difficoltà non deve aumentare all'infinito soltanto perché il giocatore costruisce lentamente. Valutare un modello che unisca cicli lunari, milestone significative e attività locale dell'End, con soglie e limiti. Non punire automaticamente la ricchezza o la dimensione della fabbrica.
+### Calendario [DIREZIONE APPROVATA]
 
-### Sonno, assenza, fuga [DA DECIDERE]
+La luna scandisce un ritmo naturale di rischio. Il sistema corrente utilizza otto fasi in otto giorni Minecraft; i nuovi mondi sono allineati alla luna nuova, e la prima luna piena corrisponde al **quinto giorno di gioco** contando il giorno iniziale come primo (indice logico 4). L'ottavo giorno è luna calante, non luna piena.
 
-Definire in modo esplicito la semantica delle notti saltate, delle basi abbandonate, del giocatore in esplorazione e dei server multiplayer. Un assedio non deve essere vanificato banalmente dal sonno né imprigionare il giocatore in un unico playstyle. Evitare punizioni offline non concordate.
+Non modificare l'allineamento o la persistenza dei mondi senza una decisione esplicita e una migrazione verificabile.
 
-### Architettura prevista [DIREZIONE]
+### Difficoltà durante l'intero ciclo [DIREZIONE APPROVATA]
 
-Separare almeno:
+**La luna piena è il picco, non l'unica notte pericolosa.** Le altre fasi devono contribuire a un'esperienza più ostile e variata rispetto a Minecraft/Tekkit originali, ma conservare periodi di recupero.
 
-1. **LunarService**: fasi e calendario.
-2. **LunarEvent API**: transizioni, notti, finestre temporali.
-3. **Threat/Progression System**: stato della minaccia, in futuro.
-4. **SiegeDirector**: selezione e gestione degli eventi, in futuro.
-5. **SpawnDirector**: composizione, spawn e comportamenti, in futuro.
-6. **Base/Defense Integration**: regole per difese e infrastrutture, in futuro.
+Il calendario determina *quando* un incontro può essere eleggibile. Altri sistemi stabiliranno *se*, *dove*, *con quali mob*, *con quali equipaggiamenti* e *con quale intensità*. Non usare la fase come un moltiplicatore automatico e universale di HP o danno.
 
-Il servizio lunare non deve conoscere tipi di mob, posizioni delle basi o formule di bilanciamento delle orde. Le API devono essere stabili, ma evitare di inventare infrastrutture generiche inutilmente complesse.
+**[STATO IMPLEMENTATIVO DA VERIFICARE]** Il repository contiene PLAYER_ASSAULT a luna piena e il backport dell'equipaggiamento; le pattuglie di primo quarto/gibbosa crescente sono documentate nella PR #25, la cui integrazione in `main` va verificata prima di citarle come release accettata. Equipaggiamento automatico degli spawn e minaccia territoriale non sono ancora da presumere implementati.
 
-## 8. Il ruolo della tecnologia nella difesa
+### Sonno e letto [DIREZIONE APPROVATA SULL'INTENTO; PROTOTIPO SUL COMPORTAMENTO]
 
-La fortezza deve essere un motivo per utilizzare IC2, RedPower e BuildCraft **insieme**, senza richiedere mega-fabbriche.
+Il letto deve conservare la funzione di **punto di respawn**. Il project owner è orientato a **rimuovere completamente il salto della notte tramite sonno**, affinché il ciclo di rischio non sia eludibile con un click.
 
-**[PROPOSTE]** Torrette o trappole alimentate, recinzioni elettrificate, sensori, allarmi, illuminazione difensiva, dispositivi anti-teletrasporto, reti Redstone/RedPower, approvvigionamento automatizzato di risorse e componenti.
+L'obiettivo è approvato come direzione progettuale; la semantica tecnica e il bilanciamento definitivo richiedono un prototipo verificato. La notte non deve obbligare a combattere continuamente: un rifugio e attività produttive tranquille devono restare possibilità valide.
 
-Le soluzioni manuali e semplici devono restare possibili. Un impianto industriale avanzato offre comodità, sicurezza, scala e nuove strategie, non l'unico modo per sopravvivere.
+**[DECISIONI APERTE]** Configurabilità per mondo, comportamento del letto in condizioni speciali, compatibilità con vecchi salvataggi, eventuali altre forme di avanzamento temporale, assenza del giocatore e futuro multiplayer. Non introdurre sistemi di fatica o bisogno di dormire senza approvazione.
 
-### Assedi come possibile opportunità [PROPOSTA]
+### PLAYER_ASSAULT e SITE_SIEGE [DIREZIONE APPROVATA]
 
-I mob speciali potrebbero rilasciare materiali utili. Un giocatore avanzato potrebbe costruire difese che rendono l'assedio non solo sopravvivibile ma, in modo controllato, **sfruttabile**. Fare attenzione a farm AFK ed exploit che annullino completamente il rischio.
+- **PLAYER_ASSAULT:** incontro temporaneo diretto alle vicinanze del giocatore, indipendente dal riconoscimento di una casa. Può avvenire durante esplorazione o presso una fortificazione.
+- **SITE_SIEGE:** futuro assedio a un luogo persistente riconosciuto come insediamento/avamposto. Non è un PLAYER_ASSAULT rinominato quando il giocatore è a casa.
 
-## 9. Economia ed Equivalent Exchange 2
+Non introdurre marker obbligatori, claim, letti o macchine richiesti per dichiarare una base. Il luogo bersaglio può restare significativo indipendentemente dalla posizione corrente del giocatore.
 
-### Problema da correggere [DIREZIONE]
+## 8. Luce, spawning e ambienti protetti
 
-La conversione universale tramite EMC, soprattutto se alimentata da farm di cobblestone o altre risorse banali, rischia di cancellare troppo presto il valore di miniere, esplorazione, produzione industriale e risorse rare. La Transmutation Table può diventare una scorciatoia che elimina interi sistemi di gameplay.
+### Sicurezza non riducibile alle torce [DIREZIONE APPROVATA]
 
-### Obiettivo [DIREZIONE]
+**Una distesa all'aperto illuminata da torce non dovrebbe diventare automaticamente immune a tutte le minacce ostili.** La luce deve restare utile per visibilità e difesa, ma non essere l'unico modo di garantire la sicurezza.
 
-**EE2 deve essere potente, divertente e progressivamente liberatoria, ma non deve rendere irrilevante il mondo già nell'early o early-mid game.** Non eliminarne la fantasia alchemica; regolarne l'accesso e l'ampiezza.
+La costruzione deve acquisire valore: muri, accessi, coperture, fossati, distanze e ostacoli influenzano il rischio.
 
-### Leve di bilanciamento [PROPOSTE, DA VALUTARE]
+### Regole di spawning [PROPOSTA DA VALIDARE]
 
-- Valori EMC rivisti per risorse facilmente automatizzabili.
-- Esclusioni o limitazioni EMC per componenti complessi, prodotti industriali e materiali narrativamente speciali.
-- Necessità di aver scoperto fisicamente un materiale prima di replicarlo; verificare e, se opportuno, estendere il meccanismo di apprendimento già presente in EE2.
-- Sblocco progressivo della capacità di trasmutazione per categorie o materiali specifici.
-- Eventuali catalizzatori per certe trasformazioni, **senza** creare una lunga catena di crafting obbligatoria.
-- Analisi delle interazioni EMC ↔ EU ↔ altri sistemi e relativi cicli di rendimento.
+Distinguere almeno:
 
-**Non assumere che tutte queste misure verranno applicate simultaneamente.** Prototipare prima la soluzione meno invasiva che mantenga la miniera e l'esplorazione rilevanti.
+- **Esterno illuminato:** possibile presenza di alcuni incontri o ruoli speciali, anche se la luce ordinaria scoraggerebbe spawn vanilla.
+- **Interno protetto:** evitare spawn arbitrari all'interno di rifugi validi.
+- **Grotta naturale:** non considerarla automaticamente un rifugio solo perché coperta.
+- **Caverna adattata a base:** permettere che possa diventare spazio protetto attraverso modifiche, accessi e uso reale.
+- **Perimetro:** i nemici possono avvicinarsi dall'esterno; non devono teletrasportarsi dentro per aggirare una buona architettura soltanto per soddisfare un budget.
+
+**[DECISIONE APERTA]** Quali spawn vanilla, lunari o speciali debbano ignorare parzialmente la luce; come determinare il livello di protezione; quali condizioni rendano un interno sicuro; come mantenere prestazioni e compatibilità legacy.
+
+Non implementare un classificatore universale di edifici come semplice correzione a una pattuglia che non riesce a generare mob. Preferire prototipi piccoli e misurabili, mentre la riconoscibilità territoriale viene sviluppata nella propria milestone.
+
+## 9. Attività territoriale, provenienza dei blocchi e insediamenti
+
+### Minaccia territoriale [DIREZIONE APPROVATA]
+
+Il rischio futuro potrà dipendere dall'attività locale, dal contesto ambientale e dalla progressione significativa, entro limiti, saturazione e decadimento. Non aumentare indefinitamente la difficoltà perché il giocatore rimane in casa o possiede una fabbrica enorme.
+
+- **Territorial Activity:** registra in modo parsimonioso visite e presenza, senza dichiarare una base.
+- **Threat Assessment:** combina informazioni territoriali e pericolo ambientale, mantenendo un'intensità locale limitata.
+- **Settlement Recognition:** interpreta segnali di attività e costruzione per riconoscere insediamenti senza forma prescritta.
+- **Encounter Director:** usa i segnali disponibili per scegliere incontri; SITE_SIEGE avrà un bersaglio diverso da PLAYER_ASSAULT.
+
+### Provenienza delle costruzioni [DIREZIONE APPROVATA COME SEGNALE DA STUDIARE]
+
+Il riconoscimento degli ambienti chiusi e delle basi deve valutare **anche, e potenzialmente soprattutto, se il territorio è stato modificato dal giocatore**, non soltanto forma e geometria.
+
+Minecraft 1.2.5 non conserva una provenienza universale, persistente e interrogabile per ogni blocco. Il tracciamento richiederebbe una soluzione ZTO dedicata e un audit dei punti di modifica del mondo, incluse le mod industriali.
+
+Distinguere concettualmente:
+
+1. Terreno naturale o non osservato.
+2. Blocchi piazzati o rimossi manualmente.
+3. Modifiche tramite automazione (BuildCraft/RedPower e altre mod, ove osservabili).
+4. Alterazioni ambientali o da mob.
+5. Provenienza sconosciuta, soprattutto nei vecchi salvataggi.
+
+**L'assenza di un record non prova che un blocco sia naturale.** Un mondo già costruito prima dell'introduzione del sistema avrà dati incompleti.
+
+La provenienza è un indizio, non una definizione: una grotta riadattata può essere un insediamento, e un muro isolato costruito dal giocatore potrebbe non esserlo.
+
+### Implementazione futura [DECISIONE APERTA]
+
+Valutare dati aggregati per regione, rappresentazioni compatte spaziali dei blocchi modificati oppure una combinazione. Evitare registri storici integrali per ogni blocco, costosi e poco utili. Non presumere che gli hook del pack intercettino automaticamente tutti i piazzamenti dei macchinari.
+
+Definire formato persistente, limiti dimensionali, gestione dei chunk, compatibilità con vecchi mondi, rimozioni/sostituzioni, automatismi, fallimenti di rilevazione e politiche di decadimento. Non generare o caricare chunk per calcolare l'attività.
+
+**Protected Interior** e **Settlement Identity** sono concetti distinti: un rifugio può non essere un insediamento e una base può contenere aree esterne non protette. Non confonderli in un unico booleano.
+
+## 10. Tecnologia, difesa e interoperabilità
+
+### Difesa [DIREZIONE APPROVATA]
+
+Fortificazioni e tecnologia devono fornire risposte a minacce concrete. Possibili strumenti [PROPOSTA DA VALIDARE]: sensori, allarmi, trappole alimentate, recinzioni elettrificate, torrette, dispositivi anti-teletrasporto, reti redstone/RedPower e rifornimento automatizzato.
+
+Le difese semplici devono rimanere valide. Una rete IC2/RedPower/BuildCraft può aumentare efficacia e comodità, ma non deve essere l'unica strategia praticabile.
+
+### Interoperabilità [DIREZIONE APPROVATA]
+
+Preferire collegamenti utili tra le mod già presenti a reti tecnologiche parallele. Valutare convertitori IC2 EU/Bluetricity/BuildCraft solo quando producono un vantaggio di gameplay convincente; non imporre un programma generale di conversione energetica.
+
+Per ogni macchina approvata valutare energia, inventari, tubi, redstone, NEI, EMC, automazione, salvataggi e impiego difensivo/esplorativo, **quando pertinenti**. Non è richiesto supportare ogni integrazione per principio.
+
+### Assedi come opportunità [PROPOSTA DA VALIDARE]
+
+Difese avanzate potrebbero consentire di sfruttare controllatamente gli eventi per ottenere ricompense. Evitare farm AFK che eliminino integralmente il pericolo.
+
+## 11. Economia, Equivalent Exchange 2 e scarsità
+
+### Ruolo di EE2 [DIREZIONE APPROVATA]
+
+EE2 deve rimanere potente e soddisfacente, ma non rendere irrilevanti troppo presto miniere, esplorazione, macchinari e risorse eccezionali. Non abolire l'alchimia e non imporre automaticamente un'economia nuova.
+
+### Leve possibili [PROPOSTA DA VALIDARE]
+
+Rivedere EMC di risorse facilmente automatizzabili, evitare loop EMC/EU/materiali, valutare esclusioni selettive o scoperte necessarie prima della replica. Nessuna nuova valuta, sistema di catalizzatori o lunga progressione di trasmutazione va aggiunta senza un preciso bisogno.
+
+### Ender Pearl ed Eye of Ender [DIREZIONE APPROVATA]
+
+**Ender Pearl ed Eye of Ender non devono essere duplicabili o prodotti liberamente attraverso EE2.** La protezione deve considerare anche percorsi indiretti, non soltanto il prezzo EMC esplicito. Verificare l'effettivo comportamento di EE2 1.4.6.5 nel pack e documentare ogni esclusione.
+
+L'economia speciale dell'End deve essere significativa senza moltiplicare materiali intermedi. Evitare di inventare una catena di lavorazione/stabilizzazione enderica come percorso predefinito: **il project owner preferisce la direzione in cui le perle stesse sono ritrovamenti rari**.
 
 ### Regola economica
 
-Gli scambi e le catene di crafting/conversione non devono generare risorse o energia dal nulla attraverso cicli involontari a rendimento netto positivo, quando questo rende inutile il resto della progressione. L'automazione ingegnosa è desiderata; i loop infiniti accidentali vanno corretti.
+Non introdurre cicli di conversione con rendimento positivo involontario che rendano superflua la progressione. L'automazione ingegnosa è benvenuta; la duplicazione accidentale di risorse di progressione non lo è.
 
-Distinguere fra risorsa naturale, ingrediente industriale, tecnologia costruita e materiale speciale. L'EMC può ridurre il bisogno di raccogliere ripetutamente qualcosa; non deve sostituire automaticamente ogni scoperta o lavorazione.
+## 12. L'End: perle rare, world flag e scoperta
 
-## 10. Integrazione fra mod ed energia
+### Accesso come esplorazione [DIREZIONE APPROVATA]
 
-### Interoperabilità [DIREZIONE]
+L'accesso all'End deve essere significativamente più impegnativo del normale farming degli Enderman, senza diventare una catena di lavorazioni industriali obbligatorie.
 
-Le mod già presenti devono dialogare. Il progetto non deve aggiungere sistemi paralleli chiusi quando può creare collegamenti significativi.
+**Direzione A approvata dal project owner:** le **Ender Pearl** sono risorse rare distribuite fra regioni speciali e fenomeni del mondo. Gli Enderman comuni non devono costituire una fonte ordinaria e illimitata di perle. L'ottenimento passa soprattutto da esplorazione, scoperte e condizioni ambientali/occorrenze eccezionali.
 
-Caso centrale: energia elettrica IC2 (EU) e sistema energetico RedPower 2 (Bluetricity). **[PROPOSTA]** Utilizzare convertitori o adapter dedicati anziché riscrivere il modello energetico interno di ogni mod. Preservare caratteristiche e identità dei sistemi.
+Non scegliere per default la proposta alternativa di «perla instabile da stabilizzare» o una ricetta multi-macchinario: è stata esplicitamente scartata come direzione preferita.
 
-Valutare anche interazioni con BuildCraft ed EE2. Conversioni e macchinari devono dichiarare chiaramente unità, capacità, costi e rendimento. Bloccare o correggere oggetti/ricette del pack originale soltanto quando necessario per evitare exploit, bypass gravi o contraddizioni sistemiche.
+### Disponibilità mondiale e world flag [DIREZIONE APPROVATA COME MODELLO]
 
-### Integrazione come comportamento predefinito
+Il project owner vuole esplorare un modello con un numero limitato di opportunità e una **riserva totale mondiale Y**, ripartita fra grandi regioni/biomi speciali (in numero ancora da decidere, indicativamente quattro o cinque).
 
-Ogni nuovo macchinario deve essere esaminato rispetto a:
+Le **world flag persistenti** rappresentano scoperte, ricompense già ottenute e condizioni concluse. Il gioco non deve esplicitare al giocatore questi flag tramite missioni, contatori o barre boss.
 
-- Energia: sorgenti, convertitori, limiti, rendimento.
-- Oggetti: slot, tubi, Hopper, modalità di input/output.
-- Ricette: consultazione in NEI e scoperte alternative.
-- Automazione: segnali Redstone/RedPower, logistica BuildCraft.
-- Economia: EMC, materiali duplicabili, possibili loop.
-- Difesa: eventuali applicazioni pratiche nella fortezza.
+Distinguere:
 
-L'integrazione non è obbligatoriamente con **tutti** i sistemi, ma le decisioni devono essere consapevoli e documentate.
+- Categoria di regione/bioma.
+- Istanza concreta di luogo, struttura o fenomeno.
+- Opportunità di ottenere perle e sua identità stabile.
+- Stato persistente dell'opportunità e vincoli sulla disponibilità mondiale.
 
-## 11. Crafting e Quality of Life
+Un bioma può comparire più volte; la semplice presenza di una nuova istanza del bioma non deve consentire di eludere il totale mondiale tramite esplorazione infinita.
 
-### Filosofia [DIREZIONE]
+**Non impostare numeri X/Y, percentuali o una struttura di salvataggio definitiva senza decisione del project owner.** La presenza di una world flag è una direzione di design, non un via libera per implementare un grande framework di quest nascosto.
 
-**Le interfacce devono ridurre il lavoro meccanico, non prendere decisioni creative al posto del giocatore.** Non importare ciecamente interfacce moderne; rispettare il linguaggio visivo della 1.2.5.
+### Rarità e rischio di mondo impossibile [DECISIONE APERTA]
 
-Riutilizzare e ampliare NEI e Inventory Tweaks già presenti. Gli agenti hanno a disposizione il codice decompilato nel workspace e devono verificarne i comportamenti prima di aggiungere funzioni duplicate.
+Il modello di disponibilità mondiale finita è intenzionale. Resta da scegliere come gestire distruzione, lava, morte, caduta nel vuoto, oggetti persi, perdita dei salvataggi, Eye of Ender consumati durante la ricerca e frame del portale.
 
-### Priorità funzionali [DIREZIONE]
+Valutare con il project owner se la disponibilità sia:
 
-- Trasferimento ricette tipo pulsante `+` JEI: ingredienti posseduti disposti automaticamente nella crafting grid compatibile.
-- Evidenza degli ingredienti mancanti, quantità disponibili e alternative valide.
-- Ripetizione del crafting e riempimento bilanciato per ridurre operazioni manuali.
-- Supporto pieno alle griglie personalizzate, inclusa la **5×5** del progetto.
-- Restituzione rapida degli ingredienti dalla griglia.
-- Navigazione chiara NEI fra ricette, utilizzi, alternative e lavorazioni industriali.
-- Input/output manuale rapido nei macchinari, con regole di slot rispettate.
-- Deposito corrispondenti (*Deposit Matching*), deposito/prelievo rapidi, slot protetti e consolidamento stack.
-- Auto-refill, sorting e scorciatoie coerenti con Inventory Tweaks, senza duplicarle.
-- Tooltip brevi sui macchinari: alimentazione, input/output, stato, ragioni dell'inattività.
-- Keybind configurabili e pulsanti discreti che non coprano GUI legacy.
+- **Rigidamente finita:** le perle scomparse restano perdute.
+- **Finita per scoperte con recupero condizionato:** le opportunità non aumentano, ma alcune perdite possono essere recuperate attraverso regole precise.
+- **Finita con eccezioni rare:** piccole fonti ulteriori in condizioni eccezionali.
 
-### Opzioni da valutare [PROPOSTA]
+**Nessuna di queste politiche è approvata come definitiva.** Non introdurre recupero automatico, item indistruttibili, duplicazione nascosta o nuove fonti indefinite per «risolvere» il problema senza una scelta esplicita.
 
-Preferiti e cronologia NEI, liste materiali, quantità craftabili, ricerca nei container, crafting da chest adiacenti, calcolo ricorsivo degli ingredienti.
+### Eventi narrativi invisibili [DIREZIONE APPROVATA]
 
-Le ultime due richiedono particolare cautela: non devono cancellare il valore della logistica, dell'organizzazione degli inventari e dell'automazione industriale.
+Gli avvenimenti che permettono scoperte possono essere programmati in modo rigoroso, senza essere annunciati come quest o miniboss. Possono manifestarsi attraverso comportamento di creature, cambiamenti ambientali, luoghi particolari o eventi rari.
 
-### Backport vanilla [DIREZIONE]
+Non introdurre boss bar, UI di missioni o una sequenza Twilight Forest-like per amministrare la progressione.
 
-Introdurre gli **Hopper** moderni nella 1.2.5, con comportamento comprensibile e integrazione nei container del pack. Devono convivere con BuildCraft Pipes e RedPower Tubes: Hopper per automazione semplice e locale, sistemi delle mod per trasporto e logistica più elaborata. Valutare altri backport/QoL caso per caso, non come checklist di tutte le feature moderne.
+### Drago [DIREZIONE APPROVATA]
 
-### Indicazioni in gioco [DIREZIONE]
+Il combattimento finale deve essere profondamente più interessante del vanilla: fasi o situazioni differenziate, movimento, gestione dello spazio, cristalli/strutture e comportamento tattico. Non basta aumentare HP e danno. La meccanica precisa e le conseguenze narrative della vittoria restano [DECISIONE APERTA].
 
-Achievement/advancement come sistema leggero di **orientamento e scoperta**, non quest obbligatorie. Crafting visibili, tooltip chiari, macchinari autoesplicativi per quanto possibile. Niente libri-manuale lunghissimi né percorsi lineari prescritti.
+## 13. Crafting, inventari e qualità della vita
 
-## 12. L'End e il finale
+### Filosofia [DIREZIONE APPROVATA]
 
-### Il finale come omaggio [DIREZIONE]
+Le interfacce devono ridurre il lavoro meccanico senza sostituire le scelte creative. Preservare l'estetica e le convenzioni del Minecraft 1.2.5 e compatibilità con NEI/Inventory Tweaks.
 
-L'End originale di Minecraft è il riferimento tematico centrale. La presenza degli Enderman nell'Overworld deve rendere la dimensione finale una scoperta preparata da ore di eventi e anomalie.
+Priorità di QoL includono: trasferimenti ricetta quando sensati, indicazione ingredienti mancanti, rifornimento rapido, regole di slot rispettate, auto-refill, sorting, deposito corrispondenti, navigazione NEI e tooltip essenziali, evitando duplicazioni di sistemi modded già presenti.
 
-L'accesso all'End deve diventare più impegnativo di una semplice ripetizione del procedimento vanilla, ma evitare di richiedere una fabbrica industriale monumentale o ricette spropositate. **L'End deve richiedere preparazione e versatilità, non lavoro amministrativo.**
+### Equipaggiamento rapido [PROPOSTA CONCRETA]
 
-### Proposte di progressione [PROPOSTA]
+**Shift + Click su un pezzo d'armatura nell'inventario** dovrebbe equipaggiarlo direttamente se lo slot compatibile è libero, invece di mandarlo di norma nella hotbar. Se non applicabile, conservare il comportamento atteso del container. La politica di sostituzione dell'armatura già indossata è [DECISIONE APERTA]; non effettuare swap distruttivi o incontrollati.
 
-- Indizi distribuiti nel mondo e nelle Stronghold.
-- Regioni o strutture pericolose che contengono conoscenze/materiali utili.
-- Possibili interazioni tecnologiche o alchemiche nella stabilizzazione/attivazione del portale.
-- Diverse soluzioni plausibili, non un unico percorso di macchinari imposto.
+### Backport e griglie personalizzate
 
-### Drago [DIREZIONE]
+Hopper e altri QoL backport possono avere valore autonomo. **Non trattare la griglia 5×5 come requisito di prodotto**: il crafting avanzato resta [PROTOTIPO SOTTO REVISIONE]. Nuove ricette devono preferire le possibilità esistenti, evitando di rendere necessarie GUI aggiuntive senza beneficio dimostrabile.
 
-La battaglia deve essere significativamente più impegnativa e spettacolare: fasi differenziate, pressione di altri nemici, interazione con cristalli/strutture, necessità di movimento e strategia. **Non limitarsi ad aumentare HP e danni.** Gli oggetti di tier alto devono essere utili senza rendere automaticamente banale l'intero incontro.
+### Orientamento senza quest [DIREZIONE APPROVATA]
 
-La natura esatta del drago, le meccaniche delle fasi e le conseguenze della vittoria restano **[DA DECIDERE]**.
+Tooltip e informazioni essenziali possono spiegare un comando o una macchina; scoperta del mondo ed eventi restano prevalentemente impliciti. Eventuali achievement devono orientare, non prescrivere.
 
-## 13. Progressione e difficoltà: regole di bilanciamento
+### Vegetarian Locke [PROPOSTA A PRIORITÀ BASSA]
 
-1. **Niente scaling infinito dei mob comuni.** Le zone iniziali devono diventare realmente più facili dopo una crescita significativa.
-2. **Niente punizioni automatiche per la creatività.** Una fabbrica grande non deve attirare assedi ingestibili solo perché è grande.
-3. **Difese efficaci, non invincibili.** Ogni attacco speciale deve poter essere previsto o contrastato in modo comprensibile.
-4. **Perdita proporzionata.** Una notte difficile può consumare risorse o danneggiare difese; non dovrebbe distruggere arbitrariamente ore di lavoro.
-5. **Esplorazione sempre utile.** Limitare la capacità dell'EMC di sostituire subito ogni risorsa rara o speciale.
-6. **Tecnologia non obbligatoriamente massimizzata.** Un technical player leggero deve poter affrontare il cuore del gioco con una base ben pensata e una selezione ragionevole di macchine.
-7. **Sfide multidimensionali.** Più tattiche e interazioni sistemiche, meno semplici moltiplicatori numerici.
-8. **Nessuna grind wall artificiale.** Costi e ricette devono avere una giustificazione di gameplay.
-9. **Feedback leggibile.** Il giocatore deve capire almeno in modo approssimativo cosa lo ha sconfitto e cosa potrebbe fare diversamente.
-10. **Ricompensa della preparazione.** Una base e un equipaggiamento migliori devono produrre benefici tangibili.
+Possibile modalità opzionale basata su alimentazione vegetale e assenza di uccisione di animali, con semi, piante e ricette coerenti con Tekkit. Una piccola macchina alimentare IC2/BuildCraft è giustificabile solo se risolve un problema reale; non introdurre un'industria culinaria generalizzata.
 
-## 14. Linee guida architetturali trasversali per gli agenti
+**[DECISIONI APERTE]** modalità volontaria o vincolo applicato dal gioco, regole sugli animali, selezione alla creazione del mondo, compatibilità con salvataggi e ricette. Non anticipare l'implementazione.
 
-### 14.1 Non costruire scatole chiuse
+## 14. Bilanciamento e progressione della minaccia
 
-Ogni feature va sviluppata con il suo contesto di integrazione, anche quando non si implementano ancora i collegamenti futuri. Separare la logica centrale dai consumatori e fornire API/interfacce appropriate, senza sovra-ingegnerizzare.
+1. **Non tutti i giorni sono uguali.** La luna piena rappresenta un culmine; fasi intermedie e mondo ordinario contribuiscono alla minaccia.
+2. **No scaling infinito.** Le zone iniziali devono diventare realmente più facili grazie a equipaggiamento e conoscenza.
+3. **Difficoltà locale, non ricchezza punita.** La presenza prolungata può essere un segnale; grandezza della fabbrica e età del mondo non devono creare automaticamente orde incontrollabili.
+4. **Composizione prima dei numeri.** Mob con ruoli, armature, armi, tattiche e condizioni ambientali interessanti prevalgono sui semplici aumenti di HP/danno.
+5. **Limiti rigorosi.** Mob attivi, tentativi, scansioni, tempi ed effetti sul mondo devono essere limitati e osservabili.
+6. **Preparazione premiata.** Torce, costruzioni, equipaggiamento e macchine offrono vantaggi misurabili, senza garantire invulnerabilità universale.
+7. **Griefing controllato.** Le perdite strutturali non devono annullare arbitrariamente ore di lavoro.
+8. **Esplorazione significativa.** Le risorse rare non devono diventare banali attraverso EMC o farm ripetitive.
+9. **Difficoltà leggibile.** Per il giocatore cause e contromisure devono essere intuibili; per lo sviluppatore, diagnostiche e test devono essere espliciti.
+10. **Tensione e respiro.** Anche senza salto della notte, devono esserci periodi in cui costruire, pianificare e recuperare in tranquillità.
 
-Prima di implementare una feature, chiedersi:
+## 15. Architettura e vincoli per agenti
 
-- Quali sistemi già presenti la utilizzano o la influenzano?
-- Quali sistemi futuri potrebbero ascoltare i suoi eventi o interrogare il suo stato?
-- Quali regole di compatibilità, automazione o economia vengono toccate?
-- Come può essere testata da sola e in integrazione?
-- Quale comportamento resta valido se il modulo futuro non esiste ancora?
+### Confini di responsabilità [DIREZIONE APPROVATA]
 
-### 14.2 Confini consigliati
+- **LunarService:** fasi, transizioni e finestre temporali; non conosce insediamenti, mob o loot.
+- **Encounter/SiegeDirector:** sceglie e gestisce incontri; PLAYER_ASSAULT, pattuglie e futuro SITE_SIEGE hanno identità distinte.
+- **Spawn/AI:** gestisce posizione, validazione, popolazione e comportamento, senza ricalcolare autonomamente tutta la minaccia.
+- **Territorial Activity / Threat Assessment:** future autorità per segnali locali e intensità, non sistemi UI o calendario duplicato.
+- **Settlement Recognition / Block Provenance:** futuri strumenti per riconoscere spazi e insediamenti, senza dichiarare obbligatori letti, porte o marker.
+- **Economia, EMC ed energia:** verificano conversioni e scarsità; non impongono catene di nuove macchine senza ragione.
+- **UI e Dev Bridge:** osservano e presentano lo stato; non diventano autorità di gameplay.
 
-- **Calendario lunare** informa dei tempi, non genera mob.
-- **Direttore degli assedi** decide eventi e obiettivi, non reimplementa il calendario.
-- **Sistema spawn/AI** esegue regole di spawning e comportamento, non calcola da sé la progressione globale.
-- **Sistema minaccia** aggrega segnali di progressione e attività locale, non possiede le GUI.
-- **Economia/EMC/energia** gestisce conversioni e vincoli, non hardcoda le difese.
-- **Integrazione inventari/ricette** riutilizza container e recipe handler delle mod, senza duplicare i motori di crafting.
-- **Interfacce** presentano stato e comandi, ma non sono autorità di gameplay.
+Non costruire API speculative o infrastrutture generiche prima di aver validato almeno un consumatore reale.
 
-### 14.3 Compatibilità e qualità
+### Compatibilità
 
-- Verificare sempre le API reali e il codice **Minecraft 1.2.5**, evitando assunzioni prese da versioni moderne.
-- Rispettare salvataggi preesistenti e prevedere migrazioni idempotenti.
-- In multiplayer, il server è autorevole per spawn, risorse, inventari, eventi e progressione.
-- Nessuna duplicazione di oggetti né cicli di energia/EMC involontariamente positivi.
-- Preferire adapter, eventi e integrazioni ai fork invasivi delle mod legacy, salvo necessità motivata.
-- Non introdurre polling costoso, scansioni indiscriminate dei chunk o ricalcoli per tick senza necessità.
-- Ogni nuova GUI deve convivere con NEI, Inventory Tweaks e i container del pack.
-- Implementare feature piccole con test di regressione, non refactor massivi non richiesti.
+- Verificare sempre le vere API di Minecraft 1.2.5 / Tekkit Classic 3.1.2, non assumere meccaniche moderne.
+- Mantenere la distinzione fra profilo di compilazione MCP/Forge e runtime del pack installato.
+- Proteggere blocchi, Item ID, TileEntity, NBT e salvataggi preesistenti; pianificare migrazioni idempotenti.
+- Evitare sostituzioni invasive di classi vanilla/modded e conflitti con NEI/Inventory Tweaks.
+- Non effettuare scansioni costose, chunk load forzati o work per tick non limitato.
+- Il gameplay singleplayer può essere la prima implementazione; il multiplayer futuro richiederà autorità server e sincronizzazione appropriate, senza pretendere supporto già verificato.
+- Distinguere prove portabili, compilazione, runtime Tekkit Dev e playtest umano. Non presentare un test automatico come prova di bilanciamento soggettivo.
 
-## 15. Come decidere se una nuova feature è coerente
+## 16. Roadmap strategica e release
 
-Per ogni proposta, l'agente o lo sviluppatore deve poter rispondere a queste domande:
+**[DIREZIONE APPROVATA]** La linea `0.1.0-alpha.N` può contenere diverse feature e prototipi di gameplay. Passare a `0.2`, `0.3` e oltre quando si affrontano grandi architetture o sistemi, non soltanto per aver aggiunto un nuovo mob.
 
-1. **Quale problema di gioco risolve?** Non basta che sia tecnicamente interessante.
-2. **Quale possibilità nuova introduce?** Non deve essere solo un nuovo requisito.
-3. **Quale libertà conserva?** Può il giocatore scegliere un'altra strada?
-4. **Quale attrito elimina o aggiunge?** I click ripetuti non sono profondità.
-5. **Come interagisce con le mod esistenti?** Energia, oggetti, automazione, crafting, EMC.
-6. **Come interagisce con il loop di fortezza/esplorazione/minaccia?** Anche un legame indiretto può essere valido.
-7. **Quali exploit apre?** Soprattutto conversioni cicliche, transfer inventory e farm AFK.
-8. **Come comunica le sue regole?** Preferire affordance e feedback in gioco a manuali obbligatori.
-9. **È coerente col feeling legacy?** Interfaccia, ritmo, estetica, libertà.
-10. **È testabile e reversibile?** Favorire sviluppo incrementale e compatibilità con i mondi.
+| Linea | Tema strategico |
+| --- | --- |
+| **0.1 — Survival Foundations** | Calendario, PLAYER_ASSAULT, pattuglie, equipaggiamento dei mob, primi ruoli tattici, revisione ragionata di luce/spawn, prototipo sonno e prime difese. |
+| **0.2 — Territorial Activity & Threat** | Segnali territoriali, heatmap limitate, valutazione locale della minaccia e intensità/composizione degli incontri. |
+| **0.3 — Settlement Recognition** | Riconoscimento di insediamenti e avamposti, valutando provenienza delle modifiche, attività e contesto edilizio. |
+| **0.4 — SITE_SIEGE & Fortress Warfare** | Assedi reali a siti persistenti, obiettivi tattici, difese e griefing controllato. |
+| **0.5 — Dangerous Exploration** | Prime grandi regioni ostili, possibili aree sottomarine ed enderiche, preparazione e scoperte. |
+| **0.6 — Industrial Integration** | Revisione selettiva di macchine, EMC e interoperabilità, soltanto dove supportano il gioco. |
+| **0.7 — The End Awakens** | Fenomeni enderici, distribuzione delle perle, world flag e percorso narrativo ambientale verso l'End. |
+| **0.8 — Endgame & Dragon** | Accesso all'End, drago rielaborato, sfide e ricompense finali. |
+| **0.9 — Integration & Balance** | Bilanciamento trasversale, compatibilità, prestazioni, progressione e rifinitura. |
+| **1.0 — Complete Overhaul** | Prima esperienza survival-industriale coerente e consolidata dall'inizio all'End. |
 
-**Regola di veto:** se una soluzione riduce la libertà senza produrre un miglioramento significativo in atmosfera, profondità o leggibilità, deve essere riprogettata.
+**La roadmap indica il sistema protagonista di ogni linea, non vieta prototipi anticipati o manutenzione trasversale.** Non trasformare questa tabella in impegni di consegna o feature già implementate. Rimane applicabile la politica di versioning in `docs/agents/VERSIONING_POLICY.md`.
 
-## 16. Roadmap tematica, non lista di impegni già completati
+## 17. Decisioni aperte — Registro esplicito
 
-### Fondazioni e interfacce
+Gli agenti non devono risolvere unilateralmente queste questioni; possono utilizzare default locali conservativi per un prototipo, documentandoli come tali.
 
-- [ ] Audit delle funzionalità esistenti e del loro stato nel repository.
-- [ ] QoL NEI/Inventory Tweaks e crafting 5×5.
-- [ ] Hopper vanilla e interoperabilità con inventari modded.
-- [ ] Informazioni in gioco essenziali e achievement non prescrittivi.
+### End e risorse
 
-### Sistemi del mondo
+- Numero e identità delle grandi regioni speciali; eventuali biomi alternativi.
+- Numero **X** di Ender Pearl associato a ciascuna regione e limite totale **Y** per mondo.
+- Metodo per associare world flag a istanze di luoghi, scoperte o fenomeni e per impedire duplicazioni o bypass tramite nuove generazioni di biome.
+- Quantità di riserva necessaria per Eye of Ender, ricerca dello stronghold, perdita di occhi e completamento del portale.
+- Perdite irreversibili, recupero condizionato o rarissime eccezioni alla riserva finita.
+- Rimozione dei drop ordinari degli Enderman: eccezioni, compatibilità con vecchi mondi e alternative di ottenimento.
+- Politica esatta di esclusione EE2 e audit dei percorsi di conversione indiretti.
+- Regole e contenuti degli eventi enderici nascosti; drago e conseguenze della vittoria.
 
-- [ ] Calendario lunare persistente e visibile.
-- [ ] API di eventi temporali e finestre per futuri assedi.
-- [ ] Progressione della minaccia separata dal calendario.
-- [ ] Assedi e ruoli tattici dei mob.
-- [ ] Difesa della fortezza e interazioni con le macchine.
-- [ ] Biomi ostili e anomalie legate all'End.
+### Sopravvivenza e insediamenti
 
-### Economia e interoperabilità
+- Parametri reali della pressione lunare e comportamento nelle notti intermedie.
+- Regole precise di luce e spawning in spazi aperti, grotte, rifugi e regioni speciali.
+- Metodo tecnico per distinguere un interno protetto da una grotta o da una costruzione incompleta.
+- Interazione fra provenienza dei blocchi, attività territoriale, forma degli spazi e riconoscimento di una base.
+- Granularità e persistenza del tracciamento delle modifiche, comprese quelle effettuate da automazione modded.
+- Formula della minaccia locale, decadimento, saturazione, limiti e comportamento nei mondi esistenti.
+- Semantica definitiva del divieto di salto notturno, opzioni per mondo e futura compatibilità multiplayer.
+- Entità e gravità dei danni consentiti alle costruzioni durante SITE_SIEGE.
 
-- [ ] Bilanciamento EE2 e persistenza del valore dell'esplorazione.
-- [ ] Audit dei cicli EMC/EU/materiali e delle ricette exploitabili.
-- [ ] Integrazione sensata fra energia IC2 e RedPower.
-- [ ] Revisione dei colli di bottiglia di crafting inutilmente ripetitivi.
+### Tecnologia, contenuti e QoL
 
-### Endgame
-
-- [ ] Varianti e comportamenti Enderman.
-- [ ] Indizi ambientali e contaminazione dell'Overworld.
-- [ ] Revisione dell'accesso all'End.
-- [ ] Battaglia del drago multi-fase.
-- [ ] Bilanciamento delle ricompense e della fantasia di potenza endgame.
-
-**Nota:** le caselle sono aree progettuali, **non** una dichiarazione dello stato reale del codice e non impongono quest'ordine di sviluppo.
-
-## 17. Decisioni ancora aperte
-
-Da risolvere con prototipi o scelte esplicite del project owner:
-
-- Durata definitiva del ciclo lunare e frequenza degli assedi intermedi.
-- Formula della progressione della minaccia, suoi cap e comportamento in multiplayer.
-- Come identificare una base senza imporre una struttura prestabilita.
-- Conseguenze dell'assenza del giocatore o del sonno durante gli assedi.
-- Livello ammesso di danno alle costruzioni e protezione dei macchinari.
-- Quali biomi diventano ostili e con quali pericoli specifici.
-- Come limitare EE2: valori EMC, blacklist, progressione alchemica, catalizzatori o combinazioni moderate.
-- Politica delle conversioni EU/Bluetricity/EMC e relative efficienze.
-- Esatta difficoltà e pluralità di percorsi per raggiungere l'End.
-- Meccaniche dettagliate del drago e conseguenze narrative della vittoria.
-- Limiti del crafting da inventari esterni e di altre QoL avanzate.
-
-Un agente **non deve risolvere tacitamente** queste scelte implementando la prima soluzione che trova comoda. Per proseguire su una feature circoscritta, può usare default conservativi, documentandoli come provvisori.
+- Permanenza, dismissione o rimozione definitiva di distillazione frazionata, crafting 5×5 e altri prototipi industriali.
+- Quali nuove difese tecnologiche siano effettivamente necessarie e a quali minacce debbano rispondere.
+- Dettagli della regione sottomarina: ossigeno, ricarica, armature e generazione del mondo.
+- Dettagli della regione enderica e ruolo degli Enderman specifici.
+- Eventuali nuove conversioni energetiche e loro economie, senza obbligo di introdurle.
+- Politica di Shift + Click per armatura già indossata e interferenze con container modded.
+- Vegetarian Locke: attivazione, vincoli e minima quantità di nuove colture/cibo.
 
 ## 18. Istruzioni permanenti per gli agenti LLM
 
-Quando lavori su ZedsTekkitOverhaul:
+Prima di proporre o implementare una feature:
 
-1. **Leggi questo documento prima di proporre architetture o cambiamenti al gameplay.**
-2. Leggi poi la specifica della feature corrente e il codice effettivamente presente nel workspace.
-3. Tratta questa visione come vincolo di prodotto; **non** presumere che ogni feature descritta esista già.
-4. Distingui intenzioni confermate, proposte e decisioni aperte.
-5. Preferisci meccaniche sistemiche, leggibili e integrate a sistemi isolati.
-6. Non introdurre grinding, quest obbligatorie, UI invasive o gating senza una motivazione forte e approvata.
-7. Prima di scrivere codice, identifica le integrazioni con NEI, Inventory Tweaks, RedPower, EE2, IC2, BuildCraft e i sistemi già aggiunti, **quando pertinenti**.
-8. Prevedi contratti ed eventi per le integrazioni future, ma non implementare anticipatamente sottosistemi enormi.
-9. Mantieni multiplayer, persistenza, compatibilità legacy e performance come requisiti di base.
-10. Nel report finale, spiega **cosa hai implementato, cosa hai deliberatamente lasciato fuori e come la soluzione si allinea a questa visione**.
+1. Leggi **integralmente** questo documento, `AGENTS.md` e le specifiche pertinenti.
+2. Verifica cosa esiste davvero nel branch corrente: **una direzione di design non è un'implementazione**.
+3. Classifica l'intervento: [DIREZIONE APPROVATA], [PROPOSTA DA VALIDARE], [DECISIONE APERTA] oppure [PROTOTIPO SOTTO REVISIONE].
+4. Non convertire automaticamente una proposta in requisito: chiedi una decisione quando la scelta è strutturale o irreversibile.
+5. Preferisci modificare e integrare meccaniche già presenti a creare nuove risorse, macchine, GUI o economie.
+6. Evita quest obbligatorie, grind wall, sistemi di progressione espliciti non richiesti e catene di crafting artificiali.
+7. Mantieni distinti PLAYER_ASSAULT, SITE_SIEGE, calendario, minaccia territoriale, provenienza blocchi e identità degli insediamenti.
+8. Preserva varietà delle soluzioni, potere effettivo dell'equipaggiamento avanzato e momenti di calma.
+9. Verifica il vero runtime legacy e proteggi la compatibilità dei salvataggi; non cancellare una feature prototipale senza valutare le conseguenze.
+10. Mantieni compatti commit e PR, test mirati e prove riproducibili. Non presentare supposizioni come risultati osservati.
+11. Nel report spiega il valore di gameplay, le integrazioni, i rischi, le decisioni lasciate aperte e le funzionalità deliberatamente escluse.
+12. **Non fare lavoro perché la feature è già stata iniziata: fallo perché serve all'esperienza di gioco.**
+
+## 19. Criteri per accettare una nuova feature
+
+Una proposta deve superare queste domande:
+
+1. Quale problema di gameplay, esplorazione, costruzione o atmosfera risolve?
+2. Può essere risolto integrando meglio una meccanica Tekkit già presente?
+3. Introduce una possibilità reale o soltanto una nuova ricetta/barriera?
+4. Il giocatore può scegliere più di una risposta ragionevole?
+5. La scoperta rimane interessante senza una quest esplicita?
+6. Conserva il senso di potenza del progresso tecnologico?
+7. Rispetta costruzioni, salvataggi e tempo investito dal giocatore?
+8. La difficoltà resta leggibile e proporzionata?
+9. I sistemi di EE2, inventari, energia e automazione potrebbero aggirarla o duplicarla?
+10. Ha un perimetro testabile e può essere rimossa senza danni se il prototipo fallisce?
+
+**Regola di veto:** se una soluzione aumenta soprattutto la complessità e non amplia in misura convincente possibilità, tensione, atmosfera o scoperta, va semplificata oppure scartata.
 
 ---
 
 ## Sintesi in una frase
 
-> **Una Tekkit Classic fedele al suo spirito di libertà, dove la tecnologia rende possibili grandi imprese, la fortezza ha finalmente una ragione d'esistere, il mondo oppone una sfida reale e il mistero dell'End dà significato alla progressione — senza quest obbligatorie, grinding artificiale o microcrafting inutile.**
+> **Una Tekkit Classic fedele alla propria libertà, dove il mondo è abbastanza vivo e ostile da dare significato alla tecnologia e alle fortificazioni, l'esplorazione custodisce risorse e misteri davvero preziosi, e l'End diventa il culmine di una storia che il giocatore ricostruisce senza che il gioco gliela racconti — senza quest obbligatorie, grinding artificiale o un accumulo indiscriminato di nuovi sistemi.**

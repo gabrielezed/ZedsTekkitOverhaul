@@ -14,7 +14,7 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
-/** One local player encounter. All methods run on the owning simulation thread. */
+/** Local player-vicinity encounters. All methods run on the owning simulation thread. */
 public final class SiegeDirector implements LunarService.Listener {
     public enum State { IDLE, ACTIVE, RESOLVED, ABORTED }
     public enum Eligibility {
@@ -32,6 +32,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private final int activeCap;
     private final int outerRadius;
     private final SpawnController spawns;
+    private final LunarPatrol patrol;
     private final List<Spawn> evidence = new ArrayList<Spawn>();
     private final List<TrackedMob> tracked = new ArrayList<TrackedMob>();
     private AssaultWave[] waves = AssaultWave.plan(0);
@@ -52,22 +53,30 @@ public final class SiegeDirector implements LunarService.Listener {
     private int unloaded;
     private int starts;
     private int difficulty;
-    public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius) {
+    public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius,
+                         boolean patrolEnabled) {
         this.enabled = enabled;
         this.budget = Math.max(1, Math.min(24, budget));
         this.interval = Math.max(400, Math.min(1200, interval));
         this.activeCap = Math.max(2, Math.min(12, activeCap));
         this.outerRadius = Math.max(14, Math.min(28, outerRadius));
         spawns = new SpawnController(this.outerRadius);
+        patrol = new LunarPatrol(patrolEnabled);
     }
 
     public void bind(World incoming, LunarService service) {
+        if (world != null) {
+            String cause = incoming != null && world.worldProvider.worldType != incoming.worldProvider.worldType
+                    ? "DIMENSION_CHANGED" : "WORLD_UNLOADED";
+            patrol.interrupt(world.getWorldTime(), cause, diagnostics);
+        }
         if (diagnostics != null) {
             if (state == State.ACTIVE) diagnostics.assault(world.getWorldTime(), "Interrupted by world change");
         }
         if (lunar != null) lunar.unsubscribe(this);
         world = incoming;
         lunar = service;
+        patrol.reset();
         storage = null;
         pending = null;
         target = null;
@@ -79,7 +88,9 @@ public final class SiegeDirector implements LunarService.Listener {
         waveIndex = localHostiles = -1;
         spawns.rejection = null;
         reason = !enabled ? "DISABLED" : "NO_OVERWORLD";
-        if (!enabled || world == null || lunar == null || world.isRemote || world.worldProvider.worldType != 0) return;
+        if (world == null || lunar == null || world.isRemote || world.worldProvider.worldType != 0) return;
+        if (patrol.enabled) lunar.subscribe(this);
+        if (!enabled) return;
         storage = AssaultWorldState.load(world);
         if (storage == null) {
             reason = "STORAGE_UNAVAILABLE";
@@ -105,6 +116,8 @@ public final class SiegeDirector implements LunarService.Listener {
 
     @Override
     public void onLunarEvent(LunarEvent event) {
+        if (patrol.enabled) patrol.onEvent(event, diagnostics);
+        if (storage == null) return;
         if (event.kind == LunarEvent.Kind.RESYNC) {
             pending = null;
             if (state == State.ACTIVE) end(State.ABORTED, event.cause.name());
@@ -119,6 +132,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void tick(EntityPlayer player, boolean paused) {
+        if (patrol.state == State.ACTIVE) patrol.tick(world, lunar.snapshot(), player, paused, diagnostics);
         if (storage == null) return;
         LunarSnapshot boundary = pending;
         pending = null;
@@ -127,7 +141,7 @@ public final class SiegeDirector implements LunarService.Listener {
             return;
         }
         if (boundary != null) {
-            if (world.difficultySetting <= 0 || !available(player)) {
+            if (world.difficultySetting <= 0 || !available(world, player)) {
                 reason = world.difficultySetting <= 0 ? "PEACEFUL" : "PLAYER_UNAVAILABLE";
                 if (diagnostics != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: " + AssaultDiagnostics.label(reason));
                 return;
@@ -156,7 +170,7 @@ public final class SiegeDirector implements LunarService.Listener {
             if (!tracked.isEmpty() && world.getWorldTime() % AssaultWave.RETRY_INTERVAL == 0) refreshPopulation(player);
             return;
         }
-        if (!available(player) || player != target) {
+        if (!available(world, player) || player != target) {
             end(State.ABORTED, "PLAYER_UNAVAILABLE");
         } else if (world.difficultySetting != difficulty) {
             end(State.ABORTED, world.difficultySetting == 0 ? "PEACEFUL" : "DIFFICULTY_CHANGED");
@@ -260,7 +274,7 @@ public final class SiegeDirector implements LunarService.Listener {
         localHostiles = player == null || player.worldObj != world ? -1 : spawns.localHostiles(world, player);
     }
 
-    private boolean available(EntityPlayer player) {
+    static boolean available(World world, EntityPlayer player) {
         return player != null && player.worldObj == world && player.isEntityAlive()
                 && !player.isPlayerSleeping() && !player.capabilities.isCreativeMode;
     }
@@ -287,7 +301,7 @@ public final class SiegeDirector implements LunarService.Listener {
         if (context == null || context != world || storage == null) return Eligibility.UNAVAILABLE;
         if (state == State.ACTIVE) return Eligibility.ACTIVE;
         if (world.difficultySetting <= 0) return Eligibility.PEACEFUL;
-        if (!available(player)) return Eligibility.PLAYER;
+        if (!available(world, player)) return Eligibility.PLAYER;
         LunarSnapshot view = lunar.snapshot();
         if (!view.isFullMoon()) return Eligibility.PHASE;
         if (view.timeOfDay >= LunarSnapshot.NIGHT_START) return Eligibility.NIGHT;
@@ -360,6 +374,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final String trigger;
         public final List<Spawn> spawns;
         public final List<WaveSnapshot> waves;
+        public final PatrolSnapshot patrol;
 
         private Snapshot(SiegeDirector director) {
             state = director.state;
@@ -398,6 +413,34 @@ public final class SiegeDirector implements LunarService.Listener {
             budget = director.budget;
             trigger = starts == 0 ? null : "NATURAL_FULL_MOON";
             spawns = Collections.unmodifiableList(new ArrayList<Spawn>(director.evidence));
+            patrol = new PatrolSnapshot(director);
+        }
+    }
+
+    public static final class PatrolSnapshot {
+        public final boolean eligibleNight, paused;
+        public final State state;
+        public final String reason;
+        public final String stage;
+        public final int spawned, budget, attempts, elapsed, remaining, skipped;
+        public final Map<String, Integer> rejections;
+
+        private PatrolSnapshot(SiegeDirector director) {
+            LunarPatrol patrol = director.patrol;
+            eligibleNight = patrol.enabled && director.lunar != null
+                    && PatrolSchedule.eligibleNight(director.lunar.snapshot());
+            state = patrol.state;
+            reason = patrol.reason;
+            paused = patrol.paused;
+            stage = state != State.ACTIVE ? state.name()
+                    : patrol.elapsed < PatrolSchedule.SPAWN_DELAY ? "PENDING" : "SPAWNING";
+            spawned = patrol.spawned;
+            budget = patrol.budget;
+            attempts = patrol.attempts;
+            elapsed = patrol.elapsed;
+            remaining = state == State.ACTIVE ? budget - spawned : 0;
+            skipped = state == State.ACTIVE ? 0 : budget - spawned;
+            rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(patrol.rejections));
         }
     }
 }

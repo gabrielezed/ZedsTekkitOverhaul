@@ -18,11 +18,22 @@ Register one legacy Forge handler and wrap only the two stock biped renderer ent
 
 ## Runtime evidence
 
-### Development run
+### Candidate provenance
 
-GitHub `main` and the starting checkout both resolved to `8e7679181015b54b1e7fb4c581f7feb8318189f6`. The development JAR carried product version `0.1.0-alpha.2`, that Git SHA, `sourceDirty=true`, UTC build time `2026-11-12T10:17:42.8418421Z`, and SHA-256 `25d3a6ba5386b728c6bb40f6ee9b3d75470ee11cffc6b3ec64df7c43309eb2bd`. MCP client compilation and reobfuscation passed and the packaging script streamed all 251 entries. Every packaged class was under `zed/`.
+| Field | Value |
+| --- | --- |
+| Starting `main` verified against GitHub | `8e7679181015b54b1e7fb4c581f7feb8318189f6` |
+| Tested source commit | `ab1223fe34c7fe0089cdc2c47510e9007b6139d4` |
+| Product version | `0.1.0-alpha.3` |
+| Build dirty flag | `true` for the pre-existing untracked `APPROVED_SURVIVAL_RELEASE_ROADMAP.md` and `TEST_AUTOMATION_SPEC.md`. Tracked files were clean at build time. |
+| Build UTC | `2026-11-12T10:27:04.0942708Z` |
+| JAR SHA-256 | `51832afc06498cf647527cd9e1fceaa241db4a80b26f7878a78b0e16943e81b9` |
+| Compile | JDK 8u504, MCP 6.2, Forge 3.4.9.171 |
+| Runtime | Java 8u51, Minecraft 1.2.5, Tekkit Classic 3.1.2, Forge 3.3.8.164, FML 2.2.106.176, OptiFine 1.2.5 HD S C6 |
 
-The in-game probe ran on a separate copy of the isolated Tekkit Dev client with the same merged pack, local Java 8 runtime and existing inventory and lunar agents. The equipment test opened the marked save `ZTO-Test-c735f2f6fa0b4106b0d659abfd603f93` with Dev Bridge and the Survival Debug HUD off. The probe confirmed the running ZTO code source was the deployed mod archive and exercised the native game thread, not an MCP stub.
+MCP client compilation and reobfuscation passed. The package streamed all 251 entries and archive inspection found every class under `zed/`. The portable lunar calendar and assault schedule checks passed.
+
+The live probes ran on a separate copy of isolated Tekkit Dev with the same merged pack, Java 8 runtime and existing inventory and lunar agents. The hashes of 18 relevant classes in the merged client matched the effective installed overlay and base-client order. Equipment used marked save `ZTO-Test-19db7581123a4532a168bf7e868d2d37` with Dev Bridge and the Survival Debug HUD off. The probe checked the running ZTO code source and exercised the native game thread. The candidate hash was checked before each launch.
 
 | Case | Status | Observed |
 | --- | --- | --- |
@@ -33,10 +44,14 @@ The in-game probe ran on a separate copy of the isolated Tekkit Dev client with 
 | Save and Quit and reopen | PASS | The same four original entities loaded after the world was reopened from the title screen. All eight armor pieces and the iron sword's ID, count, damage value 7 and custom tag returned. There were zero owned gear drops before save and after reopen. |
 | Equipment drops | PASS | Player kill and lethal fall produced nine owned stacks total. Replaying both death callbacks and advancing world ticks added no owned drops. |
 | Despawn | PASS | The legacy direct removal path for a stone-sword Zombie emitted no gear. The save/reopen case also exercised world unload. |
-| Ordinary mobs | PASS | The comparison mobs kept their usual empty hand or bow, base damage/protection and stock renderer. The bounded probe did not statistically sample rare loot. |
-| Startup without diagnostics | PASS | The pack completed startup and opened the test world with Dev Bridge and Survival Debug HUD disabled. |
-| Lunar assault regression | PASS | In a separate Hard Survival arena, natural dusk at raw tick 205,000 started the assault. Wave 1 opened at 205,100 and placed 4/4 vanilla Skeletons with 12 nearby hostiles and peak active count 4. The HUD reflected placement and light rejections. Pause froze elapsed time and Save and Quit reopened as `ABORTED / INTERRUPTED_ON_REOPEN` with zero new starts or insertions. |
+| Ordinary mobs | PASS | The comparison mobs kept their usual empty hand or bow, base damage/protection and stock renderer. Five fresh ordinary Zombies and five Skeletons dropped five rotten flesh, six arrows and four bones total. The pigman retained its gold sword and was outside equipment scope. Rare loot rates were outside the bounded sample. |
+| Startup without diagnostics | PASS | The pack opened the equipment world with Dev Bridge and Survival Debug HUD disabled. A separate title-screen smoke run had the fixture off as well, opened zero listening sockets and shut down gracefully. |
+| Lunar assault regression | PASS | In marked save `ZTO-Test-8afb9123d99c4b36a1374f8326b13704` on Hard, natural dusk at raw tick 205,000 started the assault. Wave 1 opened at 205,100 and placed 4/4 vanilla Skeletons in 84 attempts with 12 nearby hostiles and peak active count 4. The HUD reported 80 vanilla light rejections. Pause held elapsed time at 200 ticks. Save and Quit reopened as `ABORTED / INTERRUPTED_ON_REOPEN` with zero new starts or insertions. |
 
 | Equipped Zombie | Armored Skeleton with its native bow |
 | --- | --- |
 | ![Equipped Zombie next to ordinary Zombie](images/mob-equipment-zombie.png) | ![Armored Skeleton next to ordinary Skeleton](images/mob-equipment-skeleton.png) |
+
+The regression covers the first wave and the interruption path in-game. Later wave timing was checked by the portable schedule suite. The bounded equipment test covered player and fall deaths, direct removal and world unload through Save and Quit. It did not induce a distance-based chunk eviction or a mob-on-mob kill. The test profile also logged the existing EMC profile warning for unregistered item ID 169, which was recorded in the earlier alpha.2 acceptance.
+
+Local runtime logs are in `dist-zto/test-reports/equipment-alpha3.txt`, `equipment-alpha3-assault.txt` and `equipment-alpha3-disabled.json`. The candidate is ready for owner review. Owner gameplay acceptance is pending.

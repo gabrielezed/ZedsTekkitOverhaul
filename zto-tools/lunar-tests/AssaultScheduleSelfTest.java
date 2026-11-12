@@ -16,7 +16,30 @@ public final class AssaultScheduleSelfTest {
         AssaultScheduleSelfTest test = new AssaultScheduleSelfTest();
         test.run();
         test.patrols();
+        patrolRetryWindow();
         System.out.println("Assault and patrol schedule checks passed");
+    }
+
+    private static void patrolRetryWindow() {
+        int elapsed = 0;
+        int retries = 0;
+        while (!PatrolSchedule.expired(elapsed)) {
+            if (elapsed == 9 || PatrolSchedule.retryDue(elapsed)) {
+                int beforePause = elapsed;
+                for (int pausedTick = 0; pausedTick < 50; pausedTick++) {
+                    elapsed = PatrolSchedule.advance(elapsed, true);
+                }
+                check(elapsed == beforePause, "Pause advanced the patrol clock");
+            }
+            elapsed = PatrolSchedule.advance(elapsed, false);
+            if (PatrolSchedule.retryDue(elapsed)) {
+                check(elapsed == 800 + retries * 20, "Unexpected patrol retry tick");
+                retries++;
+            }
+        }
+        check(elapsed == 1040, "Patrol window expired at the wrong tick");
+        check(retries == 12 && retries * PatrolSchedule.CANDIDATES_PER_RETRY == 48,
+                "Unexpected patrol retry budget");
     }
 
     private void run() {

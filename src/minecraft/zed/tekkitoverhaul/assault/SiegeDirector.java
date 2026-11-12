@@ -65,6 +65,11 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void bind(World incoming, LunarService service) {
+        if (world != null) {
+            String cause = incoming != null && world.worldProvider.worldType != incoming.worldProvider.worldType
+                    ? "DIMENSION_CHANGED" : "WORLD_UNLOADED";
+            patrol.interrupt(world.getWorldTime(), cause, diagnostics);
+        }
         if (diagnostics != null) {
             if (state == State.ACTIVE) diagnostics.assault(world.getWorldTime(), "Interrupted by world change");
         }
@@ -413,10 +418,12 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public static final class PatrolSnapshot {
-        public final boolean eligibleNight;
+        public final boolean eligibleNight, paused;
         public final State state;
         public final String reason;
-        public final int spawned, budget;
+        public final String stage;
+        public final int spawned, budget, attempts, elapsed, remaining, skipped;
+        public final Map<String, Integer> rejections;
 
         private PatrolSnapshot(SiegeDirector director) {
             LunarPatrol patrol = director.patrol;
@@ -424,8 +431,16 @@ public final class SiegeDirector implements LunarService.Listener {
                     && PatrolSchedule.eligibleNight(director.lunar.snapshot());
             state = patrol.state;
             reason = patrol.reason;
+            paused = patrol.paused;
+            stage = state != State.ACTIVE ? state.name()
+                    : patrol.elapsed < PatrolSchedule.SPAWN_DELAY ? "PENDING" : "SPAWNING";
             spawned = patrol.spawned;
             budget = patrol.budget;
+            attempts = patrol.attempts;
+            elapsed = patrol.elapsed;
+            remaining = state == State.ACTIVE ? budget - spawned : 0;
+            skipped = state == State.ACTIVE ? 0 : budget - spawned;
+            rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(patrol.rejections));
         }
     }
 }

@@ -85,9 +85,9 @@ final class SurvivalDebugHud extends Gui {
             "Deferred " + assault.deferred + " | Skipped " + assault.skipped,
             "Last: " + (assault.state == State.ACTIVE && assault.lastRejection != null
                     ? AssaultDiagnostics.label(assault.lastRejection) : diagnostics.lastAssaultEvent()),
-            "PATROL | " + assault.patrol.state + " | " + assault.patrol.spawned + "/" + assault.patrol.budget,
+            "PATROL | " + assault.patrol.stage + " | " + assault.patrol.spawned + "/" + assault.patrol.budget,
             "Patrol night: " + (assault.patrol.eligibleNight ? "Eligible" : "Ineligible"),
-            AssaultDiagnostics.label(assault.patrol.reason)
+            assault.patrol.paused ? "Paused" : AssaultDiagnostics.label(assault.patrol.reason)
         };
         FontRenderer font = game.fontRenderer;
         ScaledResolution scale = new ScaledResolution(game.gameSettings, game.displayWidth, game.displayHeight);

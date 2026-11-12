@@ -1,22 +1,29 @@
 package zed.tekkitoverhaul;
 
+import java.util.Map;
 import net.minecraft.src.BaseMod;
 import net.minecraft.src.Block;
+import net.minecraft.src.Entity;
 import net.minecraft.src.GuiScreen;
 import net.minecraft.src.IBlockAccess;
 import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.MLProp;
+import net.minecraft.src.Render;
 import net.minecraft.src.RenderBlocks;
+import net.minecraft.src.forge.MinecraftForge;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
 import zed.tekkitoverhaul.devbridge.DevBridge;
+import zed.tekkitoverhaul.devbridge.MobEquipmentFixture;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.emc.EmcIntegration;
+import zed.tekkitoverhaul.equipment.MobEquipmentHooks;
+import zed.tekkitoverhaul.equipment.RenderMobEquipment;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
 import zed.tekkitoverhaul.fluids.client.RenderPetroleum;
 import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
@@ -74,6 +81,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void load() {
         AdvancedCraftingRegistry.register();
+        MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
         DistillationRegistry.register();
@@ -108,6 +116,11 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     }
 
     @Override
+    public void addRenderer(Map<Class<? extends Entity>, Render> renderers) {
+        RenderMobEquipment.register(renderers);
+    }
+
+    @Override
     public boolean renderWorldBlock(RenderBlocks renderer, IBlockAccess world, int x, int y, int z,
                                     Block block, int modelId) {
         if (HopperRegistry.block != null && modelId == HopperRegistry.model)
@@ -122,6 +135,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public boolean onTickInGame(float partialTick, Minecraft minecraft) {
         emc.onGameTick(minecraft.mcDataDir);
         zed.tekkitoverhaul.hopper.dev.HopperAcceptance.tick(minecraft);
+        MobEquipmentFixture.tick(minecraft);
         return true;
     }
 

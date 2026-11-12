@@ -1,5 +1,10 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.3 — Mob equipment candidate
+
+- Allow explicit loadouts for vanilla Zombies and Skeletons in local play. Zombie swords affect melee damage, armor provides visible protection, and Skeletons retain their native ranged attack.
+- Persist equipped items with the mob and release them once on death. A disposable viewing pen is available for owner testing. See the [compatibility and acceptance record](docs/agents/mob-equipment-acceptance.md).
+
 ## 0.1.0-alpha.2 — Lunar Assault gameplay
 
 - Stage full-moon player assaults in three waves with bounded retries, active mob tracking and a separate nearby-hostile limit.

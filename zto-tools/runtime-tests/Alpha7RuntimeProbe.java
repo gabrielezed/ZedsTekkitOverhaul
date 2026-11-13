@@ -26,7 +26,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
     private static File directory;
     private static Field focus, target, impacts;
     private boolean done, aimed, retreated, moved;
-    private boolean capturedWindup, capturedShot, capturedPressure;
+    private boolean capturedWindup, capturedShot, capturedPressureWindup, capturedPressure, capturedPursuit;
     private int stage, shots, firstShot, health, measured, peakEntities;
     private long since, previousTick, elapsedNanos;
     private double initialX, initialZ;
@@ -176,6 +176,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 next(game);
                 break;
             case 6:
+                if (breacher.o < X + 8 && !capturedPursuit) {
+                    screenshot(game, "breacher-pursuit");
+                    capturedPursuit = true;
+                }
                 if (breacher.o > X + 6 && age < 65) return;
                 check(breacher.o <= X + 6 && target.get(breacher) == game.h, "Breacher approaches in the open");
                 wall(game, 4, 1);
@@ -187,6 +191,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             case 7:
                 int pressure = impacts.getInt(breacher);
                 float phase = breacher.i(1F);
+                if (pressure > 0 && !capturedPressureWindup && phase >= 0.1F && phase <= 0.3F) {
+                    screenshot(game, "breacher-pressure-windup");
+                    capturedPressureWindup = true;
+                }
                 if (pressure > 0 && !capturedPressure && phase >= 0.4F && phase <= 0.7F) {
                     screenshot(game, "breacher-pressure");
                     capturedPressure = true;
@@ -213,6 +221,11 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 skirmisher = (EntitySkirmisher) spawn(game, TacticalHostiles.SKIRMISHER, 7, -3);
                 skirmisher.l(9);
                 breacher.l(13);
+                wall(game, 4, 0);
+                game.f.g(X + 4, Y, Z, 0);
+                game.f.g(X + 4, Y + 1, Z, 0);
+                skirmisher.c(X + 5.5D, Y, Z - 0.5D, 90, 0);
+                breacher.c(X + 5.5D, Y, Z + 1.2D, 90, 0);
                 saveQuit(game);
                 check(game.f == null && game.s instanceof xt, "Save and Quit returned to title");
                 open(game);
@@ -292,7 +305,11 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             breacher = (EntityBreacher) spawn(game, TacticalHostiles.BREACHER, 5, 0);
             rv player = new rv(game.f, "ZTOTest");
             player.Z = null;
-            lineup = new acq[] {player, skirmisher, breacher, new jg(game.f), new ajg(game.f),
+            ajg zombie = new ajg(game.f) {
+                @Override
+                public boolean T() { return false; } // Keep the reference silhouette visible in daylight.
+            };
+            lineup = new acq[] {player, skirmisher, breacher, new jg(game.f), zombie,
                     (acq) spawn(game, TacticalHostiles.SKIRMISHER, 6, 4),
                     (acq) spawn(game, TacticalHostiles.BREACHER, 6, 5)};
             lineUp();
@@ -340,7 +357,6 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             mob.bd = mob.be = mob.bf = mob.bg = 90;
             mob.r = mob.s = mob.t = 0;
             mob.bL = mob.bM = mob.bN = 0;
-            mob.D();
         }
     }
 
@@ -408,7 +424,9 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
 
     private static void screenshot(Minecraft game, String label) {
         check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL before capture: " + label);
-        System.out.println("ALPHA7 " + label + " " + zh.a(directory, game.d, game.e));
+        String name = save + "-" + label + ".png";
+        System.out.println("ALPHA7 " + label + " " + zh.a(directory, name, game.d, game.e));
+        check(new File(directory, "screenshots/" + name).isFile(), "frame was saved: " + label);
         check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL after capture: " + label);
     }
 

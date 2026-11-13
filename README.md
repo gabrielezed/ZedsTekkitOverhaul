@@ -2,6 +2,8 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects industry, alchemy and automation. Its singleplayer lunar calendar gives survival a rhythm of calm nights and occasional assaults.
 
+![Skirmisher and Breacher alongside a vanilla Enderman in Tekkit Dev](docs/agents/images/enderkin-polish-lineup-daylight.png)
+
 ## Gameplay
 
 ### World and automation
@@ -10,6 +12,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 - **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
 - **Lunar Patrols** add up to two vanilla hostiles on the first quarter and three on the waxing gibbous. Patrols and assaults can spawn in lit fields with open approaches. Roofs and physical boundaries can keep special encounters outside. [Outdoor pressure and fortification](docs/agents/survival-alpha6.md)
 - **Mob equipment** gives selected lunar Zombies and Skeletons visible, persistent equipment. Zombie swords increase melee damage, armor provides protection, and Skeletons retain their native bow. Lunar loadouts carry no added loot. [Encounter loadout rules](docs/agents/survival-alpha5.md)
+- **Enderkin prototypes** include the Skirmisher, which casts a violet Ender Pulse, and the Breacher, which strikes closed barriers without breaking them. Spawn either with its Creative egg in Tekkit Dev, then switch to Survival to test combat. [Prototype guide](docs/agents/survival-alpha7.md)
 - **Hopper** adds five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI. The backport includes support for selected IC2 and BuildCraft inventory interactions. [Asset setup and compatibility](docs/engineering/hopper-backport.md)
 - **Fractional distillation** uses an IC2 LV heater to process oil, with BuildCraft oil and water intake, four placeable petroleum fractions and live component panels. [Distillation guide](docs/agents/distillation.md)
 
@@ -27,7 +30,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The current build identifier is **0.1.0-alpha.6**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
+The current build identifier is **0.1.0-alpha.7**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
 
 ```powershell
 .\zto-tools\build-and-deploy.bat

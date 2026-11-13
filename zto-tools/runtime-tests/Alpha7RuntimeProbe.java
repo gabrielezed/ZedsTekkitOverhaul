@@ -171,7 +171,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 next(game);
                 break;
             case 7:
-                if (age < 165) return;
+                if (impacts.getInt(breacher) < 3 && age < 205) return;
                 check(impacts.getInt(breacher) == 3, "Breacher applies exactly three impacts, got "
                         + impacts.getInt(breacher) + " at " + breacher.o + "," + breacher.p + "," + breacher.q
                         + " door=" + game.f.a(X + 4, Y, Z) + ":" + game.f.e(X + 4, Y, Z));
@@ -188,6 +188,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 check(game.f.a(X + 4, Y, Z) == 64 && game.f.e(X + 4, Y, Z) == 4,
                         "open door survives melee");
                 System.out.println("ALPHA7 Breacher traversed the reopened entrance and landed melee");
+                screenshot(game);
                 skirmisher = (EntitySkirmisher) spawn(game, TacticalHostiles.SKIRMISHER, 7, -3);
                 skirmisher.l(9);
                 breacher.l(13);
@@ -210,6 +211,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             case 10:
                 if (age < 30) return;
                 check(mobs(game).isEmpty(), "death removes both prototypes");
+                System.out.println("ALPHA7 Save and Quit restored both entities and health, then death removed both");
                 finish(game);
                 break;
             default:

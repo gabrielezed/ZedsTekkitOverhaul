@@ -33,6 +33,19 @@ public abstract class TacticalHostile extends EntityMob {
         return false;
     }
 
+    /** Called only after the encounter director has selected this species. */
+    public final boolean canSpawnForEncounter() {
+        return super.getCanSpawnHere();
+    }
+
+    public final boolean canEngageEncounterPlayer(EntityPlayer player) {
+        return valid(player) && loadedBetween(player);
+    }
+
+    public final void engageEncounterPlayer(EntityPlayer player) {
+        if (canEngageEncounterPlayer(player)) target = player;
+    }
+
     @Override
     protected final boolean isAIEnabled() {
         return true;

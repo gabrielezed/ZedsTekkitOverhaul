@@ -154,7 +154,10 @@ final class GuiSurvivalDebug extends GuiScreen {
         if (assault.patrol.budget > 0) {
             append(rows, lightSummary(assault.patrol.spawned, assault.patrol.outdoorLight), width);
             append(rows, assault.patrol.loadouts.summary(), width);
+            if (assault.patrol.enderkin.selected != null)
+                append(rows, "Patrol Enderkin | " + assault.patrol.enderkin.summary(), width);
         }
+        if (assault.experimentalEnderkin) append(rows, "Tracked assault Enderkin: " + assault.activeEnderkin, width);
         if (assault.starts > 0) append(rows, assault.loadouts.summary(), width);
         if (!assault.patrol.rejections.isEmpty()) {
             append(rows, "Patrol rejections: " + AssaultDiagnostics.counts(assault.patrol.rejections), width);
@@ -178,6 +181,7 @@ final class GuiSurvivalDebug extends GuiScreen {
             append(rows, "  Inserted: " + wave.inserted + "/" + wave.allocation + " | Attempts: " + wave.attempts
                     + " | Deferred: " + wave.deferred + " | Skipped: " + wave.skipped + " | Active: " + wave.active, width);
             if (wave.inserted > 0) append(rows, "  " + lightSummary(wave.inserted, wave.outdoorLight), width);
+            if (wave.enderkin.selected != null) append(rows, "  Enderkin | " + wave.enderkin.summary(), width);
             append(rows, "  Nearby: " + (wave.localHostiles < 0 ? "N/A" : wave.localHostiles) + " | Peak active assault: "
                     + wave.peakActive + " | Carry in/out: " + wave.carriedIn + "/" + wave.carriedOut, width);
             if (!wave.rejections.isEmpty()) append(rows, "  Constraints: " + AssaultDiagnostics.counts(wave.rejections), width);

@@ -64,6 +64,14 @@ public final class AssaultDiagnostics implements LunarService.Listener {
         record(time, "WAVE", message);
     }
 
+    void selected(long time, String scope, EnderkinSlot slot) {
+        if (slot.selected != null) record(time, "ENDERKIN", scope + " selected " + label(slot.selected.name()));
+    }
+
+    void specialAttempt(long time, String scope, EnderkinSlot slot) {
+        record(time, "ENDERKIN", scope + " | " + new SiegeDirector.EnderkinSnapshot(slot).summary());
+    }
+
     public List<String> history() {
         if (history == null) history = Collections.unmodifiableList(new ArrayList<String>(events));
         return history;

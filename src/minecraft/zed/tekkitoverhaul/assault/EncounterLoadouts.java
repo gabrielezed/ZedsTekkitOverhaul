@@ -11,6 +11,7 @@ import zed.tekkitoverhaul.assault.LoadoutPolicy.Profile;
 import zed.tekkitoverhaul.equipment.MobEquipment;
 import zed.tekkitoverhaul.equipment.MobEquipment.Slot;
 import zed.tekkitoverhaul.lunar.LunarPhase;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 
 /** Records the outcome of the single assignment opportunity after each insertion. */
 final class EncounterLoadouts {
@@ -26,6 +27,7 @@ final class EncounterLoadouts {
     }
 
     Profile apply(EntityMob mob, int wave, int waveEquipped) {
+        if (mob instanceof TacticalHostile) return Profile.VANILLA;
         Profile profile = LoadoutPolicy.select(phase, wave, mob instanceof EntitySkeleton,
                 equipped, waveEquipped, random.nextInt(100));
         Integer previous = selected.get(profile.name());

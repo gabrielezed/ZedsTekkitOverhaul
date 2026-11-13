@@ -50,7 +50,7 @@ final class BreacherModel extends EnderkinModel {
         float punch = pressure ? 0 : pulse(phase, 0.19F, 0.90F);
         float breathing = wave(age * 0.068F + mob.entityId);
         body.rotationPointY = 6 + speed * (0.28F - wave(gait * 2 - 0.4F) * 0.28F) + impact * 0.36F;
-        chest.rotateAngleX = 0.12F + speed * 0.12F - lift * 0.20F + impact * 0.31F
+        chest.rotateAngleX = 0.12F + speed * 0.12F - lift * 0.20F + impact * 0.12F
                 + punch * 0.19F + breathing * 0.023F;
         chest.rotateAngleY = -step * 0.13F + lift * 0.13F - impact * 0.10F + punch * 0.24F;
         chest.rotateAngleZ = wave(gait - 0.38F) * speed * 0.09F - lift * 0.05F + impact * 0.06F;
@@ -66,10 +66,10 @@ final class BreacherModel extends EnderkinModel {
             thighs[i].rotateAngleZ = -side * 0.10F;
             shins[i].rotateAngleX = knee * 0.49F + impact * 0.23F;
             feet[i].rotateAngleX = -(thighs[i].rotateAngleX + shins[i].rotateAngleX) * 0.83F;
-            arms[i].rotateAngleX = -0.08F - wave(footPhase - 0.58F) * speed * 0.44F
-                    - lift * (i == 0 ? 2.22F : 1.73F) - impact * 1.13F - drive * 1.04F;
-            arms[i].rotateAngleZ = -side * (0.20F + lift * 0.21F + impact * 0.09F + breathing * side * 0.018F);
-            forearms[i].rotateAngleX = -0.31F - lift * 0.41F + impact * 0.30F
+            arms[i].rotateAngleX = -0.08F - wave(footPhase - 0.69F) * speed * 0.40F
+                    - lift * (i == 0 ? 1.80F : 1.46F) - impact * 0.54F - drive * 1.04F;
+            arms[i].rotateAngleZ = -side * (0.20F + lift * 0.15F + impact * 0.05F + breathing * side * 0.018F);
+            forearms[i].rotateAngleX = -0.31F - lift * 0.37F + impact * 0.58F
                     + wave(footPhase - 1.1F) * speed * 0.15F - drive * 0.31F;
             fists[i].rotateAngleX = -0.10F + pulse(phase, 0.52F, 0.92F) * (pressure ? 0.33F : 0.14F);
         }

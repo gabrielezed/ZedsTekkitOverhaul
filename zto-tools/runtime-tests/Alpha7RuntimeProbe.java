@@ -64,6 +64,14 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             gameDirectory.set(null, game);
             System.setProperty("zto.alpha7.save", world);
             System.setProperty("zto.alpha7.mode", args[2]);
+            if ("pulse".equals(args[2])) {
+                String nextWorld = args[3];
+                if (nextWorld.equals(world) || !nextWorld.matches("ZTO-Test-[a-f0-9]{32}")
+                        || !new File(game, "saves/" + nextWorld + "/.zto-disposable-test").isFile()) {
+                    throw new IllegalArgumentException("World switching requires a second marked save");
+                }
+                System.setProperty("zto.alpha7.secondSave", nextWorld);
+            }
             FMLCommonHandler.instance().registerTickHandler(new Bootstrap());
             Minecraft.main(new String[] {"ZTOTest"});
         }
@@ -411,8 +419,15 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                     edge * 16 + 2, Y + 2, Z + 0.5D);
             flight.J_();
             check(flight.G && !game.f.z().a(edge, row), "pulse retires before entering an unloaded chunk");
+            xd oldWorld = game.f;
+            skirmisher = new EntitySkirmisher(oldWorld);
+            testPulse(game, Z + 0.5D);
+            check(countPulses(game) == 1, "one pulse in old world before switching");
+            save = System.getProperty("zto.alpha7.secondSave");
+            open(game);
+            check(game.f != oldWorld && countPulses(game) == 0, "active pulse does not transfer to another world");
             System.out.println("ALPHA7 pulse wall, closed door, fixed heading, single hit, owner immunity, armor,"
-                    + " dodge, expiry, Peaceful, unloaded boundary, ownerless cleanup, Save and Quit");
+                    + " dodge, expiry, Peaceful, unloaded boundary, ownerless cleanup, Save and Quit, world switch");
             finish(game);
         }
     }

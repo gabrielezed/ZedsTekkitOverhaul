@@ -22,8 +22,18 @@ $save = "ZTO-Test-$id"
 if ($LASTEXITCODE -ne 0) { throw 'Could not generate a disposable save.' }
 [IO.File]::WriteAllText((Join-Path $game "saves/$save/.zto-disposable-test"),
     "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
+$secondSave = ''
+if ($Mode -eq 'pulse') {
+    $secondId = [Guid]::NewGuid().ToString('N')
+    $secondSave = "ZTO-Test-$secondId"
+    & (Join-Path $PSScriptRoot 'new-assault-playtest.ps1') -Name "Test-$secondId" -LunarPhase NEW_MOON -SavesDirectory (Join-Path $game 'saves')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not generate the world-switch fixture.' }
+    [IO.File]::WriteAllText((Join-Path $game "saves/$secondSave/.zto-disposable-test"),
+        "$secondSave -7184827518270584220`n", [Text.Encoding]::ASCII)
+}
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
 $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha7RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $Mode
+if ($secondSave) { $arguments += " $secondSave" }
 $stdout = Join-Path $report "alpha7-$Mode-$save.txt"
 $stderr = Join-Path $report "alpha7-$Mode-$save.stderr.txt"
 $java = Join-Path (Split-Path $launch.java) 'java.exe'

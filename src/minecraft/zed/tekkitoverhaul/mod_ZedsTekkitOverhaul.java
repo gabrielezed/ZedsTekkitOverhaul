@@ -111,6 +111,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register();
         HopperRegistry.register(this);
+        TacticalHostiles.registerEggs();
         if (creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }

@@ -2,6 +2,7 @@ package zed.tekkitoverhaul.survival.tactical.client;
 
 import net.minecraft.src.Entity;
 import net.minecraft.src.ModelRenderer;
+import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 
 final class SkirmisherModel extends EnderkinModel {
@@ -40,17 +41,18 @@ final class SkirmisherModel extends EnderkinModel {
     void pose(Entity entity, float stride, float speed, float age, float yaw, float pitch) {
         EntitySkirmisher mob = (EntitySkirmisher) entity;
         float draw = mob.getAimPose(partialTick);
-        float gather = ease(draw * 1.6F);
+        float gather = ease(draw * 1.45F);
         float aim = ease((draw - 0.15F) / 0.85F);
-        float recoil = pulse(onGround, 0.16F, 0.78F);
+        float recoil = pulse(onGround, 0.18F, 0.88F);
         float gait = stride * 0.60F;
         float step = wave(gait) * speed;
         float breath = wave(age * 0.085F + mob.entityId);
-        // The render yaw is already wrapped and interpolated by RenderLiving.
         float look = mob.rotationYawHead * RADIANS;
         float lateral = clamp((float) ((mob.posX - mob.prevPosX) * Math.cos(look)
                 + (mob.posZ - mob.prevPosZ) * Math.sin(look)) * 3, -1, 1) * speed;
-        chest.rotateAngleX = 0.07F + speed * 0.16F + gather * 0.13F - recoil * 0.20F + breath * 0.018F;
+        float walk = speed * (1 - 0.7F * gather);
+        body.rotationPointY = 1 + walk * (0.30F - wave(gait * 2 - 0.35F) * 0.30F);
+        chest.rotateAngleX = 0.07F + walk * 0.16F + gather * 0.08F - recoil * 0.15F + breath * 0.018F;
         chest.rotateAngleY = clamp(yaw, -0.8F, 0.8F) * gather * 0.68F + step * 0.17F - recoil * 0.11F;
         chest.rotateAngleZ = lateral * 0.24F + wave(gait - 0.55F) * speed * 0.05F + breath * 0.013F;
         head.rotateAngleX = clamp(pitch - chest.rotateAngleX * 0.84F + wave(age * 0.061F) * 0.022F, -0.6F, 0.6F);
@@ -60,16 +62,32 @@ final class SkirmisherModel extends EnderkinModel {
             int side = 2 * i - 1;
             float phase = gait + (i == 0 ? 0 : 3.18F);
             float lift = ease((wave(phase - 2.08F) + 0.28F) / 1.28F) * speed;
-            thighs[i].rotateAngleX = wave(phase) * speed * 0.78F - lift * 0.09F;
+            thighs[i].rotateAngleX = wave(phase) * speed * 0.70F - lift * 0.09F;
             thighs[i].rotateAngleZ = -side * (0.035F + Math.abs(lateral) * 0.16F) + lateral * 0.12F;
             shins[i].rotateAngleX = lift * 0.86F;
             feet[i].rotateAngleX = -(thighs[i].rotateAngleX + shins[i].rotateAngleX) * 0.78F + lift * 0.19F;
-            arms[i].rotateAngleX = 0.12F - wave(phase - 0.40F) * speed * 0.35F * (1 - aim)
-                    - gather * 0.22F - aim * (i == 0 ? 1.11F : 0.71F) - recoil * 0.47F;
-            arms[i].rotateAngleZ = -side * (0.13F + aim * 0.19F + recoil * 0.32F + breath * side * 0.019F);
-            forearms[i].rotateAngleX = -0.23F - wave(phase - 0.9F) * speed * 0.14F * (1 - aim)
-                    - aim * (i == 0 ? 0.55F : 1.02F) + recoil * 0.24F;
-            forearms[i].rotateAngleY = side * aim * 0.24F;
+            arms[i].rotateAngleX = 0.12F - wave(phase - 0.52F) * walk * 0.35F
+                    - gather * 0.40F - aim * (i == 0 ? 0.76F : 0.67F) - recoil * 0.46F;
+            arms[i].rotateAngleZ = side * (-0.13F + aim * 0.27F - recoil * 0.30F) + breath * 0.019F;
+            arms[i].rotateAngleY = side * (aim * 0.25F - recoil * 0.20F);
+            forearms[i].rotateAngleX = -0.23F - wave(phase - 1.02F) * walk * 0.14F
+                    - aim * (i == 0 ? 0.30F : 0.44F) - recoil * 0.18F;
+        }
+    }
+
+    void renderCharge(EntitySkirmisher mob, float age, float yaw, float scale) {
+        float draw = mob.getAimPose(partialTick);
+        float charge = ease((draw - 0.32F) / 0.68F) * (1 - ease(mob.getSwingProgress(partialTick) * 10));
+        if (charge <= 0) return;
+        GL11.glPushMatrix();
+        try {
+            GL11.glTranslatef(0, 24 * scale, 0);
+            GL11.glRotatef(yaw, 0, 1, 0);
+            GL11.glTranslated(0, -EntitySkirmisher.CAST_HEIGHT + 0.12D * (1 - charge),
+                    -EntitySkirmisher.CAST_REACH + 0.22D * (1 - charge));
+            EnderPulseRenderer.draw(age, 0.24F + charge * 0.58F);
+        } finally {
+            GL11.glPopMatrix();
         }
     }
 }

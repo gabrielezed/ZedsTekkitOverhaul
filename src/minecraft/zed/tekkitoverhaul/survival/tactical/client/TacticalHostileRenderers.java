@@ -11,6 +11,7 @@ import net.minecraft.src.OpenGlHelper;
 import net.minecraft.src.Render;
 import net.minecraft.src.RenderLiving;
 import org.lwjgl.opengl.GL11;
+import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 
@@ -20,6 +21,7 @@ public final class TacticalHostileRenderers {
     public static void register(Map<Class<? extends Entity>, Render> renderers) {
         renderers.put(EntitySkirmisher.class, new TacticalRenderer(new SkirmisherModel(), 0.30F, 2.76F, "skirmisher"));
         renderers.put(EntityBreacher.class, new TacticalRenderer(new BreacherModel(), 0.58F, 2.43F, "breacher"));
+        renderers.put(EntityEnderPulse.class, new EnderPulseRenderer());
     }
 
     private static final class TacticalRenderer extends RenderLiving {
@@ -45,6 +47,8 @@ public final class TacticalHostileRenderers {
                 GL11.glDisable(GL11.GL_LIGHTING);
                 OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
                 model.body.render(scale);
+                if (model instanceof SkirmisherModel && mob.deathTime == 0)
+                    ((SkirmisherModel) model).renderCharge((EntitySkirmisher) mob, age, yaw, scale);
             } finally {
                 OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightness & 65535, brightness >> 16);
                 GL11.glPopAttrib();

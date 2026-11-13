@@ -36,6 +36,7 @@ The portable calendar, assault and patrol schedule, and geometry suites passed. 
 | Fixed candidate in Tekkit Dev | Inserted out of 24 | Other outcomes | Mean / max per call |
 | --- | ---: | --- | ---: |
 | Torch-lit field | 13 | 11 sky-light rolls | 92 / 1,008 µs |
+| Same field with the flag off | 0 | 24 vanilla-light rejections | 24 / 243 µs |
 | Sealed glass-roofed house | 0 | 24 covered columns | 1 / 9 µs |
 | Covered cell below a raised stone surface | 0 | 24 height rejections | <1 / 5 µs |
 | Water | 0 | 24 unsuitable ground | 4 / 9 µs |
@@ -57,6 +58,10 @@ The reopened waxing-gibbous save contained one Skeleton with a chain chestplate 
 | Wave 3 | 6 | 2 | 36 | 28 approach, 2 sky roll |
 
 Every assault insertion in that trial was outside the wall and within the default 12–16 block horizontal range. The probe removed each spawn to free active slots. Save and Quit reopened as `NIGHT_CONSUMED` through tick 14,260 with zero new starts or patrol attempts. The outcome measures placement through the three native wave windows with clearance, with player combat and survival pacing reserved for owner acceptance.
+
+New moon produced no patrol or assault across dusk and on reopen through tick 14,145. With the flag disabled, the first-quarter patrol expired with zero insertions in 48 attempts. The recorded rejections were 47 vanilla-light failures and one obstructed sky column.
+
+The local report filenames in `dist-zto/test-reports/` contain save IDs beginning with `4dd57b26` (first quarter and fixed coordinates), `b5bb083d` (waxing gibbous), `5d4c25e1` (interrupted assault), `b29b9540` (three waves), `a9dd9dce` (new moon) and `24d67b0a` (disabled).
 
 ## Owner acceptance
 

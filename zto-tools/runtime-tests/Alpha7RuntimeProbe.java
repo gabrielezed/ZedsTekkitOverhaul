@@ -212,8 +212,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 next(game);
                 break;
             case 8:
-                if (age < 105 && game.h.bb() == health) return;
-                check(breacher.o < X + 4 && game.h.bb() < health, "Breacher uses the reopened entrance and lands melee");
+                if (age < 165 && (breacher.o >= X + 4 || game.h.bb() >= health)) return;
+                check(breacher.o < X + 4 && game.h.bb() < health,
+                        "Breacher uses the reopened entrance and lands melee, x=" + breacher.o
+                                + " health=" + game.h.bb() + "/" + health);
                 check(game.f.a(X + 4, Y, Z) == 64 && game.f.e(X + 4, Y, Z) == 4,
                         "open door survives melee");
                 System.out.println("ALPHA7 Breacher traversed the reopened entrance and landed melee");

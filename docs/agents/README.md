@@ -17,6 +17,7 @@ This directory is the **project-specific technical reference** for coding agents
 | Changing Survival encounters | [Player assault gameplay pass](survival-assault-alpha2.md), [Owner playtest generator](survival-assault-alpha2.md#owner-playtest-world), [Player assault specification](SURVIVAL_SIEGE_SPEC.md), [Alpha.1 acceptance](survival-assault-acceptance.md), [Lunar implementation handoff](lunar-cycle-implementation.md) |
 | Testing lunar patrols | [Lunar pressure rules, playtest and acceptance](lunar-pressure.md) |
 | Working on alpha.5 Survival | [Encounter composition, bed anchors, inventory and acceptance](survival-alpha5.md) |
+| Working on alpha.6 Survival | [Outdoor light, local approaches and acceptance](survival-alpha6.md) |
 | Working on vanilla mob equipment | [Equipment contract and disposable fixture](MOB_EQUIPMENT_BACKPORT_SPEC.md), [Alpha.3 API audit, runtime acceptance and screenshots](mob-equipment-acceptance.md) |
 | Inspecting Survival encounters in-game | [Survival Debug HUD](survival-debug-hud.md) |
 | Using or extending the Dev Bridge | [Read-only diagnostics](dev-bridge.md), [Opt-in test automation](test-automation.md), [Singleplayer acceptance](singleplayer-acceptance.md) |

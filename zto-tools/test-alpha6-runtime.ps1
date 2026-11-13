@@ -47,7 +47,12 @@ try {
             $process.WaitForExit()
         }
         Write-Output "ALPHA6 $mode $save SHA-256 $hash"
-        Get-Content -LiteralPath $stdout | Select-String '^ALPHA6|MinecraftForge|Forge Mod Loader|\[ZTO\] PATROL' | ForEach-Object Line
+        Get-Content -LiteralPath $stdout | Select-String '^ALPHA6|MinecraftForge' | ForEach-Object Line
+        Select-String -LiteralPath $stderr -Pattern 'Forge Mod Loader version|Forge Mod Loader load complete|\[ZTO\] PATROL' |
+            ForEach-Object Line
+        if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
+            throw 'The deployed archive changed during the probe.'
+        }
         if ($timedOut -or $process.ExitCode -ne 0 -or !(Select-String -LiteralPath $stdout -Pattern "^ALPHA6 PASS $mode$" -Quiet)) {
             Get-Content -LiteralPath $stderr -Tail 30
             throw "Runtime probe failed in $mode."

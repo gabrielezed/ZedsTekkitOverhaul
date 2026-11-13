@@ -7,9 +7,9 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 ### World and automation
 
 - **Lunar Cycle** persists eight phases per single-player save. New worlds begin at new moon, and existing worlds retain their initial vanilla phase. An optional launch agent displays the calendar phase in the native sky. Gameplay modules can read snapshots and subscribe to transitions. [Lunar Cycle guide](docs/agents/lunar-cycle-implementation.md)
-- **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a lit shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
-- **Lunar Patrols** add up to two vanilla hostiles on the first quarter and three on the waxing gibbous. Natural dusk gives time to prepare a lit shelter, stay on the surface and fight, or move on. [Rules and playtest](docs/agents/lunar-pressure.md)
-- **Mob equipment (Survival alpha.3)** supports opt-in loadouts for vanilla Zombies and Skeletons in local play. Zombie swords increase melee damage, armor provides visible protection, and Skeletons retain their native bow. Assigned gear persists across saves and drops once on death. Ordinary spawns and lunar assault mobs use their usual loadouts. [Tekkit Dev results and screenshots](docs/agents/mob-equipment-acceptance.md)
+- **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
+- **Lunar Patrols** add up to two vanilla hostiles on the first quarter and three on the waxing gibbous. Patrols and assaults can spawn in lit fields with open approaches. Roofs and physical boundaries can keep special encounters outside. [Outdoor pressure and fortification](docs/agents/survival-alpha6.md)
+- **Mob equipment** gives selected lunar Zombies and Skeletons visible, persistent equipment. Zombie swords increase melee damage, armor provides protection, and Skeletons retain their native bow. Lunar loadouts carry no added loot. [Encounter loadout rules](docs/agents/survival-alpha5.md)
 - **Hopper** adds five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI. The backport includes support for selected IC2 and BuildCraft inventory interactions. [Asset setup and compatibility](docs/engineering/hopper-backport.md)
 - **Fractional distillation** uses an IC2 LV heater to process oil, with BuildCraft oil and water intake, four placeable petroleum fractions and live component panels. [Distillation guide](docs/agents/distillation.md)
 
@@ -27,7 +27,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The current build identifier is **0.1.0-alpha.3**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
+The current build identifier is **0.1.0-alpha.6**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
 
 ```powershell
 .\zto-tools\build-and-deploy.bat

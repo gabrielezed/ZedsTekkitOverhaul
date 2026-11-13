@@ -46,6 +46,7 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 - **Implemented for 0.1:** [lunar player assault](survival-assault-acceptance.md) follows the active player's vicinity. Tune the warning, distance and wave cadence with a short Survival playtest.
 - **Implemented in `0.1.0-alpha.3`:** opt-in hand and armor slots for vanilla Zombies and Skeletons with rendering, combat effects, entity NBT and death drops. [Specification](MOB_EQUIPMENT_BACKPORT_SPEC.md) · [Tekkit Dev evidence](mob-equipment-acceptance.md)
 - **Alpha.5 candidate:** [encounter loadouts, respawn bed anchors and armor Shift+Click](survival-alpha5.md). Owner feedback will guide later tactical enemy roles and defenses.
+- **Alpha.6 candidate:** [outdoor lunar pressure and local fortification](survival-alpha6.md). Evaluate the placement model across representative shelters and Tekkit compounds before expanding tactical roles.
 - **Later release lines:** territorial activity and threat in 0.2, settlement recognition in 0.3, and `SITE_SIEGE` in 0.4. A site siege targets a persistent settlement inferred from long-term construction and activity. Doors, beds and machines are optional evidence. The plan supports caves, treehouses, castles, outdoor industry and multiple outposts without claims or marker blocks.
 - **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
 

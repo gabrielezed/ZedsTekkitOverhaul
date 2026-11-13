@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.6 — Outdoor pressure and fortification candidate
+
+- Lunar patrols and full-moon player assaults can place Zombies and Skeletons on lit outdoor ground with open approaches. Ordinary spawning still uses vanilla lighting.
+- Special encounters can leave slots empty when roofs, barriers, or terrain block placement. Survival Debug reports outdoor-light insertions and placement constraints.
+- Set `lunarOutdoorLightPressure=false` and restart to restore alpha.5 placement. See the [alpha.6 acceptance record](docs/agents/survival-alpha6.md).
+
 ## 0.1.0-alpha.5 — Encounter composition and nocturnal survival candidate
 
 - Give selected lunar patrol and assault enemies a single piece of gear, with phase and wave limits. Encounter gear carries no added loot.

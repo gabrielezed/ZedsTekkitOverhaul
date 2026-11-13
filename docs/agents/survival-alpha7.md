@@ -1,5 +1,7 @@
 # Survival 0.1.0-alpha.7 — Tactical hostile prototypes
 
+This is the alpha.7 baseline. See [alpha.8](survival-alpha8.md) for opt-in lunar placement.
+
 Both entities are **prototypes under review**. Their save names are `ZTO.Skirmisher` and `ZTO.Breacher`. ModLoader allocates the numeric entity registry slots at startup, and vanilla NBT uses the names for loading. Their eggs are available through Creative. Both prototypes reject natural spawn checks and have no biome list, recipe or lunar allocation. Existing Zombie and Skeleton loadouts, replay protection, budgets and alpha.6 placement continue through the existing Survival pipeline.
 
 ## Experimental tuning

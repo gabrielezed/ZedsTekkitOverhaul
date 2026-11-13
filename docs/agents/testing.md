@@ -6,6 +6,8 @@ For Survival 0.1 use the [assault acceptance record](survival-assault-acceptance
 
 For the alpha.3 equipment backport, use the [disposable viewing pen](MOB_EQUIPMENT_BACKPORT_SPEC.md#disposable-viewing-pen) in isolated Tekkit Dev. The [equipment acceptance record](mob-equipment-acceptance.md) identifies the tested JAR, observed combat and persistence cases, screenshots and the scope of the assault regression.
 
+For alpha.8, the [Enderkin encounter guide](survival-alpha8.md) lists the opt-in modes in the lunar runtime runner, the separate projectile and Creative checks, and the remaining owner playtest scenarios.
+
 ## Evidence currently available
 
 - **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')]
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful')]
     [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
 )
 
@@ -23,9 +23,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack A
 
 $cfg = Join-Path $game 'config/mod_ZedsTekkitOverhaul.cfg'
 $original = [IO.File]::ReadAllBytes($cfg)
-$config = [Text.Encoding]::ASCII.GetString($original) -replace '(?m)^(lunarOutdoorLightPressure|assaultSpawnBudget|lunarDebugKey|lunarVerboseLogging|survivalDebugHud)=.*\r?\n', ''
+$config = [Text.Encoding]::ASCII.GetString($original) -replace '(?m)^(experimentalEnderkinEncounters|lunarOutdoorLightPressure|assaultSpawnBudget|lunarDebugKey|lunarVerboseLogging|survivalDebugHud)=.*\r?\n', ''
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
 $phase = @{ first = 'FIRST_QUARTER'; gibbous = 'WAXING_GIBBOUS'; full = 'FULL_MOON'; waves = 'FULL_MOON'; quiet = 'NEW_MOON'; disabled = 'FIRST_QUARTER' }
+$phase['ender-first'] = 'FIRST_QUARTER'
+$phase['ender-gibbous'] = 'WAXING_GIBBOUS'
+$phase['ender-waves'] = 'FULL_MOON'
+$phase['ender-fallback'] = 'WAXING_GIBBOUS'
+$phase['ender-cap'] = 'WAXING_GIBBOUS'
+$phase['ender-peaceful'] = 'WAXING_GIBBOUS'
 try {
     foreach ($mode in $Modes) {
         $id = [Guid]::NewGuid().ToString('N')
@@ -35,11 +41,13 @@ try {
         [IO.File]::WriteAllText((Join-Path $game "saves/$save/.zto-disposable-test"),
             "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
         $enabled = ($mode -ne 'disabled').ToString().ToLowerInvariant()
-        [IO.File]::WriteAllText($cfg, "$config`r`nlunarOutdoorLightPressure=$enabled`r`nassaultSpawnBudget=15`r`nlunarDebugKey=0`r`nlunarVerboseLogging=false`r`nsurvivalDebugHud=false`r`n", [Text.Encoding]::ASCII)
-        $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha6RuntimeProbe "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $mode
+        $enderkin = $mode.StartsWith('ender-').ToString().ToLowerInvariant()
+        [IO.File]::WriteAllText($cfg, "$config`r`nexperimentalEnderkinEncounters=$enderkin`r`nlunarOutdoorLightPressure=$enabled`r`nassaultSpawnBudget=15`r`nlunarDebugKey=0`r`nlunarVerboseLogging=false`r`nsurvivalDebugHud=false`r`n", [Text.Encoding]::ASCII)
+        $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha6RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $mode
         $stdout = Join-Path $report "alpha6-$mode-$save.txt"
         $stderr = Join-Path $report "alpha6-$mode-$save.stderr.txt"
-        $process = Start-Process -FilePath $launch.java -ArgumentList $arguments -WorkingDirectory $game `
+        $java = Join-Path (Split-Path $launch.java) 'java.exe'
+        $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
             -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         $null = $process.Handle
         $timedOut = !$process.WaitForExit(115000)

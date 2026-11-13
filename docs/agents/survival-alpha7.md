@@ -11,12 +11,20 @@ Both entities are **prototypes under review**. Their save names are `ZTO.Skirmis
 | Native AI move speed | 0.25 | 0.21 |
 | Target range | 16 blocks | 16 blocks |
 | Combat | 5–12 blocks, 12-tick aim, 50-tick cooldown after firing | Under 2 blocks, vertical overlap and visibility, 3 HP before mitigation, 30-tick cooldown |
-| Projectile | Vanilla hostile arrow, launch speed 1.35, spread 10, damage coefficient 1.5. Impact damage depends on actual velocity and mitigation. | — |
+| Projectile | Ender Pulse, 0.82 blocks/tick, 2 HP base damage through the native thrown-projectile source, up to 18 movement steps | — |
 | Replanning | One query every 20 ticks, four consecutive failed plans before backing off | One query every 24 ticks, 192 ticks without progress before backing off |
 | Target loss | 100 unseen ticks | 216 unseen ticks |
 | Reacquisition delay after giving up | 100 ticks | 100 ticks |
 
-The Skirmisher approaches from outside firing range, sidesteps around a visible target between shots and tries to move outward when the target closes inside five blocks. It alternates the side of each movement attempt and checks for a path that reaches the intended endpoint. Cover and close pressure interrupt the aiming pose. The projectile starts inside the shooter's volume and uses vanilla collision.
+The Skirmisher approaches from outside firing range, sidesteps around a visible target between shots and tries to move outward when the target closes inside five blocks. It alternates the side of each movement attempt and checks for a path that reaches the intended endpoint. Cover and close pressure interrupt the cast. The twelve-tick windup and fifty-tick post-shot cooldown remain in effect.
+
+### Ender Pulse
+
+The cast starts about one block forward at hand height. A native world ray between the caster and the launch point stops the discharge at any intervening panel. Each movement step traces terrain and checks nearby living collision boxes swept along the same segment. The closest contact wins, with terrain winning ties. The visual arcs extend outside the centerline terrain ray. Living hit boxes get a 0.10-block margin. The caster is excluded even if the pulse starts inside its hull.
+
+The trajectory is set once at release and covers at most 14.76 blocks. The previous arrow used the native ceiling of impact speed times 1.5, giving around 2–3 HP near its starting speed of 1.35 blocks/tick before mitigation. The pulse uses 2 HP base damage. Legacy difficulty scaling and equipment mitigation still apply. The attack has a single direct hit, four impact particles and a quiet native fizz at release.
+
+ModLoader assigns a free numeric registry ID to `ZTO.EnderPulse`. Rendering uses the existing entity renderer callback. Forge's chunk update hook allows just this entity to tick when the wider vanilla update neighborhood is incomplete. Its own check retires it before it enters an unloaded chunk. It expires on tick 19 and is dropped in Peaceful. A fired pulse retains its owner reference through the end of flight, even if the owner dies. It has no dependency on the original target once launched. In-flight pulses opt out of chunk and save serialization. They disappear on unload or when the world is closed. Remote entity spawning and pose transport remain outside this local singleplayer implementation.
 
 The Breacher first requests a complete native route to the target. That route can take a nearby detour. When it cannot reach the target, it can follow the partial route toward the obstruction. Within 1.5 blocks of a relevant hit on a lower-body ray, it stops to strike up to three times, with a swing and a local impact sound. Closed vanilla doors and gates, fences and opaque cubes are eligible. TileEntity-bearing blocks are excluded from the pressure effect. Pressure leaves block IDs, metadata and tiles intact. If the route opens, the next planning cycle can resume pursuit. The runtime probe found that a closed door can stop collision even when the path starts inside the door's grid cell and returns a complete route. The Breacher checks for obstruction after two route intervals without progress even when the planner reports a complete path.
 
@@ -24,9 +32,9 @@ Both mobs use vanilla movement, collision, swimming, damage, death, despawn and 
 
 ## Visuals and access
 
-The [Enderkin redesign](enderkin-visual-design.md) gives each prototype its own cuboid model, skin and attack poses. The Skirmisher's held bow is visually hidden while the existing arrow attack is retained. Industrial geometry keeps its [existing OBJ/TESR approach](codechicken-rendering-audit.md).
+The [Enderkin redesign](enderkin-visual-design.md) gives each prototype its own cuboid model, skin and attack poses. The Skirmisher gathers and releases the pulse with both hands. Industrial geometry keeps its [existing OBJ/TESR approach](codechicken-rendering-audit.md).
 
-Open the Creative inventory and find **Skirmisher Spawn Egg** and **Breacher Spawn Egg** in **Items** or **ZedsTekkitOverhaul**. The compass search matches either creature name. Move each egg to the hotbar and right-click the top of a block with enough headroom. In the native **1.2.5** screen, scroll to the modded items or use NEI search. Set `creativeInventoryBackport=false` in the isolated instance's `config/mod_ZedsTekkitOverhaul.cfg` and restart to exercise the native catalog from startup. Save and Quit, then reopen the world to verify persistence.
+Open the Creative inventory and find **Skirmisher Spawn Egg** and **Breacher Spawn Egg** in **Items** or **ZedsTekkitOverhaul**. The compass search matches either creature name. Move each egg to the hotbar and right-click the top of a block with enough headroom. Switch to Survival in the disposable test world to provoke the Skirmisher, whose existing targeting requires a damageable player. In the native **1.2.5** screen, scroll to the modded items or use NEI search. Set `creativeInventoryBackport=false` in the isolated instance's `config/mod_ZedsTekkitOverhaul.cfg` and restart to exercise the native catalog from startup. Save and Quit, then reopen the world to verify persistence.
 
 The installed Forge catalog calls `Item.addCreativeItems` and separately enumerates `EntityList.entityEggs`. Native egg metadata is a numeric entity ID, which can vary with the mod environment and follows a spawn path without a solid-volume check. Two ordinary ZTO items reuse the native shell and spots render passes and resolve stable names on use. The classic container and NEI discover them as ordinary registered items. The backport imports the classic catalog and deduplicates matching stacks.
 
@@ -36,6 +44,7 @@ The game-thread runtime probe uses marked disposable saves in the isolated Tekki
 
 ```powershell
 .\zto-tools\test-alpha7-runtime.ps1
+.\zto-tools\test-alpha7-runtime.ps1 -Mode pulse
 .\zto-tools\test-alpha7-runtime.ps1 -Mode stress
 .\zto-tools\test-alpha7-runtime.ps1 -Mode visual
 .\zto-tools\test-alpha7-runtime.ps1 -Mode creative
@@ -43,6 +52,13 @@ The game-thread runtime probe uses marked disposable saves in the isolated Tekki
 ```
 
 The probe uses the same ignored `dist-zto/survival-hud-runtime/launch.json`, pack runtime and natives as the alpha.6 checks. Each invocation makes a new disposable save. Reports and screenshots remain in ignored local paths.
+
+## Ender Pulse acceptance
+
+- The production source matches `be52b0877933b4a0d8005d1820d747e829ce0463`. The test archive was built from the changes against `90d532998e3dbb5d52d63e01fcd731a67ef6e211`. Its SHA-256 is `69a70e138082b12d3145d66d665e8d3950b91f784b24fdca746810796d4a0d78`. MCP client compilation, reobfuscation, the 286-entry streaming check and the class namespace audit passed. The local build retains the instance's optional Creative and Hopper assets.
+- The isolated Tekkit Dev client ran Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u504 with diagnostics disabled. The dedicated pulse mode observed a 2 HP Normal hit without armor and 0 HP immediate loss on the first hit with full diamond armor. The pulse survived its caster's death, ignored a dead target, stopped at stone and a closed door, missed after a sidestep, and retired on expiry, on entering Peaceful or before crossing into an unloaded chunk. The boundary probe drove the normal entity update against the installed pack without loading the destination chunk. Save and Quit restored no in-flight shots.
+- Combat observed two natural pulses with the expected spacing, no Skirmisher arrows, retreat and cancelled casting. The Breacher still applied three pressure events, traversed the reopened door and landed melee. Visual and 12-entity stress passed, including simultaneous casts and the existing Creative modes with NEI, hotbar transfers, placement and Save/Quit. [In-game captures](enderkin-visual-design.md#ender-pulse-casting) show the charge, release, recovery, daylight, torchlight and low light.
+- The verified scope is local singleplayer in the isolated pack. Direct dimension transfer, cross-world switching with a live pulse, remote spawning and other modded armor sets remain unverified. The native release fizz was confirmed in the installed sound resources. Perceived projectile fairness and sound mix remain owner playtest questions.
 
 ## Polish acceptance
 
@@ -73,7 +89,7 @@ The runtime evidence covers the solid cover and vanilla wooden-door fixtures. Th
 | Tactical identity | Ranged spacing with lateral movement and retreat | Melee approach that explicitly reacts to a blocked route |
 | Readability | Asymmetric reach and projectile give the player cues | A two-arm strike and localized impact indicate the obstruction |
 | Counterplay | Cover, pushing inside its firing range, ranged return fire and retreat | Closed barriers, alternate access control, terrain and direct combat |
-| Legacy complexity | Bounded waypoint probes and native projectiles | Distinguishes complete and partial paths and checks actual ray hits |
+| Legacy complexity | Bounded waypoint probes and a finite swept pulse | Distinguishes complete and partial paths and checks actual ray hits |
 | Rendering | Native living renderer with narrow articulated cuboids | Native living renderer with broad articulated cuboids |
 | Lunar suitability | Candidate for a rare composition slot after playtest and safe placement verification | Requires more terrain and alternate-route evidence before allocating a slot |
 | Future site sieges | Potential ranged support | Potential approach pressure using a future site objective |

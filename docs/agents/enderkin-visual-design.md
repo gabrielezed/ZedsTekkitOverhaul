@@ -6,7 +6,7 @@ The two alpha.7 prototypes share obsidian skin, a cubic face with two violet eye
 | --- | --- | --- |
 | Standing silhouette | About 2.7 blocks tall, with a narrow chest, pinched waist, long legs and a forward-set face | About 2.2 blocks tall, with a recessed head, broad shoulder mass, oversized forearms and planted feet |
 | Palette | Cool near-black with lilac eyes | Warm near-black with muted forearm fissures and pink-violet eyes |
-| Motion | Offset strides and knees, shoulder lag, lateral lean, gradual draw and shot-driven recoil | Slow weight transfer and delayed fists, two-arm pressure strike and asymmetric melee |
+| Motion | Offset strides and knees, shoulder lag, lateral lean, hands converging around a charge and opening on release | Slow weight transfer and delayed fists, two-arm pressure strike and asymmetric melee |
 
 The installed Minecraft 1.2.5 atlas uses `#000000` and `#161616` for the body and a separate eye pass with `#CC00FA` and `#E079FA`. The original Enderkin atlases keep their existing face and limb layouts. Their skin now clusters around the vanilla body tones, with small cool or warm differences for anatomy. Each eye mask contains four opaque pixels and shares the model UVs. The eyes draw at full light with alpha testing, no additive blending, and scoped lighting and texture state.
 
@@ -17,7 +17,21 @@ The installed Minecraft 1.2.5 atlas uses `#000000` and `#161616` for the body an
 
 The old knees bent at the hard zero crossing of the thigh swing, shoulders shared the leg phase, and the Breacher used its two-arm lift for both attacks. Eased knee lifts, ankle follow-through and phase delays between the shoulder and elbow soften the repeated cycles. Small independent head and shoulder motions fade into the walking and attack poses. The Skirmisher prepares its shoulders, then extends its arms during the existing twelve-tick aim. The shot starts a recoil pulse while the draw pose eases out. Its lateral tilt uses observed displacement across the gaze direction. The Breacher loads its shoulders before a two-arm barrier strike, releases its fists through contact and settles into recovery. Its melee strike drives one arm forward with torso rotation. The barrier sound is scheduled four ticks after the existing pressure event, at the visual contact keyframe. The AI pressure count, route checks and melee damage use their original timing.
 
-Collision remains 0.60×1.70 and 0.85×1.90 blocks. The loaded-block probe blends vertical compression over 0.35 blocks outside the hull footprint and scales about the feet. The mesh can visibly shorten under a two-block roof, and hands may pass through door panels or overhang walls during pressure. Vertical movement around abrupt ledges, vanilla collision-box culling and the gap between rendered and selectable height remain limitations. Gameplay targeting and projectile origin use the existing eye height. Stable save names, lunar placement and encounter loadouts are independent of the model. Pose state is transient and exercised in local singleplayer.
+Collision remains 0.60×1.70 and 0.85×1.90 blocks. The loaded-block probe blends vertical compression over 0.35 blocks outside the hull footprint and scales about the feet. The mesh can visibly shorten under a two-block roof. Vertical movement around abrupt ledges, vanilla collision-box culling, and the gap between rendered and selectable height remain limitations. Stable save names, lunar placement and encounter loadouts are independent of the model. Pose state is transient and exercised in local singleplayer.
+
+## Ender Pulse casting
+
+The Skirmisher settles its stride as it angles its shoulders in. Its elbows approach the hands' shared center at slightly different rates. A small pulse core then forms between the hands and grows to the release pose. The shot event opens the hands and drives the follow-through as the torso unloads. Cover and close pressure drain charge through the existing pose interpolation. A shortened stride and small hip drop limit foot lift on the planted part of the cycle. The pulse launches from the hand region at normal standing height. Since the ceiling adjustment is render-only, the visible casting point may sit lower under a low roof.
+
+The traveling form uses an untextured faceted core in `#301844`, `#492567` and `#643382` with two broken contours in `#DC79F5` and `#9C4ACD`. Its axis follows velocity, with rotation around that axis and slight changes in contour radius and spacing. The same scaled mesh represents the charge. The mesh is full-bright with world depth testing. It adds no light to surrounding blocks. Impact leaves four brief violet specks.
+
+The Breacher carries its hands slightly closer during the drop and folds its elbows further at impact to reduce the amount of fist visible through a closed door. The arc is still fixed, so close camera angles and certain door orientations can reveal intersection.
+
+![Tekkit Dev captures of the cast, projectile and Breacher poses](images/ender-pulse-sequence.png)
+
+[Pulse by torchlight](images/ender-pulse-torchlight.png) · [Pulse in low light](images/ender-pulse-low-light.png)
+
+The combat captures use the natural aim and release at the fixture's eight-block engagement distance. The pulse fixture sets a deterministic heading for the player and wall impacts and the two night exposures. The near-side impact specks are occluded by stone when viewed from the protected side. The frame sequence shows the silhouette and timing. Owner playtesting remains the measure of perceived weight, ground contact and readability while the camera is moving.
 
 ## Reproduction
 

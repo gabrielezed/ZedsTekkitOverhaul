@@ -44,7 +44,7 @@ public final class EntitySkirmisher extends TacticalHostile {
     @Override
     protected void updateAttackPose() {
         previousAimPose = aimPose;
-        aimPose = aim > 0 ? Math.min(1, aimPose + 0.16F) : Math.max(0, aimPose - 0.26F);
+        aimPose = aim > 0 ? Math.min(1, aimPose + 0.10F) : Math.max(0, aimPose - 0.18F);
     }
 
     @Override

@@ -46,4 +46,10 @@ abstract class EnderkinModel extends ModelBase {
         float t = clamp(value, 0, 1);
         return t * t * (3 - 2 * t);
     }
+
+    static float wave(float phase) { return (float) Math.cos(phase); }
+
+    static float pulse(float time, float peak, float end) {
+        return ease(time / peak) * (1 - ease((time - peak) / (end - peak)));
+    }
 }

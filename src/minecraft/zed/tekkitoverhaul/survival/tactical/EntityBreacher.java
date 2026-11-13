@@ -7,6 +7,7 @@ import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 
 public final class EntityBreacher extends TacticalHostile {
+    public static final int PRESSURE_CONTACT_TICKS = 4;
     private static final float SPEED = 0.21F;
     private static final int ROUTE_INTERVAL = 24;
     private static final int GIVE_UP_TICKS = 192;
@@ -19,6 +20,9 @@ public final class EntityBreacher extends TacticalHostile {
     private double progressX;
     private double progressZ;
     private int impacts;
+    private boolean pressureSwing;
+    private int pressureSoundTick = -1;
+    private double impactX, impactY, impactZ;
 
     public EntityBreacher(World world) {
         super(world, 0.85F, 1.9F, "breacher");
@@ -39,6 +43,7 @@ public final class EntityBreacher extends TacticalHostile {
             lastProgress = ticksExisted;
             if (ticksExisted >= nextMelee) {
                 nextMelee = ticksExisted + 30;
+                pressureSwing = false;
                 swing();
                 attackEntityAsMob(target);
             }
@@ -86,11 +91,24 @@ public final class EntityBreacher extends TacticalHostile {
         getLookHelper().setLookPosition(hit.hitVec.xCoord, hit.hitVec.yCoord, hit.hitVec.zCoord, 30.0F, 30.0F);
         if (impacts < MAX_IMPACTS) {
             impacts++;
+            pressureSwing = true;
             swing();
-            worldObj.playSoundEffect(hit.hitVec.xCoord, hit.hitVec.yCoord, hit.hitVec.zCoord,
-                    "step.stone", 0.75F, 0.6F);
+            pressureSoundTick = ticksExisted + PRESSURE_CONTACT_TICKS;
+            impactX = hit.hitVec.xCoord;
+            impactY = hit.hitVec.yCoord;
+            impactZ = hit.hitVec.zCoord;
         }
         return true;
+    }
+
+    public boolean isPressureSwing() { return pressureSwing; }
+
+    @Override
+    protected void updateAttackPose() {
+        if (ticksExisted == pressureSoundTick) {
+            worldObj.playSoundEffect(impactX, impactY, impactZ, "step.stone", 0.75F, 0.6F);
+            pressureSoundTick = -1;
+        }
     }
 
     @Override

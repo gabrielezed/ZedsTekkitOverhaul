@@ -7,6 +7,7 @@ import net.minecraft.src.Block;
 import net.minecraft.src.Entity;
 import net.minecraft.src.EntityLiving;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.OpenGlHelper;
 import net.minecraft.src.Render;
 import net.minecraft.src.RenderLiving;
 import org.lwjgl.opengl.GL11;
@@ -17,17 +18,37 @@ public final class TacticalHostileRenderers {
     private TacticalHostileRenderers() {}
 
     public static void register(Map<Class<? extends Entity>, Render> renderers) {
-        renderers.put(EntitySkirmisher.class, new TacticalRenderer(new SkirmisherModel(), 0.30F, 2.76F));
-        renderers.put(EntityBreacher.class, new TacticalRenderer(new BreacherModel(), 0.58F, 2.43F));
+        renderers.put(EntitySkirmisher.class, new TacticalRenderer(new SkirmisherModel(), 0.30F, 2.76F, "skirmisher"));
+        renderers.put(EntityBreacher.class, new TacticalRenderer(new BreacherModel(), 0.58F, 2.43F, "breacher"));
     }
 
     private static final class TacticalRenderer extends RenderLiving {
         private final float visualEnvelope;
+        private final String eyes;
         private final ArrayList<AxisAlignedBB> ceilingHits = new ArrayList<AxisAlignedBB>();
 
-        TacticalRenderer(EnderkinModel model, float shadow, float visualEnvelope) {
+        TacticalRenderer(EnderkinModel model, float shadow, float visualEnvelope, String skin) {
             super(model, shadow);
             this.visualEnvelope = visualEnvelope;
+            eyes = "/zed/textures/" + skin + "_eyes.png";
+        }
+
+        @Override
+        protected void renderModel(EntityLiving mob, float stride, float speed, float age,
+                float yaw, float pitch, float scale) {
+            super.renderModel(mob, stride, speed, age, yaw, pitch, scale);
+            EnderkinModel model = (EnderkinModel) mainModel;
+            int brightness = mob.getBrightnessForRender(model.partialTick);
+            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_TEXTURE_BIT);
+            try {
+                loadTexture(eyes);
+                GL11.glDisable(GL11.GL_LIGHTING);
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
+                model.body.render(scale);
+            } finally {
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightness & 65535, brightness >> 16);
+                GL11.glPopAttrib();
+            }
         }
 
         @Override
@@ -41,11 +62,13 @@ public final class TacticalHostileRenderers {
             double x = mob.lastTickPosX + (mob.posX - mob.lastTickPosX) * partialTick;
             double z = mob.lastTickPosZ + (mob.posZ - mob.lastTickPosZ) * partialTick;
             double feet = mob.boundingBox.minY + (mob.lastTickPosY - mob.posY) * (1 - partialTick);
-            double top = feet + visualEnvelope;
-            // Probe only above the movement hull and only in already loaded columns.
+            // Start the compression before the collision hull reaches a roof edge.
+            // This spatial transition works even when the mob first enters the frustum under a roof.
+            double margin = 0.35D;
             double half = mob.width * 0.5D;
-            AxisAlignedBB probe = AxisAlignedBB.getBoundingBox(x - half, feet + mob.height, z - half,
-                    x + half, top, z + half);
+            double reach = half + margin;
+            AxisAlignedBB probe = AxisAlignedBB.getBoundingBox(x - reach, feet + mob.height, z - reach,
+                    x + reach, feet + visualEnvelope, z + reach);
             ceilingHits.clear();
             for (int bx = MathHelper.floor_double(probe.minX); bx <= MathHelper.floor_double(probe.maxX); bx++) {
                 for (int bz = MathHelper.floor_double(probe.minZ); bz <= MathHelper.floor_double(probe.maxZ); bz++) {
@@ -56,11 +79,17 @@ public final class TacticalHostileRenderers {
                     }
                 }
             }
+            float scale = 1;
             for (AxisAlignedBB hit : ceilingHits) {
-                if (hit.minY >= probe.minY - 0.001D) top = Math.min(top, hit.minY - 0.025D);
+                if (hit.minY < probe.minY - 0.001D) continue;
+                double dx = Math.max(hit.minX - x, x - hit.maxX);
+                double dz = Math.max(hit.minZ - z, z - hit.maxZ);
+                float blend = EnderkinModel.ease((float) ((reach - Math.max(dx, dz)) / margin));
+                float required = (float) ((hit.minY - feet - 0.025D) / visualEnvelope);
+                scale = Math.min(scale, 1 - (1 - required) * blend);
             }
             ceilingHits.clear();
-            return Math.min(1, (float) ((top - feet) / visualEnvelope));
+            return scale;
         }
     }
 }

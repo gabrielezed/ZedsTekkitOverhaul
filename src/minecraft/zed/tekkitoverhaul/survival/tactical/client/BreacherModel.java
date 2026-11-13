@@ -2,6 +2,7 @@ package zed.tekkitoverhaul.survival.tactical.client;
 
 import net.minecraft.src.Entity;
 import net.minecraft.src.ModelRenderer;
+import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 
 final class BreacherModel extends EnderkinModel {
     private final ModelRenderer chest, head;
@@ -38,29 +39,39 @@ final class BreacherModel extends EnderkinModel {
 
     @Override
     void pose(Entity mob, float stride, float speed, float age, float yaw, float pitch) {
-        float gait = stride * 0.52F;
-        float step = (float) Math.cos(gait) * speed;
+        EntityBreacher breacher = (EntityBreacher) mob;
+        float gait = stride * 0.49F;
+        float step = wave(gait) * speed;
         float phase = onGround;
-        float lift = phase == 0 ? 0 : ease(phase * 4) * (1 - ease((phase - 0.25F) * 6));
-        float impact = ease((phase - 0.24F) * 5.5F) * (1 - ease((phase - 0.44F) * 1.8F));
-        float breathing = (float) Math.sin(age * 0.09F);
-        body.rotationPointY = 6 + Math.abs(step) * 0.62F + impact * 0.9F;
-        chest.rotateAngleX = 0.12F + speed * 0.12F - lift * 0.27F + impact * 0.29F + breathing * 0.025F;
-        chest.rotateAngleY = -step * 0.13F + lift * 0.16F - impact * 0.13F;
-        chest.rotateAngleZ = step * 0.11F - lift * 0.06F + impact * 0.07F;
+        boolean pressure = breacher.isPressureSwing();
+        float contact = EntityBreacher.PRESSURE_CONTACT_TICKS / 10.0F;
+        float lift = pressure ? pulse(phase, 0.22F, contact + 0.02F) : 0;
+        float impact = pressure ? pulse(phase, contact, 0.97F) : 0;
+        float punch = pressure ? 0 : pulse(phase, 0.19F, 0.90F);
+        float breathing = wave(age * 0.068F + mob.entityId);
+        body.rotationPointY = 6 + speed * (0.28F - wave(gait * 2 - 0.4F) * 0.28F) + impact * 0.36F;
+        chest.rotateAngleX = 0.12F + speed * 0.12F - lift * 0.20F + impact * 0.31F
+                + punch * 0.19F + breathing * 0.023F;
+        chest.rotateAngleY = -step * 0.13F + lift * 0.13F - impact * 0.10F + punch * 0.24F;
+        chest.rotateAngleZ = wave(gait - 0.38F) * speed * 0.09F - lift * 0.05F + impact * 0.06F;
         head.rotateAngleY = clamp(yaw - chest.rotateAngleY, -0.55F, 0.55F);
-        head.rotateAngleX = clamp(pitch * 0.6F - chest.rotateAngleX, -0.42F, 0.5F);
+        head.rotateAngleX = clamp(pitch * 0.6F - chest.rotateAngleX * 0.86F
+                + wave(age * 0.048F) * 0.018F, -0.42F, 0.5F);
         for (int i = 0; i < 2; i++) {
             int side = 2 * i - 1;
-            float leg = side * step;
-            thighs[i].rotateAngleX = leg * 0.56F - impact * 0.17F;
+            float footPhase = gait + (i == 0 ? 0 : 3.12F);
+            float knee = ease((wave(footPhase - 2.15F) + 0.15F) / 1.15F) * speed;
+            float drive = punch * (i == 0 ? 1 : 0.22F);
+            thighs[i].rotateAngleX = wave(footPhase) * speed * 0.51F - impact * 0.13F;
             thighs[i].rotateAngleZ = -side * 0.10F;
-            shins[i].rotateAngleX = Math.max(0, -leg) * 0.47F + impact * 0.27F;
-            feet[i].rotateAngleX = -(thighs[i].rotateAngleX + shins[i].rotateAngleX) * 0.7F;
-            arms[i].rotateAngleX = -0.08F - leg * 0.53F - lift * (i == 0 ? 2.40F : 1.85F) - impact * 0.68F;
-            arms[i].rotateAngleZ = -side * (0.19F + lift * 0.24F + impact * 0.07F);
-            forearms[i].rotateAngleX = -0.31F - lift * 0.39F + impact * 0.27F + leg * 0.18F;
-            fists[i].rotateAngleX = -0.10F + impact * 0.33F;
+            shins[i].rotateAngleX = knee * 0.49F + impact * 0.23F;
+            feet[i].rotateAngleX = -(thighs[i].rotateAngleX + shins[i].rotateAngleX) * 0.83F;
+            arms[i].rotateAngleX = -0.08F - wave(footPhase - 0.58F) * speed * 0.44F
+                    - lift * (i == 0 ? 2.22F : 1.73F) - impact * 1.13F - drive * 1.04F;
+            arms[i].rotateAngleZ = -side * (0.20F + lift * 0.21F + impact * 0.09F + breathing * side * 0.018F);
+            forearms[i].rotateAngleX = -0.31F - lift * 0.41F + impact * 0.30F
+                    + wave(footPhase - 1.1F) * speed * 0.15F - drive * 0.31F;
+            fists[i].rotateAngleX = -0.10F + pulse(phase, 0.52F, 0.92F) * (pressure ? 0.33F : 0.14F);
         }
     }
 }

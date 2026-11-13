@@ -69,10 +69,12 @@ public final class EntityBreacher extends TacticalHostile {
     }
 
     private boolean pressure() {
-        Vec3D start = Vec3D.createVector(posX, boundingBox.minY + 0.8D, posZ);
+        double height = boundingBox.minY + 0.8D;
+        Vec3D start = Vec3D.createVector(posX, height, posZ);
         Vec3D end = Vec3D.createVector(target.posX, target.boundingBox.minY + 0.8D, target.posZ);
         MovingObjectPosition hit = worldObj.rayTraceBlocks(start, end);
-        if (hit == null || start.distanceTo(hit.hitVec) > 1.5D) return false;
+        // The legacy ray tracer advances its start vector in place.
+        if (hit == null || hit.hitVec.squareDistanceTo(posX, height, posZ) > 2.25D) return false;
 
         int x = hit.blockX, y = hit.blockY, z = hit.blockZ;
         Block block = Block.blocksList[worldObj.getBlockId(x, y, z)];

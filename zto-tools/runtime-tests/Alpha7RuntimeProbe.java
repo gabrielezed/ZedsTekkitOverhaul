@@ -101,7 +101,8 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             }
         } catch (Throwable failure) {
             failure.printStackTrace();
-            System.exit(1);
+            game.f();
+            done = true;
         }
     }
 
@@ -134,6 +135,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 check(retreated, "Skirmisher retreats from a close player");
                 System.out.println("ALPHA7 Skirmisher retreated");
                 game.f.b(skirmisher);
+                clearArrows(game);
                 player(game, 0.5D, 0.5D);
                 skirmisher = (EntitySkirmisher) spawn(game, TacticalHostiles.SKIRMISHER, 8, 0);
                 shots = 0;
@@ -152,8 +154,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                         "cover cancels the shot and breaks pursuit");
                 System.out.println("ALPHA7 cover cancelled the shot and pursuit");
                 game.f.b(skirmisher);
+                clearArrows(game);
                 wall(game, 4, 0);
                 breacher = (EntityBreacher) spawn(game, TacticalHostiles.BREACHER, 8, 0);
+                game.h.l(20);
                 health = game.h.bb();
                 next(game);
                 break;
@@ -172,7 +176,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                         + impacts.getInt(breacher) + " at " + breacher.o + "," + breacher.p + "," + breacher.q
                         + " door=" + game.f.a(X + 4, Y, Z) + ":" + game.f.e(X + 4, Y, Z));
                 check(game.f.a(X + 4, Y, Z) == 64 && game.f.e(X + 4, Y, Z) == 0
-                        && game.f.a(X + 4, Y + 1, Z) == 64 && game.h.bb() == health,
+                        && game.f.a(X + 4, Y + 1, Z) == 64 && breacher.o > X + 4 && game.h.bb() == health,
                         "closed door and player behind it remain intact");
                 System.out.println("ALPHA7 Breacher stopped after three impacts without changing the door");
                 game.f.f(X + 4, Y, Z, 4);
@@ -223,6 +227,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             check(arrow.n() == 1.5D, "projectile damage coefficient");
             shots++;
         }
+    }
+
+    private static void clearArrows(Minecraft game) {
+        for (Object entity : game.f.b) if (entity instanceof nm) ((nm) entity).A();
     }
 
     private void stress(Minecraft game) throws Exception {

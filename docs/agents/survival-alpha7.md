@@ -1,6 +1,6 @@
 # Survival 0.1.0-alpha.7 — Tactical hostile prototypes
 
-Both entities are **prototypes under review**. Their save names are `ZTO.Skirmisher` and `ZTO.Breacher`. ModLoader allocates the numeric registry slots at startup, and vanilla NBT uses the names for loading. Keep the names stable while disposable saves still contain the entities. Neither class registers a spawn list, egg, recipe or lunar allocation. Existing Zombie and Skeleton loadouts, replay protection, budgets and alpha.6 placement continue through the existing Survival pipeline.
+Both entities are **prototypes under review**. Their save names are `ZTO.Skirmisher` and `ZTO.Breacher`. ModLoader allocates the numeric entity registry slots at startup, and vanilla NBT uses the names for loading. Their eggs are available through Creative. Both prototypes reject natural spawn checks and have no biome list, recipe or lunar allocation. Existing Zombie and Skeleton loadouts, replay protection, budgets and alpha.6 placement continue through the existing Survival pipeline.
 
 ## Experimental tuning
 
@@ -26,15 +26,31 @@ Both mobs use vanilla movement, collision, swimming, damage, death, despawn and 
 
 The [Enderkin redesign](enderkin-visual-design.md) gives each prototype its own cuboid model, skin and attack poses. The Skirmisher's held bow is visually hidden while the existing arrow attack is retained. Industrial geometry keeps its [existing OBJ/TESR approach](codechicken-rendering-audit.md).
 
-The game-thread runtime probe is the developer spawn mechanism. It uses a marked generated disposable world in the isolated Tekkit Dev copy and resolves each entity through the production registry. It stays outside the production JAR. Build with `zto-tools/build-and-deploy.bat`, pointing `ZTO_PRISM_MODS` at the copy's `minecraft/mods` directory, and run:
+Open the Creative inventory and find **Skirmisher Spawn Egg** and **Breacher Spawn Egg** in **Items** or **ZedsTekkitOverhaul**. The compass search matches either creature name. Move each egg to the hotbar and right-click the top of a block with enough headroom. In the native **1.2.5** screen, scroll to the modded items or use NEI search. Set `creativeInventoryBackport=false` in the isolated instance's `config/mod_ZedsTekkitOverhaul.cfg` and restart to exercise the native catalog from startup. Save and Quit, then reopen the world to verify persistence.
+
+The installed Forge catalog calls `Item.addCreativeItems` and separately enumerates `EntityList.entityEggs`. Native egg metadata is a numeric entity ID, which can vary with the mod environment and follows a spawn path without a solid-volume check. Two ordinary ZTO items reuse the native shell and spots render passes and resolve stable names on use. The classic container and NEI discover them as ordinary registered items. The backport imports the classic catalog and deduplicates matching stacks.
+
+The defaults in `config/ZedsTekkitOverhaul-Tactical.cfg` are constructor IDs 22004 and 22005, respectively, giving stack IDs **22260** and **22261**, metadata 0. Registration checks both slots after the normal mod load phase. A conflicting ID fails with the relevant config path. Keep configured IDs stable once stacks are saved. The Skirmisher shell and spots use `#17171C` and `#535170`. The Breacher uses `#1C171B` and `#785469`. The item checks edit permissions, height, loaded placement, collision and Peaceful, and consumes one egg on successful non-Creative use. It allows manual placement in the active local dimension.
+
+The game-thread runtime probe uses marked disposable saves in the isolated Tekkit Dev copy. Build with `zto-tools/build-and-deploy.bat`, point `ZTO_PRISM_MODS` at the copy's `minecraft/mods` directory, and run:
 
 ```powershell
 .\zto-tools\test-alpha7-runtime.ps1
 .\zto-tools\test-alpha7-runtime.ps1 -Mode stress
 .\zto-tools\test-alpha7-runtime.ps1 -Mode visual
+.\zto-tools\test-alpha7-runtime.ps1 -Mode creative
+.\zto-tools\test-alpha7-runtime.ps1 -Mode creative-native
 ```
 
 The probe uses the same ignored `dist-zto/survival-hud-runtime/launch.json`, pack runtime and natives as the alpha.6 checks. Each invocation makes a new disposable save. Reports and screenshots remain in ignored local paths.
+
+## Polish acceptance
+
+- PR #28 started at `aa494013a3ac0075bdcc7884fe1d18f52235b179`. The accepted runtime archive was built at `567ea62b5c693a90d3fd844626cfe4eb21a7d370` with probe changes and the two pre-existing untracked documents in the workspace. Its SHA-256 is `64f46fb46b0e0b47e04de794f06d400e6680469bc69774e4deacf80abc0b8b7f`. MCP 6.2 client compile, Forge 3.4.9.171 reobfuscation and the 283-entry streaming archive check passed. The local test archive includes the instance's pre-existing optional Hopper and Creative assets.
+- The isolated Tekkit Classic 3.1.2 client ran Minecraft 1.2.5, Forge 3.3.8.164 and FML 2.2.106.176 on Java 8u504. The local launcher profile used workspace LWJGL and JInput jars with the isolated pack classpath. The bridge was disabled. The known resource download failures and the pre-existing EMC warning for item 169 still appeared.
+- Both `creative` and `creative-native` passed. Each run checked one entry per variant, NEI's general and filtered lists, transfer into hotbar slots and two uses per egg. The backport run also exercised its mod category and keyboard search. The native run scrolled the original catalog with the backport disabled at startup. The probes checked correct class, health, position, renderer, unchanged Creative stacks, solid-block and Peaceful rejection, no pre-existing Enderkin, and all four entities after Save and Quit. Dimension transfer and remote server use remain unverified.
+- Combat passed with the original timing and spacing for ranged attacks, cover cancellation, exactly three pressure events, intact door, reopened traversal, melee damage and persistence. The first pressure sequence checked that the sound dispatch occurred on the fourth tick. Visual and stress passed with the original light comparisons and twelve entities active across 140 ticks. See the [game frames](enderkin-visual-design.md#polish-in-tekkit-dev).
+- A separate archive without the optional local texture groups passed the 274-entry streaming check. Its 240 payload files match the test archive byte for byte, and all 218 classes are under `zed/`. SHA-256 `52c7a294b6e565a6babe6a7a9f158dde8e9cb8c11cabc726d2b6a1e6f4c39b08`.
 
 ## Original biped prototype evidence
 
@@ -61,4 +77,4 @@ The runtime evidence covers the solid cover and vanilla wooden-door fixtures. Th
 | Lunar suitability | Candidate for a rare composition slot after playtest and safe placement verification | Requires more terrain and alternate-route evidence before allocating a slot |
 | Future site sieges | Potential ranged support | Potential approach pressure using a future site objective |
 
-The prototypes test the project vision's emphasis on positioning, meaningful construction and readable difficulty. Existing player-vicinity targeting, outdoor placement, loadouts and future site recognition remain independent integration points. Keep both developer-only until the owner evaluates counterplay and a bounded placement policy. Prioritize testing pressure readability and path selection across real builds before redesigning either mob.
+The prototypes test the project vision's emphasis on positioning, meaningful construction and readable difficulty. Existing player-vicinity targeting, outdoor placement, loadouts and future site recognition remain independent integration points. Creative provides direct access for the owner's evaluation of counterplay and a bounded placement policy.

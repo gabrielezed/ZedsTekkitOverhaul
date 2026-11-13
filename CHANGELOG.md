@@ -2,7 +2,8 @@
 
 ## 0.1.0-alpha.7 — Tactical hostile prototypes
 
-- Add developer-only Skirmisher and Breacher scenarios with distinct Enderkin models, custom skins and stable entity save names.
+- Add Skirmisher and Breacher prototypes with stable entity save names and Creative spawn eggs.
+- Darken both Enderkin skins, keep their eyes visible in low light and refine walking, ranged release and barrier impact poses.
 - The Skirmisher repositions and telegraphs ranged attacks. The Breacher follows access routes and applies bounded, non-destructive pressure at nearby barriers.
 - Retain the existing industrial OBJ pipeline after inspecting CodeChickenCore 0.5.3. See the [rendering audit](docs/agents/codechicken-rendering-audit.md).
 

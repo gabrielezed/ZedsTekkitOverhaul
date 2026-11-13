@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([ValidateSet('combat', 'stress', 'visual')][string]$Mode = 'combat')
+param([ValidateSet('combat', 'stress', 'visual', 'creative', 'creative-native')][string]$Mode = 'combat')
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
@@ -27,14 +27,25 @@ $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.libra
 $stdout = Join-Path $report "alpha7-$Mode-$save.txt"
 $stderr = Join-Path $report "alpha7-$Mode-$save.stderr.txt"
 $java = Join-Path (Split-Path $launch.java) 'java.exe'
-$process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
-    -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-$null = $process.Handle
-if (!$process.WaitForExit(120000)) {
-    $process.Kill()
-    $process.WaitForExit()
-    Get-Content -LiteralPath $stderr -Tail 30
-    throw "Tactical probe timed out. See $stdout and $stderr"
+$config = Join-Path $game 'config/mod_ZedsTekkitOverhaul.cfg'
+$original = if ($Mode.StartsWith('creative')) { [IO.File]::ReadAllBytes($config) }
+try {
+    if ($original) {
+        $enabled = ($Mode -eq 'creative').ToString().ToLowerInvariant()
+        $content = [Text.Encoding]::ASCII.GetString($original) -replace '(?m)^creativeInventoryBackport=.*\r?\n', ''
+        [IO.File]::WriteAllText($config, "$content`r`ncreativeInventoryBackport=$enabled`r`n", [Text.Encoding]::ASCII)
+    }
+    $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
+        -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $null = $process.Handle
+    if (!$process.WaitForExit(120000)) {
+        $process.Kill()
+        $process.WaitForExit()
+        Get-Content -LiteralPath $stderr -Tail 30
+        throw "Tactical probe timed out. See $stdout and $stderr"
+    }
+} finally {
+    if ($original) { [IO.File]::WriteAllBytes($config, $original) }
 }
 Write-Output "ALPHA7 $Mode $save SHA-256 $hash"
 Get-Content -LiteralPath $stdout | Select-String '^ALPHA7|MinecraftForge' | ForEach-Object Line

@@ -9,11 +9,16 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import javax.imageio.ImageIO;
+import codechicken.nei.NEIConfig;
+import codechicken.nei.NEIController;
+import codechicken.nei.NEIUtils;
+import codechicken.nei.ItemPanelStack;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
@@ -28,6 +33,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
     private boolean done, aimed, retreated, moved;
     private boolean capturedWindup, capturedShot, capturedPressureWindup, capturedPressure, capturedPursuit;
     private int stage, shots, firstShot, health, measured, peakEntities;
+    private int aimFrame, pressureFrame, pursuitFrame;
     private long since, previousTick, elapsedNanos;
     private double initialX, initialZ;
     private EntitySkirmisher skirmisher;
@@ -102,6 +108,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 previousTick = game.f.w();
                 if ("stress".equals(mode)) stress(game);
                 else if ("visual".equals(mode)) visual(game);
+                else if (mode.startsWith("creative")) creative(game);
                 else combat(game);
             }
         } catch (Throwable failure) {
@@ -122,6 +129,8 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 break;
             case 2:
                 observeArrows(game);
+                if (aimFrame < 8 && (skirmisher.isAiming() || shots > 0)
+                        && (age % 2 == 0)) screenshot(game, "skirmisher-motion-" + aimFrame++);
                 if (skirmisher.getAimPose(1) > 0.85F && !capturedWindup) {
                     screenshot(game, "skirmisher-windup");
                     capturedWindup = true;
@@ -180,6 +189,8 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                     screenshot(game, "breacher-pursuit");
                     capturedPursuit = true;
                 }
+                if (breacher.o < X + 8 && pursuitFrame < 5 && age % 3 == 0)
+                    screenshot(game, "breacher-walk-" + pursuitFrame++);
                 if (breacher.o > X + 6 && age < 65) return;
                 check(breacher.o <= X + 6 && target.get(breacher) == game.h, "Breacher approaches in the open");
                 wall(game, 4, 1);
@@ -191,6 +202,13 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             case 7:
                 int pressure = impacts.getInt(breacher);
                 float phase = breacher.i(1F);
+                if (pressure == 1 && phase > 0 && phase <= 0.85F && pressureFrame < 8) {
+                    int soundTick = field(EntityBreacher.class, "pressureSoundTick").getInt(breacher);
+                    if (phase < 0.39F) check(soundTick == breacher.V + EntityBreacher.PRESSURE_CONTACT_TICKS
+                            - Math.round(phase * 10), "sound awaits contact");
+                    else check(soundTick == -1, "sound dispatched at contact");
+                    screenshot(game, "breacher-pressure-motion-" + pressureFrame++);
+                }
                 if (pressure > 0 && !capturedPressureWindup && phase >= 0.1F && phase <= 0.3F) {
                     screenshot(game, "breacher-pressure-windup");
                     capturedPressureWindup = true;
@@ -349,6 +367,145 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             }
             lineUp();
         }
+    }
+
+    private void creative(Minecraft game) throws Exception {
+        long age = game.f.w() - since;
+        if (stage == 1 && age >= 25) {
+            check(mobs(game).isEmpty(), "fresh world has no naturally spawned Enderkin");
+            game.c = new aff(game);
+            aff.d(game.h);
+            game.h.ap.a(0, null);
+            game.h.ap.a(1, null);
+            game.a(new sr(game.h));
+            next(game);
+            return;
+        }
+        if (stage == 2) {
+            if (game.s instanceof sr && "creative".equals(mode) && age < 10) return;
+            boolean backport = "creative".equals(mode);
+            gb screen = (gb) game.s;
+            check(backport ? screen.getClass().getName().endsWith(".GuiCreativeBackport") : screen instanceof sr,
+                    "configured Creative screen is active");
+            check(screen.controller != null, "NEI controller attached");
+            checkEggCatalog(game, screen, backport);
+            game.a((vp) null);
+            check(mobs(game).isEmpty(), "catalog transfer did not spawn entities");
+            for (int i = 0; i < 2; i++) {
+                aan egg = game.h.ap.k_(i);
+                int count = egg.a;
+                int z = Z + i * 3;
+                game.f.g(X + 6, Y, z, 1);
+                check(!egg.a().a(egg, game.h, game.f, X + 6, Y - 1, z, 1), "solid target rejects egg");
+                check(egg.a == count && mobs(game).size() == i * 2, "failed placement leaves inventory and world intact");
+                game.f.g(X + 6, Y, z, 0);
+                for (int x = X + 6; x <= X + 8; x += 2) {
+                    check(game.c.a(game.h, game.f, egg, x, Y - 1, z, 1), "Creative controller uses egg");
+                    check(egg.a == count, "Creative keeps the stack");
+                    TacticalHostile mob = mobs(game).get(mobs(game).size() - 1);
+                    check((i == 0 ? mob instanceof EntitySkirmisher : mob instanceof EntityBreacher), "egg spawns the right entity");
+                    check(mob.bb() == (i == 0 ? 16 : 22), "egg initializes full health");
+                    check(mob.o == x + 0.5D && mob.y.b == Y && mob.q == z + 0.5D, "egg uses the native face offset");
+                    checkRenderer(game, mob);
+                }
+            }
+            game.f.q = 0;
+            aan egg = game.h.ap.k_(0);
+            check(!egg.a().a(egg, game.h, game.f, X + 10, Y - 1, Z, 1), "Peaceful rejects the hostile egg");
+            game.f.q = 2;
+            System.out.println("ALPHA7 catalog, NEI search, hotbar transfer, repeated placement and rejection passed");
+            next(game);
+        } else if (stage == 3 && age >= 5) {
+            screenshot(game, "creative-spawned");
+            saveQuit(game);
+            open(game);
+            next(game);
+        } else if (stage == 4 && age >= 10) {
+            int ranged = 0, heavy = 0;
+            for (TacticalHostile mob : mobs(game)) {
+                if (TacticalHostiles.SKIRMISHER.equals(aao.b(mob))) ranged++;
+                if (TacticalHostiles.BREACHER.equals(aao.b(mob))) heavy++;
+                checkRenderer(game, mob);
+            }
+            check(ranged == 2 && heavy == 2, "all four egg-spawned entities persist with their save names");
+            screenshot(game, "creative-reopened");
+            finish(game);
+        }
+    }
+
+    private void checkEggCatalog(Minecraft game, gb screen, boolean backport) throws Exception {
+        String original = NEIConfig.getSearchExpression();
+        try {
+            for (int i = 0; i < 2; i++) {
+                String name = i == 0 ? "Skirmisher" : "Breacher";
+                NEIConfig.setSearchExpression(name);
+                NEIUtils.loadItems();
+                check(eggIndex(neiStacks(NEIController.items), name) >= 0, "NEI general catalog includes " + name);
+                check(eggIndex(neiStacks(NEIController.visibleitems), name) >= 0, "NEI search includes " + name);
+                yu slot;
+                if (backport) {
+                    Method tab = screen.getClass().getDeclaredMethod("selectTab", int.class);
+                    tab.setAccessible(true);
+                    tab.invoke(screen, 2);
+                    List<?> entries = (List<?>) field(screen.getClass(), "entries").get(screen);
+                    List<aan> stacks = new ArrayList<aan>();
+                    for (Object entry : entries) stacks.add((aan) field(entry.getClass(), "stack").get(entry));
+                    check(eggIndex(stacks, name) >= 0, "ZTO category includes " + name);
+                    tab.invoke(screen, 5);
+                    ((agu) field(screen.getClass(), "search").get(screen)).a("");
+                    Method key = vp.class.getDeclaredMethod("a", char.class, int.class);
+                    key.setAccessible(true);
+                    for (char letter : name.toLowerCase(java.util.Locale.ROOT).toCharArray())
+                        key.invoke(screen, letter, Keyboard.getKeyIndex(String.valueOf(Character.toUpperCase(letter))));
+                    slot = (yu) screen.d.e.get(0);
+                    check(matchesEgg(slot.b(), name) && ((List<?>) field(screen.getClass(), "entries").get(screen)).size() == 1,
+                            "backport search returns one " + name);
+                } else {
+                    os catalog = (os) screen.d;
+                    int index = eggIndex(catalog.a, name);
+                    check(index >= 0, "native Creative catalog includes " + name);
+                    int lastRow = catalog.a.size() / 8 - 8 + 1;
+                    int row = Math.min(index / 8, lastRow);
+                    catalog.a(row / (float) lastRow);
+                    slot = (yu) catalog.e.get(index - row * 8);
+                    check(matchesEgg(slot.b(), name), "native scroll exposes " + name);
+                }
+                yu hotbar = (yu) screen.d.e.get(screen.d.e.size() - 9 + i);
+                Method click = gb.class.getDeclaredMethod("a", yu.class, int.class, int.class, boolean.class);
+                click.setAccessible(true);
+                click.invoke(screen, slot, slot.c, 0, false);
+                check(matchesEgg(game.h.ap.k(), name), "catalog click acquires " + name);
+                click.invoke(screen, hotbar, hotbar.c, 0, false);
+                check(matchesEgg(game.h.ap.k_(i), name),
+                        "catalog click transfers egg into its hotbar slot");
+            }
+        } finally {
+            NEIConfig.setSearchExpression(original);
+            NEIUtils.loadItems();
+        }
+    }
+
+    private static List<aan> neiStacks(List<?> entries) throws Exception {
+        List<aan> stacks = new ArrayList<aan>();
+        Field item = field(ItemPanelStack.class, "item");
+        for (Object entry : entries) {
+            if (entry instanceof ItemPanelStack) stacks.add((aan) item.get(entry));
+        }
+        return stacks;
+    }
+
+    private static boolean matchesEgg(aan stack, String name) {
+        return stack != null && (name + " Spawn Egg").equals(stack.a().d(stack));
+    }
+
+    private static int eggIndex(List<?> entries, String name) {
+        int result = -1;
+        for (int index = 0; index < entries.size(); index++) {
+            if (!(entries.get(index) instanceof aan) || !matchesEgg((aan) entries.get(index), name)) continue;
+            check(result == -1, "catalog lists only one " + name);
+            result = index;
+        }
+        return result;
     }
 
     private void lineUp() {

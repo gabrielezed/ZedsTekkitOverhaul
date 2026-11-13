@@ -1,6 +1,6 @@
 # Survival 0.1.0-alpha.5 candidate
 
-This branch builds on [PR #25](https://github.com/gabrielezed/ZedsTekkitOverhaul/pull/25), which was open against `main` at the start of the work. Its verified head was `46352a1c09ad7bdb8a040a185431de773fbfc749`. Retarget the alpha.5 pull request after the patrol changes land on `main`.
+Alpha.5 builds on [PR #25](https://github.com/gabrielezed/ZedsTekkitOverhaul/pull/25), merged as `6e61d3e`. [PR #26](https://github.com/gabrielezed/ZedsTekkitOverhaul/pull/26) merged the alpha.5 changes as `90fa6f1`. This record describes the alpha.5 build. See [alpha.6 placement](survival-alpha6.md) for current light and perimeter rules.
 
 ## Encounter composition
 

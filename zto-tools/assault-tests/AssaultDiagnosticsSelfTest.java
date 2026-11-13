@@ -53,7 +53,7 @@ public final class AssaultDiagnosticsSelfTest {
         check(before.get(2).contains("Player assault started"), "Assault must follow the window");
         check(before.get(4).contains("Inserted 0/4 in 24 attempts") && before.get(4).contains("24 Vanilla light"),
                 "Incorrect wave summary");
-        check(before.get(6).contains("1 Local mob cap") && !before.get(6).contains("Vanilla light"),
+        check(before.get(6).contains("1 Local mob cap") && !before.get(6).contains("24 Vanilla light"),
                 "Wave rejections leaked into the next wave");
         for (int i = 0; i <= 20; i++) log.record(dusk + 500 + i, "WORLD", "Entry " + i);
         check(log.history().size() == 20 && log.history().get(0).endsWith("Entry 1"), "Oldest events were not evicted");

@@ -56,14 +56,14 @@ public final class SiegeDirector implements LunarService.Listener {
     private int starts;
     private int difficulty;
     public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius,
-                         boolean patrolEnabled) {
+                         boolean patrolEnabled, boolean outdoorPressure) {
         this.enabled = enabled;
         this.budget = Math.max(1, Math.min(24, budget));
         this.interval = Math.max(400, Math.min(1200, interval));
         this.activeCap = Math.max(2, Math.min(12, activeCap));
         this.outerRadius = Math.max(14, Math.min(28, outerRadius));
-        spawns = new SpawnController(this.outerRadius);
-        patrol = new LunarPatrol(patrolEnabled);
+        spawns = new SpawnController(this.outerRadius, outdoorPressure);
+        patrol = new LunarPatrol(patrolEnabled, outdoorPressure);
     }
 
     public void bind(World incoming, LunarService service) {
@@ -240,10 +240,11 @@ public final class SiegeDirector implements LunarService.Listener {
                 int equippedBefore = loadouts.equipped;
                 String profile = loadouts.apply(mob, wave.number, wave.equipped).name();
                 wave.equipped += loadouts.equipped - equippedBefore;
-                Spawn spawn = new Spawn(mob, player, wave.number, elapsed, profile);
+                Spawn spawn = new Spawn(mob, player, wave.number, elapsed, profile, spawns.outdoorLight);
                 evidence.add(spawn);
                 tracked.add(new TrackedMob(mob, wave));
                 wave.inserted++;
+                if (spawn.outdoorLight) wave.outdoorLight++;
                 wave.active++;
                 wave.localHostiles = ++localHostiles;
                 wave.peakActive = Math.max(wave.peakActive, tracked.size());
@@ -321,12 +322,14 @@ public final class SiegeDirector implements LunarService.Listener {
         public final String mob, profile;
         public final double x, y, z, horizontalSquared;
         public final int wave, tick;
+        public final boolean outdoorLight;
 
-        private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick, String profile) {
+        private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick, String profile, boolean outdoorLight) {
             this.wave = wave;
             this.tick = tick;
             mob = entity instanceof EntitySkeleton ? "SKELETON" : "ZOMBIE";
             this.profile = profile;
+            this.outdoorLight = outdoorLight;
             x = entity.posX;
             y = entity.posY;
             z = entity.posZ;
@@ -347,6 +350,7 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public static final class WaveSnapshot {
         public final int equipped, equipmentCap;
+        public final int outdoorLight;
         public final int number, planned, allocation, inserted, attempts, deferred, skipped, active;
         public final int startedAt, closedAt, carriedIn, carriedOut, localHostiles, peakActive;
         public final String state, outcome;
@@ -359,6 +363,7 @@ public final class SiegeDirector implements LunarService.Listener {
             planned = wave.planned;
             allocation = wave.allocation();
             inserted = wave.inserted;
+            outdoorLight = wave.outdoorLight;
             attempts = wave.attempts;
             deferred = wave.deferred();
             skipped = wave.skipped();
@@ -456,7 +461,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final State state;
         public final String reason;
         public final String stage;
-        public final int spawned, budget, attempts, elapsed, remaining, skipped;
+        public final int spawned, outdoorLight, budget, attempts, elapsed, remaining, skipped;
         public final Map<String, Integer> rejections;
         public final LoadoutSnapshot loadouts;
 
@@ -470,6 +475,7 @@ public final class SiegeDirector implements LunarService.Listener {
             stage = state != State.ACTIVE ? state.name()
                     : patrol.elapsed < PatrolSchedule.SPAWN_DELAY ? "PENDING" : "SPAWNING";
             spawned = patrol.spawned;
+            outdoorLight = patrol.outdoorLight;
             budget = patrol.budget;
             attempts = patrol.attempts;
             elapsed = patrol.elapsed;

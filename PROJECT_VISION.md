@@ -184,7 +184,7 @@ Non modificare l'allineamento o la persistenza dei mondi senza una decisione esp
 
 Il calendario determina *quando* un incontro può essere eleggibile. Altri sistemi stabiliranno *se*, *dove*, *con quali mob*, *con quali equipaggiamenti* e *con quale intensità*. Non usare la fase come un moltiplicatore automatico e universale di HP o danno.
 
-**[STATO IMPLEMENTATIVO DA VERIFICARE]** Il repository contiene PLAYER_ASSAULT a luna piena e il backport dell'equipaggiamento; le pattuglie di primo quarto/gibbosa crescente sono documentate nella PR #25, la cui integrazione in `main` va verificata prima di citarle come release accettata. Equipaggiamento automatico degli spawn e minaccia territoriale non sono ancora da presumere implementati.
+**[IMPLEMENTATION STATUS]** The full-moon PLAYER_ASSAULT is implemented. PR #25 added first-quarter and waxing-gibbous patrols in alpha.4. PR #26 added bounded encounter loadouts in alpha.5. Alpha.6 introduces outdoor placement in artificial light with local approach checks. Territorial threat, persistent settlements and SITE_SIEGE remain future milestones. [Patrol rules](docs/agents/lunar-pressure.md) · [Encounter loadouts](docs/agents/survival-alpha5.md) · [Outdoor placement and evidence](docs/agents/survival-alpha6.md)
 
 ### Sonno e letto [DIREZIONE APPROVATA SULL'INTENTO; PROTOTIPO SUL COMPORTAMENTO]
 

@@ -1,5 +1,7 @@
 # Survival 0.1.0-alpha.2 gameplay pass
 
+This record covers the original wave and tuning changes. See [alpha.6 placement](survival-alpha6.md) for current light and perimeter rules.
+
 ## Tuning and compatibility
 
 The natural full-moon dusk still admits one local Overworld PLAYER_ASSAULT. The director uses simulation ticks, retains the existing consumed-night record, and leaves vanilla mobs in the world when spawning ends. The encounter budget and world save format are independent. SITE_SIEGE remains a future encounter with a different target.

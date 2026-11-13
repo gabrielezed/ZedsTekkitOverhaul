@@ -1,6 +1,6 @@
 # Survival 0.1: Lunar Player Assault
 
-This record describes the alpha.1 implementation and its historical builds. See the [alpha.2 gameplay pass](survival-assault-alpha2.md) for current tuning and verification.
+This record describes the alpha.1 implementation and its historical builds. See the [alpha.2 gameplay pass](survival-assault-alpha2.md) for wave tuning and [alpha.6 placement](survival-alpha6.md) for current light and perimeter rules.
 
 ## Playable rules
 

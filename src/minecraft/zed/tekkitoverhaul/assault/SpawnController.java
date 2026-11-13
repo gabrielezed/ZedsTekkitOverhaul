@@ -10,22 +10,26 @@ import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.EntityZombie;
 import net.minecraft.src.EnumCreatureType;
+import net.minecraft.src.EnumSkyBlock;
 import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.SpawnerAnimals;
 import net.minecraft.src.World;
 
-/** Samples outdoor, loaded sites and inserts vanilla mobs using their ordinary spawn checks. */
+/** Samples loaded outdoor sites for lunar patrols and player assault waves. */
 final class SpawnController {
     static final int LOCAL_CAP = 28;
     static final int INNER_RADIUS = 12;
     private static final double BLOCK_CENTER_ERROR = Math.sqrt(0.5);
     private final int outerRadius;
+    private final boolean outdoorPressure;
     private final Random random = new Random();
     String rejection;
+    boolean outdoorLight;
 
-    SpawnController(int outerRadius) {
+    SpawnController(int outerRadius, boolean outdoorPressure) {
         this.outerRadius = outerRadius;
+        this.outdoorPressure = outdoorPressure;
     }
 
     int localHostiles(World world, EntityPlayer player) {
@@ -44,6 +48,18 @@ final class SpawnController {
         double angle = random.nextDouble() * 2 * Math.PI;
         int x = MathHelper.floor_double(player.posX + radius * Math.cos(angle));
         int z = MathHelper.floor_double(player.posZ + radius * Math.sin(angle));
+        return tryCandidate(world, player, skeleton, x, z);
+    }
+
+    EntityMob tryCandidate(World world, EntityPlayer player, boolean skeleton, int x, int z) {
+        rejection = null;
+        outdoorLight = false;
+        double dx = x + 0.5 - player.posX;
+        double dz = z + 0.5 - player.posZ;
+        double distanceSquared = dx * dx + dz * dz;
+        if (distanceSquared < INNER_RADIUS * INNER_RADIUS || distanceSquared > outerRadius * outerRadius) {
+            return reject("OUTSIDE_SPAWN_RANGE");
+        }
         if (x < -29999998 || x >= 29999998 || z < -29999998 || z >= 29999998
                 || !world.checkChunksExist(x - 2, 0, z - 2, x + 2, 255, z + 2)) {
             return reject("UNLOADED_CHUNK");
@@ -68,8 +84,22 @@ final class SpawnController {
         if (!world.getCollidingBoundingBoxes(mob, box).isEmpty() || world.isAnyLiquid(box)) {
             return reject("COLLISION_OR_LIQUID");
         }
-        if (!mob.getCanSpawnHere()) return reject("VANILLA_LIGHT");
+        if (outdoorPressure && !OutdoorApproach.hasOpenApproaches(new LoadedSurface(world), x, y, z,
+                MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ))) {
+            return reject("NO_OPEN_APPROACHES");
+        }
+        // Block light above 7 guarantees failure of the stock local-light roll.
+        // The stock Zombie and Skeleton path-weight gate also depends solely on brightness.
+        boolean exception = outdoorPressure && world.getSavedLightValue(EnumSkyBlock.Block, x, y, z) > 7;
+        if (exception) {
+            if (world.getSavedLightValue(EnumSkyBlock.Sky, x, y, z) > random.nextInt(32)) {
+                return reject("SKY_LIGHT_ROLL");
+            }
+        } else if (!mob.getCanSpawnHere()) {
+            return reject("VANILLA_LIGHT");
+        }
         if (!world.spawnEntityInWorld(mob)) return reject("INSERTION_REJECTED");
+        outdoorLight = exception;
         return mob;
     }
 

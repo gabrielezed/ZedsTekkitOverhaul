@@ -30,6 +30,8 @@ final class AssaultObservation {
         loadouts(json, view.loadouts);
         json.append(",\"patrolLoadouts\":");
         loadouts(json, view.patrol.loadouts);
+        json.append(",\"patrolOutdoorLight\":").append(view.patrol.outdoorLight)
+                .append(",\"patrolVanillaLight\":").append(view.patrol.spawned - view.patrol.outdoorLight);
         json.append(",\"waves\":[");
         for (WaveSnapshot wave : view.waves) {
             if (wave.number > 1) json.append(',');
@@ -38,6 +40,8 @@ final class AssaultObservation {
                     .append(",\"closedAt\":").append(wave.closedAt).append(",\"planned\":").append(wave.planned)
                     .append(",\"allocation\":").append(wave.allocation).append(",\"attempts\":").append(wave.attempts)
                     .append(",\"inserted\":").append(wave.inserted).append(",\"active\":").append(wave.active)
+                    .append(",\"outdoorLight\":").append(wave.outdoorLight)
+                    .append(",\"vanillaLight\":").append(wave.inserted - wave.outdoorLight)
                     .append(",\"equipped\":").append(wave.equipped).append(",\"equipmentCap\":").append(wave.equipmentCap)
                     .append(",\"deferred\":").append(wave.deferred).append(",\"skipped\":").append(wave.skipped)
                     .append(",\"carriedIn\":").append(wave.carriedIn).append(",\"carriedOut\":").append(wave.carriedOut)
@@ -57,6 +61,7 @@ final class AssaultObservation {
             if (i > 0) json.append(',');
             json.append("{\"mob\":\"").append(spawn.mob).append("\",\"wave\":").append(spawn.wave)
                     .append(",\"profile\":").append(code(spawn.profile))
+                    .append(",\"outdoorLight\":").append(spawn.outdoorLight)
                     .append(",\"tick\":").append(spawn.tick).append(",\"x\":").append(spawn.x)
                     .append(",\"y\":").append(spawn.y).append(",\"z\":").append(spawn.z)
                     .append(",\"horizontalSquared\":").append(spawn.horizontalSquared).append('}');

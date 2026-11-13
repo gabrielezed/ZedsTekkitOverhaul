@@ -151,7 +151,10 @@ final class GuiSurvivalDebug extends GuiScreen {
                 + " | Attempts: " + assault.patrol.attempts, width);
         append(rows, "Patrol elapsed: " + assault.patrol.elapsed + "t | Remaining: " + assault.patrol.remaining
                 + " | Skipped: " + assault.patrol.skipped, width);
-        if (assault.patrol.budget > 0) append(rows, assault.patrol.loadouts.summary(), width);
+        if (assault.patrol.budget > 0) {
+            append(rows, lightSummary(assault.patrol.spawned, assault.patrol.outdoorLight), width);
+            append(rows, assault.patrol.loadouts.summary(), width);
+        }
         if (assault.starts > 0) append(rows, assault.loadouts.summary(), width);
         if (!assault.patrol.rejections.isEmpty()) {
             append(rows, "Patrol rejections: " + AssaultDiagnostics.counts(assault.patrol.rejections), width);
@@ -174,6 +177,7 @@ final class GuiSurvivalDebug extends GuiScreen {
             append(rows, "Wave " + wave.number + " | " + wave.state + " | " + AssaultDiagnostics.label(wave.outcome), width);
             append(rows, "  Inserted: " + wave.inserted + "/" + wave.allocation + " | Attempts: " + wave.attempts
                     + " | Deferred: " + wave.deferred + " | Skipped: " + wave.skipped + " | Active: " + wave.active, width);
+            if (wave.inserted > 0) append(rows, "  " + lightSummary(wave.inserted, wave.outdoorLight), width);
             append(rows, "  Nearby: " + (wave.localHostiles < 0 ? "N/A" : wave.localHostiles) + " | Peak active assault: "
                     + wave.peakActive + " | Carry in/out: " + wave.carriedIn + "/" + wave.carriedOut, width);
             if (!wave.rejections.isEmpty()) append(rows, "  Constraints: " + AssaultDiagnostics.counts(wave.rejections), width);
@@ -184,6 +188,10 @@ final class GuiSurvivalDebug extends GuiScreen {
             append(rows, "Horizontal distance at spawn: " + AssaultDiagnostics.distance(last) + " blocks", width);
         }
         return rows;
+    }
+
+    private static String lightSummary(int inserted, int outdoorLight) {
+        return "Outdoor light: " + outdoorLight + " | Vanilla light: " + (inserted - outdoorLight);
     }
 
     private void append(List<String> rows, String line, int width) {

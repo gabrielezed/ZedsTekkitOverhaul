@@ -1,12 +1,13 @@
 package zed.tekkitoverhaul.survival.tactical;
 
-import net.minecraft.src.EntityArrow;
-import net.minecraft.src.Item;
-import net.minecraft.src.ItemStack;
+import net.minecraft.src.MovingObjectPosition;
 import net.minecraft.src.PathEntity;
+import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 
 public final class EntitySkirmisher extends TacticalHostile {
+    public static final double CAST_HEIGHT = 1.77D;
+    public static final double CAST_REACH = 0.98D;
     private static final float SPEED = 0.25F;
     private static final double RETREAT_SQ = 25.0D;
     private static final double RANGE_SQ = 144.0D;
@@ -15,7 +16,6 @@ public final class EntitySkirmisher extends TacticalHostile {
     private static final int MOVE_INTERVAL = 20;
     private static final int MAX_MOVE_FAILURES = 4;
 
-    private final ItemStack bow = new ItemStack(Item.bow);
     private int aim;
     private int nextShot;
     private int nextMove;
@@ -31,9 +31,6 @@ public final class EntitySkirmisher extends TacticalHostile {
 
     @Override
     public int getMaxHealth() { return 16; }
-
-    @Override
-    public ItemStack getHeldItem() { return bow; }
 
     public boolean isAiming() { return aim > 0; }
 
@@ -101,17 +98,21 @@ public final class EntitySkirmisher extends TacticalHostile {
     }
 
     private void fire() {
-        // Start inside the shooter's volume so collision checks include nearby cover.
-        EntityArrow arrow = new EntityArrow(worldObj, this, 1.0F);
-        arrow.setPosition(posX, posY + getEyeHeight() - 0.1D, posZ);
-        double dx = target.posX - arrow.posX;
-        double dz = target.posZ - arrow.posZ;
-        double dy = target.boundingBox.minY + 0.9D - arrow.posY + Math.sqrt(dx * dx + dz * dz) * 0.12D;
-        arrow.setArrowHeading(dx, dy, dz, 1.35F, 10.0F);
-        arrow.setDamage(1.5D);
-        if (worldObj.spawnEntityInWorld(arrow)) {
+        double dx = target.posX - posX, dz = target.posZ - posZ;
+        double length = Math.sqrt(dx * dx + dz * dz);
+        if (length < 1.0E-5D) return;
+        double y = boundingBox.minY + CAST_HEIGHT;
+        double x = posX + dx * CAST_REACH / length;
+        double z = posZ + dz * CAST_REACH / length;
+        EntityEnderPulse pulse = new EntityEnderPulse(this, x, y, z,
+                target.posX, target.boundingBox.minY + 1.0D, target.posZ);
+        // A panel between the chest and hands must absorb the discharge at its near side.
+        MovingObjectPosition wall = worldObj.rayTraceBlocks(Vec3D.createVector(posX, y, posZ),
+                Vec3D.createVector(x, y, z));
+        if (wall != null) pulse.dissipate(wall.hitVec);
+        if (wall != null || worldObj.spawnEntityInWorld(pulse)) {
             swing();
-            worldObj.playSoundAtEntity(this, "random.bow", 0.8F, 1.0F);
+            worldObj.playSoundAtEntity(this, "random.fizz", 0.35F, 1.55F);
         }
     }
 

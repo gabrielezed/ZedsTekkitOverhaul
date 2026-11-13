@@ -1,9 +1,16 @@
 package zed.tekkitoverhaul.survival.tactical;
 
 import java.io.File;
+import java.util.Set;
+import net.minecraft.src.Chunk;
+import net.minecraft.src.ChunkCoordIntPair;
+import net.minecraft.src.Entity;
 import net.minecraft.src.Item;
 import net.minecraft.src.ModLoader;
+import net.minecraft.src.World;
 import net.minecraft.src.forge.Configuration;
+import net.minecraft.src.forge.IChunkLoadHandler;
+import net.minecraft.src.forge.MinecraftForge;
 
 public final class TacticalHostiles {
     public static final String SKIRMISHER = "ZTO.Skirmisher";
@@ -14,6 +21,20 @@ public final class TacticalHostiles {
     public static void register() {
         ModLoader.registerEntityID(EntitySkirmisher.class, SKIRMISHER, ModLoader.getUniqueEntityId());
         ModLoader.registerEntityID(EntityBreacher.class, BREACHER, ModLoader.getUniqueEntityId());
+        ModLoader.registerEntityID(EntityEnderPulse.class, "ZTO.EnderPulse", ModLoader.getUniqueEntityId());
+        MinecraftForge.registerChunkLoadHandler(new IChunkLoadHandler() {
+            @Override
+            public void addActiveChunks(World world, Set<ChunkCoordIntPair> chunks) {}
+
+            @Override
+            public boolean canUnloadChunk(Chunk chunk) { return true; }
+
+            @Override
+            public boolean canUpdateEntity(Entity entity) {
+                // Let the pulse retire if the 32-block vanilla update neighborhood is incomplete.
+                return entity instanceof EntityEnderPulse;
+            }
+        });
     }
 
     public static void registerEggs() {

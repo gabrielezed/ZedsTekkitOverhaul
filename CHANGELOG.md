@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.7 — Tactical hostile prototypes
+
+- Add Skirmisher and Breacher prototypes with stable entity save names and Creative spawn eggs.
+- Darken both Enderkin skins, keep their eyes visible in low light and refine walking, ranged release and barrier impact poses.
+- Give the Skirmisher a hands-cast Ender Pulse with a moving faceted core, rotating violet contours and single-target collision.
+- The Skirmisher repositions and telegraphs ranged attacks. The Breacher follows access routes and applies bounded, non-destructive pressure at nearby barriers.
+- Retain the existing industrial OBJ pipeline after inspecting CodeChickenCore 0.5.3. See the [rendering audit](docs/agents/codechicken-rendering-audit.md).
+
 ## 0.1.0-alpha.6 — Outdoor pressure and fortification candidate
 
 - Lunar patrols and full-moon player assaults can place Zombies and Skeletons on lit outdoor ground with open approaches. Ordinary spawning still uses vanilla lighting.

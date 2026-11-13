@@ -1,3 +1,4 @@
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -7,6 +8,7 @@ import java.util.EnumSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import javax.imageio.ImageIO;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
@@ -24,11 +26,13 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
     private static File directory;
     private static Field focus, target, impacts;
     private boolean done, aimed, retreated, moved;
+    private boolean capturedWindup, capturedShot, capturedPressure;
     private int stage, shots, firstShot, health, measured, peakEntities;
     private long since, previousTick, elapsedNanos;
     private double initialX, initialZ;
     private EntitySkirmisher skirmisher;
     private EntityBreacher breacher;
+    private acq[] lineup;
     private final Set<nm> observed = Collections.newSetFromMap(new IdentityHashMap<nm, Boolean>());
 
     /** Keep prototype class resolution after FML has added the mod JAR to the classpath. */
@@ -94,9 +98,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 open(game);
                 arena(game);
                 next(game);
-            } else if (game.f.w() > previousTick) {
+            } else if (game.f.w() != previousTick) {
                 previousTick = game.f.w();
                 if ("stress".equals(mode)) stress(game);
+                else if ("visual".equals(mode)) visual(game);
                 else combat(game);
             }
         } catch (Throwable failure) {
@@ -117,13 +122,22 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 break;
             case 2:
                 observeArrows(game);
+                if (skirmisher.getAimPose(1) > 0.85F && !capturedWindup) {
+                    screenshot(game, "skirmisher-windup");
+                    capturedWindup = true;
+                }
+                if (shots > 0 && skirmisher.V - firstShot <= 3 && !capturedShot) {
+                    screenshot(game, "skirmisher-release");
+                    capturedShot = true;
+                }
                 aimed |= skirmisher.isAiming();
                 moved |= Math.abs(skirmisher.q - initialZ) > 0.75D;
                 if (shots < 2 && age < 180) return;
-                check(aimed && moved && shots >= 2, "Skirmisher aims, shoots twice and strafes");
+                check(aimed && moved && shots >= 2 && capturedWindup && capturedShot,
+                        "Skirmisher aims, shoots twice and strafes");
                 check(target.get(skirmisher) == game.h, "Skirmisher acquires the player");
                 System.out.println("ALPHA7 Skirmisher aimed, strafed and fired two spaced shots");
-                screenshot(game);
+                screenshot(game, "skirmisher-strafe");
                 player(game, skirmisher.o - X - 2, skirmisher.q - Z);
                 initialX = skirmisher.o;
                 initialZ = skirmisher.q;
@@ -171,7 +185,14 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 next(game);
                 break;
             case 7:
-                if (impacts.getInt(breacher) < 3 && age < 205) return;
+                int pressure = impacts.getInt(breacher);
+                float phase = breacher.i(1F);
+                if (pressure > 0 && !capturedPressure && phase >= 0.4F && phase <= 0.7F) {
+                    screenshot(game, "breacher-pressure");
+                    capturedPressure = true;
+                }
+                if ((pressure < 3 || !capturedPressure) && age < 205) return;
+                check(capturedPressure, "pressure drives the attack pose");
                 check(impacts.getInt(breacher) == 3, "Breacher applies exactly three impacts, got "
                         + impacts.getInt(breacher) + " at " + breacher.o + "," + breacher.p + "," + breacher.q
                         + " door=" + game.f.a(X + 4, Y, Z) + ":" + game.f.e(X + 4, Y, Z));
@@ -188,7 +209,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 check(game.f.a(X + 4, Y, Z) == 64 && game.f.e(X + 4, Y, Z) == 4,
                         "open door survives melee");
                 System.out.println("ALPHA7 Breacher traversed the reopened entrance and landed melee");
-                screenshot(game);
+                screenshot(game, "breacher-melee");
                 skirmisher = (EntitySkirmisher) spawn(game, TacticalHostiles.SKIRMISHER, 7, -3);
                 skirmisher.l(9);
                 breacher.l(13);
@@ -201,6 +222,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                 if (age < 10) return;
                 List<TacticalHostile> loaded = mobs(game);
                 check(loaded.size() == 2, "exactly two prototypes loaded from the save");
+                screenshot(game, "reopened");
                 for (TacticalHostile mob : loaded) {
                     check(mob.bb() == (mob instanceof EntitySkirmisher ? 9 : 13), "health persists through Save and Quit");
                     checkRenderer(game, mob);
@@ -258,9 +280,79 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             check(active >= 8, "most prototypes still pursue the player");
             System.out.println("ALPHA7 stress ticks=" + age + " sampledTicks=" + measured
                     + " wallMillis=" + (now - elapsedNanos) / 1000000 + " active=" + active + " peak=" + peakEntities);
-            screenshot(game);
+            screenshot(game, "stress");
             finish(game);
         }
+    }
+
+    private void visual(Minecraft game) throws Exception {
+        long age = game.f.w() - since;
+        if (stage == 1 && age >= 35) {
+            skirmisher = (EntitySkirmisher) spawn(game, TacticalHostiles.SKIRMISHER, 5, -1);
+            breacher = (EntityBreacher) spawn(game, TacticalHostiles.BREACHER, 5, 0);
+            rv player = new rv(game.f, "ZTOTest");
+            player.Z = null;
+            lineup = new acq[] {player, skirmisher, breacher, new jg(game.f), new ajg(game.f),
+                    (acq) spawn(game, TacticalHostiles.SKIRMISHER, 6, 4),
+                    (acq) spawn(game, TacticalHostiles.BREACHER, 6, 5)};
+            lineUp();
+            for (acq mob : lineup) if (!game.f.b.contains(mob)) check(game.f.a(mob), "lineup insertion");
+            game.h.aT.a = true;
+            player(game, 1.2D, 0.75D);
+            game.A.D = true;
+            game.A.O = 0.35F;
+            next(game);
+        } else if (stage >= 2 && stage <= 5) {
+            if (age >= 12) {
+                if (stage == 2) {
+                    check(game.f.o(X + 5, Y + 1, Z) == 15, "daylight reaches the lineup");
+                    screenshot(game, "lineup-daylight");
+                    game.f.a(18000L);
+                    torches(game, 50);
+                } else if (stage == 3) {
+                    check(game.f.o(X + 5, Y + 1, Z) >= 10, "torchlight reaches the lineup");
+                    screenshot(game, "lineup-torchlight");
+                    torches(game, 0);
+                } else if (stage == 4) {
+                    check(game.f.o(X + 5, Y + 1, Z) <= 5, "lineup is in low light");
+                    screenshot(game, "lineup-low-light");
+                    game.f.a(6000L);
+                    for (int dz = -2; dz <= 1; dz++) game.f.g(X + 5, Y + 2, Z + dz, 1);
+                } else {
+                    check(clearance(skirmisher) < 0.75F && clearance(breacher) < 0.85F,
+                            "two-block ceiling fits both render envelopes");
+                    screenshot(game, "two-block-clearance");
+                    game.A.D = false;
+                    finish(game);
+                    return;
+                }
+                next(game);
+            }
+            lineUp();
+        }
+    }
+
+    private void lineUp() {
+        double[] positions = {-2.2, -1.1, 0.25, 1.55, 2.65, 3.75, 4.85};
+        for (int i = 0; i < lineup.length; i++) {
+            acq mob = lineup[i];
+            mob.c(X + (i < 5 ? 5.5D : 6.6D), Y, Z + positions[i], 90, 0);
+            mob.bd = mob.be = mob.bf = mob.bg = 90;
+            mob.r = mob.s = mob.t = 0;
+            mob.bL = mob.bM = mob.bN = 0;
+            mob.D();
+        }
+    }
+
+    private static float clearance(TacticalHostile mob) throws Exception {
+        um renderer = ahu.a.a(mob);
+        Method measure = renderer.getClass().getDeclaredMethod("clearanceScale", acq.class, float.class);
+        measure.setAccessible(true);
+        return (Float) measure.invoke(renderer, mob, 1F);
+    }
+
+    private static void torches(Minecraft game, int id) {
+        for (int dz = -3; dz <= 5; dz += 2) game.f.g(X + 4, Y, Z + dz, id);
     }
 
     private static nn spawn(Minecraft game, String name, int dx, int dz) {
@@ -273,9 +365,19 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
     }
 
     private static void checkRenderer(Minecraft game, nn mob) {
+        check(ahu.a.a(mob) instanceof fe, "native living renderer registry");
         check(ahu.a.a(mob).getClass().getName().contains("TacticalRenderer"), "custom renderer registry");
         check(TacticalHostile.class.getResource(mob.v_()) != null, "packaged skin " + mob.v_());
-        check(game.p.b(mob.v_()) > 0, "texture uploaded");
+        try {
+            BufferedImage skin = ImageIO.read(TacticalHostile.class.getResource(mob.v_()));
+            check(skin.getHeight() == 64 && skin.getWidth() == (mob instanceof EntitySkirmisher ? 64 : 128),
+                    "native UV atlas dimensions");
+        } catch (java.io.IOException failure) {
+            throw new AssertionError("texture decode", failure);
+        }
+        int texture = game.p.b(mob.v_());
+        check(texture > 0 && GL11.glIsTexture(texture), "texture uploaded");
+        check(game.p.b(mob.v_()) == texture, "texture binding is stable");
         check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL reports no error");
     }
 
@@ -304,8 +406,10 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
         }
     }
 
-    private static void screenshot(Minecraft game) {
-        System.out.println("ALPHA7 " + zh.a(directory, game.d, game.e));
+    private static void screenshot(Minecraft game, String label) {
+        check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL before capture: " + label);
+        System.out.println("ALPHA7 " + label + " " + zh.a(directory, game.d, game.e));
+        check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL after capture: " + label);
     }
 
     private static void open(Minecraft game) throws Exception {

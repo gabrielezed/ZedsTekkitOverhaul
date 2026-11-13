@@ -19,6 +19,7 @@ public abstract class TacticalHostile extends EntityMob {
     private int nextTargetSearch;
     private int unseenTicks;
     private int swingTicks;
+    private int previousSwingTicks;
 
     protected TacticalHostile(World world, float width, float height, String skin) {
         super(world);
@@ -40,6 +41,7 @@ public abstract class TacticalHostile extends EntityMob {
     @Override
     protected final void updateAITasks() {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
+        previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
         if (target == null && ticksExisted >= nextTargetSearch) {
             nextTargetSearch = ticksExisted + 20;
@@ -62,6 +64,7 @@ public abstract class TacticalHostile extends EntityMob {
             }
         }
         super.updateAITasks();
+        updateAttackPose();
     }
 
     private boolean valid(EntityPlayer player) {
@@ -102,13 +105,17 @@ public abstract class TacticalHostile extends EntityMob {
     }
 
     protected final void swing() {
-        swingTicks = 6;
+        swingTicks = 10;
+        previousSwingTicks = 10;
     }
 
     @Override
     public final float getSwingProgress(float partialTick) {
-        return swingTicks == 0 ? 0.0F : (7.0F - swingTicks + partialTick) / 8.0F;
+        if (previousSwingTicks == 0) return 0;
+        return (10 - previousSwingTicks + (previousSwingTicks - swingTicks) * partialTick) / 10;
     }
+
+    protected void updateAttackPose() {}
 
     protected final Vec3D eyes() {
         return Vec3D.createVector(posX, posY + getEyeHeight(), posZ);

@@ -21,6 +21,8 @@ public final class EntitySkirmisher extends TacticalHostile {
     private int nextMove;
     private int moveFailures;
     private int side = 1;
+    private float previousAimPose;
+    private float aimPose;
 
     public EntitySkirmisher(World world) {
         super(world, 0.6F, 1.7F, "skirmisher");
@@ -34,6 +36,16 @@ public final class EntitySkirmisher extends TacticalHostile {
     public ItemStack getHeldItem() { return bow; }
 
     public boolean isAiming() { return aim > 0; }
+
+    public float getAimPose(float partialTick) {
+        return previousAimPose + (aimPose - previousAimPose) * partialTick;
+    }
+
+    @Override
+    protected void updateAttackPose() {
+        previousAimPose = aimPose;
+        aimPose = aim > 0 ? Math.min(1, aimPose + 0.16F) : Math.max(0, aimPose - 0.26F);
+    }
 
     @Override
     protected int unseenLimit() { return 100; }

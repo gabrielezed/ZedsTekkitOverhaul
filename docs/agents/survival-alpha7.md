@@ -24,18 +24,19 @@ Both mobs use vanilla movement, collision, swimming, damage, death, despawn and 
 
 ## Visuals and access
 
-The original temporary 64×32 skins use the legacy biped atlas. The green, narrow Skirmisher carries a vanilla bow and raises it during the windup. The rust-colored Breacher uses a broader biped silhouette and a swing for both melee and pressure. Native walking, orientation, lightmap and model-view state come from the pack entity renderer. Industrial geometry keeps its [existing OBJ/TESR approach](codechicken-rendering-audit.md).
+The [Enderkin redesign](enderkin-visual-design.md) gives each prototype its own cuboid model, skin and attack poses. The Skirmisher's held bow is visually hidden while the existing arrow attack is retained. Industrial geometry keeps its [existing OBJ/TESR approach](codechicken-rendering-audit.md).
 
 The game-thread runtime probe is the developer spawn mechanism. It uses a marked generated disposable world in the isolated Tekkit Dev copy and resolves each entity through the production registry. It stays outside the production JAR. Build with `zto-tools/build-and-deploy.bat`, pointing `ZTO_PRISM_MODS` at the copy's `minecraft/mods` directory, and run:
 
 ```powershell
 .\zto-tools\test-alpha7-runtime.ps1
 .\zto-tools\test-alpha7-runtime.ps1 -Mode stress
+.\zto-tools\test-alpha7-runtime.ps1 -Mode visual
 ```
 
 The probe uses the same ignored `dist-zto/survival-hud-runtime/launch.json`, pack runtime and natives as the alpha.6 checks. Each invocation makes a new disposable save. Reports and screenshots remain in ignored local paths.
 
-## Build and runtime evidence
+## Original biped prototype evidence
 
 - Local and remote `main` resolved to `92abefd1b4ef8aaf4c67416be2d5ef4ada2475d0`, the merge of PR #27 after #25 and #26. Baseline product version was alpha.6.
 - Candidate source commit `c594a46663f4bc132484c75aaf8419541b9642fd` on `codex/survival-alpha7-tactical-mobs`. The build sidecar reports `sourceDirty=true` because the workspace had two pre-existing untracked documentation files. Packaged SHA-256 `9691843f47d8a84f13eaa046bc86865b42ab398f138c1defc7ef3fd340985647`. MCP 6.2 client compile, reobfuscation and the 277-entry streaming archive check passed. Compiler profile Forge 3.4.9.171 with Java 8. The candidate was deployed into the workspace copy of Tekkit Dev.
@@ -53,10 +54,10 @@ The runtime evidence covers the solid cover and vanilla wooden-door fixtures. Th
 | Area | Skirmisher | Breacher |
 | --- | --- | --- |
 | Tactical identity | Ranged spacing with lateral movement and retreat | Melee approach that explicitly reacts to a blocked route |
-| Readability | Bow windup and projectile give the player cues | A swing and localized impact indicate the obstruction |
+| Readability | Asymmetric reach and projectile give the player cues | A two-arm strike and localized impact indicate the obstruction |
 | Counterplay | Cover, pushing inside its firing range, ranged return fire and retreat | Closed barriers, alternate access control, terrain and direct combat |
 | Legacy complexity | Bounded waypoint probes and native projectiles | Distinguishes complete and partial paths and checks actual ray hits |
-| Render complexity | One biped and native held-item pass | One widened biped |
+| Rendering | Native living renderer with narrow articulated cuboids | Native living renderer with broad articulated cuboids |
 | Lunar suitability | Candidate for a rare composition slot after playtest and safe placement verification | Requires more terrain and alternate-route evidence before allocating a slot |
 | Future site sieges | Potential ranged support | Potential approach pressure using a future site objective |
 

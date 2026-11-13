@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([ValidateSet('combat', 'stress')][string]$Mode = 'combat')
+param([ValidateSet('combat', 'stress', 'visual')][string]$Mode = 'combat')
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot

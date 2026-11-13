@@ -1,4 +1,6 @@
-# Lunar Pressure candidate (0.1.0-alpha.4)
+# Lunar patrols
+
+PR #25 introduced patrols in `0.1.0-alpha.4` and merged into `main` as `6e61d3e`. The scheduling rules below still apply. The acceptance results at the end record the original alpha.4 builds.
 
 | Lunar phase | Additional pressure |
 | --- | --- |
@@ -12,7 +14,7 @@ Patrols are enabled by default. Set `lunarPatrols=false` in `config/mod_ZedsTekk
 
 Natural dusk at tick 13,000 schedules one patrol in the local Overworld. The patrol is pending for 800 simulation ticks. An ordinary pause freezes its timer and suppresses placement until play resumes. Player loss, Peaceful, a difficulty change, a world or dimension change, night end and calendar resync discard pending work.
 
-Placement begins around tick 13,800. The patrol checks up to four candidates every 20 simulation ticks for a 240-tick window, with at most 12 rounds and 48 candidates. Filling the allocation or reaching the local hostile cap closes the window early. Any unfilled slots are skipped. Each round samples 12–16 blocks from the player's current position and uses the existing loaded-chunk, surface, roof, collision, vanilla light and local population checks. Zombies and skeletons use their normal equipment and AI. Hard uses skeletons to avoid vanilla wooden-door breaking by zombies. Spawned hostiles stay in the world under vanilla rules.
+Placement begins around tick 13,800. The patrol checks up to four candidates every 20 simulation ticks for a 240-tick window, with at most 12 rounds and 48 candidates. Filling the allocation or reaching the local hostile cap closes the window early. Any unfilled slots are skipped. Each round samples 12–16 blocks from the player's current position. Alpha.6 checks local surface approaches and allows eligible torch-lit exterior placements. Set `lunarOutdoorLightPressure=false` and restart to restore the earlier placement rules. Eligible mobs can receive the alpha.5 encounter loadouts. Hard uses Skeletons to avoid vanilla wooden-door breaking by Zombies. Spawned hostiles use native AI and persistence. [Outdoor placement rules](survival-alpha6.md) · [Loadout rules](survival-alpha5.md)
 
 `SiegeDirector` receives the lunar event and ticks the patrol on the same simulation thread as the assault. The lunar service already persists its replay watermark, including the dusk boundary. Save and Quit abandons a queued patrol. Reopening, rewinding, skipping time or changing phase cannot replay that boundary. The patrol adds no save record. A phase selected in daylight can still encounter the next natural dusk. Both encounters target the player's vicinity, which keeps site targeting and territorial systems available as separate future work.
 
@@ -70,6 +72,6 @@ MCP 6.2 compiled and reobfuscated the client with JDK 8 and Forge 3.4.9.171. The
 
 The lifecycle report filenames end with `7832ce7df99d4915a1d97ab277748249` (first quarter), `69a370e39d8b4282ba4ee628e37ebef4` (waxing gibbous), `72a60089a705494896fd0d30d15ccc63` (shelter), `df5c0f8bd3524d5eb3cde346faa299bd` (interrupted patrol), `c4eda3316fb94c63a5183a91de8be8be` (new moon), `3bed987288db4f65bf438ffcc9e6e4d3` (interrupted assault) and `f4e116d07416485c8f9212aa817dab14` (covered assault) under `dist-zto/test-reports/`. The GUI checks used the vanilla menu on the game thread. Owner playtesting and physical bed use remain separate.
 
-## Deferred design
+## Follow-up milestones
 
-The revised [Project Vision](../../PROJECT_VISION.md) calls for meaningful fortifications and the possibility of threats in illuminated open areas. This release keeps vanilla hostile light validation and the existing open-column requirement. A roof check is a placement constraint. Recognizing protected interiors, adapted caves and open fortified yards requires separate evidence and design. Future illuminated exterior encounters need a tested placement boundary that protects interiors. Territorial threat, encounter-specific equipment distribution, settlement recognition and persistent `SITE_SIEGE` targets remain separate milestones.
+Alpha.4 used vanilla hostile light validation and required an open column. Alpha.5 introduced encounter equipment, and alpha.6 added the lit exterior rule and the local approach checks. Territorial threat, settlement recognition and persistent `SITE_SIEGE` targets remain future milestones. [Project Vision](../../PROJECT_VISION.md) · [Alpha.6 acceptance](survival-alpha6.md)

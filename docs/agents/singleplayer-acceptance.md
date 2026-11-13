@@ -1,6 +1,6 @@
 # Milestone 1 singleplayer acceptance
 
-Later Survival results are tracked in the [alpha.1 assault record](survival-assault-acceptance.md), the [alpha.2 assault gameplay pass](survival-assault-alpha2.md) and the [alpha.3 mob equipment acceptance record](mob-equipment-acceptance.md). The historical results below apply only to their original build hashes.
+Later Survival results have their own records for the [initial assault](survival-assault-acceptance.md), [waves](survival-assault-alpha2.md), [mob equipment](mob-equipment-acceptance.md), [patrols](lunar-pressure.md), [encounter composition and beds](survival-alpha5.md), and [outdoor placement](survival-alpha6.md). The historical results below apply only to their original build hashes.
 
 ## Provenance
 

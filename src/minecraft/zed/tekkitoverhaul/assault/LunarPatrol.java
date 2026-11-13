@@ -14,18 +14,19 @@ import zed.tekkitoverhaul.lunar.LunarSnapshot;
 /** A single dusk patrol in the local player's vicinity. */
 final class LunarPatrol {
     final boolean enabled;
-    private final SpawnController spawns = new SpawnController(16);
+    private final SpawnController spawns;
     final EncounterLoadouts loadouts = new EncounterLoadouts();
     final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
     private EntityPlayer target;
     private int difficulty;
     State state = State.IDLE;
     String reason;
-    int budget, spawned, attempts, elapsed;
+    int budget, spawned, outdoorLight, attempts, elapsed;
     boolean paused;
 
-    LunarPatrol(boolean enabled) {
+    LunarPatrol(boolean enabled, boolean outdoorPressure) {
         this.enabled = enabled;
+        spawns = new SpawnController(16, outdoorPressure);
         reset();
     }
 
@@ -39,7 +40,7 @@ final class LunarPatrol {
     }
 
     private void clearProgress() {
-        spawned = attempts = elapsed = 0;
+        spawned = outdoorLight = attempts = elapsed = 0;
         paused = false;
         rejections.clear();
     }
@@ -100,6 +101,7 @@ final class LunarPatrol {
             if (mob != null) {
                 loadouts.apply(mob, 0, 0);
                 spawned++;
+                if (spawns.outdoorLight) outdoorLight++;
                 localHostiles++;
             } else {
                 String rejection = spawns.rejection;
@@ -121,7 +123,8 @@ final class LunarPatrol {
         paused = false;
         String message = terminal + " | " + cause + " | Spawned " + spawned + "/" + budget
                 + " | Attempts " + attempts + " | Skipped " + (budget - spawned) + " | Elapsed " + elapsed
-                + (rejections.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(rejections));
+                + (rejections.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(rejections))
+                + " | Outdoor light " + outdoorLight + " | Vanilla light " + (spawned - outdoorLight);
         ModLoader.getLogger().info("[ZTO] PATROL [" + time + "] " + message);
         if (diagnostics != null) diagnostics.record(time, "PATROL",
                 message + " | " + new SiegeDirector.LoadoutSnapshot(loadouts, spawned).summary());

@@ -20,6 +20,7 @@ final class AssaultWave {
     int closedAt = -1;
     int attempts;
     int inserted;
+    int outdoorLight;
     int active;
     int carriedIn;
     int carriedOut;

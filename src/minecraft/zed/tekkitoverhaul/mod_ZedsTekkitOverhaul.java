@@ -51,6 +51,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public static boolean playerAssault = true;
     @MLProp(info = "Enable natural first-quarter and waxing-gibbous patrols in local Survival")
     public static boolean lunarPatrols = true;
+    @MLProp(info = "Allow limited outdoor lunar encounters in artificial light with open surface approaches")
+    public static boolean lunarOutdoorLightPressure = true;
     @MLProp(info = "Use Overworld beds as respawn anchors without sleeping or advancing the night")
     public static boolean disableNightSkipping = true;
     @MLProp(info = "Maximum enemies per assault (1 to 24)")
@@ -100,7 +102,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void modsLoaded() {
         LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
                 new SiegeDirector(playerAssault, assaultSpawnBudget, assaultWaveInterval, assaultActiveCap,
-                        assaultOuterRadius, lunarPatrols),
+                        assaultOuterRadius, lunarPatrols, lunarOutdoorLightPressure),
                 survivalDebugHud, survivalDebugHudKey, survivalDebugLogCapacity);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();

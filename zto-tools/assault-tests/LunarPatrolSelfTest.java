@@ -20,7 +20,7 @@ public final class LunarPatrolSelfTest {
         EntityPlayer player = new EntityPlayer(world) {
             public void func_6420_o() { }
         };
-        LunarPatrol patrol = new LunarPatrol(true);
+        LunarPatrol patrol = new LunarPatrol(true, true);
         long dusk = 2L * LunarSnapshot.DAY + LunarSnapshot.NIGHT_START;
         LunarCalendar calendar = new LunarCalendar(1, 0, 0, Long.MIN_VALUE, () -> { }, failure -> {
             throw new AssertionError(failure);

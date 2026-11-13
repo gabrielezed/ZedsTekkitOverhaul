@@ -34,6 +34,8 @@ import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
+import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -87,6 +89,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void load() {
+        TacticalHostiles.register();
         AdvancedCraftingRegistry.register();
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
         if (disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
@@ -127,6 +130,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void addRenderer(Map<Class<? extends Entity>, Render> renderers) {
         RenderMobEquipment.register(renderers);
+        TacticalHostileRenderers.register(renderers);
     }
 
     @Override

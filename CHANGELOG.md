@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.7 — Tactical hostile prototypes
+
+- Add developer-only Skirmisher and Breacher scenarios with original temporary skins, legacy biped rendering and stable entity save names.
+- The Skirmisher repositions and telegraphs ranged attacks. The Breacher follows access routes and applies bounded, non-destructive pressure at nearby barriers.
+- Retain the existing industrial OBJ pipeline after inspecting CodeChickenCore 0.5.3. See the [rendering audit](docs/agents/codechicken-rendering-audit.md).
+
 ## 0.1.0-alpha.6 — Outdoor pressure and fortification candidate
 
 - Lunar patrols and full-moon player assaults can place Zombies and Skeletons on lit outdoor ground with open approaches. Ordinary spawning still uses vanilla lighting.

@@ -41,6 +41,7 @@ try {
         $stderr = Join-Path $report "alpha6-$mode-$save.stderr.txt"
         $process = Start-Process -FilePath $launch.java -ArgumentList $arguments -WorkingDirectory $game `
             -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $null = $process.Handle
         $timedOut = !$process.WaitForExit(115000)
         if ($timedOut) {
             $process.Kill()

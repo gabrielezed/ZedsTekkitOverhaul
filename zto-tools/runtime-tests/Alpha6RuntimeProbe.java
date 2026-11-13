@@ -17,6 +17,7 @@ import zed.tekkitoverhaul.mod_ZedsTekkitOverhaul;
 public final class Alpha6RuntimeProbe implements ITickHandler {
     private static final int X = 34, Y = 121, Z = 215;
     private static String save, mode;
+    private static Field lastFocusTime;
     private final boolean bootstrap;
     private boolean done;
     private int stage, frozen;
@@ -38,13 +39,23 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             throw new IllegalArgumentException("Use a marked save in the isolated Tekkit Dev copy");
         }
         field(Minecraft.class, "aj").set(null, game);
+        lastFocusTime = field(lr.class, "Y");
         FMLCommonHandler.instance().registerTickHandler(new Alpha6RuntimeProbe(true));
         Minecraft.main(new String[] {"ZTOTest"});
     }
 
     public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }
     public String getLabel() { return "Alpha 6 runtime acceptance"; }
-    public void tickStart(EnumSet<TickType> ticks, Object... data) { }
+    public void tickStart(EnumSet<TickType> ticks, Object... data) {
+        if (bootstrap || done) return;
+        Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
+        try {
+            // The hidden test client must only pause through the explicit menu in this probe.
+            lastFocusTime.setLong(game.u, System.currentTimeMillis());
+        } catch (IllegalAccessException error) {
+            throw new IllegalStateException(error);
+        }
+    }
 
     public void tickEnd(EnumSet<TickType> ticks, Object... data) {
         if (done) return;
@@ -82,6 +93,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             if (stage == 3) {
                 check(view.patrol.elapsed == frozen && view.patrol.attempts == 0, "paused patrol is frozen");
                 if (System.nanoTime() >= pauseUntil) {
+                    check(game.s instanceof lb, "native pause menu is open");
                     game.a((vp) null);
                     stage = 4;
                 }
@@ -92,6 +104,8 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 if ("full".equals(mode)) check("INTERRUPTED_ON_REOPEN".equals(view.reason), "interrupted assault state");
                 if ("waves".equals(mode)) check("NIGHT_CONSUMED".equals(view.reason), "resolved assault state");
                 if (game.f.w() >= reopenAt + 100) {
+                    System.out.println("ALPHA6 reopen mode=" + mode + " reason=" + view.reason
+                            + " through=" + game.f.w() + " starts=" + view.starts + " patrolAttempts=" + view.patrol.attempts);
                     saveQuit(game);
                     System.out.println("ALPHA6 PASS " + mode);
                     done = true;
@@ -118,7 +132,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         }
     }
 
-    private static boolean verifyEncounter(Minecraft game, Snapshot view) {
+    private boolean verifyEncounter(Minecraft game, Snapshot view) {
         if ("full".equals(mode) || "waves".equals(mode)) {
             if (view.spawns.isEmpty()) return false;
             check(view.starts == 1 && view.patrol.spawned == 0 && view.budget == 15, "full moon assault only");

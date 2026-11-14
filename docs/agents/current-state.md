@@ -1,6 +1,6 @@
 # Current implementation
 
-The integration branch for **0.1.0-alpha.8** is `codex/survival-alpha8-enderkin-encounters`, targeting `main` in PR #30. Acceptance targets the locally simulated Overworld in Tekkit Classic 3.1.2. [Environment and build](environment.md)
+**0.1.0-alpha.8** closes the Survival Foundations milestone. [PR #30](https://github.com/gabrielezed/ZedsTekkitOverhaul/pull/30) tracks its integration into `main`. Acceptance targets the locally simulated Overworld in Tekkit Classic 3.1.2. [Environment and build](environment.md)
 
 | Owner | Current responsibility |
 | --- | --- |

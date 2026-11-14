@@ -4,6 +4,17 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 ![Skirmisher and Breacher alongside a vanilla Enderman in Tekkit Dev](docs/agents/images/enderkin-polish-lineup-daylight.png)
 
+## Survival Foundations · Alpha.8 complete
+
+**0.1.0-alpha.8** closes the Survival Foundations milestone. Full-moon assaults, lunar patrols and experimental Enderkin encounters give the Overworld a rhythm of preparation, danger and recovery. [Changelog](CHANGELOG.md) · [Alpha.8 playtest and verification](docs/agents/survival-alpha8.md)
+
+| Under the full moon | At the door |
+| --- | --- |
+| ![Skirmisher charging an Ender Pulse beneath the full moon in a torch-lit arena](docs/agents/images/alpha8-mixed-pulse.png) | ![Breacher striking a closed wooden door](docs/agents/images/enderkin-breacher-pressure.png) |
+| A Skirmisher winds up its Ender Pulse during a mixed lunar assault. | A Breacher pressures the entrance and leaves the door intact. |
+
+**Next up: 0.2 · Territorial Activity & Threat.** The next milestone explores how local activity and regional danger can shape encounters. [Territorial design](docs/agents/territorial-threat-design.md)
+
 ## Gameplay
 
 ### World and automation

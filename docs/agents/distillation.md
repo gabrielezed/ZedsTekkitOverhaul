@@ -54,10 +54,7 @@ Right-click any of the six components with an empty hand to open its live panel.
 
 ## Short test command
 
-For an existing `config/ZedsTekkitOverhaul-Distillation.cfg` that fails with
-`unknown character _`, close Minecraft and rename `heavy_gas_oilBucket`
-to `heavygasoilBucket`. Keep the
-numeric value and the rest of the file so existing item and block IDs are preserved.
+The [unified configuration](configuration.md) imports the original distillation IDs. The migrated heavy gas oil keys are `item.heavygasoilBucket` and `block.heavygasoilFlowing`. Keep the numbers stable for existing worlds.
 
 ```powershell
 .\zto-tools\test-distillation-core.bat

@@ -7,6 +7,7 @@ This directory is the **project-specific technical reference** for coding agents
 | Task | Read first |
 | --- | --- |
 | Starting a new work session | [Architecture](architecture.md), [Environment](environment.md) |
+| Adding or migrating a startup setting | [Configuration](configuration.md) |
 | Updating blocks, recipes or GUI | [Architecture](architecture.md), [Compatibility](compatibility.md), [Testing](testing.md) |
 | Crafting and inventory UX, NEI or Inventory Tweaks | [Implementation checklist and agent prompts](crafting-inventory-ux.md) |
 | IC2, EE2, BuildCraft or EMC changes | [Integrations](integrations.md), [Versioned API reference](../reference/tekkit-classic-3.1.2/README.md), [Compatibility](compatibility.md) |

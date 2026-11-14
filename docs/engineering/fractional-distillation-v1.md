@@ -142,7 +142,7 @@ git switch -c feature/fractional-distillation-v1 --track origin/feature/fraction
 .\zto-tools\build-and-deploy.bat
 ```
 
-**Before deploy:** close Minecraft, move old competing ZTO JARs out of the Prism mods directory and make a backup of your test world. Check `config/ZedsTekkitOverhaul-Distillation.cfg` for numeric ID collisions; defaults are **3010–3015** for six blocks, **22000–22003** as *item constructor IDs* for four sample buckets (their runtime item IDs are 256 higher).
+**Before deploy:** close Minecraft, move old competing ZTO JARs out of the Prism mods directory and make a backup of your test world. Check `config/ZedsTekkitOverhaul.cfg` for numeric ID collisions; defaults are **3010–3015** for six blocks, **22000–22003** as *item constructor IDs* for four sample buckets (their runtime item IDs are 256 higher).
 
 **In Tekkit Dev:**
 1. Obtain one Boiler, one LV Heater, two Columns, one Condenser, one Receiver and one Thermometer from crafting/NEI.

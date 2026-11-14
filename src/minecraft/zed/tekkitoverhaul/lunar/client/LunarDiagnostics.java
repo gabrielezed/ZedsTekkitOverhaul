@@ -41,7 +41,7 @@ final class LunarDiagnostics implements LunarService.Listener {
     static String decision(LunarEvent event) {
         if (event.cause != LunarEvent.Cause.NATURAL) return "Suppressed: " + event.cause;
         if (event.kind != LunarEvent.Kind.NIGHT_STARTED) return "No night-start boundary";
-        return FULL_MOON_NIGHT.matches(event.after) ? "Fired: natural full-moon night" : "Suppressed: window mismatch";
+        return FULL_MOON_NIGHT.matches(event.after) ? "Natural full-moon boundary" : "Suppressed: window mismatch";
     }
 
     private static String describe(LunarSnapshot view) {

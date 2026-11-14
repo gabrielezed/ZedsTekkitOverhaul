@@ -129,13 +129,20 @@ public final class SiegeDirector implements LunarService.Listener {
         if (event.kind == LunarEvent.Kind.RESYNC) {
             pending = null;
             if (state == State.ACTIVE) end(State.ABORTED, event.cause.name());
+            if (diagnostics != null && AssaultSchedule.WINDOW.matches(event.after)) {
+                diagnostics.assault(event.after.rawTime, "No assault boundary: " + event.cause
+                        + " | consumed " + storage.consumed + " | starts " + starts);
+            }
         } else if (event.kind == LunarEvent.Kind.NIGHT_ENDED && state == State.ACTIVE) {
             end(State.RESOLVED, "NIGHT_ENDED");
         } else if (state != State.ACTIVE && AssaultSchedule.canStart(event, storage.consumed)) {
             pending = event.after;
         } else if (diagnostics != null && event.kind == LunarEvent.Kind.NIGHT_STARTED
                 && AssaultSchedule.WINDOW.matches(event.after)) {
-            diagnostics.assault(event.after.rawTime, "Eligibility rejected: night already consumed or active");
+            String rejection = event.cause != LunarEvent.Cause.NATURAL ? event.cause.name()
+                    : state == State.ACTIVE ? "ACTIVE" : "CONSUMED";
+            diagnostics.assault(event.after.rawTime, "Eligibility rejected: " + rejection
+                    + " | consumed " + storage.consumed + " | starts " + starts);
         }
     }
 

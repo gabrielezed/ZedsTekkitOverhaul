@@ -15,7 +15,7 @@ public final class EmcSelfTest {
         parsing();
         identitiesAndPrecedence();
         economics();
-        new EmcIntegration().onGameTick(null);
+        new EmcIntegration().onGameTick(null, "");
         System.out.println("EMC self-test passed");
     }
 

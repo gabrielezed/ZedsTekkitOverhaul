@@ -48,7 +48,7 @@ public final class ConfigRuntimeProbe implements ITickHandler {
             check(mod != null, "mod loaded");
             ZtoConfig settings = mod.settings();
             boolean custom = mode.equals("legacy") || mode.equals("restart");
-            boolean edited = mode.equals("canonical");
+            boolean edited = mode.equals("canonical") || mode.equals("write-blocked");
             check(settings.experimentalEnderkinEncounters == custom, "experimental opt-in");
             check(settings.disableNightSkipping != custom, "bed policy");
             check(settings.partialRecipeFill == custom && settings.craftingUxShortcut == (custom ? 34 : 0),

@@ -105,6 +105,21 @@ if ((Get-FileHash -LiteralPath $canonical).Hash -ne $editedHash) { throw 'Canoni
 if (!(Select-String -LiteralPath (Join-Path $game 'config-canonical.stderr.log') -Pattern 'Invalid assaultSpawnBudget' -Quiet)) {
     throw 'Expected an invalid-value warning in the FML log.'
 }
+$encoding = [Text.Encoding]::GetEncoding(28591)
+$unversioned = [IO.File]::ReadAllText($canonical, $encoding) -creplace '(?m)^configVersion=1\r?\n', ''
+[IO.File]::WriteAllText($canonical, $unversioned, $encoding)
+$writeBlockedHash = (Get-FileHash -LiteralPath $canonical).Hash
+# Deny replacement on Windows while allowing the Java client to read the fixture.
+$lock = [IO.File]::Open($canonical, 'Open', 'Read', 'Read')
+try {
+    Test-Launch 'write-blocked'
+    if ((Get-FileHash -LiteralPath $canonical).Hash -ne $writeBlockedHash -or
+            !(Select-String -LiteralPath (Join-Path $game 'config-write-blocked.stderr.log') -Pattern 'Could not save' -Quiet)) {
+        throw 'Expected a logged write failure and unchanged settings file.'
+    }
+} finally {
+    $lock.Dispose()
+}
 $changed = @(foreach ($path in $contents.Keys) {
     $name = Split-Path $path -Leaf
     if (!(Test-Path -LiteralPath $path)) { throw "Missing third-party configuration: $name" }
@@ -112,7 +127,6 @@ $changed = @(foreach ($path in $contents.Keys) {
     $current = [IO.File]::ReadAllBytes($path)
     if ([Convert]::ToBase64String($old) -eq [Convert]::ToBase64String($current)) { continue }
     $timestamp = '(?m)^#(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) | Generated on )[^\r\n]*\r?\n'
-    $encoding = [Text.Encoding]::GetEncoding(28591)
     $oldLines = @($encoding.GetString($old) -creplace $timestamp, '' -split '\r?\n' | Sort-Object -CaseSensitive)
     $newLines = @($encoding.GetString($current) -creplace $timestamp, '' -split '\r?\n' | Sort-Object -CaseSensitive)
     if (($oldLines -join "`n") -cne ($newLines -join "`n")) {

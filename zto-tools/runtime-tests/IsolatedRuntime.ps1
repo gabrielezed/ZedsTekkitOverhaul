@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot 'SilentMinecraft.ps1')
+
 # Each invocation owns its game directory, config, saves and harness, including after a killed runner.
 function New-IsolatedRuntimeGame([string]$Runtime) {
     $source = Join-Path $Runtime 'Tekkit Dev/minecraft'
@@ -11,6 +13,7 @@ function New-IsolatedRuntimeGame([string]$Runtime) {
         }
     }
     $null = New-Item -ItemType Directory -Path (Join-Path $game 'saves')
+    Set-SilentMinecraftOptions $game
     return $game
 }
 

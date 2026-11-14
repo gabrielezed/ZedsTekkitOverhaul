@@ -97,6 +97,26 @@ public final class LunarCalendarSelfTest {
             legacy.observe(day * DAY + 13000);
             check(last().cause == LunarEvent.Cause.REPLAY_SUPPRESSED, "Persisted watermark on older clock");
         }
+        fullMoonsWithContinuousClock();
+    }
+
+    private static void fullMoonsWithContinuousClock() {
+        long first = 4 * DAY + LunarSnapshot.NIGHT_START;
+        long cycle = 8 * DAY;
+        List<Long> fullMoons = new ArrayList<Long>();
+        LunarCalendar continuous = new LunarCalendar(2, 0, 0, Long.MIN_VALUE, () -> {}, failure -> {
+            throw failure;
+        });
+        continuous.rebaseline(0, first - 1, LunarEvent.Cause.LOADED);
+        continuous.view().subscribe(event -> {
+            if (event.kind == LunarEvent.Kind.NIGHT_STARTED && event.after.isFullMoon()) {
+                check(event.cause == LunarEvent.Cause.NATURAL, "continuous full moon is natural");
+                fullMoons.add(event.after.rawTime);
+            }
+        });
+        for (long tick = first; tick <= first + 2 * cycle; tick++) continuous.observe(tick);
+        check(fullMoons.equals(Arrays.asList(first, first + cycle, first + 2 * cycle)),
+                "three full moons with every intervening tick observed");
     }
 
     private LunarEvent last() { return events.get(events.size() - 1); }

@@ -21,6 +21,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+. (Join-Path $PSScriptRoot 'runtime-tests/SilentMinecraft.ps1')
 $prismData = Join-Path $env:APPDATA 'PrismLauncher'
 $instance = Join-Path $prismData 'instances/Tekkit Dev'
 $game = Join-Path $instance 'minecraft'
@@ -45,6 +46,10 @@ $launch = $null
 $payload = $null
 $discovery = $null
 $exitCode = 2
+$optionsPath = Join-Path $game 'options.txt'
+$optionsBackup = Join-Path $game 'zto-options-before-automation.bak'
+$optionsPrepared = $false
+$hadOptions = $false
 
 function Invoke-Bridge([string]$Verb, [string]$Op, [hashtable]$Arguments = @{}) {
     $cli = Join-Path $PSScriptRoot 'zed-dev.ps1'
@@ -147,6 +152,7 @@ function Write-Request([string]$Content) {
 }
 
 function Start-DevClient {
+    Set-SilentMinecraftOptions $game
     $script:client = $null
     $script:discovery = $null
     $script:launch = [ordered]@{
@@ -450,6 +456,9 @@ try {
     if (!$locked) { throw 'INSTANCE_BUSY: A Tekkit Dev lifecycle is already in progress.' }
     if (Test-Path -LiteralPath $request) { throw 'REQUEST_PRESENT: Inspect the pending Tekkit Dev autoload request before retrying.' }
     if (Get-TekkitDevJava) { throw 'INSTANCE_BUSY: Close the running Tekkit Dev client before starting the lifecycle.' }
+    if (Test-Path -LiteralPath $optionsBackup) {
+        throw 'OPTIONS_RECOVERY: Restore zto-options-before-automation.bak as options.txt in Tekkit Dev with the client closed.'
+    }
     $report.buildSha256 = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
     $report.build = Get-Content -LiteralPath "$candidate.build.json" -Raw | ConvertFrom-Json
     if ($report.build.jarSha256 -cne $report.buildSha256) {
@@ -480,6 +489,9 @@ try {
     Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
     [IO.File]::WriteAllText((Join-Path $target '.zto-disposable-test'), "$copyName $seed`n", [Text.Encoding]::ASCII)
 
+    $hadOptions = Test-Path -LiteralPath $optionsPath -PathType Leaf
+    if ($hadOptions) { [IO.File]::Copy($optionsPath, $optionsBackup) }
+    $optionsPrepared = $true
     $context = Start-DevClient
     $assaultBoundary = 0
     if ($Persistence -eq 'Assault' -and !$SkipCore) {
@@ -530,6 +542,17 @@ try {
         try { Stop-DevClient } catch { $launch.diagnostics += $_.Exception.Message }
     }
     try { Remove-OwnedRequest } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
+    if ($optionsPrepared) {
+        try {
+            if (Get-TekkitDevJava) { throw 'Close the remaining Tekkit Dev process before restoring its audio options.' }
+            if ($hadOptions) {
+                [IO.File]::Copy($optionsBackup, $optionsPath, $true)
+                Remove-Item -LiteralPath $optionsBackup
+            } else {
+                Remove-Item -LiteralPath $optionsPath -ErrorAction SilentlyContinue
+            }
+        } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
+    }
     if ($report.status -ne 'PASS' -and $launch -and (Test-Path -LiteralPath $log)) {
         $launch.diagnostics += @(Select-String -LiteralPath $log -Pattern '\[ZTO\] Disposable world autoload|\[SEVERE\]|Exception in thread' |
             Select-Object -Last 12 | ForEach-Object { $_.Line })

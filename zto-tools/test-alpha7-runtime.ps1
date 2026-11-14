@@ -14,7 +14,7 @@ $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $harness = Join-Path $game 'harness'
 $report = Join-Path $root 'dist-zto/test-reports'
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha7RuntimeProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha7RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $id = [Guid]::NewGuid().ToString('N')

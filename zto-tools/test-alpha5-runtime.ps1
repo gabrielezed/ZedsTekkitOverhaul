@@ -25,7 +25,7 @@ if (!(Test-Path -LiteralPath (Join-Path $template '.zto-disposable-test') -PathT
     throw 'Use a marked disposable template save in the runtime copy.'
 }
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha5RuntimeProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha5RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile the runtime probe against the installed classes.' }
 
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '

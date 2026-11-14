@@ -28,6 +28,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
     private long pauseUntil, reopenAt;
     private int cleared;
     private LocalLunarCalendar lunar;
+    private AssaultRecurrenceProbe recurrence;
     private EntitySkirmisher caster;
     private EntityBreacher breacher;
     private boolean sawPulse, sawPressure;
@@ -101,6 +102,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
         if (game == null) return;
         try {
+            SilentRuntimeAudio.verify(game);
             if (stage == 0) {
                 ZtoConfig settings = settings();
                 initialize();
@@ -116,12 +118,31 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 lunar = (LocalLunarCalendar) field(mod_ZedsTekkitOverhaul.class, "LUNAR").get(null);
                 open(game);
                 arena(game);
+                if ("assault-recurrence".equals(mode)) {
+                    recurrence = new AssaultRecurrenceProbe(lunar);
+                    game.h.aT.a = false;
+                    field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
+                }
                 if (mode.startsWith("ender-")) seedPlacement();
                 stage++;
                 return;
             }
             Snapshot view = lunar.assaultSnapshot(game.f);
             if (view == null) return;
+            if (recurrence != null) {
+                try {
+                    if (recurrence.tick(game, view)) {
+                        saveQuit(game);
+                        System.out.println("ALPHA6 PASS " + mode);
+                        done = true;
+                        game.f();
+                    }
+                } catch (Throwable failure) {
+                    recurrence.trace(game, view);
+                    throw failure;
+                }
+                return;
+            }
             if (stage == 1) {
                 if (game.f.w() < 10820) return;
                 if ("first".equals(mode) || "disabled".equals(mode)) geometry(game);
@@ -491,7 +512,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         game.h.aT.a = !("ender-waves".equals(mode) || "ender-gibbous".equals(mode));
     }
 
-    private static void clearHostiles(Minecraft game) {
+    static void clearHostiles(Minecraft game) {
         for (Object entity : game.f.b) {
             if (entity instanceof yy && Math.abs(((yy) entity).p - Y) < 3) game.f.b((yy) entity);
         }
@@ -589,14 +610,14 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         }
     }
 
-    private static void open(Minecraft game) throws Exception {
+    static void open(Minecraft game) throws Exception {
         field(Minecraft.class, "c").set(game, new aes(game));
         game.a(save, save, (fj) null);
         game.a((vp) null);
         game.f.q = 2;
     }
 
-    private static void saveQuit(Minecraft game) throws Exception {
+    static void saveQuit(Minecraft game) throws Exception {
         lb menu = new lb();
         game.a(menu);
         Method action = lb.class.getDeclaredMethod("a", abp.class);

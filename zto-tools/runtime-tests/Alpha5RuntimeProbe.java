@@ -68,6 +68,7 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
                 done = true;
                 return;
             }
+            SilentRuntimeAudio.verify(game);
             if (stage == 0) {
                 ZtoConfig settings = settings();
                 deadline = System.nanoTime() + 45_000_000_000L;

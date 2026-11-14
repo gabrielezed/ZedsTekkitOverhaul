@@ -41,6 +41,11 @@ public final class ConfigRuntimeProbe implements ITickHandler {
         if (game == null || !(game.s instanceof xt)) return;
         done = true;
         try {
+            SilentRuntimeAudio.verify(game);
+            game.C.c();
+            game.C.a("random.click", 1.0F, 1.0F);
+            SilentRuntimeAudio.verify(game);
+            System.out.println("CONFIG AUDIO music=0 effects=0 backend=absent after playback calls");
             mod_ZedsTekkitOverhaul mod = null;
             for (BaseMod entry : ModLoader.getLoadedMods()) {
                 if (entry instanceof mod_ZedsTekkitOverhaul) mod = (mod_ZedsTekkitOverhaul) entry;

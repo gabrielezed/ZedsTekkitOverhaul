@@ -106,6 +106,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
         Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
         if (game == null) return;
         try {
+            SilentRuntimeAudio.verify(game);
             if (stage == 0) {
                 directory = (File) field(Minecraft.class, "aj").get(null);
                 save = System.getProperty("zto.alpha7.save");

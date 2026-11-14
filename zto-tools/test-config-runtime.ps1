@@ -11,7 +11,7 @@ if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) { throw 'Deploy the ca
 $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $harness = Join-Path $game 'harness'
 $null = New-Item -ItemType Directory -Path $harness
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/ConfigRuntimeProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/ConfigRuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile the startup probe against the installed pack ABI.' }
 
 $canonical = Join-Path $config 'ZedsTekkitOverhaul.cfg'
@@ -32,6 +32,7 @@ function Test-Launch([string]$Mode) {
         throw "Startup probe failed. See $stdout and $stderr"
     }
     Write-Output "CONFIG PASS $Mode SHA-256 $hash"
+    Select-String -LiteralPath $stdout -Pattern '^CONFIG AUDIO ' | ForEach-Object Line
     if (Test-Path -LiteralPath $mlProp) { throw 'FML left or regenerated an active MLProp file.' }
 }
 

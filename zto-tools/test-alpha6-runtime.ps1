@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful')]
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence')]
     [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
 )
 
@@ -19,7 +19,7 @@ if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
 }
 $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
@@ -30,6 +30,7 @@ $phase['ender-waves'] = 'FULL_MOON'
 $phase['ender-fallback'] = 'WAXING_GIBBOUS'
 $phase['ender-cap'] = 'WAXING_GIBBOUS'
 $phase['ender-peaceful'] = 'WAXING_GIBBOUS'
+$phase['assault-recurrence'] = 'FULL_MOON'
 foreach ($mode in $Modes) {
     $id = [Guid]::NewGuid().ToString('N')
     $save = "ZTO-Test-$id"

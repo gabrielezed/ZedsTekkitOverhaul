@@ -8,46 +8,86 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
 import net.minecraft.client.Minecraft;
+import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.mod_ZedsTekkitOverhaul;
+import zed.tekkitoverhaul.config.ZtoConfig;
+import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
+import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 
 /** Exercises the packaged classes on the game thread in a marked copy of the pack. */
 public final class Alpha6RuntimeProbe implements ITickHandler {
     private static final int X = 34, Y = 121, Z = 215;
     private static String save, mode;
     private static Field lastFocusTime;
-    private final boolean bootstrap;
     private boolean done;
     private int stage, frozen;
     private long pauseUntil, reopenAt;
     private int cleared;
     private LocalLunarCalendar lunar;
+    private AssaultRecurrenceProbe recurrence;
+    private EntitySkirmisher caster;
+    private EntityBreacher breacher;
+    private boolean sawPulse, sawPressure;
+    private long combatStart;
+    private boolean saturated;
+    private boolean liftedRoof;
+    private int doorX, doorZ;
+    private long lastCombatFrame = Long.MIN_VALUE;
+    private File directory;
 
-    private Alpha6RuntimeProbe(boolean bootstrap) {
-        this.bootstrap = bootstrap;
+    public static final class Bootstrap implements ITickHandler {
+        private boolean ready;
+
+        public static void main(String[] args) throws Exception {
+            File game = new File(args[0]).getCanonicalFile();
+            String world = args[1];
+            if (!"survival-hud-runtime".equals(game.getParentFile().getParentFile().getName())
+                    || !world.matches("ZTO-Test-[a-f0-9]{32}")
+                    || !new File(game, "saves/" + world + "/.zto-disposable-test").isFile()) {
+                throw new IllegalArgumentException("Use a marked save in the isolated Tekkit Dev copy");
+            }
+            Field folder = Minecraft.class.getDeclaredField("aj");
+            folder.setAccessible(true);
+            folder.set(null, game);
+            System.setProperty("zto.alpha6.save", world);
+            System.setProperty("zto.alpha6.mode", args[2]);
+            FMLCommonHandler.instance().registerTickHandler(new Bootstrap());
+            Minecraft.main(new String[] {"ZTOTest"});
+        }
+
+        public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }
+        public String getLabel() { return "Lunar encounter probe bootstrap"; }
+        public void tickStart(EnumSet<TickType> ticks, Object... data) {}
+        public void tickEnd(EnumSet<TickType> ticks, Object... data) {
+            if (ready) return;
+            Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
+            if (game == null || !(game.s instanceof xt)) return;
+            FMLCommonHandler.instance().registerTickHandler(new Alpha6RuntimeProbe());
+            ready = true;
+        }
     }
 
-    public static void main(String[] args) throws Exception {
-        File game = new File(args[0]).getCanonicalFile();
-        save = args[1];
-        mode = args[2];
-        if (!"survival-hud-runtime".equals(game.getParentFile().getParentFile().getName())
-                || !save.matches("ZTO-Test-[a-f0-9]{32}")
-                || !new File(game, "saves/" + save + "/.zto-disposable-test").isFile()) {
-            throw new IllegalArgumentException("Use a marked save in the isolated Tekkit Dev copy");
-        }
-        field(Minecraft.class, "aj").set(null, game);
+    private static void initialize() throws Exception {
+        save = System.getProperty("zto.alpha6.save");
+        mode = System.getProperty("zto.alpha6.mode");
         lastFocusTime = field(lr.class, "Y");
-        FMLCommonHandler.instance().registerTickHandler(new Alpha6RuntimeProbe(true));
-        Minecraft.main(new String[] {"ZTOTest"});
+    }
+
+    private static ZtoConfig settings() {
+        for (BaseMod mod : ModLoader.getLoadedMods()) {
+            if (mod instanceof mod_ZedsTekkitOverhaul) return ((mod_ZedsTekkitOverhaul) mod).settings();
+        }
+        throw new AssertionError("ZTO was not loaded");
     }
 
     public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }
     public String getLabel() { return "Alpha 6 runtime acceptance"; }
     public void tickStart(EnumSet<TickType> ticks, Object... data) {
-        if (bootstrap || done) return;
+        if (lastFocusTime == null || done) return;
         Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
         try {
             // The hidden test client must only pause through the explicit menu in this probe.
@@ -62,31 +102,53 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         Minecraft game = (Minecraft) FMLCommonHandler.instance().getMinecraftInstance();
         if (game == null) return;
         try {
-            if (bootstrap) {
-                if (!(game.s instanceof xt)) return;
-                FMLCommonHandler.instance().registerTickHandler(new Alpha6RuntimeProbe(false));
-                done = true;
-                return;
-            }
+            SilentRuntimeAudio.verify(game);
             if (stage == 0) {
-                check(!mod_ZedsTekkitOverhaul.survivalDebugHud && mod_ZedsTekkitOverhaul.lunarDebugKey == 0
-                        && !mod_ZedsTekkitOverhaul.lunarVerboseLogging
+                ZtoConfig settings = settings();
+                initialize();
+                directory = (File) field(Minecraft.class, "aj").get(null);
+                check(!settings.survivalDebugHud && settings.lunarDebugKey == 0
+                        && !settings.lunarVerboseLogging
                         && !Boolean.getBoolean("zto.devBridge.enabled"), "diagnostics disabled");
-                check(mod_ZedsTekkitOverhaul.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
+                check(settings.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
+                check(settings.experimentalEnderkinEncounters == mode.startsWith("ender-"),
+                        "experimental setting loaded from startup configuration");
                 System.out.println("ALPHA6 JAR " + mod_ZedsTekkitOverhaul.class.getProtectionDomain()
                         .getCodeSource().getLocation() + " Java " + System.getProperty("java.version"));
                 lunar = (LocalLunarCalendar) field(mod_ZedsTekkitOverhaul.class, "LUNAR").get(null);
                 open(game);
                 arena(game);
+                if ("assault-recurrence".equals(mode)) {
+                    recurrence = new AssaultRecurrenceProbe(lunar);
+                    game.h.aT.a = false;
+                    field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
+                }
+                if (mode.startsWith("ender-")) seedPlacement();
                 stage++;
                 return;
             }
             Snapshot view = lunar.assaultSnapshot(game.f);
             if (view == null) return;
+            if (recurrence != null) {
+                try {
+                    if (recurrence.tick(game, view)) {
+                        saveQuit(game);
+                        System.out.println("ALPHA6 PASS " + mode);
+                        done = true;
+                        game.f();
+                    }
+                } catch (Throwable failure) {
+                    recurrence.trace(game, view);
+                    throw failure;
+                }
+                return;
+            }
             if (stage == 1) {
                 if (game.f.w() < 10820) return;
                 if ("first".equals(mode) || "disabled".equals(mode)) geometry(game);
-                game.f.a(12980L);
+                if ("ender-first".equals(mode)) enderkinGeometry(game);
+                if ("ender-fallback".equals(mode)) roofRing(game, 1);
+                game.f.a("ender-waves".equals(mode) ? 8 * 24000L + 12980 : 12980L);
                 stage++;
                 return;
             }
@@ -102,7 +164,8 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             if (stage == 5) {
                 check(view.starts == 0 && view.spawns.isEmpty() && view.patrol.attempts == 0, "same night replay");
                 if ("full".equals(mode)) check("INTERRUPTED_ON_REOPEN".equals(view.reason), "interrupted assault state");
-                if ("waves".equals(mode)) check("NIGHT_CONSUMED".equals(view.reason), "resolved assault state");
+                if ("waves".equals(mode) || "ender-waves".equals(mode))
+                    check("NIGHT_CONSUMED".equals(view.reason), "resolved assault state");
                 if (game.f.w() >= reopenAt + 100) {
                     System.out.println("ALPHA6 reopen mode=" + mode + " reason=" + view.reason
                             + " through=" + game.f.w() + " starts=" + view.starts + " patrolAttempts=" + view.patrol.attempts);
@@ -120,7 +183,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 stage++;
                 return;
             }
-            if (!verifyEncounter(game, view)) return;
+            if (!(mode.startsWith("ender-") ? verifyEnderkin(game, view) : verifyEncounter(game, view))) return;
             saveQuit(game);
             check(game.f == null && game.s instanceof xt, "Save and Quit returned to title");
             open(game);
@@ -130,6 +193,267 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             error.printStackTrace();
             System.exit(1);
         }
+    }
+
+    private void seedPlacement() throws Exception {
+        Object director = field(LocalLunarCalendar.class, "assault").get(lunar);
+        Object owner = director;
+        if (!"ender-waves".equals(mode)) owner = field(director.getClass(), "patrol").get(director);
+        Object spawns = field(owner.getClass(), "spawns").get(owner);
+        ((java.util.Random) field(spawns.getClass(), "random").get(spawns)).setSeed(6001L);
+    }
+
+    private boolean verifyEnderkin(Minecraft game, Snapshot view) throws Exception {
+        check(view.experimentalEnderkin, "snapshot exposes opt-in");
+        if ("ender-waves".equals(mode)) return verifyMixedAssault(game, view);
+        SiegeDirector.PatrolSnapshot patrol = view.patrol;
+        if ("ender-peaceful".equals(mode) && patrol.state == SiegeDirector.State.ACTIVE && patrol.elapsed > 10)
+            game.A.C = game.f.q = 0;
+        if ("ender-cap".equals(mode) && !saturated && patrol.elapsed >= 790 && patrol.state == SiegeDirector.State.ACTIVE) {
+            saturate(game);
+            saturated = true;
+        }
+        if ("ender-fallback".equals(mode) && patrol.enderkin.attempts == 4 && !liftedRoof) {
+            roofRing(game, 0);
+            liftedRoof = true;
+        }
+        if (patrol.state != SiegeDirector.State.RESOLVED && patrol.state != SiegeDirector.State.ABORTED) return false;
+        check(view.starts == 0, "patrol never starts an assault");
+        check(patrol.budget == ("ender-first".equals(mode) ? 2 : 3), "unchanged patrol budget");
+        if ("ender-first".equals(mode)) {
+            check(patrol.spawned == 2 && patrol.enderkin.selected == null && patrol.enderkin.attempts == 0,
+                    "first quarter stays ordinary when enabled");
+        } else {
+            check("SKIRMISHER".equals(patrol.enderkin.selected) && patrol.enderkin.attempts <= 4, "seeded patrol selection");
+            if ("ender-fallback".equals(mode)) {
+                check(patrol.enderkin.attempts == 4 && !patrol.enderkin.inserted && patrol.spawned == 3,
+                        "four rejected candidates fall back to ordinary slots");
+                check(Integer.valueOf(4).equals(patrol.enderkin.rejections.get("SURFACE_OUT_OF_REACH")),
+                        "roof rejects every special candidate");
+            } else if ("ender-cap".equals(mode)) {
+                check("LOCAL_MOB_CAP".equals(patrol.reason) && patrol.enderkin.attempts == 0 && patrol.spawned == 0,
+                        "nearby hostiles stop attempts before allocating an Enderkin");
+            } else if ("ender-peaceful".equals(mode)) {
+                check("PEACEFUL".equals(patrol.reason) && patrol.spawned == 0, "Peaceful cancels eligible patrol");
+                game.A.C = game.f.q = 2;
+            } else {
+                check(patrol.spawned == 3 && patrol.enderkin.inserted && patrol.outdoorLight == 3,
+                        "one Skirmisher substitutes inside a three-mob lit patrol");
+            }
+        }
+        System.out.println("ALPHA6 " + mode + " budget=" + patrol.budget + " inserted=" + patrol.spawned
+                + " outcome=" + patrol.reason + " " + patrol.enderkin.summary());
+        return true;
+    }
+
+    private boolean verifyMixedAssault(Minecraft game, Snapshot view) throws Exception {
+        if (view.starts == 0 || lastCombatFrame == game.f.w()) return false;
+        lastCombatFrame = game.f.w();
+        check(view.budget == 15 && view.spawns.size() <= 15 && view.peakActive <= view.activeCap, "same assault limits");
+        while (cleared < view.spawns.size()) {
+            SiegeDirector.Spawn entry = (SiegeDirector.Spawn) view.spawns.get(cleared++);
+            check(entry.outdoorLight && entry.horizontalSquared >= 144 && entry.horizontalSquared <= 256,
+                    "lit surface in legacy annulus");
+        }
+        for (Object entity : game.f.b) {
+            if (caster == null && entity instanceof EntitySkirmisher) {
+                caster = (EntitySkirmisher) entity;
+                faceFrom(game, caster, 8);
+                combatStart = game.f.w();
+            }
+            if (breacher == null && entity instanceof EntityBreacher) {
+                breacher = (EntityBreacher) entity;
+                faceFrom(game, breacher, 8);
+                combatStart = game.f.w();
+                doorX = (int) Math.floor(breacher.o) - 3;
+                doorZ = (int) Math.floor(breacher.q);
+                // Align the combat fixture with the same flat doorway used by the alpha.7 probe.
+                breacher.c(breacher.o, Y, doorZ + .5D, 90, 0);
+                faceFrom(game, breacher, 8);
+                for (int dx = -10; dx <= 5; dx++) for (int dz = -3; dz <= 3; dz++) {
+                    game.f.g(doorX + dx, Y - 1, doorZ + dz, 1);
+                    for (int dy = 0; dy <= 2; dy++) game.f.g(doorX + dx, Y + dy, doorZ + dz, 0);
+                }
+                for (int dz = -16; dz <= 16; dz++)
+                    for (int dy = 0; dy < 3; dy++) game.f.g(doorX, Y + dy, doorZ + dz, 1);
+                game.f.b(doorX, Y + 1, doorZ, 64, 8);
+                game.f.d(doorX, Y, doorZ, 64, 2);
+                System.out.println("ALPHA6 mixed doorway at " + doorX + "," + doorZ);
+            }
+            if (!sawPulse && entity instanceof EntityEnderPulse && ((EntityEnderPulse) entity).getOwner() == caster) {
+                sawPulse = true;
+                capture(game, "mixed-pulse");
+            }
+        }
+        if (breacher != null && !sawPressure && breacher.isPressureSwing()) {
+            sawPressure = true;
+            capture(game, "mixed-pressure");
+            check(game.f.a(doorX, Y, doorZ) == 64 && game.f.e(doorX, Y, doorZ) == 2,
+                    "mixed assault Breacher leaves the door closed and intact");
+            for (int dz = -16; dz <= 16; dz++)
+                for (int dy = 0; dy < 3; dy++) game.f.g(doorX, Y + dy, doorZ + dz, 0);
+        }
+        boolean waitForCast = caster != null && !caster.G && !sawPulse;
+        boolean waitForPressure = breacher != null && !breacher.G && !sawPressure;
+        if ((waitForCast || waitForPressure) && game.f.w() - combatStart < 240) {
+            game.h.l(20);
+            game.h.r = game.h.s = game.h.t = 0;
+            return false;
+        }
+        if (game.f.w() % 20 == 0) {
+            clearHostiles(game);
+            game.h.c(X + .5, Y, Z + .5, -90, 0);
+            game.h.r = game.h.s = game.h.t = 0;
+        }
+        if (view.state != SiegeDirector.State.RESOLVED) return false;
+        int[] expected = {4, 5, 6};
+        for (Object item : view.waves) {
+            SiegeDirector.WaveSnapshot wave = (SiegeDirector.WaveSnapshot) item;
+            check(wave.inserted == expected[wave.number - 1], "4/5/6 budget preserved");
+            System.out.println("ALPHA6 mixed wave=" + wave.number + " inserted=" + wave.inserted
+                    + " peak=" + wave.peakActive + " " + wave.enderkin.summary());
+        }
+        check(((SiegeDirector.WaveSnapshot) view.waves.get(0)).enderkin.selected == null
+                && ((SiegeDirector.WaveSnapshot) view.waves.get(1)).enderkin.inserted
+                && ((SiegeDirector.WaveSnapshot) view.waves.get(2)).enderkin.inserted && sawPulse && sawPressure,
+                "both substituted roles use their tactical attacks");
+        return true;
+    }
+
+    private static void faceFrom(Minecraft game, nn mob, double distance) {
+        game.h.c(mob.o - distance, Y, mob.q, -90, 0);
+        game.h.r = game.h.s = game.h.t = 0;
+    }
+
+    private void capture(Minecraft game, String name) {
+        check(GL11.glGetError() == GL11.GL_NO_ERROR, "renderer before capture");
+        System.out.println("ALPHA6 " + name + " " + zh.a(directory, save + "-" + name + ".png", game.d, game.e));
+    }
+
+    private static void roofRing(Minecraft game, int block) {
+        for (int dx = -16; dx <= 16; dx++) for (int dz = -16; dz <= 16; dz++) {
+            int square = dx * dx + dz * dz;
+            if (square >= 144 && square <= 256) game.f.g(X + dx, Y + 10, Z + dz, block);
+        }
+    }
+
+    private static void enderkinGeometry(Minecraft game) throws Exception {
+        Class<?> controllerClass = Class.forName("zed.tekkitoverhaul.assault.SpawnController");
+        Class<?> roleClass = Class.forName("zed.tekkitoverhaul.assault.EnderkinRole");
+        java.lang.reflect.Constructor<?> constructor = controllerClass.getDeclaredConstructor(int.class, boolean.class);
+        constructor.setAccessible(true);
+        Object controller = constructor.newInstance(16, true);
+        Method place = controllerClass.getDeclaredMethod("tryCandidate", xd.class, yw.class, boolean.class,
+                int.class, int.class, roleClass);
+        place.setAccessible(true);
+        Object role = roleClass.getEnumConstants()[1];
+        int x = X + 12, z = Z + 2;
+        game.h.aT.a = false;
+        game.f.g(x, Y + 2, z, 20);
+        geometryRejection(game, controller, place, role, x, z, "NOT_OPEN_TO_SKY");
+        game.f.g(x, Y + 2, z, 0);
+        game.f.g(x, Y, z, 9);
+        geometryRejection(game, controller, place, role, x, z, "UNSUITABLE_GROUND");
+        game.f.g(x, Y, z, 0);
+        game.f.g(x, Y + 1, z + 1, 1);
+        geometryRejection(game, controller, place, role, x, z, "ENDERKIN_CLEARANCE");
+        game.f.g(x, Y + 1, z + 1, 0);
+        wall(game, 14);
+        geometryRejection(game, controller, place, role, x, z, "NO_OPEN_APPROACHES");
+        for (int dx = -14; dx <= 14; dx++) for (int dz = -14; dz <= 14; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) != 14) continue;
+            for (int dy = 0; dy < 3; dy++) game.f.g(X + dx, Y + dy, Z + dz, 0);
+        }
+        game.f.g(x, Y - 2, z, 1);
+        game.f.g(x, Y - 1, z, 0);
+        // A two-block drop along an outward approach rules out this narrow trench.
+        game.f.g(x + 1, Y - 3, z, 1);
+        game.f.g(x + 1, Y - 2, z, 0);
+        game.f.g(x + 1, Y - 1, z, 0);
+        game.f.g(x + 2, Y - 1, z, 1);
+        geometryRejection(game, controller, place, role, x, z, "ENDERKIN_CLEARANCE");
+        game.f.g(x, Y - 1, z, 1);
+        game.f.g(x + 1, Y - 1, z, 1);
+        geometryRejection(game, controller, place, role, X + 28, z, "OUTSIDE_SPAWN_RANGE");
+        unloadedBoundary(game, controller, place, role);
+        barrierMatrix(game);
+        game.h.aT.a = true;
+    }
+
+    private static void unloadedBoundary(Minecraft game, Object controller, Method place, Object role)
+            throws Exception {
+        int x = X + 4096;
+        double playerX = game.h.o, playerY = game.h.p, playerZ = game.h.q;
+        check(!game.f.b(x - 2, 0, Z - 2, x + 2, 255, Z + 2), "fixture starts outside loaded chunks");
+        // Move the query origin temporarily without ticking or changing the chunk provider.
+        game.h.c(x - 11.5D, Y, Z + .5D, 0, 0);
+        try {
+            geometryRejection(game, controller, place, role, x, Z, "UNLOADED_CHUNK");
+            check(!game.f.b(x - 2, 0, Z - 2, x + 2, 255, Z + 2), "placement did not load the boundary");
+        } finally {
+            game.h.c(playerX, playerY, playerZ, 0, 0);
+        }
+    }
+
+    private static void barrierMatrix(Minecraft game) throws Exception {
+        int x = X + 4, z = Z;
+        game.h.c(x - 1.5, Y, z + .5, -90, 0);
+        EntityBreacher mob = new EntityBreacher(game.f);
+        mob.c(x + 1.35, Y, z + .5, 90, 0);
+        Class<?> tactical = mob.getClass().getSuperclass();
+        field(tactical, "target").set(mob, game.h);
+        Method pressure = EntityBreacher.class.getDeclaredMethod("pressure");
+        pressure.setAccessible(true);
+        Field impacts = field(EntityBreacher.class, "impacts");
+        int machine = ((pb) Class.forName("RedPowerMachine").getField("blockMachine").get(null)).bO;
+        // The pack's fence ray misses the isolated post in this approach. Native collision still blocks movement.
+        int[][] cases = {{64, 0, 1}, {71, 0, 1}, {85, 0, 0}, {107, 1, 1}, {1, 0, 1},
+                {64, 4, 0}, {107, 5, 0}, {54, 0, 0}, {machine, 1, 0}};
+        for (int[] entry : cases) {
+            int id = entry[0], data = entry[1];
+            game.f.g(x, Y, z, 0);
+            game.f.g(x, Y + 1, z, 0);
+            if (id == 64 || id == 71) game.f.b(x, Y + 1, z, id, 8);
+            game.f.d(x, Y, z, id, data);
+            kw tile = game.f.b(x, Y, z);
+            int initialMetadata = game.f.e(x, Y, z);
+            if (id == machine || id == 54) check(tile != null, "fixture has live tile " + id);
+            if (id == 54) ((hb) tile).a(0, new aan(265, 17, 0));
+            ady before = new ady();
+            if (tile != null) tile.b(before);
+            impacts.setInt(mob, 0);
+            boolean struck = (Boolean) pressure.invoke(mob);
+            check(struck == (entry[2] == 1), "barrier gate behavior id=" + id + ":" + data + " struck=" + struck);
+            check(game.f.a(x, Y, z) == id && game.f.e(x, Y, z) == initialMetadata && game.f.b(x, Y, z) == tile,
+                    "barrier and tile unchanged id=" + id);
+            if (tile != null) {
+                ady after = new ady();
+                tile.b(after);
+                check(before.equals(after), "barrier tile NBT unchanged id=" + id);
+            }
+            System.out.println("ALPHA6 Breacher barrier id=" + id + ":" + data + " pressure=" + struck);
+        }
+        game.f.g(x, Y, z, 0);
+        game.h.c(X + .5, Y, Z + .5, 0, 0);
+        game.h.r = game.h.s = game.h.t = 0;
+    }
+
+    private static void geometryRejection(Minecraft game, Object controller, Method place, Object role,
+                                          int x, int z, String expected) throws Exception {
+        long start = System.nanoTime();
+        Object result = place.invoke(controller, game.f, game.h, false, x, z, role);
+        String rejection = (String) field(controller.getClass(), "rejection").get(controller);
+        check(result == null && expected.equals(rejection), "special placement: expected " + expected + ", got " + rejection);
+        System.out.println("ALPHA6 Breacher placement " + rejection + " us=" + (System.nanoTime() - start) / 1000);
+    }
+
+    private static void saturate(Minecraft game) {
+        for (int i = 0; i < 28; i++) {
+            ajg zombie = new ajg(game.f);
+            zombie.c(X + 7.5 + i % 7, Y, Z + 6.5 + i / 7, 0, 0);
+            check(game.f.a(zombie), "population fixture");
+        }
+        game.h.aT.a = true;
     }
 
     private boolean verifyEncounter(Minecraft game, Snapshot view) {
@@ -185,10 +509,10 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         if ("full".equals(mode) || "waves".equals(mode)) wall(game, 13);
         game.h.c(X + .5, Y, Z + .5, 0, 0);
         game.h.r = game.h.s = game.h.t = 0;
-        game.h.aT.a = true;
+        game.h.aT.a = !("ender-waves".equals(mode) || "ender-gibbous".equals(mode));
     }
 
-    private static void clearHostiles(Minecraft game) {
+    static void clearHostiles(Minecraft game) {
         for (Object entity : game.f.b) {
             if (entity instanceof yy && Math.abs(((yy) entity).p - Y) < 3) game.f.b((yy) entity);
         }
@@ -205,7 +529,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         Class<?> type = Class.forName("zed.tekkitoverhaul.assault.SpawnController");
         java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(int.class, boolean.class);
         constructor.setAccessible(true);
-        Object controller = constructor.newInstance(28, mod_ZedsTekkitOverhaul.lunarOutdoorLightPressure);
+        Object controller = constructor.newInstance(28, settings().lunarOutdoorLightPressure);
         ((java.util.Random) field(type, "random").get(controller)).setSeed(6001);
         Method place = type.getDeclaredMethod("tryCandidate", xd.class, yw.class, boolean.class, int.class, int.class);
         place.setAccessible(true);
@@ -286,14 +610,14 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         }
     }
 
-    private static void open(Minecraft game) throws Exception {
+    static void open(Minecraft game) throws Exception {
         field(Minecraft.class, "c").set(game, new aes(game));
         game.a(save, save, (fj) null);
         game.a((vp) null);
         game.f.q = 2;
     }
 
-    private static void saveQuit(Minecraft game) throws Exception {
+    static void saveQuit(Minecraft game) throws Exception {
         lb menu = new lb();
         game.a(menu);
         Method action = lb.class.getDeclaredMethod("a", abp.class);

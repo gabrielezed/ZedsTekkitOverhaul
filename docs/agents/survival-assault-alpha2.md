@@ -88,7 +88,7 @@ By default it writes a new save under the Prism **Tekkit Dev** instance. Use `-S
 
 The preset starts on open terrain at X 34.5, Z 215.5, with seed `-7184827518270584220`. It starts in Survival at tick 10,800 with a full moon aligned for natural dusk at tick 13,000, about 110 seconds later at 20 TPS. The hotbar contains a stone sword, bow, 24 arrows, 12 bread, 32 torches, 64 cobblestone, a stone pickaxe and a wooden door. Leather armor is equipped.
 
-Difficulty is a client setting. In **Tekkit Dev**, select **Normal** and set `playerAssault=true`, `assaultSpawnBudget=15` and `survivalDebugHud=true` in `config/mod_ZedsTekkitOverhaul.cfg` for the comparison. The generator leaves client settings alone. Use F10 for details and Shift+F10 to toggle the overlay. The Dev Bridge is optional for a manual trial.
+Difficulty is a client setting. In **Tekkit Dev**, select **Normal** and set `playerAssault=true`, `assaultSpawnBudget=15` and `survivalDebugHud=true` in `config/ZedsTekkitOverhaul.cfg` for the comparison. The generator leaves client settings alone. Use F10 for details and Shift+F10 to toggle the overlay. The Dev Bridge is optional for a manual trial.
 
 1. Fight in the open. Compare with an ordinary night. Note when each wave actually arrives, how many mobs reach or shoot at you, how long the gaps feel, and whether the final wave reads as a climax. Record attempts, insertions, active mobs and missed allocation from F10.
 2. Use a fresh copy to build a modest lit shelter with a roof, door and retreat route before dusk. Compare interior safety, roof and perimeter spawns, and whether the shelter buys recovery time. Try a wall or moat, a simple trap, or retreat.

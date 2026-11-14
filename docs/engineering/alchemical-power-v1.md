@@ -2,7 +2,7 @@
 
 Place one or more lit EE2 Energy Collectors against any face of the Alchemical Converter. Leave their fuel-upgrade slots idle to make their normal output available. Attach IC2 cables or a compatible receiver to any free face, including the top. Right-click with an empty hand to see the highest connected collector tier, output limit, EMC buffer and connection instructions. The prototype uses vanilla textures with a glowstone top and requires both EE2 and IC2 to register.
 
-Craft one converter in a vanilla crafting table. Use three Glowstone blocks on the top row, a Basic Machine Block, an Advanced Circuit and a Basic Machine Block across the middle row, and one insulated Copper Cable in the bottom center. The recipe resolves IC2 item identities at post-initialization. The default block ID is 3024 in `config/ZedsTekkitOverhaul-AlchemicalPower.cfg`. Keep the assigned ID stable once a world uses it.
+Craft one converter in a vanilla crafting table. Use three Glowstone blocks on the top row, a Basic Machine Block, an Advanced Circuit and a Basic Machine Block across the middle row, and one insulated Copper Cable in the bottom center. The recipe resolves IC2 item identities at post-initialization. The default block ID is 3024 under `block.alchemicalConverter` in `config/ZedsTekkitOverhaul.cfg`. Keep the assigned ID stable once a world uses it.
 
 ## Conversion and progression
 

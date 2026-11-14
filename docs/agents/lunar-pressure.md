@@ -10,7 +10,7 @@ PR #25 introduced patrols in `0.1.0-alpha.4` and merged into `main` as `6e61d3e`
 | Full moon | Existing three-wave player assault |
 | Waning gibbous, last quarter, waning crescent | Ordinary nights. A residual waning-gibbous patrol is deferred. |
 
-Patrols are enabled by default. Set `lunarPatrols=false` in `config/mod_ZedsTekkitOverhaul.cfg` while the client is closed to turn them off independently of `playerAssault`. New worlds still start at new moon (day index 0), with the full moon on day five (index 4).
+Patrols are enabled by default. Set `lunarPatrols=false` in `config/ZedsTekkitOverhaul.cfg` while the client is closed to turn them off independently of `playerAssault`. New worlds still start at new moon (day index 0), with the full moon on day five (index 4).
 
 Natural dusk at tick 13,000 schedules one patrol in the local Overworld. The patrol is pending for 800 simulation ticks. An ordinary pause freezes its timer and suppresses placement until play resumes. Player loss, Peaceful, a difficulty change, a world or dimension change, night end and calendar resync discard pending work.
 

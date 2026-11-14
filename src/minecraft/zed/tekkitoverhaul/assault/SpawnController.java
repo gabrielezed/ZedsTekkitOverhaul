@@ -15,6 +15,9 @@ import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.SpawnerAnimals;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
+import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 
 /** Samples loaded outdoor sites for lunar patrols and player assault waves. */
 final class SpawnController {
@@ -40,7 +43,7 @@ final class SpawnController {
         return alive;
     }
 
-    EntityMob trySpawn(World world, EntityPlayer player, boolean skeleton) {
+    EntityMob trySpawn(World world, EntityPlayer player, boolean skeleton, EnderkinRole role) {
         // Inset the continuous annulus so rounding to a block center cannot cross either edge.
         double inner = INNER_RADIUS + BLOCK_CENTER_ERROR;
         double outer = outerRadius - BLOCK_CENTER_ERROR;
@@ -48,12 +51,18 @@ final class SpawnController {
         double angle = random.nextDouble() * 2 * Math.PI;
         int x = MathHelper.floor_double(player.posX + radius * Math.cos(angle));
         int z = MathHelper.floor_double(player.posZ + radius * Math.sin(angle));
-        return tryCandidate(world, player, skeleton, x, z);
+        return tryCandidate(world, player, skeleton, x, z, role);
     }
 
     EntityMob tryCandidate(World world, EntityPlayer player, boolean skeleton, int x, int z) {
+        return tryCandidate(world, player, skeleton, x, z, null);
+    }
+
+    EntityMob tryCandidate(World world, EntityPlayer player, boolean skeleton, int x, int z, EnderkinRole role) {
         rejection = null;
         outdoorLight = false;
+        if (role == EnderkinRole.BREACHER && !world.getEntitiesWithinAABB(EntityBreacher.class,
+                player.boundingBox.expand(32, 24, 32)).isEmpty()) return reject("NEARBY_BREACHER");
         double dx = x + 0.5 - player.posX;
         double dz = z + 0.5 - player.posZ;
         double distanceSquared = dx * dx + dz * dz;
@@ -75,7 +84,7 @@ final class SpawnController {
             return reject("UNSUITABLE_GROUND");
         }
         if (world.getClosestPlayer(x + 0.5, y, z + 0.5, INNER_RADIUS) != null) return reject("PLAYER_TOO_CLOSE");
-        EntityMob mob = skeleton ? new EntitySkeleton(world) : new EntityZombie(world);
+        EntityMob mob = create(world, skeleton, role);
         mob.setLocationAndAngles(x + 0.5, y, z + 0.5, random.nextFloat() * 360, 0);
         AxisAlignedBB box = mob.boundingBox;
         if (!world.checkIfAABBIsClear(box) || !world.getEntitiesWithinAABB(EntityLiving.class, box).isEmpty()) {
@@ -84,7 +93,16 @@ final class SpawnController {
         if (!world.getCollidingBoundingBoxes(mob, box).isEmpty() || world.isAnyLiquid(box)) {
             return reject("COLLISION_OR_LIQUID");
         }
-        if (outdoorPressure && !OutdoorApproach.hasOpenApproaches(new LoadedSurface(world), x, y, z,
+        if (role != null) {
+            TacticalHostile tactical = (TacticalHostile) mob;
+            if (!tactical.canEngageEncounterPlayer(player)) return reject("OUTSIDE_TACTICAL_RANGE");
+            double half = role == EnderkinRole.BREACHER ? 0.85D : 0.52D;
+            AxisAlignedBB envelope = AxisAlignedBB.getBoundingBox(x + 0.5D - half, y, z + 0.5D - half,
+                    x + 0.5D + half, y + 2.8D, z + 0.5D + half);
+            if (!world.getCollidingBoundingBoxes(mob, envelope).isEmpty() || world.isAnyLiquid(envelope))
+                return reject("ENDERKIN_CLEARANCE");
+        }
+        if ((outdoorPressure || role != null) && !OutdoorApproach.hasOpenApproaches(new LoadedSurface(world), x, y, z,
                 MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ))) {
             return reject("NO_OPEN_APPROACHES");
         }
@@ -95,12 +113,19 @@ final class SpawnController {
             if (world.getSavedLightValue(EnumSkyBlock.Sky, x, y, z) > random.nextInt(32)) {
                 return reject("SKY_LIGHT_ROLL");
             }
-        } else if (!mob.getCanSpawnHere()) {
+        } else if (!(role == null ? mob.getCanSpawnHere() : ((TacticalHostile) mob).canSpawnForEncounter())) {
             return reject("VANILLA_LIGHT");
         }
         if (!world.spawnEntityInWorld(mob)) return reject("INSERTION_REJECTED");
+        if (role != null) ((TacticalHostile) mob).engageEncounterPlayer(player);
         outdoorLight = exception;
         return mob;
+    }
+
+    private static EntityMob create(World world, boolean skeleton, EnderkinRole role) {
+        if (role == EnderkinRole.SKIRMISHER) return new EntitySkirmisher(world);
+        if (role == EnderkinRole.BREACHER) return new EntityBreacher(world);
+        return skeleton ? new EntitySkeleton(world) : new EntityZombie(world);
     }
 
     private EntityMob reject(String reason) {

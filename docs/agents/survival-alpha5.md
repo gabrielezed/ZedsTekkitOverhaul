@@ -29,7 +29,7 @@ The assault cap is five across all three waves. Hard continues to use Skeletons 
 
 ## Bed anchors
 
-`disableNightSkipping=true` is an MLProp in `config/mod_ZedsTekkitOverhaul.cfg`. On restart with the setting enabled, clicking either half of a valid local Overworld bed sets the native player spawn coordinates during day or night. The hook keeps the legacy reach and nearby-monster checks and requires both matching bed halves and an available native bed exit. A successful click confirms the anchor and leaves the player awake. A rejected anchor attempt preserves the previous spawn.
+`disableNightSkipping=true` is a startup setting in `config/ZedsTekkitOverhaul.cfg`. On restart with the setting enabled, clicking either half of a valid local Overworld bed sets the native player spawn coordinates during day or night. The hook keeps the legacy reach and nearby-monster checks and requires both matching bed halves and an available native bed exit. A successful click confirms the anchor and leaves the player awake. A rejected anchor attempt preserves the previous spawn.
 
 The installed 1.2.5 bed resolves the head and handles occupancy and non-respawn dimensions before calling `EntityPlayer.sleepInBedAt`. Forge 3.3.8.164 invokes `ISleepHandler` at the start of that method. `BedRespawn` returns a handled non-sleep result, which prevents the sleep GUI, bed occupancy and the fully-asleep world tick that advances time. Player `SpawnX/Y/Z` NBT and the native respawn verifier handle persistence and destroyed or obstructed bed fallback. The handler acts only in local worlds. Set the option to `false` and restart the client to use legacy sleep. The anchor implementation supports vanilla Overworld beds and leaves the pre-hook dimension behavior to the installed game.
 
@@ -73,7 +73,7 @@ The local lifecycle report filenames end with `b9670ec29ccb49d0b80cfb50ed982138`
 
 Run `zto-tools/test-lunar-calendar.bat` and compile `zto-tools/assault-tests/*.java` against `bin/minecraft`. Run `LoadoutPolicySelfTest` alongside the existing patrol and diagnostics checks. For natural dusk and reopen, use the marked-save [patrol runner](lunar-pressure.md#reproduce-in-tekkit-dev) and the existing `-Persistence Assault` path. Both check the new read-only counts and caps.
 
-The focused `zto-tools/test-alpha5-runtime.ps1 -TemplateSave <marked-save>` probe runs in a separate Tekkit Dev copy under `dist-zto/survival-hud-runtime/Tekkit Dev`. Its local `launch.json` supplies the Java 8 runtime path, effective Prism classpath with the assembled client, and existing inventory and lunar agent arguments as `java`, `classpath` and `agents`. The runner uses the staged `natives` directory, compiles the probe against the obfuscated classes, checks the deployed JAR hash, clones the template per mode and restores the config after the two launches. Logs are written under `dist-zto/test-reports/`.
+The focused `zto-tools/test-alpha5-runtime.ps1 -TemplateSave <marked-save>` probe runs in a separate Tekkit Dev copy under `dist-zto/survival-hud-runtime/Tekkit Dev`. Its local `launch.json` supplies the Java 8 runtime path, effective Prism classpath with the assembled client, and existing inventory and lunar agent arguments as `java`, `classpath` and `agents`. The runner uses the staged `natives` directory, compiles the probe against the obfuscated classes, checks the deployed JAR hash, clones the template per mode and writes its settings in a per-run instance copy. Logs are written under `dist-zto/test-reports/`.
 
 ### Owner acceptance in Tekkit Dev
 

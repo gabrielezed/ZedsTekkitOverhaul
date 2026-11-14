@@ -14,6 +14,9 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
+import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
+import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 
 /** Local player-vicinity encounters. All methods run on the owning simulation thread. */
 public final class SiegeDirector implements LunarService.Listener {
@@ -28,6 +31,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     private final boolean enabled;
+    private final boolean experimentalEnderkin;
     private final int budget;
     private final int interval;
     private final int activeCap;
@@ -56,14 +60,15 @@ public final class SiegeDirector implements LunarService.Listener {
     private int starts;
     private int difficulty;
     public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius,
-                         boolean patrolEnabled, boolean outdoorPressure) {
+                         boolean patrolEnabled, boolean outdoorPressure, boolean experimentalEnderkin) {
         this.enabled = enabled;
+        this.experimentalEnderkin = experimentalEnderkin;
         this.budget = Math.max(1, Math.min(24, budget));
         this.interval = Math.max(400, Math.min(1200, interval));
         this.activeCap = Math.max(2, Math.min(12, activeCap));
         this.outerRadius = Math.max(14, Math.min(28, outerRadius));
         spawns = new SpawnController(this.outerRadius, outdoorPressure);
-        patrol = new LunarPatrol(patrolEnabled, outdoorPressure);
+        patrol = new LunarPatrol(patrolEnabled, outdoorPressure, experimentalEnderkin);
     }
 
     public void bind(World incoming, LunarService service) {
@@ -119,18 +124,25 @@ public final class SiegeDirector implements LunarService.Listener {
 
     @Override
     public void onLunarEvent(LunarEvent event) {
-        if (patrol.enabled) patrol.onEvent(event, diagnostics);
+        if (patrol.enabled) patrol.onEvent(world, event, diagnostics);
         if (storage == null) return;
         if (event.kind == LunarEvent.Kind.RESYNC) {
             pending = null;
             if (state == State.ACTIVE) end(State.ABORTED, event.cause.name());
+            if (diagnostics != null && AssaultSchedule.WINDOW.matches(event.after)) {
+                diagnostics.assault(event.after.rawTime, "No assault boundary: " + event.cause
+                        + " | consumed " + storage.consumed + " | starts " + starts);
+            }
         } else if (event.kind == LunarEvent.Kind.NIGHT_ENDED && state == State.ACTIVE) {
             end(State.RESOLVED, "NIGHT_ENDED");
         } else if (state != State.ACTIVE && AssaultSchedule.canStart(event, storage.consumed)) {
             pending = event.after;
         } else if (diagnostics != null && event.kind == LunarEvent.Kind.NIGHT_STARTED
                 && AssaultSchedule.WINDOW.matches(event.after)) {
-            diagnostics.assault(event.after.rawTime, "Eligibility rejected: night already consumed or active");
+            String rejection = event.cause != LunarEvent.Cause.NATURAL ? event.cause.name()
+                    : state == State.ACTIVE ? "ACTIVE" : "CONSUMED";
+            diagnostics.assault(event.after.rawTime, "Eligibility rejected: " + rejection
+                    + " | consumed " + storage.consumed + " | starts " + starts);
         }
     }
 
@@ -159,6 +171,10 @@ public final class SiegeDirector implements LunarService.Listener {
             localHostiles = -1;
             peakActive = tracked.size();
             waves = AssaultWave.plan(budget);
+            for (AssaultWave wave : waves) {
+                if (wave.planned > 0) wave.special.reset(EnderkinRole.select(experimentalEnderkin,
+                        world.getSeed(), boundary.logicalDay, boundary.phase, wave.number));
+            }
             loadouts.reset(boundary.phase);
             starts++;
             evidence.clear();
@@ -191,7 +207,10 @@ public final class SiegeDirector implements LunarService.Listener {
         if (waveIndex + 1 < waves.length && elapsed >= nextWaveAt()) {
             AssaultWave wave = waves[++waveIndex];
             wave.startedAt = elapsed;
-            if (diagnostics != null) diagnostics.beginWave(world.getWorldTime(), wave);
+            if (diagnostics != null) {
+                diagnostics.beginWave(world.getWorldTime(), wave);
+                diagnostics.selected(world.getWorldTime(), "Wave " + wave.number, wave.special);
+            }
         }
         if (waveIndex < 0) return;
         AssaultWave wave = waves[waveIndex];
@@ -235,7 +254,12 @@ public final class SiegeDirector implements LunarService.Listener {
             wave.attempts++;
             // Vanilla Hard zombies can break wooden doors. Keep vanilla AI and use skeletons there.
             boolean skeleton = difficulty == 3 || (wave.number == 3 ? wave.inserted % 2 == 0 : wave.inserted % 3 == 2);
-            EntityMob mob = spawns.trySpawn(world, player, skeleton);
+            EnderkinRole role = wave.special.pending();
+            EntityMob mob = spawns.trySpawn(world, player, skeleton, role);
+            if (role != null) {
+                wave.special.record(spawns.rejection);
+                if (diagnostics != null) diagnostics.specialAttempt(world.getWorldTime(), "Wave " + wave.number, wave.special);
+            }
             if (mob != null) {
                 int equippedBefore = loadouts.equipped;
                 String profile = loadouts.apply(mob, wave.number, wave.equipped).name();
@@ -327,7 +351,8 @@ public final class SiegeDirector implements LunarService.Listener {
         private Spawn(EntityMob entity, EntityPlayer target, int wave, int tick, String profile, boolean outdoorLight) {
             this.wave = wave;
             this.tick = tick;
-            mob = entity instanceof EntitySkeleton ? "SKELETON" : "ZOMBIE";
+            mob = entity instanceof EntitySkirmisher ? "SKIRMISHER" : entity instanceof EntityBreacher ? "BREACHER"
+                    : entity instanceof EntitySkeleton ? "SKELETON" : "ZOMBIE";
             this.profile = profile;
             this.outdoorLight = outdoorLight;
             x = entity.posX;
@@ -349,6 +374,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public static final class WaveSnapshot {
+        public final EnderkinSnapshot enderkin;
         public final int equipped, equipmentCap;
         public final int outdoorLight;
         public final int number, planned, allocation, inserted, attempts, deferred, skipped, active;
@@ -357,6 +383,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final Map<String, Integer> rejections;
 
         private WaveSnapshot(AssaultWave wave) {
+            enderkin = new EnderkinSnapshot(wave.special);
             equipped = wave.equipped;
             equipmentCap = LoadoutPolicy.assaultWaveCap(wave.number);
             number = wave.number;
@@ -377,6 +404,25 @@ public final class SiegeDirector implements LunarService.Listener {
             state = wave.state();
             outcome = wave.outcome;
             rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(wave.rejections));
+        }
+    }
+
+    public static final class EnderkinSnapshot {
+        public final String selected;
+        public final int attempts;
+        public final boolean inserted;
+        public final Map<String, Integer> rejections;
+
+        EnderkinSnapshot(EnderkinSlot slot) {
+            selected = slot.selected == null ? null : slot.selected.name();
+            attempts = slot.attempts;
+            inserted = slot.inserted;
+            rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(slot.rejections));
+        }
+
+        public String summary() {
+            return AssaultDiagnostics.label(selected) + " | Attempts " + attempts + " | Inserted " + (inserted ? 1 : 0)
+                    + (rejections.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(rejections));
         }
     }
 
@@ -413,6 +459,8 @@ public final class SiegeDirector implements LunarService.Listener {
         public final List<WaveSnapshot> waves;
         public final PatrolSnapshot patrol;
         public final LoadoutSnapshot loadouts;
+        public final boolean experimentalEnderkin;
+        public final int activeEnderkin;
 
         private Snapshot(SiegeDirector director) {
             state = director.state;
@@ -438,6 +486,10 @@ public final class SiegeDirector implements LunarService.Listener {
             deferred = waiting;
             skipped = lost;
             active = director.tracked.size();
+            experimentalEnderkin = director.experimentalEnderkin;
+            int tactical = 0;
+            for (TrackedMob entry : director.tracked) if (entry.mob instanceof TacticalHostile) tactical++;
+            activeEnderkin = tactical;
             peakActive = director.peakActive;
             localHostiles = director.localHostiles;
             observedDeaths = director.observedDeaths;
@@ -457,6 +509,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public static final class PatrolSnapshot {
+        public final EnderkinSnapshot enderkin;
         public final boolean eligibleNight, paused;
         public final State state;
         public final String reason;
@@ -467,6 +520,7 @@ public final class SiegeDirector implements LunarService.Listener {
 
         private PatrolSnapshot(SiegeDirector director) {
             LunarPatrol patrol = director.patrol;
+            enderkin = new EnderkinSnapshot(patrol.special);
             eligibleNight = patrol.enabled && director.lunar != null
                     && PatrolSchedule.eligibleNight(director.lunar.snapshot());
             state = patrol.state;

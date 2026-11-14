@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.1.0-alpha.8 — Experimental Enderkin encounters
+
+- Add opt-in Enderkin substitutions for waxing-gibbous patrols and later full-moon assault waves. Existing hostile budgets and population caps still apply.
+- Check outdoor approaches and model clearance before placement, with a bounded fallback to ordinary composition.
+- Consolidate startup settings, registry IDs and EMC rules in the unified configuration. Import existing values and keep recovery copies. [Settings and migration](docs/agents/configuration.md)
+- Record special selection, placement failures and successful substitutions in Survival Debug and the read-only assault snapshot. [Configuration and playtest](docs/agents/survival-alpha8.md)
+
 ## 0.1.0-alpha.7 — Tactical hostile prototypes
 
 - Add Skirmisher and Breacher prototypes with stable entity save names and Creative spawn eggs.

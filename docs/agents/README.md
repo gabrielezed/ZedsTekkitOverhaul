@@ -1,44 +1,21 @@
 # Coding agent handbook
 
-This directory is the **project-specific technical reference** for coding agents and future contributors. The canonical executable instructions are the repository-root [AGENTS.md](../../AGENTS.md). These pages provide context; they do not override the actual source code.
+Start with the [root instructions](../../AGENTS.md) and [current implementation map](current-state.md), then pick the relevant row. The [Project Vision](../../PROJECT_VISION.md) governs design. Current feature contracts and runbooks govern implementation and verification. Resolve discrepancies against the active branch and approved design before changing behavior.
 
-## Read by task
-
-| Task | Read first |
+| Task | Current references |
 | --- | --- |
-| Starting a new work session | [Architecture](architecture.md), [Environment](environment.md) |
-| Updating blocks, recipes or GUI | [Architecture](architecture.md), [Compatibility](compatibility.md), [Testing](testing.md) |
-| Crafting and inventory UX, NEI or Inventory Tweaks | [Implementation checklist and agent prompts](crafting-inventory-ux.md) |
-| IC2, EE2, BuildCraft or EMC changes | [Integrations](integrations.md), [Versioned API reference](../reference/tekkit-classic-3.1.2/README.md), [Compatibility](compatibility.md) |
-| Fractional distillation or fluid models | [Distillation handoff](distillation.md), [Engineering spec](../engineering/fractional-distillation-v1.md), [IC2 API](../reference/tekkit-classic-3.1.2/ic2-1.97.md) |
-| Building, deploying or fixing a crash | [Environment](environment.md), [Testing](testing.md) |
-| Planning multiblocks or custom rendering | [Roadmap](roadmap.md), [Architecture](architecture.md), [OBJ prototype](obj-renderer.md), [Legacy lightmap](lightmap-diagnostics.md), [Multiblock validator](multiblock-validator.md) |
-| Implementing the lunar calendar, moon rendering or debug menu | [Lunar implementation handoff](lunar-cycle-implementation.md), [Original lunar specification](lunar-cycle-system.md) |
-| Changing Survival encounters | [Player assault gameplay pass](survival-assault-alpha2.md), [Owner playtest generator](survival-assault-alpha2.md#owner-playtest-world), [Player assault specification](SURVIVAL_SIEGE_SPEC.md), [Alpha.1 acceptance](survival-assault-acceptance.md), [Lunar implementation handoff](lunar-cycle-implementation.md) |
-| Testing lunar patrols | [Lunar pressure rules, playtest and acceptance](lunar-pressure.md) |
-| Working on alpha.5 Survival | [Encounter composition, bed anchors, inventory and acceptance](survival-alpha5.md) |
-| Working on alpha.6 Survival | [Outdoor light, local approaches and acceptance](survival-alpha6.md) |
-| Working on alpha.7 Survival | [Ender Pulse and Creative playtest](survival-alpha7.md), [Enderkin models and in-game captures](enderkin-visual-design.md), [CodeChickenCore rendering audit](codechicken-rendering-audit.md) |
-| Working on vanilla mob equipment | [Equipment contract and disposable fixture](MOB_EQUIPMENT_BACKPORT_SPEC.md), [Alpha.3 API audit, runtime acceptance and screenshots](mob-equipment-acceptance.md) |
-| Inspecting Survival encounters in-game | [Survival Debug HUD](survival-debug-hud.md) |
-| Using or extending the Dev Bridge | [Read-only diagnostics](dev-bridge.md), [Opt-in test automation](test-automation.md), [Singleplayer acceptance](singleplayer-acceptance.md) |
-| Making a Git commit or pull request | [Workflow](workflow.md), [Testing](testing.md) |
+| Settings, build and deploy | [Configuration](configuration.md), [environment](environment.md), [build provenance](VERSIONING_POLICY.md) |
+| Selecting checks and launching a client | [Test tiers and silent launch](testing.md), [Dev Bridge lifecycle](test-automation.md) |
+| Calendar, world ownership or rendering | [Lunar implementation](lunar-cycle-implementation.md), [lunar specification](lunar-cycle-system.md) |
+| Natural encounters and replay | [Survival contract](SURVIVAL_SIEGE_SPEC.md), [alpha.8](survival-alpha8.md), [HUD](survival-debug-hud.md) |
+| Tactical mobs and mob equipment | [Tactical guide](survival-alpha7.md), [equipment contract](MOB_EQUIPMENT_BACKPORT_SPEC.md) |
+| Inventory, crafting and Creative | [Crafting UX](crafting-inventory-ux.md), [Creative backport](../engineering/creative-inventory-backport.md) |
+| Machines, rendering and external APIs | [Architecture](architecture.md), [integrations](integrations.md), [distillation](distillation.md), [pack ABI](../reference/tekkit-classic-3.1.2/README.md) |
+| Diagnostics protocol | [Dev Bridge](dev-bridge.md) |
+| Future territorial design | [0.2 design contract](territorial-threat-design.md), [roadmap](roadmap.md) |
 
-## Evidence levels
+## Historical evidence and reference material
 
-Separate these four states in notes and PRs:
+[Alpha.1 assault](survival-assault-acceptance.md), [alpha.2 playtest](survival-assault-alpha2.md), [equipment acceptance](mob-equipment-acceptance.md) and [singleplayer acceptance](singleplayer-acceptance.md) record earlier observations. The alpha.5 [beds and composition](survival-alpha5.md), alpha.6 [outdoor placement](survival-alpha6.md) and alpha.7 tactical guide preserve feature-specific procedures alongside historical results. Open earlier notes when their artifacts, compatibility findings or fixtures matter. Screenshots, past proposals and the pinned API catalog are supporting references. Keep local saves, copied binaries and reports in ignored staging paths.
 
-1. **Implemented** — code is present in the repository.
-2. **Compiled** — a build was run successfully in the named environment.
-3. **Runtime-tested** — behavior was directly observed in an actual game.
-4. **Planned** — design intention only; do not represent it as implemented.
-
-Project documentation may become outdated. When documentation conflicts with source, **inspect the source** and update the documentation after the discrepancy is understood.
-
-## Language
-
-Everything committed to this repository is in **English**. Chat with the owner may remain in Italian. Do not translate API identifiers, class names, item registry keys, or on-disk configuration names merely for style consistency.
-
-## Version-pinned external references
-
-Read [Tekkit Classic 3.1.2](../reference/tekkit-classic-3.1.2/README.md) before creating external-mod adapters. Pages distinguish inspected API declarations from unverified, version-specific research leads; use the [source policy](../reference/tekkit-classic-3.1.2/sources.md) before committing dependency material.
+Report the tested source and artifact, and distinguish portable, build, actual pack and owner evidence.

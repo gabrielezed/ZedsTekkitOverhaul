@@ -1,6 +1,6 @@
 # Survival Debug HUD
 
-Set these properties in the local client's `config/mod_ZedsTekkitOverhaul.cfg` while Minecraft is closed.
+Set these properties in the local client's `config/ZedsTekkitOverhaul.cfg` while Minecraft is closed.
 
 ```properties
 survivalDebugHud=true

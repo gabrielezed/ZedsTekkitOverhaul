@@ -1,12 +1,10 @@
 package zed.tekkitoverhaul.distillation;
 
-import java.io.File;
-import java.util.Locale;
 import net.minecraft.src.Block;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
-import net.minecraft.src.forge.Configuration;
+import zed.tekkitoverhaul.config.ZtoConfig;
 import zed.tekkitoverhaul.distillation.client.RenderDistillationComponent;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
 
@@ -67,28 +65,19 @@ public final class DistillationRegistry {
         }
     }
 
-    public static void register() {
+    public static void register(ZtoConfig config) {
         if (registered) return;
-        Configuration config = new Configuration(new File("config/ZedsTekkitOverhaul-Distillation.cfg"));
-        config.load();
         int[] blockIds = new int[BLOCKS.length];
         int[] itemIds = new int[BUCKETS.length];
         int[] flowingIds = new int[BUCKETS.length];
         for (DistillationPartType type : DistillationPartType.values()) {
-            blockIds[type.index] = config.getOrCreateBlockIdProperty(
-                    type.modelName, 3010 + type.index).getInt();
+            blockIds[type.index] = config.partId(type);
         }
         for (DistillateType type : DistillateType.values()) {
-            // Legacy Forge configuration keys cannot contain underscores.
-            String fluidKey = type.name().toLowerCase(Locale.ROOT).replace("_", "");
-            itemIds[type.id] = config.getOrCreateIntProperty(
-                    fluidKey + "Bucket", "item", 22000 + type.id).getInt();
-            flowingIds[type.id] = config.getOrCreateIntProperty(
-                    fluidKey + "Flowing", "block", 3016 + type.id * 2).getInt();
+            itemIds[type.id] = config.bucketId(type);
+            flowingIds[type.id] = config.flowingId(type);
         }
-        oilBucketIdOverride = config.getOrCreateIntProperty(
-                "buildcraftOilBucketItemId", "integration", -1).getInt();
-        config.save();
+        oilBucketIdOverride = config.buildcraftOilBucketItemId;
 
         for (int i = 0; i < blockIds.length; i++) {
             int id = blockIds[i];

@@ -1,10 +1,10 @@
 # Lunar Cycle System implementation handoff
 
-Status: implemented with partial single-player runtime verification. The [original lunar specification](lunar-cycle-system.md) supplies the requirements. This handoff records the legacy integration decisions and acceptance criteria. Read [AGENTS.md](../../AGENTS.md), [Project Vision §7 and §14](../../PROJECT_VISION.md), and the [MDK environment](environment.md) before editing code.
+The [alpha.8 guide](survival-alpha8.md#recurring-player-assault) records current recurrence evidence. This handoff preserves the original integration and persistence decisions. The [lunar specification](lunar-cycle-system.md) supplies the calendar requirements.
 
 The first production consumer is [Survival 0.1](survival-assault-acceptance.md). The local owner binds and detaches its director with the active world, then advances it after observing lunar time. Only a natural full-moon `NIGHT_STARTED` in the Overworld can start an assault. The director keeps a separate consumed-boundary datum; lunar alignment, rendering, schema and API remain unchanged.
 
-The sky should give players a recurring, readable signal for preparation. The milestone delivers that signal and a calendar that future directors can query. Encounter selection, timing balance beyond the eight-day baseline, sleep restrictions, spawn changes, new mobs, and ThreatLevel remain future work. Dedicated server wiring, packets, multiplayer commands, and multiplayer acceptance are deferred. Keep the authoritative service independent of the client so a later server adapter can own it.
+The sky gives players a recurring signal for preparation. The calendar exposes scheduling to consumers. See the [current map](current-state.md) for the implemented encounter, sleep and spawn behavior. Dedicated server wiring, packets, multiplayer commands and multiplayer acceptance remain deferred. Keep the authoritative service independent of the client so a later server adapter can own it.
 
 ## 1. Technical audit
 

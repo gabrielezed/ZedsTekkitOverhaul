@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.devbridge;
 
 import java.util.Map;
+import zed.tekkitoverhaul.assault.SiegeDirector.EnderkinSnapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.LoadoutSnapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
 import zed.tekkitoverhaul.assault.SiegeDirector.Spawn;
@@ -31,7 +32,11 @@ final class AssaultObservation {
         json.append(",\"patrolLoadouts\":");
         loadouts(json, view.patrol.loadouts);
         json.append(",\"patrolOutdoorLight\":").append(view.patrol.outdoorLight)
-                .append(",\"patrolVanillaLight\":").append(view.patrol.spawned - view.patrol.outdoorLight);
+                .append(",\"patrolVanillaLight\":").append(view.patrol.spawned - view.patrol.outdoorLight)
+                .append(",\"experimentalEnderkin\":").append(view.experimentalEnderkin)
+                .append(",\"activeAssaultEnderkin\":").append(view.activeEnderkin)
+                .append(",\"patrolEnderkin\":");
+        enderkin(json, view.patrol.enderkin, view.patrol.spawned);
         json.append(",\"waves\":[");
         for (WaveSnapshot wave : view.waves) {
             if (wave.number > 1) json.append(',');
@@ -46,7 +51,9 @@ final class AssaultObservation {
                     .append(",\"deferred\":").append(wave.deferred).append(",\"skipped\":").append(wave.skipped)
                     .append(",\"carriedIn\":").append(wave.carriedIn).append(",\"carriedOut\":").append(wave.carriedOut)
                     .append(",\"localHostiles\":").append(wave.localHostiles).append(",\"peakActive\":").append(wave.peakActive)
-                    .append(",\"rejections\":{");
+                    .append(",\"enderkin\":");
+            enderkin(json, wave.enderkin, wave.inserted);
+            json.append(",\"rejections\":{");
             boolean first = true;
             for (Map.Entry<String, Integer> rejection : wave.rejections.entrySet()) {
                 if (!first) json.append(',');
@@ -67,6 +74,20 @@ final class AssaultObservation {
                     .append(",\"horizontalSquared\":").append(spawn.horizontalSquared).append('}');
         }
         return json.append("]}").toString();
+    }
+
+    private static void enderkin(StringBuilder json, EnderkinSnapshot slot, int total) {
+        json.append("{\"selected\":").append(code(slot.selected)).append(",\"attempts\":").append(slot.attempts)
+                .append(",\"inserted\":").append(slot.inserted)
+                .append(",\"ordinaryInserted\":").append(total - (slot.inserted ? 1 : 0))
+                .append(",\"rejections\":{");
+        boolean first = true;
+        for (Map.Entry<String, Integer> entry : slot.rejections.entrySet()) {
+            if (!first) json.append(',');
+            first = false;
+            json.append(code(entry.getKey())).append(':').append(entry.getValue());
+        }
+        json.append("}}");
     }
 
     private static void loadouts(StringBuilder json, LoadoutSnapshot loadouts) {

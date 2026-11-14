@@ -20,6 +20,8 @@ Run a single scenario with `run <scenario>` or all currently registered scenario
 
 ## Unattended Tekkit Dev lifecycle
 
+The runner uses the [silent launch procedure](testing.md#silent-client-launch) before starting Prism and restores the isolated instance's options after shutdown.
+
 Prepare one marked disposable Overworld as described below. Keep its player near spawn, its fixture arena empty and the source save closed. Deploy the candidate with `zto-tools/build-and-deploy.bat`. In **Tekkit Dev** only, enable the three bridge flags from the setup below and configure a Prism account and Java installation that can already launch the pack. Close any existing Tekkit Dev client.
 
 From the MDK root, run this command with the folder name of the authorized save.

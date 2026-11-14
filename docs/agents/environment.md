@@ -29,6 +29,8 @@ The default Prism mod directory is:
 %APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods
 ```
 
+ZTO reads its startup settings from `minecraft/config/ZedsTekkitOverhaul.cfg`. Alpha.8 imports legacy values on first startup and retains recovery files. See the [configuration guide](configuration.md) and [isolated runtime commands](survival-alpha8.md#configuration-regression).
+
 ## Build and deploy
 
 Close the game and, from the MDK root, run:

@@ -9,7 +9,7 @@ $previous = 'dist-zto/ZedsTekkitOverhaul.previous.jar'
 $published = 'dist-zto/ZedsTekkitOverhaul.jar'
 $config = Join-Path (Split-Path (Split-Path $Installed -Parent) -Parent) 'config/ZedsTekkitOverhaul.cfg'
 $hopperConfigured = (Test-Path -LiteralPath $config -PathType Leaf) -and
-    (Select-String -LiteralPath $config -Pattern '^\s*hopper\s*=' -Quiet)
+    (Select-String -LiteralPath $config -Pattern '^\s*(?:block\.)?hopper\s*[=:\s]' -Quiet)
 $groups = @(
     @{ Name = 'Hopper'; Root = $env:ZTO_HOPPER_ASSETS; Required = $hopperConfigured
        Entries = @('gui', 'outer', 'top', 'inside', 'item' | ForEach-Object { "zed/hopper-1.5.2/$_.png" }) }

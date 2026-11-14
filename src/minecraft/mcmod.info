@@ -3,7 +3,7 @@
     "modid": "mod_ZedsTekkitOverhaul",
     "name": "Zed's Tekkit Overhaul",
     "description": "A Minecraft 1.2.5 expansion for Tekkit Classic: advanced crafting, legacy cross-mod integrations and experimental multiblock industrial machinery.",
-    "version": "0.1.0-alpha.7",
+    "version": "0.1.0-alpha.8",
     "mcversion": "1.2.5",
     "url": "https://github.com/gabrielezed/ZedsTekkitOverhaul",
     "updateUrl": "",

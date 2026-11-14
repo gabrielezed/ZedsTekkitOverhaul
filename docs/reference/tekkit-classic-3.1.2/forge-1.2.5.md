@@ -39,7 +39,7 @@ For automation work, validate which slots each side exposes, and test with both 
 
 ## Configuration and Ore Dictionary
 
-- `Configuration(File)`, `load()`, `save()`, and `getOrCreateBlockIdProperty(String, int)` are used by `AdvancedCraftingRegistry`.
+- `Configuration(File)`, `load()`, `save()`, and `getOrCreateBlockIdProperty(String, int)` were used before the [alpha.8 migration](../../agents/configuration.md).
 - Numeric block IDs must stay stable for existing worlds. The current defaults are **3000** for Advanced Crafting Table and **3001** for Foundry; the active world config takes precedence.
 - In the locally supplied `OreDictionary` source, `getOreID(String)`, `getOreName(int)`, and `getOres(String)` exist. Confirm registration APIs in the installed MDK before implementing an ore-dictionary recipe handler.
 

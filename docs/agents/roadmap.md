@@ -48,6 +48,7 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 - **Implemented in `0.1.0-alpha.4`:** bounded first-quarter and waxing-gibbous patrols with pause and same-night replay protection. [Patrol rules and Tekkit Dev evidence](lunar-pressure.md)
 - **Alpha.5 candidate:** [encounter loadouts, respawn bed anchors and armor Shift+Click](survival-alpha5.md). Owner feedback will guide later tactical enemy roles and defenses.
 - **Alpha.6 candidate:** [outdoor lunar pressure and local fortification](survival-alpha6.md). Evaluate the placement model across representative shelters and Tekkit compounds before expanding tactical roles.
+- **Alpha.8 experiment:** [bounded Enderkin substitutions](survival-alpha8.md) in existing patrols and player assaults. Owner acceptance governs broader adoption.
 - **Later release lines:** territorial activity and threat in 0.2, settlement recognition in 0.3, and `SITE_SIEGE` in 0.4. A site siege targets a persistent settlement inferred from long-term construction and activity. Doors, beds and machines are optional evidence. The plan supports caves, treehouses, castles, outdoor industry and multiple outposts without claims or marker blocks.
 - **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
 

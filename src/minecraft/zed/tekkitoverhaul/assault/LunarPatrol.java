@@ -15,6 +15,8 @@ import zed.tekkitoverhaul.lunar.LunarSnapshot;
 final class LunarPatrol {
     final boolean enabled;
     private final SpawnController spawns;
+    private final boolean experimentalEnderkin;
+    final EnderkinSlot special = new EnderkinSlot();
     final EncounterLoadouts loadouts = new EncounterLoadouts();
     final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
     private EntityPlayer target;
@@ -24,8 +26,9 @@ final class LunarPatrol {
     int budget, spawned, outdoorLight, attempts, elapsed;
     boolean paused;
 
-    LunarPatrol(boolean enabled, boolean outdoorPressure) {
+    LunarPatrol(boolean enabled, boolean outdoorPressure, boolean experimentalEnderkin) {
         this.enabled = enabled;
+        this.experimentalEnderkin = experimentalEnderkin;
         spawns = new SpawnController(16, outdoorPressure);
         reset();
     }
@@ -35,6 +38,7 @@ final class LunarPatrol {
         reason = enabled ? "WAITING_FOR_NATURAL_DUSK" : "DISABLED";
         target = null;
         budget = 0;
+        special.reset(null);
         loadouts.reset(LunarPhase.NEW_MOON);
         clearProgress();
     }
@@ -45,7 +49,7 @@ final class LunarPatrol {
         rejections.clear();
     }
 
-    void onEvent(LunarEvent event, AssaultDiagnostics diagnostics) {
+    void onEvent(World world, LunarEvent event, AssaultDiagnostics diagnostics) {
         if (event.kind == LunarEvent.Kind.RESYNC || event.kind == LunarEvent.Kind.NIGHT_ENDED) {
             if (state == State.ACTIVE) {
                 finish(event.after.rawTime, State.ABORTED,
@@ -56,6 +60,9 @@ final class LunarPatrol {
             state = State.ACTIVE;
             reason = "NATURAL_DUSK";
             budget = PatrolSchedule.budget(event.after.phase);
+            special.reset(EnderkinRole.select(experimentalEnderkin, world.getSeed(), event.after.logicalDay,
+                    event.after.phase, 0));
+            if (diagnostics != null) diagnostics.selected(event.after.rawTime, "Patrol", special);
             loadouts.reset(event.after.phase);
             clearProgress();
         }
@@ -97,7 +104,12 @@ final class LunarPatrol {
                 && spawned < budget && localHostiles < SpawnController.LOCAL_CAP; tried++) {
             attempts++;
             // Vanilla Hard zombies can break wooden doors.
-            EntityMob mob = spawns.trySpawn(world, player, difficulty == 3 || spawned % 2 == 1);
+            EnderkinRole role = special.pending();
+            EntityMob mob = spawns.trySpawn(world, player, difficulty == 3 || spawned % 2 == 1, role);
+            if (role != null) {
+                special.record(spawns.rejection);
+                if (diagnostics != null) diagnostics.specialAttempt(moon.rawTime, "Patrol", special);
+            }
             if (mob != null) {
                 loadouts.apply(mob, 0, 0);
                 spawned++;
@@ -125,6 +137,7 @@ final class LunarPatrol {
                 + " | Attempts " + attempts + " | Skipped " + (budget - spawned) + " | Elapsed " + elapsed
                 + (rejections.isEmpty() ? "" : " | " + AssaultDiagnostics.counts(rejections))
                 + " | Outdoor light " + outdoorLight + " | Vanilla light " + (spawned - outdoorLight);
+        if (special.selected != null) message += " | " + new SiegeDirector.EnderkinSnapshot(special).summary();
         ModLoader.getLogger().info("[ZTO] PATROL [" + time + "] " + message);
         if (diagnostics != null) diagnostics.record(time, "PATROL",
                 message + " | " + new SiegeDirector.LoadoutSnapshot(loadouts, spawned).summary());

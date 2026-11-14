@@ -1,19 +1,18 @@
 package zed.tekkitoverhaul.power;
 
-import java.io.File;
 import java.lang.reflect.Method;
 import java.util.logging.Level;
 import net.minecraft.src.Block;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
-import net.minecraft.src.forge.Configuration;
+import zed.tekkitoverhaul.config.ZtoConfig;
 
 /** Optional registration boundary for the EE2 to IC2 converter. */
 public final class AlchemicalPowerRegistry {
     private AlchemicalPowerRegistry() { }
 
-    public static void register() {
+    public static void register(ZtoConfig config) {
         Class<?> ic2Items;
         try {
             ClassLoader loader = AlchemicalPowerRegistry.class.getClassLoader();
@@ -37,20 +36,16 @@ public final class AlchemicalPowerRegistry {
                 ModLoader.getLogger().warning("[ZTO] Alchemical converter requires the IC2 machine, advanced circuit and copper cable");
                 return;
             }
-            registerBlock(machine, circuit, cable);
+            registerBlock(config.alchemicalConverter, machine, circuit, cable);
         } catch (ReflectiveOperationException failure) {
             ModLoader.getLogger().log(Level.WARNING, "[ZTO] Alchemical converter recipe lookup failed", failure);
         }
     }
 
-    private static void registerBlock(ItemStack machine, ItemStack circuit, ItemStack cable) {
-        Configuration config = new Configuration(new File("config/ZedsTekkitOverhaul-AlchemicalPower.cfg"));
-        config.load();
-        int id = config.getOrCreateBlockIdProperty("alchemicalConverter", 3024).getInt();
+    private static void registerBlock(int id, ItemStack machine, ItemStack circuit, ItemStack cable) {
         if (id < 1 || id >= Block.blocksList.length || Block.blocksList[id] != null || Item.itemsList[id] != null) {
             throw new IllegalStateException("ZTO: Invalid or occupied alchemical converter block ID " + id);
         }
-        config.save();
 
         Block block = new BlockAlchemicalConverter(id);
         ModLoader.registerBlock(block);

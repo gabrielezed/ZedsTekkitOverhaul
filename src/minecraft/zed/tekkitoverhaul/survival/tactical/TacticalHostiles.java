@@ -1,6 +1,5 @@
 package zed.tekkitoverhaul.survival.tactical;
 
-import java.io.File;
 import java.util.Set;
 import net.minecraft.src.Chunk;
 import net.minecraft.src.ChunkCoordIntPair;
@@ -8,7 +7,7 @@ import net.minecraft.src.Entity;
 import net.minecraft.src.Item;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
-import net.minecraft.src.forge.Configuration;
+import zed.tekkitoverhaul.config.ZtoConfig;
 import net.minecraft.src.forge.IChunkLoadHandler;
 import net.minecraft.src.forge.MinecraftForge;
 
@@ -37,12 +36,9 @@ public final class TacticalHostiles {
         });
     }
 
-    public static void registerEggs() {
-        Configuration config = new Configuration(new File("config/ZedsTekkitOverhaul-Tactical.cfg"));
-        config.load();
-        int skirmisher = config.getOrCreateIntProperty("skirmisherEgg", "item", 22004).getInt();
-        int breacher = config.getOrCreateIntProperty("breacherEgg", "item", 22005).getInt();
-        config.save();
+    public static void registerEggs(ZtoConfig config) {
+        int skirmisher = config.skirmisherEgg;
+        int breacher = config.breacherEgg;
         if (skirmisher == breacher) throw new IllegalStateException("ZTO: Duplicate tactical spawn egg item IDs");
         checkItemSlot(skirmisher);
         checkItemSlot(breacher);
@@ -55,6 +51,6 @@ public final class TacticalHostiles {
     private static void checkItemSlot(int id) {
         if (id < 4096 - 256 || id >= Item.itemsList.length - 256 || Item.itemsList[id + 256] != null)
             throw new IllegalStateException("ZTO: Invalid or occupied tactical spawn egg item ID " + id
-                    + " in ZedsTekkitOverhaul-Tactical.cfg");
+                    + " in config/ZedsTekkitOverhaul.cfg");
     }
 }

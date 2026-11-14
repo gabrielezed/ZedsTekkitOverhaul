@@ -3,8 +3,7 @@ package zed.tekkitoverhaul.emc;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.StringReader;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -16,13 +15,13 @@ public final class EmcIntegration {
     private Ee2EmcAdapter ee2;
     private boolean done;
 
-    public void onGameTick(File gameDirectory) {
+    public void onGameTick(File gameDirectory, String profileText) {
         if (done) return;
         try {
             if (ee2 == null) ee2 = new Ee2EmcAdapter();
             if (!ee2.isReady()) return;
             done = true;
-            initialize(new File(gameDirectory, "config"));
+            initialize(new File(gameDirectory, "config"), profileText);
         } catch (ClassNotFoundException absent) {
             done = true;
         } catch (Exception failure) {
@@ -34,17 +33,9 @@ public final class EmcIntegration {
         }
     }
 
-    private void initialize(File config) throws IOException, ReflectiveOperationException {
-        File file = new File(config, "ZedsTekkitOverhaul-emc.txt");
-        EmcProfile profile = null;
-        if (file.exists()) {
-            BufferedReader input = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8);
-            try {
-                profile = EmcProfile.read(input);
-            } finally {
-                input.close();
-            }
-        }
+    private void initialize(File config, String profileText) throws IOException, ReflectiveOperationException {
+        EmcProfile profile = profileText.isEmpty() ? null :
+                EmcProfile.read(new BufferedReader(new StringReader(profileText)));
         int table = AdvancedCraftingRegistry.advancedTable.blockID;
         int foundry = AdvancedCraftingRegistry.foundry.blockID;
         Map<Integer, Map<Integer, Integer>> candidate = ee2.snapshot();

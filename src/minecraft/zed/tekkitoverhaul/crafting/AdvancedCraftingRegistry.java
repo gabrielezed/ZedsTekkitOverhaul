@@ -1,10 +1,9 @@
 package zed.tekkitoverhaul.crafting;
 
-import java.io.File;
 import net.minecraft.src.Block;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
-import net.minecraft.src.forge.Configuration;
+import zed.tekkitoverhaul.config.ZtoConfig;
 import zed.tekkitoverhaul.render.TileEntityFoundryVisual;
 import zed.tekkitoverhaul.render.client.RenderFoundryVisual;
 
@@ -16,14 +15,10 @@ public final class AdvancedCraftingRegistry {
 
     private AdvancedCraftingRegistry() {}
 
-    public static void register() {
+    public static void register(ZtoConfig config) {
         if (initialized) return;
-        // Configuration is saved on first launch. Do not change IDs in an existing world.
-        Configuration config = new Configuration(new File("config/ZedsTekkitOverhaul.cfg"));
-        config.load();
-        int tableId = config.getOrCreateBlockIdProperty("advancedCraftingTable", 3000).getInt();
-        int foundryId = config.getOrCreateBlockIdProperty("foundry", 3001).getInt();
-        config.save();
+        int tableId = config.advancedCraftingTable;
+        int foundryId = config.foundry;
         if (tableId == foundryId || tableId < 1 || foundryId < 1
                 || tableId >= Block.blocksList.length || foundryId >= Block.blocksList.length
                 || Block.blocksList[tableId] != null || Block.blocksList[foundryId] != null) {

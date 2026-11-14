@@ -8,12 +8,12 @@ import net.minecraft.src.GuiScreen;
 import net.minecraft.src.IBlockAccess;
 import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
-import net.minecraft.src.MLProp;
 import net.minecraft.src.Render;
 import net.minecraft.src.RenderBlocks;
 import net.minecraft.src.forge.MinecraftForge;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.config.ZtoConfig;
+import zed.tekkitoverhaul.config.ZtoConfigLoader;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
 import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
@@ -39,40 +39,9 @@ import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
-    @MLProp(info = "Enable the single-player creative inventory backport when its local assets are installed")
-    public static boolean creativeInventoryBackport = true;
-    @MLProp(info = "Allow Alt-click on the recipe prepare button to place available ingredients")
-    public static boolean partialRecipeFill = false;
-    @MLProp(info = "Optional LWJGL key code for the hovered crafting UX button (0 disables it)")
-    public static int craftingUxShortcut = 0;
-    @MLProp(info = "LWJGL key code for the single-player Lunar Debug menu (0 disables it)")
-    public static int lunarDebugKey = 0;
-    @MLProp(info = "Log lunar transitions, save initialization and listener failures")
-    public static boolean lunarVerboseLogging = false;
-    @MLProp(info = "Enable natural full-moon player assaults in local Survival")
-    public static boolean playerAssault = true;
-    @MLProp(info = "Enable natural first-quarter and waxing-gibbous patrols in local Survival")
-    public static boolean lunarPatrols = true;
-    @MLProp(info = "Allow limited outdoor lunar encounters in artificial light with open surface approaches")
-    public static boolean lunarOutdoorLightPressure = true;
-    @MLProp(info = "Allow experimental Enderkin substitutions in local lunar encounters")
-    public static boolean experimentalEnderkinEncounters = false;
-    @MLProp(info = "Use Overworld beds as respawn anchors without sleeping or advancing the night")
-    public static boolean disableNightSkipping = true;
-    @MLProp(info = "Maximum enemies per assault (1 to 24)")
-    public static int assaultSpawnBudget = 15;
-    @MLProp(info = "Simulation ticks between assault waves while enemies remain (400 to 1200)")
-    public static int assaultWaveInterval = 900;
-    @MLProp(info = "Maximum active assault enemies (2 to 12)")
-    public static int assaultActiveCap = 8;
-    @MLProp(info = "Maximum horizontal assault spawn distance in blocks (14 to 28)")
-    public static int assaultOuterRadius = 16;
-    @MLProp(info = "Enable the local single-player Survival Debug HUD")
-    public static boolean survivalDebugHud = false;
-    @MLProp(info = "LWJGL key code for Survival Debug (0 disables its shortcut)")
-    public static int survivalDebugHudKey = Keyboard.KEY_F10;
-    @MLProp(info = "Survival Debug history entries per save session (20 to 300)")
-    public static int survivalDebugLogCapacity = 250;
+    private ZtoConfig settings;
+
+    public ZtoConfig settings() { return settings; }
 
     private static final LocalLunarCalendar LUNAR = new LocalLunarCalendar();
 
@@ -91,13 +60,15 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void load() {
+        settings = ZtoConfigLoader.load(ModLoader.getMinecraftInstance().mcDataDir.toPath().resolve("config"),
+                HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
-        AdvancedCraftingRegistry.register();
+        AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
-        if (disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
+        if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
-        DistillationRegistry.register();
+        DistillationRegistry.register(settings);
         ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         ModLoader.setInGUIHook(this, true, false);
         System.out.println("[ZTO] v" + getVersion() + " loaded");
@@ -105,16 +76,17 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
-        LUNAR.register(this, lunarDebugKey, lunarVerboseLogging,
-                new SiegeDirector(playerAssault, assaultSpawnBudget, assaultWaveInterval, assaultActiveCap,
-                        assaultOuterRadius, lunarPatrols, lunarOutdoorLightPressure, experimentalEnderkinEncounters),
-                survivalDebugHud, survivalDebugHudKey, survivalDebugLogCapacity);
+        LUNAR.register(this, settings.lunarDebugKey, settings.lunarVerboseLogging,
+                new SiegeDirector(settings.playerAssault, settings.assaultSpawnBudget, settings.assaultWaveInterval,
+                        settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
+                        settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
+                settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
-        AlchemicalPowerRegistry.register();
-        HopperRegistry.register(this);
-        TacticalHostiles.registerEggs();
-        if (creativeInventoryBackport) creativeInventory.register(this);
+        AlchemicalPowerRegistry.register(settings);
+        HopperRegistry.register(this, settings);
+        TacticalHostiles.registerEggs(settings);
+        if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
 
@@ -149,7 +121,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public boolean onTickInGame(float partialTick, Minecraft minecraft) {
-        emc.onGameTick(minecraft.mcDataDir);
+        emc.onGameTick(minecraft.mcDataDir, settings.emcProfile);
         zed.tekkitoverhaul.hopper.dev.HopperAcceptance.tick(minecraft);
         MobEquipmentFixture.tick(minecraft);
         return true;
@@ -157,7 +129,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public boolean onTickInGUI(float partialTick, Minecraft minecraft, GuiScreen screen) {
-        craftingUx.tick(minecraft, screen, partialRecipeFill, craftingUxShortcut);
+        craftingUx.tick(minecraft, screen, settings.partialRecipeFill, settings.craftingUxShortcut);
         DragDistributionIntegration.renderPreview(minecraft, minecraft.currentScreen);
         return true;
     }

@@ -83,3 +83,21 @@ The extended `ender-first` geometry fixture rejected an unloaded candidate witho
 ### Deferred work
 
 Powered access behavior and long-running unrestricted fights need owner observation. Tactical navigation still depends on the installed legacy pathfinder and loaded world provider. The launch harness uses an assembled pack classpath and obfuscated names tied to Minecraft 1.2.5. Territorial activity, settlement recognition and their save formats remain future design work. Keep any future threat assessment at the encounter admission boundary described in the [territorial design contract](territorial-threat-design.md).
+
+## Recurring PLAYER_ASSAULT
+
+Run `zto-tools/test-alpha6-runtime.ps1 -Modes assault-recurrence` in the isolated staging profile. The fixture uses an open lit arena, a damageable Survival player and bounded hostile cleanup after each wave. The first dusk advances naturally from the fixture's saved time. To shorten subsequent cycles the runner jumps to 160 ticks before the corresponding full-moon dusks, then lets the normal game loop cross each boundary. The portable calendar test supplies every intervening tick across two complete eight-day cycles.
+
+The natural full moons at raw ticks 13,000, 205,000 and 397,000 each started an encounter. Each initialized all three waves, placed 15 hostiles and resolved with `WAVES_COMPLETE`. Rewinding before the first dusk and recrossing yielded `RESYNC/REPLAY_SUPPRESSED`. Save and Quit and reopening on the third night restored the consumed boundary with zero starts in the new session.
+
+The installed NEI local time setter jumped inside the next full-moon night and produced `RESYNC/TIME_SKIP`, with zero starts. This is intentional. A skipped boundary should not create a missed encounter. To reproduce a later eligible assault, set the time before dusk and allow ordinary ticks through 13,000. The installed NEI hour controls advance the raw day as well as the time of day, which can also change the lunar phase. The lunar debug phase control changes the alignment without moving vanilla time. Align before dusk and wait for the natural event. The fixture did this at 613,000 after the previous save/reopen.
+
+The calendar stores a replay watermark. The director persists its separate most recent consumed raw boundary and an open flag. Resolved and interrupted encounters can be followed by later admissions. Peaceful and a Creative player reject dusk without consuming an assault. The recurrence fixture reports event kind and cause, phase, raw time, eligibility, consumed boundary, starts, wave state and placement results. Optional HUD history distinguishes a calendar boundary from encounter admission. The investigation reproduced intentional skip suppression and required no scheduling or persistence change. See the [maintenance review](alpha8-maintenance.md).
+
+### Stabilization candidate evidence
+
+The stabilization build used production source `3d487af20df63b6ab134cb10b02ca7e493653bf8` and archive SHA-256 `5b2c6b372e50cc122b77404133e9509865f20f79ee7c30bc0d29fea6515f07b7`. MCP 6.2 client compilation, reobfuscation and streaming validation of 293 entries passed. The runtime used Forge 3.3.8.164, FML 2.2.106.176 and Prism Java 8u51. The sidecar records pending test and documentation edits as a dirty tree.
+
+The compiled recurrence fixture passed on this archive, including interruption replay and an Overworld → Nether → Overworld round trip while an encounter was active. The Nether run had no assault authority. On return, the Overworld retained the interrupted boundary and zero starts in the rebound director. The portable full-clock check covered every tick between three full moons. The runtime run accelerated only normal client ticks and used explicit skips for the cases described above.
+
+All five configuration startup cases passed with effective music and effects at zero and no SoundSystem backend. The silent gameplay probes check those values throughout their render callbacks. Prism Hopper and distillation persistence probes passed with graceful shutdown and options restoration. The live 3×3 and 5×5 crafting and hotbar checks passed. The active Inventory Tweaks profile left the hard-protection check blocked. See [silent client launch](testing.md#silent-client-launch) for the test boundary.

@@ -1,56 +1,23 @@
 # Validation and definition of done
 
-Use the [singleplayer acceptance matrix](singleplayer-acceptance.md) for current scenario results, candidate provenance and the Survival smoke path. The [automation guide](test-automation.md) records runner setup and the earlier PR #17 evidence.
+Select tiers by the change. An integration candidate should cover release regressions in the pinned pack. Report PASS, FAIL and NOT RUN, with the tested source commit and JAR SHA-256. Record developer fixtures and owner observations separately.
 
-For Survival 0.1 use the [assault acceptance record](survival-assault-acceptance.md). The existing lunar batch exercises the portable event gate and the existing Tekkit Dev lifecycle runs the full-moon encounter and reopen assertions. Record a human Survival fortification trial separately.
+| Tier | Scope and commands |
+| --- | --- |
+| 1 — Fast checks | `zto-tools/test-config.ps1` for migration and settings. `zto-tools/test-lunar-calendar.bat` for continuous cycles, event classification, scheduling, placement policy and role selection. Use `zto-tools/test-agent-docs.ps1` for current links, commands and provenance references. Use the crafting, EMC, Hopper and relevant asset or machine self-tests for those areas. |
+| 2 — Build and packaging | `zto-tools/build-and-deploy.bat` runs MCP compilation, reobfuscation and streaming JAR validation. Use `ZTO_PRISM_MODS` to deploy to the isolated staging copy. Check the [provenance sidecar](VERSIONING_POLICY.md). |
+| 3 — Targeted pack runtime | `zto-tools/test-config-runtime.ps1` checks actual migration and silent startup. `zto-tools/test-alpha6-runtime.ps1 -Modes assault-recurrence` checks recurring dusk and replay. The alpha.5 probe owns native bed/respawn and armor-transfer coverage. |
+| 4 — Release regression | Run the alpha.6 and alpha.8 encounter modes and alpha.7 combat, Pulse and both Creative catalogs. Use the [Dev Bridge lifecycle](test-automation.md) for representative Hopper, crafting and distillation transactions and restart persistence. [Release commands](survival-alpha8.md#configuration-regression) |
+| 5 — Stress and visuals | Alpha.7 `stress` and `visual` are targeted runtime probes. Use the [tactical guide](survival-alpha7.md) and [distillation rendering checklist](../engineering/distillation-rendering-and-binding-v2.md) for owner-facing visual review. |
 
-For the alpha.3 equipment backport, use the [disposable viewing pen](MOB_EQUIPMENT_BACKPORT_SPEC.md#disposable-viewing-pen) in isolated Tekkit Dev. The [equipment acceptance record](mob-equipment-acceptance.md) identifies the tested JAR, observed combat and persistence cases, screenshots and the scope of the assault regression.
+Keep marked saves disposable. Keep output in ignored staging and report paths. Run graphical fixtures serially when timing matters. Verify that the process exits and report unresolved shutdown issues. Compare measurements for the same fixture and artifact when claiming a performance change.
 
-For alpha.8, the [Enderkin encounter guide](survival-alpha8.md) lists the opt-in modes in the lunar runtime runner, the separate projectile and Creative checks, and the remaining owner playtest scenarios.
+## Silent client launch
 
-## Evidence currently available
+The installed Minecraft 1.2.5 client reads `music:0.0` and `sound:0.0` from its own `options.txt` before initializing SoundManager. The shared [preparation helper](../../zto-tools/runtime-tests/SilentMinecraft.ps1) writes both values before launch and can create a missing options file. It is used by all tracked automated graphical launch paths.
 
-- **Observed in-game (owner):** Advanced Crafting Table opens with a correctly displayed 5×5 GUI; the Foundry recipe using smooth Stone is craftable.
-- **Previously observed in real Tekkit (owner):** EE2 Alchemical Coal provides fuel to an IC2 Generator.
-- **Observed in-game (owner):** Foundry right-click rotor toggle and independent NBT state across multiple placed blocks survive saving and reopening the world.
-- **Observed in-game (owner):** the explicit full-bright OBJ lightmap fix resolves the previously dark rotor colors.
-- **Implemented, not fully verified in this repository:** new block EMC mappings, multiplayer behavior, a production-compatible drag GUI hook and the proposed multiblock validator.
-- **Observed in-game (owner):** OBJ model loads in Tekkit and the Foundry rotor animates. The initial dark colors were corrected by setting explicit Tessellator lightmap brightness.
-- **Implemented on a feature branch, not yet tested in real Tekkit:** a temporary 3×3 Foundry Stone ring validator with isolated Java tests.
-- **Planned only:** final Foundry multiblock architecture, EU energy/processing, production world-aware OBJ lighting, BuildCraft refinery, more complete EE2–IC2 conversion.
+- The alpha.5, alpha.6, alpha.7 and config runners only mute per-run copies. Their clients assert both effective volumes are zero and the SoundSystem backend is absent. The configuration probe also calls music and sound playback before checking the backend again.
+- The Prism lifecycle runner mutes only the isolated Tekkit Dev instance while it owns the launch. It restores the exact original options after exit. If forced termination prevents cleanup, close the client and use `zto-options-before-automation.bak` in the Tekkit Dev game directory to restore the original `options.txt`. Never run the lifecycle with an ordinary profile.
+- Use a manual launch in a separate disposable profile for owner-requested sound design checks. Leave host-wide audio controls alone.
 
-Update this list only with explicit evidence and indicate the game environment, date or build if known.
-
-## Change validation
-
-1. `git status --short` and `git diff --check` are clean of accidental files/whitespace errors.
-2. The change does not import vanilla/Forge sources, mod JARs, local saves, production `gb.class` or generated compiled output.
-3. If changing Java: run MCP/Eclipse compilation. Note failures and which versions of the API were used.
-4. If shipping code: run MCP reobfuscation and inspect the packaging for `zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class` and `zed/gui/advanced_table.png`.
-5. If changing runtime behavior: launch the **isolated Tekkit Dev** instance and test in a disposable/copy world.
-6. If changing OBJ or renderer code: run `zto-tools/test-obj-loader.bat` and verify the packaged `zed/models/` and `zed/textures/` assets; confirm the visual outcome in the Prism instance.
-7. If changing structure validation: run `zto-tools/test-multiblock.bat`, then test the 3×3 ring in Prism and check multiple controllers and world reload.
-8. If touching an integration: verify it with the relevant installed mod and consider absence/failure paths.
-
-## Regression checklist
-
-- [ ] Mod starts without a crash in supported environments.
-- [ ] Existing saved worlds still resolve configured block IDs.
-- [ ] Advanced Crafting Table is crafted with four vanilla crafting tables.
-- [ ] GUI opens and the 25 input slots, result and inventory slots work.
-- [ ] Sixteen **Stone** along the perimeter, with a clear center, produce one Foundry.
-- [ ] Crafting consumes exactly the required ingredients; closing returns unused items.
-- [ ] Foundry can be placed and rendered; do not expect machine behavior yet.
-- [ ] Existing EE2 fuels retain their expected IC2 Generator behavior.
-- [ ] EMC values are checked explicitly in real EE2 before being marked verified.
-- [ ] NEI works unchanged when testing any future GUI hook.
-
-A documentation-only commit does not require claiming a successful Minecraft build. Never fabricate test output.
-
-## Fractional distillation V1 prototype (feature branch)
-
-Run the core, layout and model checks before deploying to Tekkit Dev. The owner observed formation, LV EU intake and product output on an earlier build. The current acceptance record separates those observations from live batch conservation, BuildCraft transport, NBT and GUI checks. See the [engineering specification](../engineering/fractional-distillation-v1.md) and [distillation handoff](distillation.md).
-
-## Distillation binding and visual update
-
-PR #5 added four-way layout resolution, missing-part diagnostics, an opaque atlas and connecting fittings after the owner reported binding and rendering problems. Follow the [visual acceptance checklist](../engineering/distillation-rendering-and-binding-v2.md) for current in-game checks.
+For historical release evidence use the [handbook index](README.md#historical-evidence-and-reference-material). For the current source and ownership map see [current implementation](current-state.md).

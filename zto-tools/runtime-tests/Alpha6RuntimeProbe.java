@@ -13,6 +13,7 @@ import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.assault.SiegeDirector.Snapshot;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.mod_ZedsTekkitOverhaul;
+import zed.tekkitoverhaul.config.ZtoConfig;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
@@ -75,6 +76,13 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         lastFocusTime = field(lr.class, "Y");
     }
 
+    private static ZtoConfig settings() {
+        for (BaseMod mod : ModLoader.getLoadedMods()) {
+            if (mod instanceof mod_ZedsTekkitOverhaul) return ((mod_ZedsTekkitOverhaul) mod).settings();
+        }
+        throw new AssertionError("ZTO was not loaded");
+    }
+
     public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }
     public String getLabel() { return "Alpha 6 runtime acceptance"; }
     public void tickStart(EnumSet<TickType> ticks, Object... data) {
@@ -94,13 +102,14 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         if (game == null) return;
         try {
             if (stage == 0) {
+                ZtoConfig settings = settings();
                 initialize();
                 directory = (File) field(Minecraft.class, "aj").get(null);
-                check(!mod_ZedsTekkitOverhaul.survivalDebugHud && mod_ZedsTekkitOverhaul.lunarDebugKey == 0
-                        && !mod_ZedsTekkitOverhaul.lunarVerboseLogging
+                check(!settings.survivalDebugHud && settings.lunarDebugKey == 0
+                        && !settings.lunarVerboseLogging
                         && !Boolean.getBoolean("zto.devBridge.enabled"), "diagnostics disabled");
-                check(mod_ZedsTekkitOverhaul.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
-                check(mod_ZedsTekkitOverhaul.experimentalEnderkinEncounters == mode.startsWith("ender-"),
+                check(settings.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
+                check(settings.experimentalEnderkinEncounters == mode.startsWith("ender-"),
                         "experimental setting loaded from startup configuration");
                 System.out.println("ALPHA6 JAR " + mod_ZedsTekkitOverhaul.class.getProtectionDomain()
                         .getCodeSource().getLocation() + " Java " + System.getProperty("java.version"));
@@ -345,8 +354,24 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         game.f.g(x, Y - 1, z, 1);
         game.f.g(x + 1, Y - 1, z, 1);
         geometryRejection(game, controller, place, role, X + 28, z, "OUTSIDE_SPAWN_RANGE");
+        unloadedBoundary(game, controller, place, role);
         barrierMatrix(game);
         game.h.aT.a = true;
+    }
+
+    private static void unloadedBoundary(Minecraft game, Object controller, Method place, Object role)
+            throws Exception {
+        int x = X + 4096;
+        double playerX = game.h.o, playerY = game.h.p, playerZ = game.h.q;
+        check(!game.f.b(x - 2, 0, Z - 2, x + 2, 255, Z + 2), "fixture starts outside loaded chunks");
+        // Move the query origin temporarily without ticking or changing the chunk provider.
+        game.h.c(x - 11.5D, Y, Z + .5D, 0, 0);
+        try {
+            geometryRejection(game, controller, place, role, x, Z, "UNLOADED_CHUNK");
+            check(!game.f.b(x - 2, 0, Z - 2, x + 2, 255, Z + 2), "placement did not load the boundary");
+        } finally {
+            game.h.c(playerX, playerY, playerZ, 0, 0);
+        }
     }
 
     private static void barrierMatrix(Minecraft game) throws Exception {
@@ -372,11 +397,19 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             kw tile = game.f.b(x, Y, z);
             int initialMetadata = game.f.e(x, Y, z);
             if (id == machine || id == 54) check(tile != null, "fixture has live tile " + id);
+            if (id == 54) ((hb) tile).a(0, new aan(265, 17, 0));
+            ady before = new ady();
+            if (tile != null) tile.b(before);
             impacts.setInt(mob, 0);
             boolean struck = (Boolean) pressure.invoke(mob);
             check(struck == (entry[2] == 1), "barrier gate behavior id=" + id + ":" + data + " struck=" + struck);
             check(game.f.a(x, Y, z) == id && game.f.e(x, Y, z) == initialMetadata && game.f.b(x, Y, z) == tile,
                     "barrier and tile unchanged id=" + id);
+            if (tile != null) {
+                ady after = new ady();
+                tile.b(after);
+                check(before.equals(after), "barrier tile NBT unchanged id=" + id);
+            }
             System.out.println("ALPHA6 Breacher barrier id=" + id + ":" + data + " pressure=" + struck);
         }
         game.f.g(x, Y, z, 0);
@@ -475,7 +508,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         Class<?> type = Class.forName("zed.tekkitoverhaul.assault.SpawnController");
         java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(int.class, boolean.class);
         constructor.setAccessible(true);
-        Object controller = constructor.newInstance(28, mod_ZedsTekkitOverhaul.lunarOutdoorLightPressure);
+        Object controller = constructor.newInstance(28, settings().lunarOutdoorLightPressure);
         ((java.util.Random) field(type, "random").get(controller)).setSeed(6001);
         Method place = type.getDeclaredMethod("tryCandidate", xd.class, yw.class, boolean.class, int.class, int.class);
         place.setAccessible(true);

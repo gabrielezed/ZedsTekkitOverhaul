@@ -4,13 +4,14 @@ param(
     [string]$Name = 'Lunar Assault - Playtest',
     [string]$SavesDirectory = (Join-Path $env:APPDATA 'PrismLauncher/instances/Tekkit Dev/minecraft/saves'),
     [ValidateSet('NEW_MOON', 'FIRST_QUARTER', 'WAXING_GIBBOUS', 'FULL_MOON')]
-    [string]$LunarPhase = 'FULL_MOON'
+    [string]$LunarPhase = 'FULL_MOON',
+    [string]$ToolsDirectory = (Join-Path (Split-Path $PSScriptRoot) 'dist-zto/playtest-tools')
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 $classes = Join-Path $root 'bin/minecraft'
-$output = Join-Path $root 'dist-zto/playtest-tools'
+$output = $ToolsDirectory
 $source = Join-Path $PSScriptRoot 'playtest/AssaultPlaytestSave.java'
 if (!(Test-Path -LiteralPath (Join-Path $classes 'net/minecraft/src/NBTTagCompound.class') -PathType Leaf)) {
     throw 'Compile the MCP client first with recompile.bat or build-and-deploy.bat.'

@@ -15,6 +15,7 @@ import zed.tekkitoverhaul.equipment.MobEquipment;
 import zed.tekkitoverhaul.equipment.MobEquipment.Slot;
 import zed.tekkitoverhaul.equipment.MobEquipmentHooks;
 import zed.tekkitoverhaul.mod_ZedsTekkitOverhaul;
+import zed.tekkitoverhaul.config.ZtoConfig;
 
 /** Runs against the assembled obfuscated Tekkit Dev client in a disposable copy. */
 public final class Alpha5RuntimeProbe implements ITickHandler {
@@ -44,6 +45,13 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
         Minecraft.main(new String[] {"ZTOTest"});
     }
 
+    private static ZtoConfig settings() {
+        for (BaseMod mod : ModLoader.getLoadedMods()) {
+            if (mod instanceof mod_ZedsTekkitOverhaul) return ((mod_ZedsTekkitOverhaul) mod).settings();
+        }
+        throw new AssertionError("ZTO was not loaded");
+    }
+
     @Override public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }
     @Override public String getLabel() { return "Alpha 5 runtime acceptance"; }
     @Override public void tickStart(EnumSet<TickType> ticks, Object... data) { }
@@ -61,9 +69,10 @@ public final class Alpha5RuntimeProbe implements ITickHandler {
                 return;
             }
             if (stage == 0) {
+                ZtoConfig settings = settings();
                 deadline = System.nanoTime() + 45_000_000_000L;
-                check(mod_ZedsTekkitOverhaul.disableNightSkipping != vanillaSleep, "bed configuration loaded");
-                check(!mod_ZedsTekkitOverhaul.survivalDebugHud && !Boolean.getBoolean("zto.devBridge.enabled"),
+                check(settings.disableNightSkipping != vanillaSleep, "bed configuration loaded");
+                check(!settings.survivalDebugHud && !Boolean.getBoolean("zto.devBridge.enabled"),
                         "diagnostics disabled");
                 System.out.println("ALPHA5 JAR "
                         + mod_ZedsTekkitOverhaul.class.getProtectionDomain().getCodeSource().getLocation());

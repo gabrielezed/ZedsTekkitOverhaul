@@ -127,6 +127,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                     field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
                 }
                 if (mode.startsWith("territory-")) {
+                    if (settings.experimentalEnderkinEncounters) game.h.aT.a = false;
                     field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
                     territory = new TerritorialRuntimeProbe(lunar, settings.experimentalTerritorialThreat,
                             settings.experimentalEnderkinEncounters, directory, save);

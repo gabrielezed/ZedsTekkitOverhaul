@@ -6,7 +6,7 @@
 | --- | --- |
 | `territory/TerritorialActivity` | Grid, bounded observations, lazy decay and interpolation. Pure Java. |
 | `territory/TerritorialActivityService` | Bind the active local Overworld, sample the eligible Survival player and adapt the legacy biome input. |
-| `territory/TerritorialWorldState` | Validate and serialize the world's versioned NBT through MapStorage. |
+| `territory/TerritorialWorldState` | Validate the world's versioned NBT and register it with MapStorage for saves. |
 | `territory/ThreatAssessment` | Immutable activity and environment contributions, cell, observation status and assault budget decision. |
 | `assault/SiegeDirector` | Use the assessment once at eligible natural dusk when configured, then freeze the budget and plan the regular three waves. |
 
@@ -31,7 +31,7 @@ A 64×64-block cell spans 4×4 chunks. Signed coordinates use floor division. Th
 
 `<save>/data/zto_territorial_activity.dat` is a separate WorldSavedData entry. A local Overworld without the entry starts empty. Legacy World construction gives a portal destination a fresh MapStorage and reuses the ISaveHandler. The service keeps the Overworld state for that handler, suspends collection in other dimensions and reattaches it to the returning Overworld's MapStorage. A different handler opens its own dataset. No territory writes are issued by the service. Vanilla autosave and Save and Quit handle serialization.
 
-The `data` compound contains integer `Schema=1`, `Grid=1`, `Dimension=0`, a nonnegative long `Clock` and an ordered `Regions` list. Each row stores signed integer `X`, `Z`, integer `Presence`, `Returns` and a long `Seen`. Unknown schemas, bad types, invalid coordinates, duplicates, out-of-order or out-of-range values and lists larger than 512 disable the dataset for the session and preserve the existing file. The same fallback applies when legacy MapStorage cannot load the data. The size and type checks run when vanilla's NBT parser hands the mod a compound. The legacy parser itself is shared with other map data and runs before schema validation.
+The `data` compound contains integer `Schema=1`, `Grid=1`, `Dimension=0`, a nonnegative long `Clock` and an ordered `Regions` list. Each row stores signed integer `X`, `Z`, integer `Presence`, `Returns` and a long `Seen`. Unknown schemas, bad types, invalid coordinates, duplicates, out-of-order or out-of-range values and lists larger than 512 disable the dataset for the session and preserve the existing file. The bounded input reader checks the compressed file size, tag types, depth, field counts, names and list length before allocating records. MapStorage writes the usual compressed NBT format and retains the existing save cadence.
 
 Score changes mark the dataset dirty at sample time. With history present, a checkpoint marks it at most every 1,200 ticks between score changes. Clock and timestamps can advance in memory between checkpoints. An untouched empty save needs no new file. The activity record holds only bounded counters, its last observation tick and a packed key. No blocks, machines, entities or raw trajectories are retained.
 
@@ -47,7 +47,7 @@ The read-only Dev Bridge query `territory.snapshot` returns the current cell and
 
 Run `zto-tools/test-territory.ps1`, `zto-tools/test-config.ps1`, `zto-tools/test-lunar-calendar.bat` and `zto-tools/test-dev-bridge.ps1`. Run `zto-tools/build-and-deploy.bat` with the staging mods directory, then run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-both`. The probes use marked saves, native Save and Quit, runtime audio assertions and the pinned reobfuscated archive.
 
-Representative synthetic records compressed to 117/318/825/2,960 bytes for 1/32/128/512 entries. A 12,000-tick stationary trace issued 32 dirty marks. Steady-state portable batches of 100,000 operations measured 11–13 ns for position conversion, 90–98 ns for a record update, 22–41 ns for one lookup, 70–91 ns for the four-cell blend and 65–93 ns for capped insertion and eviction. These timings isolate the pure operations on this machine and exclude the biome manager, world tick and save I/O.
+Representative world-data envelopes compressed to 124/323/833/2,969 bytes for 1/32/128/512 records. A 12,000-tick stationary trace issued 32 dirty marks. Steady-state portable batches of 100,000 operations measured about 11 ns for position conversion, 56–57 ns for a record update, 21 ns for one lookup, 67–68 ns for the four-cell blend and 62–63 ns for capped insertion and eviction. These timings isolate the pure operations on this machine and exclude the biome manager, world tick and save I/O.
 
 ## Follow-ups
 

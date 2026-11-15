@@ -1,6 +1,11 @@
 package zed.tekkitoverhaul.territory;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.minecraft.src.NBTBase;
 import java.util.Map;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
@@ -13,6 +18,7 @@ public final class TerritorialWorldState extends WorldSavedData {
     static final String KEY = "zto_territorial_activity";
     private static final int VERSION = 1;
     private static final int CHECKPOINT = 1200;
+    private static final int MAX_FILE_BYTES = 65536;
     final TerritorialActivity activity = new TerritorialActivity();
     private long checkpoint;
     String status = "UNREADABLE";
@@ -20,13 +26,24 @@ public final class TerritorialWorldState extends WorldSavedData {
     public TerritorialWorldState(String name) { super(name); }
 
     static TerritorialWorldState load(World world) {
-        TerritorialWorldState state = (TerritorialWorldState) world.loadItemData(TerritorialWorldState.class, KEY);
-        if (state != null) return state;
         File file = world.getSaveHandler().getMapFileFromName(KEY);
-        if (file == null || file.exists()) return null;
-        state = new TerritorialWorldState(KEY);
-        state.status = "READY";
-        state.attach(world);
+        TerritorialWorldState state = new TerritorialWorldState(KEY);
+        if (file == null) return state;
+        Path path = file.toPath();
+        if (Files.notExists(path)) {
+            state.status = "READY";
+        } else {
+            try {
+                if (Files.size(path) > MAX_FILE_BYTES) return state;
+                try (InputStream input = Files.newInputStream(path)) {
+                    NBTBase data = TerritorialNbtInput.read(input).getTag("data");
+                    if (data instanceof NBTTagCompound) state.readFromNBT((NBTTagCompound) data);
+                }
+            } catch (IOException unreadable) {
+                return state;
+            }
+        }
+        if ("READY".equals(state.status)) state.attach(world);
         return state;
     }
 

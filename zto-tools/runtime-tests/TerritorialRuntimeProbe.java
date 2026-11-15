@@ -94,13 +94,15 @@ final class TerritorialRuntimeProbe {
                 assault = lunar.assaultSnapshot(game.f);
                 require(assault.budget == selected && view.presence >= presence, "moving leaves admission frozen");
                 if (enderkin) {
+                    game.h.l(20);
                     SiegeDirector.WaveSnapshot second = (SiegeDirector.WaveSnapshot) assault.waves.get(1);
                     SiegeDirector.WaveSnapshot third = (SiegeDirector.WaveSnapshot) assault.waves.get(2);
                     require("SKIRMISHER".equals(second.enderkin.selected) && "BREACHER".equals(third.enderkin.selected),
                             "combined experiment retains eligible substitution slots");
                     Alpha6RuntimeProbe.clearHostiles(game);
                     if (!second.enderkin.inserted || !third.enderkin.inserted) {
-                        require(assault.state == SiegeDirector.State.ACTIVE, "combined substitutions inserted before resolution");
+                        require(assault.state == SiegeDirector.State.ACTIVE, "combined substitutions inserted before resolution: "
+                                + second.enderkin.summary() + " | " + third.enderkin.summary());
                         break;
                     }
                     System.out.println("ALPHA6 territory both inserted Skirmisher and Breacher within the selected budget");

@@ -1,8 +1,12 @@
 package zed.tekkitoverhaul.territory;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.zip.GZIPOutputStream;
 import net.minecraft.src.CompressedStreamTools;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagList;
@@ -91,8 +95,10 @@ public final class TerritorialSelfTest {
             for (int i = source.activity.records.size(); i < count; i++) sample(source.activity, 64 * i, -64, 1);
             NBTTagCompound tag = encode(source);
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            CompressedStreamTools.writeCompressed(tag, bytes);
-            loaded.readFromNBT(CompressedStreamTools.decompress(bytes.toByteArray()));
+            NBTTagCompound envelope = new NBTTagCompound();
+            envelope.setCompoundTag("data", tag);
+            CompressedStreamTools.writeCompressed(envelope, bytes);
+            loaded.readFromNBT(TerritorialNbtInput.read(new ByteArrayInputStream(bytes.toByteArray())).getCompoundTag("data"));
             expect("READY".equals(loaded.status) && loaded.activity.records.size() == count
                     && source.activity.clock == loaded.activity.clock, "round trip and repeated save");
             System.out.printf("NBT %d records: %d compressed bytes%n", count, bytes.size());
@@ -114,6 +120,8 @@ public final class TerritorialSelfTest {
         records.appendTag(records.tagAt(0));
         loaded.readFromNBT(invalid);
         expect("UNREADABLE".equals(loaded.status), "oversized list rejected");
+        oversizedFrame(9, "Regions");
+        oversizedFrame(7, "UnexpectedArray");
         TerritorialWorldState dirty = new TerritorialWorldState("test");
         int marks = 0;
         for (int n = 0; n < 12000; n++) {
@@ -127,6 +135,26 @@ public final class TerritorialSelfTest {
         }
         expect(marks == 32, "saturated sampling uses bounded checkpoints");
         System.out.println("Dirty marks in 12,000 stationary simulation ticks: " + marks);
+    }
+
+    private static void oversizedFrame(int type, String name) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(bytes))) {
+            out.writeByte(10);
+            out.writeUTF("");
+            out.writeByte(10);
+            out.writeUTF("data");
+            out.writeByte(type);
+            out.writeUTF(name);
+            if (type == 9) out.writeByte(10);
+            out.writeInt(Integer.MAX_VALUE);
+        }
+        try {
+            TerritorialNbtInput.read(new ByteArrayInputStream(bytes.toByteArray()));
+            throw new AssertionError("Oversized NBT declaration was accepted");
+        } catch (IOException expected) {
+            expect("Invalid territorial NBT framing".equals(expected.getMessage()), "reject declaration before allocation");
+        }
     }
 
     private static NBTTagCompound encode(TerritorialWorldState state) {

@@ -25,7 +25,7 @@ public final class TerritorialActivityService {
         ticks = 0;
         if (overworld()) {
             if (state == null) state = TerritorialWorldState.load(world);
-            else state.attach(world);
+            else if ("READY".equals(state.status)) state.attach(world);
         }
     }
 

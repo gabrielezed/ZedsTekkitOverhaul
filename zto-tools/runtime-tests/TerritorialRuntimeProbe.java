@@ -38,6 +38,7 @@ final class TerritorialRuntimeProbe {
                 break;
             case 1:
                 if (view.presence < 8) break;
+                if (adapt && !enderkin) measureAssessment(game, view.threat.threat);
                 presence = view.presence;
                 clock = view.clock;
                 game.i();
@@ -189,6 +190,18 @@ final class TerritorialRuntimeProbe {
             }
         }
         throw new AssertionError("No baseline biome found near the arena");
+    }
+
+    private void measureAssessment(Minecraft game, int expected) {
+        final int samples = 512;
+        for (int run = 0; run < 5; run++) {
+            int checksum = 0;
+            long start = System.nanoTime();
+            for (int i = 0; i < samples; i++) checksum += lunar.territorialSnapshot(game.f).threat.threat;
+            long elapsed = System.nanoTime() - start;
+            require(checksum == expected * samples, "assessment is stable within a game tick");
+            if (run > 1) System.out.println("ALPHA6 territory assessment + snapshot ns/op=" + elapsed / samples);
+        }
     }
 
     private static void require(boolean condition, String message) {

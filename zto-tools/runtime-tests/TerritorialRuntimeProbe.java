@@ -16,6 +16,7 @@ final class TerritorialRuntimeProbe {
     private int stage;
     private long clock, due;
     private int presence, regions, selected;
+    private int nextCell;
 
     TerritorialRuntimeProbe(LocalLunarCalendar lunar, boolean adapt, boolean enderkin, File directory, String save) {
         this.lunar = lunar;
@@ -151,6 +152,17 @@ final class TerritorialRuntimeProbe {
                 if (view.count == 0) break;
                 require(view.count == 1 && view.presence == 1, "fresh world records its first visit");
                 System.out.println("ALPHA6 fresh territory regions=" + view.count + " clock=" + view.clock);
+                nextCell = view.threat.regionX + 1;
+                stage++;
+                break;
+            case 13:
+                if (game.h.o < nextCell * 64 + 2) {
+                    game.h.b(0.30D, 0, 0);
+                    break;
+                }
+                if (view.count < 2) break;
+                require(view.threat.regionX == nextCell && view.presence > 0, "collision-aware movement crossed into a distinct cell");
+                System.out.println("ALPHA6 movement recorded adjacent region " + nextCell + "," + view.threat.regionZ);
                 return true;
             default: throw new AssertionError("Unknown territorial probe stage " + stage);
         }

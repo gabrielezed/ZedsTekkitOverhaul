@@ -47,7 +47,7 @@ The read-only Dev Bridge query `territory.snapshot` returns the current cell and
 
 Run `zto-tools/test-territory.ps1`, `zto-tools/test-config.ps1`, `zto-tools/test-lunar-calendar.bat` and `zto-tools/test-dev-bridge.ps1`. Run `zto-tools/build-and-deploy.bat` with the staging mods directory, then run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-both`. The probes use marked saves, native Save and Quit, runtime audio assertions and the pinned reobfuscated archive.
 
-Representative world-data envelopes compressed to 124/323/833/2,969 bytes for 1/32/128/512 records. A 12,000-tick stationary trace issued 32 dirty marks. Steady-state portable batches of 100,000 operations measured about 11 ns for position conversion, 56–57 ns for a record update, 21 ns for one lookup, 67–68 ns for the four-cell blend and 62–63 ns for capped insertion and eviction. These timings isolate the pure operations on this machine and exclude the biome manager, world tick and save I/O.
+Representative world-data envelopes compressed to 124/323/833/2,969 bytes for 1/32/128/512 records. Four Java 8 heap-difference trials holding 128 populated datasets estimated 29–41 KiB per full dataset after GC. A 12,000-tick stationary trace issued 32 dirty marks. Portable batches of 100,000 operations measured 11–12 ns for position conversion, 56–120 ns for a record update, 21–93 ns for one lookup, 67–149 ns for the four-cell blend and 62–114 ns for capped insertion and eviction. These timings isolate the pure operations on this machine and exclude the biome manager, world tick and save I/O.
 
 ## Follow-ups
 

@@ -35,9 +35,12 @@ public final class TerritorialWorldState extends WorldSavedData {
         } else {
             try {
                 if (Files.size(path) > MAX_FILE_BYTES) return state;
-                try (InputStream input = Files.newInputStream(path)) {
+                InputStream input = Files.newInputStream(path);
+                try {
                     NBTBase data = TerritorialNbtInput.read(input).getTag("data");
                     if (data instanceof NBTTagCompound) state.readFromNBT((NBTTagCompound) data);
+                } finally {
+                    input.close();
                 }
             } catch (IOException unreadable) {
                 return state;

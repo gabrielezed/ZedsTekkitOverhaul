@@ -15,11 +15,14 @@ final class TerritorialNbtInput {
     private TerritorialNbtInput() { }
 
     static NBTTagCompound read(InputStream source) throws IOException {
-        try (DataInputStream input = new DataInputStream(new BufferedInputStream(new GZIPInputStream(source)))) {
+        DataInputStream input = new DataInputStream(new BufferedInputStream(new GZIPInputStream(source)));
+        try {
             if (input.readUnsignedByte() != COMPOUND || !readName(input).isEmpty()) throw invalid();
             NBTTagCompound root = readCompound(input, 0);
             if (input.read() != -1) throw invalid();
             return root;
+        } finally {
+            input.close();
         }
     }
 

@@ -10,6 +10,7 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `lunarPatrols` | true | First-quarter and waxing-gibbous patrols |
 | `lunarOutdoorLightPressure` | true | Limited lunar outdoor artificial-light exception. Set false for alpha.5 placement rules. |
 | `experimentalEnderkinEncounters` | false | Set true to allow opt-in substitutions. Set false for ordinary lunar composition. Creative spawn eggs work either way. |
+| `experimentalTerritorialThreat` | false | At eligible natural full-moon admission, allow quiet regions to reduce the configured assault budget by one slot. Local Overworld activity is collected in either mode. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |
 | `assaultWaveInterval` | 900 | 400–1200 simulation ticks between waves while enemies remain |
@@ -74,6 +75,6 @@ No other mod reader for these ZTO files was identified. IC2, BuildCraft, RedPowe
 
 Declare the key and default in `ZtoConfig`. Validate it before passing the typed value to the existing consumer. Add a legacy alias only for an established on-disk key, add a startup test, and document the new option. Older versioned files use the new default until the user adds the key. When revising the file format, implement an explicit upgrade that preserves comments and unknown keys. Keep diagnostics opt-in.
 
-World saves own lunar phase/alignment, replay markers, entity and machine NBT, and future territory or settlement data. The active world session owns encounter scheduling, entity tracking and transient debug history. Recipe bookmarks are user interaction data. Audit TSVs, logs, captures, test markers and build metadata are outputs. JVM `-Dzto.*` opt-ins, Dev Bridge discovery/token files and disposable-world requests retain their existing launch and runtime ownership.
+World saves own lunar phase/alignment, replay markers, entity and machine NBT, and territorial activity. The active world session owns encounter scheduling, entity tracking and transient debug history. Recipe bookmarks are user interaction data. Audit TSVs, logs, captures, test markers and build metadata are outputs. JVM `-Dzto.*` opt-ins, Dev Bridge discovery/token files and disposable-world requests retain their existing launch and runtime ownership.
 
-The lunar service still supplies immutable timing snapshots. The director decides encounter admission and composition. SpawnController owns placement and clearance. Tactical entities own their movement and combat. HUD and Dev Bridge observe those boundaries. A future local threat assessment can inform admission without making the lunar calendar or global configuration own territorial records. See the [territorial design contract](territorial-threat-design.md).
+The lunar service supplies immutable timing snapshots. The director decides encounter admission and composition. SpawnController owns placement and clearance. Tactical entities own their movement and combat. HUD and Dev Bridge observe those boundaries. The territorial service owns its per-save records and can supply one assessment at admission. [Territorial contract](survival-02-alpha1.md)

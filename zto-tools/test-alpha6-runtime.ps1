@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence')]
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-both')]
     [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
 )
 
@@ -19,7 +19,7 @@ if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
 }
 $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/TerritorialRuntimeProbe.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
@@ -31,6 +31,7 @@ $phase['ender-fallback'] = 'WAXING_GIBBOUS'
 $phase['ender-cap'] = 'WAXING_GIBBOUS'
 $phase['ender-peaceful'] = 'WAXING_GIBBOUS'
 $phase['assault-recurrence'] = 'FULL_MOON'
+$phase['territory-legacy'] = $phase['territory-threat'] = $phase['territory-both'] = 'FULL_MOON'
 foreach ($mode in $Modes) {
     $id = [Guid]::NewGuid().ToString('N')
     $save = "ZTO-Test-$id"
@@ -38,10 +39,17 @@ foreach ($mode in $Modes) {
     if ($LASTEXITCODE -ne 0) { throw 'Could not generate a disposable save.' }
     [IO.File]::WriteAllText((Join-Path $game "saves/$save/.zto-disposable-test"),
         "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
+    if ($mode -eq 'territory-threat') {
+        $fresh = Join-Path $game "saves/$save-Fresh"
+        $null = New-Item -ItemType Directory -Path $fresh
+        [IO.File]::WriteAllText((Join-Path $fresh '.zto-disposable-test'), "$save-Fresh 911`n", [Text.Encoding]::ASCII)
+    }
     $enabled = ($mode -ne 'disabled').ToString().ToLowerInvariant()
-    $enderkin = $mode.StartsWith('ender-').ToString().ToLowerInvariant()
+    $enderkin = ($mode.StartsWith('ender-') -or $mode -eq 'territory-both').ToString().ToLowerInvariant()
+    $threat = ($mode -in 'territory-threat', 'territory-both').ToString().ToLowerInvariant()
     Set-RuntimeConfig $game ([ordered]@{
         experimentalEnderkinEncounters = $enderkin
+        experimentalTerritorialThreat = $threat
         lunarOutdoorLightPressure = $enabled
     })
     $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha6RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $mode

@@ -1,7 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 $docs = @('AGENTS.md', 'docs/agents/README.md', 'docs/agents/current-state.md', 'docs/agents/testing.md',
-    'docs/agents/configuration.md', 'docs/agents/survival-alpha8.md', 'docs/agents/alpha8-maintenance.md')
+    'docs/agents/configuration.md', 'docs/agents/survival-alpha8.md', 'docs/agents/alpha8-maintenance.md',
+    'docs/agents/survival-02-alpha1.md')
 foreach ($doc in $docs) {
     $file = Join-Path $root $doc
     $content = [IO.File]::ReadAllText($file)

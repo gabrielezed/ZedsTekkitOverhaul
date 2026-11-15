@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.0-alpha.1 — Territorial activity and threat
+
+- Record bounded, decaying activity in local Overworld regions and persist it with the save.
+- Combine activity with an independent biome signal and smooth activity across cell boundaries.
+- Offer opt-in territorial tuning at natural full-moon assault admission. Quiet regions can reduce the configured budget by one slot.
+- Expose the current local assessment and the budget selected at admission in Dev Bridge. [Territorial contract](docs/agents/survival-02-alpha1.md)
+
 ## 0.1.0-alpha.8 — Experimental Enderkin encounters
 
 - Add opt-in Enderkin substitutions for waxing-gibbous patrols and later full-moon assault waves. Existing hostile budgets and population caps still apply.

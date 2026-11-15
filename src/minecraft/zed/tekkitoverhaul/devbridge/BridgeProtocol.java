@@ -10,7 +10,8 @@ final class BridgeProtocol {
             + "{\"op\":\"world.time\",\"schema\":\"world.time@1\"},"
             + "{\"op\":\"world.block\",\"schema\":\"world.block@1\"},"
             + "{\"op\":\"lunar.snapshot\",\"schema\":\"lunar.snapshot@1\"},"
-            + operation("lunar.events") + "," + operation("assault.snapshot") + "," + operation("inventory.player") + ","
+            + operation("lunar.events") + "," + operation("assault.snapshot") + "," + operation("territory.snapshot") + ","
+            + operation("inventory.player") + ","
             + operation("inventory.container") + "," + operation("machine.inspect") + ","
             + operation("test.context") + "]}";
 
@@ -72,7 +73,8 @@ final class BridgeProtocol {
                         nonnegative(values, "revision"), positive(values, "sessionId"), positive(values, "runId"), count);
             }
             if ("world.time".equals(op) || "lunar.snapshot".equals(op)
-                    || "inventory.player".equals(op) || "test.context".equals(op) || "assault.snapshot".equals(op)) {
+                    || "inventory.player".equals(op) || "test.context".equals(op) || "assault.snapshot".equals(op)
+                    || "territory.snapshot".equals(op)) {
                 if (!values.isEmpty()) throw invalid();
                 return new Query(id, op, 0, 0, 0, 0, 0, 0);
             }

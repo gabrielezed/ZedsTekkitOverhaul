@@ -12,7 +12,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Inventory, crafting and Creative | [Crafting UX](crafting-inventory-ux.md), [Creative backport](../engineering/creative-inventory-backport.md) |
 | Machines, rendering and external APIs | [Architecture](architecture.md), [integrations](integrations.md), [distillation](distillation.md), [pack ABI](../reference/tekkit-classic-3.1.2/README.md) |
 | Diagnostics protocol | [Dev Bridge](dev-bridge.md) |
-| Future territorial design | [0.2 design contract](territorial-threat-design.md), [roadmap](roadmap.md) |
+| Territorial activity and threat | [0.2 alpha.1 implementation](survival-02-alpha1.md), [design direction](territorial-threat-design.md), [roadmap](roadmap.md) |
 
 ## Historical evidence and reference material
 

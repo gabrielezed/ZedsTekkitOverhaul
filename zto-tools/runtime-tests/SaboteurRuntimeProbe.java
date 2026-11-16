@@ -84,6 +84,10 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 save = System.getProperty("zto.saboteur.save");
                 mode = System.getProperty("zto.saboteur.mode");
                 focus = field(lr.class, "Y");
+                File running = new File(EntitySaboteur.class.getProtectionDomain().getCodeSource()
+                        .getLocation().toURI()).getCanonicalFile();
+                check(running.equals(new File(directory, "mods/ZedsTekkitOverhaul.jar").getCanonicalFile()),
+                        "load the entity from the deployed candidate archive");
                 System.out.println("SABOTEUR Java " + System.getProperty("java.version")
                         + ", audio backend uninitialized, Bridge=" + Boolean.getBoolean("zto.devBridge.enabled"));
                 open(game);
@@ -374,12 +378,18 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         sample.z = true;
         expectBlink(check, sample, 2.75D, "CLEAR");
         expectBlink(check, sample, 4.01D, "RANGE");
+        long started = System.nanoTime();
+        for (int i = 0; i < 96; i++) expectBlink(check, sample, 2.75D, "CLEAR");
+        System.out.println("SABOTEUR candidate validation 96 open sweeps meanNs="
+                + (System.nanoTime() - started) / 96 + " including harness reflection");
         for (int x = X; x <= X + 3; x++) {
             game.f.g(x, Y, z - 1, 1);
             game.f.g(x, Y, z + 1, 1);
         }
         expectBlink(check, sample, 2.75D, "CLEAR");
         game.f.g(X + 1, Y, z, 1);
+        expectBlink(check, sample, 2.75D, "OBSTRUCTED");
+        game.f.g(X + 1, Y, z, 20);
         expectBlink(check, sample, 2.75D, "OBSTRUCTED");
         game.f.g(X + 1, Y, z, 0);
         game.f.b(X + 1, Y + 1, z, 64, 8);
@@ -388,6 +398,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         game.f.g(X + 1, Y, z, 0);
         game.f.g(X + 1, Y + 1, z, 0);
         game.f.g(X + 1, Y, z, 44);
+        expectBlink(check, sample, 2.75D, "OBSTRUCTED");
+        game.f.g(X + 1, Y, z, 53);
         expectBlink(check, sample, 2.75D, "OBSTRUCTED");
         game.f.g(X + 1, Y, z, 0);
         game.f.g(X + 2, Y - 1, z, 0);

@@ -14,7 +14,13 @@ function New-IsolatedRuntimeGame([string]$Runtime, [switch]$WithoutOptionalMods)
             Copy-Item -LiteralPath $path -Destination (Join-Path $game $name) -Recurse
         }
     }
-    if ($WithoutOptionalMods) { $null = New-Item -ItemType Directory -Path (Join-Path $game 'mods') }
+    if ($WithoutOptionalMods) {
+        $mods = New-Item -ItemType Directory -Path (Join-Path $game 'mods')
+        # Existing distillation tiles link these APIs during registration.
+        foreach ($required in 'buildcraft-client-A-core-2.2.14.zip', 'industrialcraft-2-client_1.97.jar') {
+            Copy-Item -LiteralPath (Join-Path $source "mods/$required") -Destination $mods.FullName
+        }
+    }
     $null = New-Item -ItemType Directory -Path (Join-Path $game 'saves')
     Set-SilentMinecraftOptions $game
     return $game

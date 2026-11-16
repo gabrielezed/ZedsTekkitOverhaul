@@ -1,6 +1,6 @@
 # Current implementation
 
-**0.2.0-alpha.5** adds a Creative-spawned Enderkin Saboteur with approach and evasive blinks, an interruptible ZTO Hopper output pause, and a narrow BuildCraft 2.2.14 receiver-side extraction gate. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Owner feedback revision](saboteur-owner-revision.md)
+**0.2.0-alpha.5** adds a Creative-spawned Enderkin Saboteur with approach and evasive blinks, interruptible machine disruption and an optional launch agent for native BuildCraft, IC2, RedPower and EE2 endpoints. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Industrial support and launch](saboteur-industrial.md)
 
 | Owner | Current responsibility |
 | --- | --- |

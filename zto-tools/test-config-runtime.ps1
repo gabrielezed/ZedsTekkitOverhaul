@@ -24,8 +24,8 @@ function Test-Launch([string]$Mode) {
     $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" ConfigRuntimeProbe "{4}" {5}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $Mode
     $stdout = Join-Path $game "config-$Mode.log"
     $stderr = Join-Path $game "config-$Mode.stderr.log"
-    $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
-        -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $process = Start-BackgroundMinecraft -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
+        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if (!(Wait-RuntimeClient $process 90000) -or $process.ExitCode -ne 0 -or
             !(Select-String -LiteralPath $stdout -Pattern "^CONFIG PASS $Mode$" -Quiet)) {
         Get-Content -LiteralPath $stderr -Tail 50

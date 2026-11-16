@@ -40,8 +40,8 @@ $stderr = Join-Path $report "alpha7-$Mode-$save.stderr.txt"
 $java = Join-Path (Split-Path $launch.java) 'java.exe'
 $enabled = ($Mode -ne 'creative-native').ToString().ToLowerInvariant()
 Set-RuntimeConfig $game ([ordered]@{ creativeInventoryBackport = $enabled })
-$process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
-    -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+$process = Start-BackgroundMinecraft -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
+    -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 if (!(Wait-RuntimeClient $process 120000)) {
     Get-Content -LiteralPath $stderr -Tail 30
     throw "Tactical probe timed out. See $stdout and $stderr"

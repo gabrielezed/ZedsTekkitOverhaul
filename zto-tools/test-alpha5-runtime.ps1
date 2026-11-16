@@ -39,8 +39,8 @@ foreach ($mode in 'anchor', 'vanilla') {
     $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2}" Alpha5RuntimeProbe "{3}" {4} {5}' -f (Join-Path $runtime 'natives'), $agents, $classpath, $game, $save, $mode
     $stdout = Join-Path $report "alpha5-$mode-$save.txt"
     $stderr = Join-Path $report "alpha5-$mode-$save.stderr.txt"
-    $process = Start-Process -FilePath $launch.java -ArgumentList $arguments -WorkingDirectory $game `
-        -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $process = Start-BackgroundMinecraft -FilePath $launch.java -ArgumentList $arguments -WorkingDirectory $game `
+        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $timedOut = !(Wait-RuntimeClient $process 65000)
     Write-Output "ALPHA5 $mode $save SHA-256 $hash"
     Get-Content -LiteralPath $stdout | Select-String '^ALPHA5|MinecraftForge|Forge Mod Loader' | ForEach-Object Line

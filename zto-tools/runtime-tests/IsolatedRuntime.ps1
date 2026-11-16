@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'BackgroundMinecraft.ps1')
 . (Join-Path $PSScriptRoot 'SilentMinecraft.ps1')
 
 # Each invocation owns its game directory, config, saves and harness, including after a killed runner.

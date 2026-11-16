@@ -75,8 +75,8 @@ foreach ($mode in $Modes) {
     $stdout = Join-Path $report "alpha6-$mode-$save.txt"
     $stderr = Join-Path $report "alpha6-$mode-$save.stderr.txt"
     $java = Join-Path (Split-Path $launch.java) 'java.exe'
-    $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
-        -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $process = Start-BackgroundMinecraft -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
+        -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if ($useBridge) {
         $prefix = if ($composition) { 'alpha4' } else { 'alpha2' }
         Test-TerritoryHttp $process $game $save $mode $stdout (Join-Path $report "$prefix-http-$save.json")

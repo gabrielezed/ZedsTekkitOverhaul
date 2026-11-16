@@ -22,6 +22,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 . (Join-Path $PSScriptRoot 'runtime-tests/SilentMinecraft.ps1')
+. (Join-Path $PSScriptRoot 'runtime-tests/BackgroundMinecraft.ps1')
 $prismData = Join-Path $env:APPDATA 'PrismLauncher'
 $instance = Join-Path $prismData 'instances/Tekkit Dev'
 $game = Join-Path $instance 'minecraft'
@@ -83,6 +84,14 @@ function Get-TekkitDevJava {
     }
 }
 
+function Assert-PrismAvailable {
+    # An existing Prism process can receive --launch for the same data directory.
+    $names = 'prismlauncher', [IO.Path]::GetFileNameWithoutExtension($PrismExe)
+    if (Get-Process -Name ($names | Select-Object -Unique) -ErrorAction SilentlyContinue) {
+        throw 'PRISM_BUSY: Close Prism before running the lifecycle, or use a direct runtime probe.'
+    }
+}
+
 function Remove-OwnedRequest {
     if (!$payload -or !(Test-Path -LiteralPath $request)) { return }
     try {
@@ -119,7 +128,8 @@ function Stop-DevClient {
         Write-Request "$($launch.nonce) stop`n"
         $stopped = $client.WaitForExit(30000)
     } else {
-        $stopped = $client.CloseMainWindow() -and $client.WaitForExit(15000)
+        $stopped = [BackgroundMinecraftNative]::CloseGameWindow($launch.desktop, $client.Id) -and
+            $client.WaitForExit(15000)
     }
     $launch.exitCode = if ($client.HasExited) { $client.ExitCode } else { $null }
     $acknowledged = !$requested -or (Select-String -LiteralPath $log -Quiet -Pattern (
@@ -142,6 +152,15 @@ function Stop-DevClient {
     }
 }
 
+function Stop-OwnedPrism {
+    if (!$launcher -or $launcher.HasExited -or (Get-TekkitDevJava)) { return }
+    # A Prism startup dialog can stay open on the private desktop without starting Java.
+    if (!$launcher.WaitForExit(3000)) {
+        $launcher.Kill()
+        if (!$launcher.WaitForExit(10000)) { throw 'STOP_TIMEOUT: The owned Prism process did not exit.' }
+    }
+}
+
 function Write-Request([string]$Content) {
     $stream = [IO.File]::Open($request, 'CreateNew', 'Write', 'None')
     $script:payload = $Content
@@ -152,17 +171,22 @@ function Write-Request([string]$Content) {
 }
 
 function Start-DevClient {
+    Stop-OwnedPrism
+    Assert-PrismAvailable
+    $script:launcher = $null
     Set-SilentMinecraftOptions $game
     $script:client = $null
     $script:discovery = $null
     $script:launch = [ordered]@{
         nonce = [Guid]::NewGuid().ToString('N'); started = Get-Date; pid = $null; stop = $null
         sessionId = $null; worldId = $null; worldOpened = $false; runtime = @(); log = $log; diagnostics = @()
+        desktop = $null; gameWindowIsolated = $false
     }
     $report.launches += $launch
     Write-Request "$($launch.nonce) $copyName $($report.buildSha256)`n"
-    $script:launcher = Start-Process -FilePath $PrismExe -ArgumentList "--dir `"$prismData`" --launch `"Tekkit Dev`"" `
-        -WindowStyle Hidden -PassThru
+    $script:launcher = Start-BackgroundMinecraft -FilePath $PrismExe `
+        -ArgumentList "--dir `"$prismData`" --launch `"Tekkit Dev`"" -WorkingDirectory $prismData
+    $launch.desktop = $launcher.BackgroundDesktop
 
     $deadline = [Diagnostics.Stopwatch]::StartNew()
     $openedPattern = '\[ZTO\] Autoload ' + $launch.nonce + ' WORLD_OPENED ' + $copyName + '$'
@@ -177,6 +201,10 @@ function Start-DevClient {
             if ($refusal) { throw $refusal.Line }
             if (Select-String -LiteralPath $log -Pattern $openedPattern -Quiet) {
                 $launch.worldOpened = $true
+                $launch.gameWindowIsolated = [BackgroundMinecraftNative]::GameWindow($launch.desktop, $client.Id) -ne [IntPtr]::Zero
+                if (!$launch.gameWindowIsolated) {
+                    throw 'DESKTOP_MISMATCH: The Minecraft window was not found on the private desktop.'
+                }
                 try {
                     $status = Invoke-Bridge status
                     if ($status.state -eq 'ready') {
@@ -456,6 +484,7 @@ try {
     if (!$locked) { throw 'INSTANCE_BUSY: A Tekkit Dev lifecycle is already in progress.' }
     if (Test-Path -LiteralPath $request) { throw 'REQUEST_PRESENT: Inspect the pending Tekkit Dev autoload request before retrying.' }
     if (Get-TekkitDevJava) { throw 'INSTANCE_BUSY: Close the running Tekkit Dev client before starting the lifecycle.' }
+    Assert-PrismAvailable
     if (Test-Path -LiteralPath $optionsBackup) {
         throw 'OPTIONS_RECOVERY: Restore zto-options-before-automation.bak as options.txt in Tekkit Dev with the client closed.'
     }
@@ -541,6 +570,7 @@ try {
     if ($launch -and !$launch.stop) {
         try { Stop-DevClient } catch { $launch.diagnostics += $_.Exception.Message }
     }
+    try { Stop-OwnedPrism } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     try { Remove-OwnedRequest } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     if ($optionsPrepared) {
         try {

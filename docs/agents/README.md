@@ -5,7 +5,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Task | Current references |
 | --- | --- |
 | Settings, build and deploy | [Configuration](configuration.md), [environment](environment.md), [build provenance](VERSIONING_POLICY.md) |
-| Selecting checks and launching a client | [Test tiers and silent launch](testing.md), [Dev Bridge lifecycle](test-automation.md) |
+| Selecting checks and launching a client | [Test tiers and muted background launch](testing.md), [Dev Bridge lifecycle](test-automation.md) |
 | Calendar, world ownership or rendering | [Lunar implementation](lunar-cycle-implementation.md), [lunar specification](lunar-cycle-system.md) |
 | Natural encounters and replay | [Survival contract](SURVIVAL_SIEGE_SPEC.md), [alpha.8](survival-alpha8.md), [HUD](survival-debug-hud.md) |
 | Tactical mobs and mob equipment | [Tactical guide](survival-alpha7.md), [equipment contract](MOB_EQUIPMENT_BACKPORT_SPEC.md), [future Enderkin prototypes](enderkin-future-roles.md) |

@@ -15,6 +15,6 @@ Start with the [current implementation map](docs/agents/current-state.md), then 
 
 1. Check the branch, working tree and relevant source. Keep edits focused and separate migrations from behavior changes where practical.
 2. Use the [test tiers](docs/agents/testing.md). Run MCP compilation and reobfuscation before packaging with `zto-tools/build-and-deploy.bat`. Use isolated Tekkit Dev and marked disposable saves for runtime evidence.
-3. **Automated Minecraft/Tekkit Dev clients must be launched silently by default. Never modify host-wide audio settings. Scope audio suppression to isolated test instances and verify it before running audible gameplay fixtures.** Follow the [silent launch procedure](docs/agents/testing.md#silent-client-launch).
+3. **Run automated Minecraft/Tekkit Dev clients in the background and muted by default. Keep the owner's desktop, keyboard and mouse available.** Use the [background client procedure](docs/agents/testing.md#background-client-launch) and [silent launch procedure](docs/agents/testing.md#silent-client-launch). Leave host-wide audio and input settings alone. Reserve interactive launches for owner-requested manual playtests.
 4. Review the diff and report what actually ran. Keep portable, build, runtime and owner observations distinct. Add a focused runtime test for new gameplay where the isolated client can exercise it.
 5. Write all repository content and commit/PR text in English. Communicate with the owner in Italian unless requested otherwise. Use focused commits and keep local/generated work out of Git.

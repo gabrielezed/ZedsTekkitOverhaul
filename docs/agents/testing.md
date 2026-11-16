@@ -16,6 +16,14 @@ For territory, run `zto-tools/test-territory.ps1` after MCP compilation to use t
 
 For concurrent assault pressure, run `zto-tools/test-alpha6-runtime.ps1 -Modes composition-disabled,composition-quiet,composition-ordinary,composition-elevated,composition-quantum`. These modes retain hostiles and compare the planned slots and actual insertions over authenticated HTTP. For Hard entrances use `composition-hard,composition-hard-iron,composition-hard-powered,composition-hard-retreat`. Use `composition-hard-open,composition-hard-balanced` to compare production and a fixture-only 50:50 mix. Use `-Modes composition-hard-baseline-open -CandidateJar <alpha.3 JAR>` for the historical all-skeleton comparator in a disposable instance. For selected-versus-inserted roles use `composition-quiet-enderkin,composition-ordinary-enderkin,composition-elevated-enderkin`. The staged role fixture remains available as `composition-both`. [Balance and evidence](survival-02-alpha4.md)
 
+## Background client launch
+
+On Windows, the automated runners start Java or Prism on a private Win32 desktop. The legacy LWJGL window can render there without receiving input from the owner's desktop or moving, capturing or confining its cursor. The launcher never switches the active desktop. Hiding a console or minimizing a Minecraft window does not provide this isolation.
+
+Use `Start-BackgroundMinecraft` from [the shared launcher](../../zto-tools/runtime-tests/BackgroundMinecraft.ps1) for new graphical runners. The alpha.5, alpha.6, alpha.7 and configuration probes redirect their logs as before. Use their assertions and saved frames for evidence. If desktop creation fails, report the runtime as blocked and keep the owner's desktop available.
+
+For the Prism lifecycle, close Prism before starting the run. A running Prism launcher can receive a second process's launch request and start the game on its own desktop. The lifecycle checks for an existing launcher and verifies that the owned Java process has a game window on the private desktop after each launch. Use a direct probe when Prism needs to stay open. Launch on the owner's desktop only for an owner-requested manual playtest in an isolated profile.
+
 ## Silent client launch
 
 The installed Minecraft 1.2.5 client reads `music:0.0` and `sound:0.0` from its own `options.txt` before initializing SoundManager. The shared [preparation helper](../../zto-tools/runtime-tests/SilentMinecraft.ps1) writes both values before launch and can create a missing options file. It is used by all tracked automated graphical launch paths.

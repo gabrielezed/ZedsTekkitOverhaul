@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.0-alpha.5 — Enderkin Saboteur
+
+- Add a Creative-spawned Saboteur with a crouched model, luminous eyes, rapid pursuit and short blinks across clear, level ground.
+- A visible, interruptible windup can pause new output from a ZTO Hopper for up to 80 ticks. Input, collection and stored stacks remain available. The pause expires automatically and is transient across saves.
+- Add local read-only diagnostics and a silent Tekkit Dev fixture for counterplay, transfers and recovery. [Rules and evidence](docs/agents/survival-02-alpha5-saboteur.md)
+
 ## 0.2.0-alpha.4 — Hard assault pressure
 
 - Restore a bounded mix of skeletons and zombies in Hard full-moon assaults. A closed wooden entrance is vulnerable to native zombie behavior.

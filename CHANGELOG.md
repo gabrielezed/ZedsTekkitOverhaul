@@ -1,5 +1,10 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.0-alpha.4 — Hard assault pressure
+
+- Restore a bounded mix of skeletons and zombies in Hard full-moon assaults. A closed wooden entrance is vulnerable to native zombie behavior.
+- Reserve existing active-population space for selected later-wave Enderkin when the experiment is enabled. The read-only assault snapshot identifies selected roles, cap deferrals, and the frozen admission difficulty. [Balance and verification](docs/agents/survival-02-alpha4.md)
+
 ## 0.2.0-alpha.3 — Contextual assault composition
 
 - The opt-in territorial experiment freezes melee-led Quiet waves and a mixed melee/ranged Elevated opening on Easy and Normal. Ordinary keeps the legacy order. Hard keeps vanilla zombies out of assault waves to protect wooden doors.

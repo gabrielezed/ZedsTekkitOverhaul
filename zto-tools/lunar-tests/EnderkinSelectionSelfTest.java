@@ -26,16 +26,18 @@ public final class EnderkinSelectionSelfTest {
         check(patrols > 2100 && patrols < 2900 && skirmishers > 4600 && skirmishers < 5400
                 && breachers > 3600 && breachers < 4400 && ordinaryAssaults > 0);
         EnderkinSlot slot = new EnderkinSlot();
-        slot.reset(EnderkinRole.BREACHER);
+        slot.reset(true, -7184827518270584220L, 8, LunarPhase.FULL_MOON, 3);
         for (int i = 0; i < 4; i++) {
             check(slot.pending() == EnderkinRole.BREACHER);
             slot.record("ENDERKIN_CLEARANCE");
         }
         check(slot.pending() == null && !slot.inserted && slot.rejections.get("ENDERKIN_CLEARANCE") == 4);
-        slot.reset(EnderkinRole.SKIRMISHER);
+        slot.reset(true, -7184827518270584220L, 8, LunarPhase.FULL_MOON, 2);
         slot.record(null);
         check(slot.pending() == null && slot.inserted && slot.attempts == 1 && slot.rejections.isEmpty());
-        System.out.println("Enderkin selection and fallback passed across 10000 cycles/seeds");
+        System.out.println("Enderkin selection and fallback passed across 10000 cycles/seeds"
+                + ": patrolSkirmisher=" + patrols + ", waveSkirmisher=" + skirmishers
+                + ", waveBreacher=" + breachers + ", neitherAssaultRole=" + ordinaryAssaults);
     }
 
     private static void check(boolean result) {

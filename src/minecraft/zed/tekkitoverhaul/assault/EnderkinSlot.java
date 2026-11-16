@@ -2,6 +2,7 @@ package zed.tekkitoverhaul.assault;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import zed.tekkitoverhaul.lunar.LunarPhase;
 
 /** One optional substitution at the start of an already allocated wave or patrol. */
 final class EnderkinSlot {
@@ -9,11 +10,14 @@ final class EnderkinSlot {
     final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
     EnderkinRole selected;
     int attempts;
+    int capDeferrals;
+    boolean eligible;
     boolean inserted;
 
-    void reset(EnderkinRole role) {
-        selected = role;
-        attempts = 0;
+    void reset(boolean enabled, long seed, long day, LunarPhase phase, int wave) {
+        eligible = enabled && EnderkinRole.eligible(phase, wave);
+        selected = EnderkinRole.select(enabled, seed, day, phase, wave);
+        attempts = capDeferrals = 0;
         inserted = false;
         rejections.clear();
     }

@@ -8,7 +8,9 @@ enum AssaultComposition {
     LEGACY_FINAL("SZ"),
     QUIET_MELEE("ZZZS"),
     ELEVATED_OPENING("SZ"),
-    HARD_SKELETONS("S");
+    HARD_RANGED("SSZ"),
+    HARD_QUIET_OPENING("ZSS"),
+    HARD_ELEVATED_OPENING("SZS");
 
     private final String order;
 
@@ -17,8 +19,11 @@ enum AssaultComposition {
     }
 
     static AssaultComposition select(Profile profile, int difficulty, int wave) {
-        // Vanilla Hard zombies can break wooden doors.
-        if (difficulty == 3) return HARD_SKELETONS;
+        if (difficulty == 3) {
+            if (wave == 1 && profile == Profile.QUIET) return HARD_QUIET_OPENING;
+            if (wave == 1 && profile == Profile.ELEVATED) return HARD_ELEVATED_OPENING;
+            return HARD_RANGED;
+        }
         if (profile == Profile.QUIET) return QUIET_MELEE;
         if (profile == Profile.ELEVATED && wave == 1) return ELEVATED_OPENING;
         return wave == AssaultWave.COUNT ? LEGACY_FINAL : LEGACY_EARLY;

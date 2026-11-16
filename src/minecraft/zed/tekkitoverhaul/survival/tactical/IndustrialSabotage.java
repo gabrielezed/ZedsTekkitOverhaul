@@ -24,6 +24,7 @@ final class IndustrialSabotage implements SabotageTarget {
     private static final String LIQUID_PIPE = "buildcraft.transport.pipes.PipeLiquidsWood";
     private static final String ENGINE_TILE = "buildcraft.energy.TileEngine";
     private static final String ELECTRIC_BLOCK = "ic2.common.TileEntityElectricBlock";
+    private static final String RELAY_TILE = "eloraam.machine.TileRelay";
     private static final int[] DX = {0, 0, 0, 0, -1, 1};
     private static final int[] DY = {-1, 1, 0, 0, 0, 0};
     private static final int[] DZ = {0, 0, -1, 1, 0, 0};
@@ -35,7 +36,8 @@ final class IndustrialSabotage implements SabotageTarget {
         BUILDCRAFT_ITEM_EXTRACTION(2),
         BUILDCRAFT_LIQUID_EXTRACTION(2),
         BUILDCRAFT_REDSTONE_ENGINE(1),
-        IC2_STORAGE_OUTPUT(2);
+        IC2_STORAGE_OUTPUT(2),
+        REDPOWER_RELAY_EXTRACTION(2);
 
         final int priority;
 
@@ -74,6 +76,9 @@ final class IndustrialSabotage implements SabotageTarget {
                 if (ELECTRIC_BLOCK.equals(base.getName()) && installed(base) && supplyingEU(tile))
                     return new IndustrialSabotage(Operation.IC2_STORAGE_OUTPUT, tile, tile, null, -1);
             }
+            if (RELAY_TILE.equals(name) && installed(type) && hasItems(tile, 9) && !booleanField(tile, "Powered")
+                    && neighbor(tile, intField(tile, "Rotation")) != null)
+                return new IndustrialSabotage(Operation.REDPOWER_RELAY_EXTRACTION, tile, tile, null, -1);
         } catch (ReflectiveOperationException incompatible) {
             // The optional ABI can be missing in another pack. Leave that endpoint native.
         } catch (LinkageError incompatible) {

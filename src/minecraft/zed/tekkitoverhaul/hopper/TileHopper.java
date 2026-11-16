@@ -33,7 +33,8 @@ public final class TileHopper extends TileEntity implements ISidedInventory {
     }
 
     public boolean isDisrupted() {
-        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(worldObj);
+        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(worldObj)
+                && loadedAt(worldObj, xCoord, yCoord, zCoord) == this;
     }
 
     public int disruptionTicksRemaining() { return isDisrupted() ? disruptionTicks : 0; }

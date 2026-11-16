@@ -182,7 +182,7 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private boolean inContact() {
-        return Math.abs(boundingBox.minY - hopperY) <= 1.25D
+        return onGround && Math.abs(boundingBox.minY - hopperY) <= 1.25D
                 && getDistanceSq(hopperX + 0.5D, hopperY + 0.5D, hopperZ + 0.5D) <= CONTACT_SQ;
     }
 

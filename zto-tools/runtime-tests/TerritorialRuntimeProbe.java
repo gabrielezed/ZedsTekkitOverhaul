@@ -1,4 +1,5 @@
 import java.io.File;
+import java.lang.reflect.Method;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
@@ -51,7 +52,10 @@ final class TerritorialRuntimeProbe {
             case 1:
                 if (view.presence < (elevated ? 16 : 8)) break;
                 if (!checkpoint("sustained", view, null)) break;
-                if (adapt && !enderkin) measureAssessment(game, view.threat.threat);
+                if (adapt && !enderkin) {
+                    measureAssessment(game, view.threat.threat);
+                    if (!elevated) verifyQuantumSuit(game, view.threat);
+                }
                 presence = view.presence;
                 clock = view.clock;
                 game.i();
@@ -300,6 +304,25 @@ final class TerritorialRuntimeProbe {
             long elapsed = System.nanoTime() - start;
             require(checksum == expected * samples, "assessment is stable within a game tick");
             if (run > 1) System.out.println("ALPHA6 territory assessment + snapshot ns/op=" + elapsed / samples);
+        }
+    }
+
+    private void verifyQuantumSuit(Minecraft game, ThreatAssessment expected) throws Exception {
+        Method getItem = Class.forName("ic2.api.Items").getMethod("getItem", String.class);
+        String[] names = {"quantumBoots", "quantumLeggings", "quantumBodyarmor", "quantumHelmet"};
+        aan[] armor = game.h.ap.b;
+        aan[] original = armor.clone();
+        try {
+            for (int slot = 0; slot < names.length; slot++) {
+                armor[slot] = (aan) getItem.invoke(null, names[slot]);
+                require(armor[slot] != null, "installed pack provides " + names[slot]);
+            }
+            ThreatAssessment equipped = lunar.territorialSnapshot(game.f).threat;
+            require(equipped.activity == expected.activity && equipped.environmental == expected.environmental
+                    && equipped.threat == expected.threat, "QuantumSuit leaves the same-tick threat unchanged");
+            System.out.println("ALPHA6 installed IC2 QuantumSuit leaves threat at " + equipped.threat);
+        } finally {
+            System.arraycopy(original, 0, armor, 0, original.length);
         }
     }
 

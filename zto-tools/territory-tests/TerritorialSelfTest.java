@@ -63,6 +63,16 @@ public final class TerritorialSelfTest {
         activity.clock = Long.MAX_VALUE;
         activity.advance();
         expect(activity.clock == Long.MAX_VALUE && activity.score(0, 0) == 0, "clock saturation");
+
+        TerritorialActivity outposts = new TerritorialActivity();
+        sample(outposts, 32, 32, 10);
+        for (int visit = 0; visit < 6; visit++) {
+            sample(outposts, 320, 32, 36);
+            sample(outposts, 32, 32, 4);
+        }
+        expect(outposts.records.get(cell(32, 32, 64)).returns == TerritorialActivity.RETURN_MAX
+                && outposts.score(5, 0) > 0, "repeated visits saturate returns and maintain both outposts");
+
         TerritorialActivity exploration = new TerritorialActivity();
         sample(exploration, 0, 0, 48);
         // Fill the cap with older records, then revisit the base before inserting a new cell.
@@ -74,6 +84,7 @@ public final class TerritorialSelfTest {
                 && !exploration.records.containsKey(cell(64, 0, 64)), "oldest tie at zero");
         TerritorialActivity recent = new TerritorialActivity();
         sample(recent, 0, 0, 48);
+        recent.advance();
         // Equivalent saved observations made recently across the map.
         for (int i = 1; i < TerritorialActivity.CAPACITY; i++) {
             TerritorialActivity.Record record = new TerritorialActivity.Record();

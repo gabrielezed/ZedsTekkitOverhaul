@@ -262,7 +262,18 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
 
     private void setupIndustrial(Minecraft game) throws Exception {
         int x = HOPPER_X;
-        if (mode.startsWith("industrial-eu")) {
+        if (mode.startsWith("industrial-solar")) {
+            int tier = mode.endsWith("-mv") ? 1 : mode.endsWith("-hv") ? 2 : 0;
+            pb array = (pb) staticField("mod_CompactSolars", "compactSolarBlock");
+            String storage = tier == 0 ? "batBox" : tier == 1 ? "mfeUnit" : "mfsUnit";
+            aan sink = (aan) staticField("ic2.common.Ic2Items", storage);
+            game.f.d(x, Y, Z, array.bO, tier);
+            game.f.d(x, Y, Z + 1, sink.c, sink.i());
+            industrialTarget = industrialSource = game.f.b(x, Y, Z);
+            industrialSink = game.f.b(x, Y, Z + 1);
+            industrialSink.getClass().getMethod("setFacing", short.class).invoke(industrialSink, (short) 3);
+            industrialType = "COMPACT_SOLARS_OUTPUT";
+        } else if (mode.startsWith("industrial-eu")) {
             String storage = mode.endsWith("-mfe") ? "mfeUnit" : mode.endsWith("-mfsu") ? "mfsUnit" : "batBox";
             aan block = (aan) staticField("ic2.common.Ic2Items", storage);
             game.f.d(x, Y, Z, block.c, block.i());
@@ -351,12 +362,16 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
 
     private void industrial(Minecraft game, long age) throws Exception {
         check(game.f.b(industrialTarget.j, industrialTarget.k, industrialTarget.l) == industrialTarget, "target identity");
+        if (industrialSink != null)
+            check(game.f.b(industrialSink.j, industrialSink.k, industrialSink.l) == industrialSink, "native receiver identity");
         int reserve, delivered, flight = 0;
         if (industrialType.equals("IC2_STORAGE_OUTPUT")) {
             reserve = ((Number) member(industrialSource, "energy")).intValue();
             delivered = ((Number) member(industrialSink, "energy")).intValue();
         } else if (industrialType.equals("EE2_COLLECTOR")) {
             reserve = delivered = ((Number) member(industrialSource, "collectorSunTime")).intValue();
+        } else if (industrialType.equals("COMPACT_SOLARS_OUTPUT")) {
+            reserve = delivered = ((Number) member(industrialSink, "energy")).intValue();
         } else if (industrialType.equals("BUILDCRAFT_LIQUID_EXTRACTION")) {
             reserve = ((ILiquidContainer) industrialSource).getLiquidQuantity();
             delivered = ((ILiquidContainer) industrialSink).getLiquidQuantity();

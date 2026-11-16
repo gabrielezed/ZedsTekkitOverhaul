@@ -18,9 +18,7 @@ import jdk.internal.org.objectweb.asm.Opcodes;
 /** Launch-time gates for the exact Tekkit Classic client bytecode. No Minecraft dependency. */
 public final class IndustrialAgent implements Opcodes {
     private static final String AGENT = "zed/tekkitoverhaul/industrialagent/IndustrialAgent";
-    private static final String ENERGY_NET = "ic2/common/EnergyNet";
     private static final String EMIT = "(Lic2/api/IEnergySource;I)I";
-    private static final String OFFER = "(L" + ENERGY_NET + ";" + EMIT.substring(1);
     private static final Hook[] HOOKS = Hook.values();
     private static final Map<ClassLoader, EnumSet<Hook>> INSTALLED = new WeakHashMap<ClassLoader, EnumSet<Hook>>();
     private static volatile Predicate<Object> gate;
@@ -30,6 +28,7 @@ public final class IndustrialAgent implements Opcodes {
         LIQUIDS("buildcraft/transport/pipes/PipeLiquidsWood", "ccb7f5d7ce236aa71454b19201f5f5702d8bd7835acfe53775ecc3467a886ece", 2),
         ENGINE("buildcraft/energy/TileEngine", "20ec0a85265cd48684da97150ecc5a182b3a36f83ee0385830d88febbad5a518", 1),
         EU("ic2/common/TileEntityElectricBlock", "bffa7d7c41cfa8c3353f96a73eee4354afdfc98ac7dccec7f9694e9aaa21a150", 1),
+        SOLAR("cpw/mods/compactsolars/TileEntityCompactSolar", "090cc73a3053d7ee20d0636167aed3ea6b8bde6c492c64b08b2702e21a0714fd", 1),
         REDPOWER("eloraam/machine/TileRelay", "80690f4f05c566c279d1ad586ae02b18e4a9eedc40721d2d6104a879c181ef57", 1),
         COLLECTOR("ee/TileCollector", "847e1203b683ce6facde3f862f898d23c21ac608a0396603797a655d6997c2bb", 1),
         COLLECTOR_2("ee/TileCollector2", "e72c40b343ff9cd6df5d267a0d1e32a199dc20616da38701e28d7b32c23d4d5e", 1),
@@ -102,6 +101,8 @@ public final class IndustrialAgent implements Opcodes {
         ClassReader reader = new ClassReader(bytes);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
         final int[] sites = {0};
+        final String energyNet = hook == Hook.EU ? "ic2/common/EnergyNet"
+                : hook == Hook.SOLAR ? "ic2/api/EnergyNet" : null;
         reader.accept(new ClassVisitor(ASM5, writer) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
@@ -116,14 +117,14 @@ public final class IndustrialAgent implements Opcodes {
                     return afterSuper(target, sites, "buildcraft/transport/Pipe", "updateEntity");
                 if (hook == Hook.ENGINE && name.equals("n_") && desc.equals("()V"))
                     return afterSuper(target, sites, "buildcraft/core/TileBuildCraft", "n_");
-                if (hook == Hook.EU && name.equals("n_") && desc.equals("()V")) {
+                if (energyNet != null && name.equals("n_") && desc.equals("()V")) {
                     return new MethodVisitor(ASM5, target) {
                         @Override
                         public void visitMethodInsn(int opcode, String owner, String method, String desc, boolean itf) {
-                            if (opcode == INVOKEVIRTUAL && owner.equals(ENERGY_NET) && method.equals("emitEnergyFrom")
+                            if (opcode == INVOKEVIRTUAL && owner.equals(energyNet) && method.equals("emitEnergyFrom")
                                     && desc.equals(EMIT)) {
                                 sites[0]++;
-                                super.visitMethodInsn(INVOKESTATIC, hook.name, "zto$offerEnergy", OFFER, false);
+                                super.visitMethodInsn(INVOKESTATIC, hook.name, "zto$offerEnergy", offer(energyNet), false);
                             } else super.visitMethodInsn(opcode, owner, method, desc, itf);
                         }
                     };
@@ -133,7 +134,7 @@ public final class IndustrialAgent implements Opcodes {
 
             @Override
             public void visitEnd() {
-                if (hook == Hook.EU) addEnergyOffer(cv);
+                if (energyNet != null) addEnergyOffer(cv, energyNet);
                 super.visitEnd();
             }
         }, 0);
@@ -178,9 +179,9 @@ public final class IndustrialAgent implements Opcodes {
     }
 
     /** EnergyNet returns the unaccepted remainder. A withheld offer spends exactly zero EU. */
-    private static void addEnergyOffer(ClassVisitor owner) {
+    private static void addEnergyOffer(ClassVisitor owner, String energyNet) {
         MethodVisitor method = owner.visitMethod(ACC_PRIVATE | ACC_STATIC | ACC_SYNTHETIC,
-                "zto$offerEnergy", OFFER, null, null);
+                "zto$offerEnergy", offer(energyNet), null, null);
         method.visitCode();
         Label emit = new Label();
         method.visitVarInsn(ALOAD, 1);
@@ -193,9 +194,13 @@ public final class IndustrialAgent implements Opcodes {
         method.visitVarInsn(ALOAD, 0);
         method.visitVarInsn(ALOAD, 1);
         method.visitVarInsn(ILOAD, 2);
-        method.visitMethodInsn(INVOKEVIRTUAL, ENERGY_NET, "emitEnergyFrom", EMIT, false);
+        method.visitMethodInsn(INVOKEVIRTUAL, energyNet, "emitEnergyFrom", EMIT, false);
         method.visitInsn(IRETURN);
         method.visitMaxs(0, 0);
         method.visitEnd();
+    }
+
+    private static String offer(String energyNet) {
+        return "(L" + energyNet + ";" + EMIT.substring(1);
     }
 }

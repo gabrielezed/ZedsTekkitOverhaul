@@ -4,7 +4,7 @@ param(
         'industrial-item', 'industrial-liquid', 'industrial-engine', 'industrial-eu', 'industrial-redpower', 'industrial-ee2',
         'industrial-eu-quit', 'industrial-eu-restart', 'industrial-eu-counterplay', 'industrial-eu-peaceful',
         'industrial-eu-unload', 'industrial-eu-replacement', 'industrial-eu-mfe', 'industrial-eu-mfsu',
-        'industrial-ee2-cover', 'industrial-ee2-mk2',
+        'industrial-solar', 'industrial-solar-mv', 'industrial-solar-hv', 'industrial-ee2-cover', 'industrial-ee2-mk2',
         'industrial-ee2-mk3')]
     [string]$Mode = 'exercise',
     [switch]$Bridge,

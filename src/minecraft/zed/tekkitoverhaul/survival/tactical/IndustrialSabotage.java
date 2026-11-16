@@ -24,6 +24,7 @@ final class IndustrialSabotage implements SabotageTarget {
     private static final String LIQUID_PIPE = "buildcraft.transport.pipes.PipeLiquidsWood";
     private static final String ENGINE_TILE = "buildcraft.energy.TileEngine";
     private static final String ELECTRIC_BLOCK = "ic2.common.TileEntityElectricBlock";
+    private static final String SOLAR_ARRAY = "cpw.mods.compactsolars.TileEntityCompactSolar";
     private static final String RELAY_TILE = "eloraam.machine.TileRelay";
     private static final int[] DX = {0, 0, 0, 0, -1, 1};
     private static final int[] DY = {-1, 1, 0, 0, 0, 0};
@@ -37,6 +38,7 @@ final class IndustrialSabotage implements SabotageTarget {
         BUILDCRAFT_LIQUID_EXTRACTION(2),
         BUILDCRAFT_REDSTONE_ENGINE(1),
         IC2_STORAGE_OUTPUT(2),
+        COMPACT_SOLARS_OUTPUT(2),
         REDPOWER_RELAY_EXTRACTION(2),
         EE2_COLLECTOR(2);
 
@@ -76,6 +78,11 @@ final class IndustrialSabotage implements SabotageTarget {
                 Class<?> base = type.getSuperclass();
                 if (ELECTRIC_BLOCK.equals(base.getName()) && installed(base) && supplyingEU(tile))
                     return new IndustrialSabotage(Operation.IC2_STORAGE_OUTPUT, tile, tile, null, -1);
+            }
+            if (name.equals(SOLAR_ARRAY) || name.equals(SOLAR_ARRAY + "MV") || name.equals(SOLAR_ARRAY + "HV")) {
+                Class<?> base = name.equals(SOLAR_ARRAY) ? type : type.getSuperclass();
+                if (SOLAR_ARRAY.equals(base.getName()) && installed(base) && solarOutput(tile))
+                    return new IndustrialSabotage(Operation.COMPACT_SOLARS_OUTPUT, tile, tile, null, -1);
             }
             if (RELAY_TILE.equals(name) && installed(type) && hasItems(tile, 9) && !booleanField(tile, "Powered")
                     && neighbor(tile, intField(tile, "Rotation")) != null)
@@ -143,9 +150,18 @@ final class IndustrialSabotage implements SabotageTarget {
                 && (!powerAreaLoaded(tile) || tile.worldObj.isBlockGettingPowered(tile.xCoord, tile.yCoord, tile.zCoord)))
             return false;
         int side = ((Number) tile.getClass().getMethod("getFacing").invoke(tile)).intValue();
-        TileEntity receiver = neighbor(tile, side);
-        return receiver != null && Class.forName("ic2.api.IEnergyAcceptor", false, tile.getClass().getClassLoader())
-                .isInstance(receiver);
+        return energyAcceptor(tile).isInstance(neighbor(tile, side));
+    }
+
+    private static boolean solarOutput(TileEntity tile) throws ReflectiveOperationException {
+        if (!booleanField(tile, "theSunIsVisible")) return false;
+        Class<?> acceptor = energyAcceptor(tile);
+        for (int side = 0; side < 6; side++) if (acceptor.isInstance(neighbor(tile, side))) return true;
+        return false;
+    }
+
+    private static Class<?> energyAcceptor(TileEntity tile) throws ClassNotFoundException {
+        return Class.forName("ic2.api.IEnergyAcceptor", false, tile.getClass().getClassLoader());
     }
 
     private static boolean collectorOperating(TileEntity tile) throws ReflectiveOperationException {

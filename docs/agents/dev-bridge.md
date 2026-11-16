@@ -66,6 +66,8 @@ Queries accept `Content-Type: application/json` and an object with exactly `requ
 
 The listener binds `127.0.0.1` and uses four workers, an eight-connection requested OS backlog and zero buffered worker tasks. A connection beyond worker capacity may close without a reply. Header and body limits are 4096 and 1024 bytes. The read deadline is one second. Authenticated requests are limited to 32 per fixed one-second window. The two-slot game queue rejects overflow with `BUSY`; queued queries expire after 750 ms. No user text beyond the validated request ID is reflected. The fixed response schemas bound the reply size. The trusted-workstation threat model assumes local software running as the same user can read the discovery file.
 
+Use `saboteur.nearby` with empty arguments to sample up to four live Saboteurs within the local player neighborhood. The response contains the world ID, pose, current action and blink cooldowns, eligible target coordinates and bounded counters and outcomes. `machine.inspect` includes `disruptionTicks` for a Hopper. [Saboteur diagnostics](survival-02-alpha5-saboteur.md#diagnostics-and-reproducibility)
+
 ## Verification
 
 Run the isolated transport and dispatch harness from the repository root:

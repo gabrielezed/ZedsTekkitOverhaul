@@ -110,6 +110,7 @@ public final class DevBridge implements ITickHandler {
 
     private String readQuery(Minecraft game, World world, int dimension, BridgeProtocol.Query query) throws BridgeProtocol.Error {
         if ("inventory.player".equals(query.op)) return BridgeSnapshots.player(game.thePlayer.inventory, worldId);
+        if ("saboteur.nearby".equals(query.op)) return BridgeSnapshots.saboteurs(game.thePlayer, worldId);
         if ("test.context".equals(query.op)) {
             return fixture == null ? "{\"allowed\":false}" : fixture.context(game.mcDataDir, world, dimension, simulationTicks);
         }

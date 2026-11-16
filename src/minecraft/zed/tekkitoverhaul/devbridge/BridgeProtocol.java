@@ -13,7 +13,7 @@ final class BridgeProtocol {
             + operation("lunar.events") + "," + operation("assault.snapshot") + "," + operation("territory.snapshot") + ","
             + operation("inventory.player") + ","
             + operation("inventory.container") + "," + operation("machine.inspect") + ","
-            + operation("test.context") + "]}";
+            + operation("saboteur.nearby") + "," + operation("test.context") + "]}";
 
     static String capabilities(boolean testing) {
         if (!testing) return CAPABILITIES;
@@ -74,7 +74,7 @@ final class BridgeProtocol {
             }
             if ("world.time".equals(op) || "lunar.snapshot".equals(op)
                     || "inventory.player".equals(op) || "test.context".equals(op) || "assault.snapshot".equals(op)
-                    || "territory.snapshot".equals(op)) {
+                    || "territory.snapshot".equals(op) || "saboteur.nearby".equals(op)) {
                 if (!values.isEmpty()) throw invalid();
                 return new Query(id, op, 0, 0, 0, 0, 0, 0);
             }

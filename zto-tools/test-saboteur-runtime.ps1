@@ -1,15 +1,24 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('exercise', 'restart', 'stress', 'dimension', 'transport', 'transport-quit', 'transport-restart', 'combat', 'terrain')]
+    [ValidateSet('exercise', 'restart', 'stress', 'dimension', 'transport', 'transport-quit', 'transport-restart', 'combat', 'terrain',
+        'industrial-item', 'industrial-liquid', 'industrial-engine', 'industrial-eu', 'industrial-redpower', 'industrial-ee2',
+        'industrial-eu-quit', 'industrial-eu-restart', 'industrial-eu-counterplay', 'industrial-eu-peaceful',
+        'industrial-eu-unload', 'industrial-eu-replacement', 'industrial-eu-mfe', 'industrial-eu-mfsu',
+        'industrial-ee2-cover', 'industrial-ee2-mk2',
+        'industrial-ee2-mk3')]
     [string]$Mode = 'exercise',
     [switch]$Bridge,
     [switch]$WithoutOptionalMods,
+    [switch]$WithIndustrialAgent,
+    [switch]$DiscardGame,
     [string]$CandidateJar
 )
 
 $ErrorActionPreference = 'Stop'
 if ($Bridge -and $Mode -notin 'exercise', 'transport') { throw 'Use -Bridge with exercise or transport.' }
-if ($WithoutOptionalMods -and $Mode.StartsWith('transport')) { throw 'The transport fixture requires BuildCraft Transport.' }
+if ($WithoutOptionalMods -and ($Mode.StartsWith('transport') -or $Mode.StartsWith('industrial'))) {
+    throw 'This fixture requires the corresponding native mods.'
+}
 $root = Split-Path $PSScriptRoot
 $runtime = Join-Path $root 'dist-zto/survival-hud-runtime'
 . (Join-Path $PSScriptRoot 'runtime-tests/IsolatedRuntime.ps1')
@@ -23,7 +32,7 @@ $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $harness = Join-Path $game 'harness'
 $report = Join-Path $root 'dist-zto/test-reports'
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate;$game/mods/buildcraft-client-A-core-2.2.14.zip;$game/mods/industrialcraft-2-client_1.97.jar" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/SaboteurRuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
+& javac -cp "$($launch.classpath);$deployed;$game/mods/buildcraft-client-A-core-2.2.14.zip;$game/mods/industrialcraft-2-client_1.97.jar" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/SaboteurRuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $id = [Guid]::NewGuid().ToString('N')
@@ -34,6 +43,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not generate a disposable save.' }
     "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
 Set-RuntimeConfig $game ([ordered]@{ playerAssault = 'false'; lunarPatrols = 'false' })
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
+if ($Mode.StartsWith('industrial') -or $WithIndustrialAgent) {
+    $industrialAgent = Join-Path $root 'dist-zto/ZTOIndustrialAgent.jar'
+    if (!(Test-Path -LiteralPath $industrialAgent)) { throw 'Build ZTOIndustrialAgent.jar before running the industrial probes.' }
+    $agents += ' "-javaagent:' + $industrialAgent + '"'
+    Write-Output "SABOTEUR industrial agent SHA-256 $((Get-FileHash -LiteralPath $industrialAgent).Hash)"
+}
 $java = Join-Path (Split-Path $launch.java) 'java.exe'
 
 function Read-ProbeBridge([Diagnostics.Process]$Process) {
@@ -96,13 +111,32 @@ function Invoke-Probe([string]$Phase, [int]$ExpectedExit) {
 Write-Output "SABOTEUR $Mode $save SHA-256 $hash"
 if ($WithoutOptionalMods) { Write-Output 'SABOTEUR optional mods omitted from the disposable mods directory' }
 Write-Output "SABOTEUR game $game"
-if ($Mode -eq 'restart') {
-    Invoke-Probe 'halt' 23
-    Invoke-Probe 'reopen' 0
-} elseif ($Mode -eq 'transport-restart') {
-    Invoke-Probe 'transport-halt' 23
-    Invoke-Probe 'transport-reopen' 0
-} else {
-    Invoke-Probe $Mode 0
+try {
+    if ($Mode -eq 'restart') {
+        Invoke-Probe 'halt' 23
+        Invoke-Probe 'reopen' 0
+    } elseif ($Mode -eq 'transport-restart') {
+        Invoke-Probe 'transport-halt' 23
+        Invoke-Probe 'transport-reopen' 0
+    } elseif ($Mode -in 'industrial-eu-quit', 'industrial-eu-restart') {
+        if ($Mode -eq 'industrial-eu-quit') {
+            Invoke-Probe 'industrial-eu-quit' 0
+        } else {
+            Invoke-Probe 'industrial-eu-halt' 23
+        }
+        Invoke-Probe 'industrial-eu-reopen' 0
+    } else {
+        Invoke-Probe $Mode 0
+    }
+    if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) { throw 'The deployed archive changed during the probe.' }
+} finally {
+    if ($DiscardGame) {
+        $run = (Get-Item -LiteralPath $game).Parent.Parent.Parent
+        $runs = (Resolve-Path -LiteralPath (Join-Path $runtime 'runs')).Path
+        if ($run.Parent.FullName -ne $runs -or $run.Name -notmatch '^[a-f0-9]{32}$' -or
+            $run.Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) {
+            throw "Unexpected disposable test path $($run.FullName)"
+        }
+        Remove-Item -LiteralPath $run.FullName -Recurse -Force
+    }
 }
-if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) { throw 'The deployed archive changed during the probe.' }

@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import buildcraft.api.ILiquidContainer;
 import buildcraft.api.Orientations;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -46,6 +47,13 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     private int rangedHits, lastCombatHealth;
     private long fightStart, combatTicks;
     private double initialGround, minGround, maxGround;
+    private kw industrialTarget, industrialSource, industrialSink, industrialEngine;
+    private String industrialType;
+    private int nativeTotal, normalMoved, pauseMoved, pauseReserve, pauseFlight, pauseEngine, maxFlight, deliveredWhilePaused;
+    private boolean industrialCountered, industrialStopped, industrialEngineSeeded;
+    private int priorStrokePart, strokesDuringPause;
+    private float pauseStroke;
+    private long baselineTick;
 
     public static final class Bootstrap implements ITickHandler {
         private boolean ready;
@@ -111,13 +119,15 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 hopperId = HopperRegistry.block.bO;
                 if ("reopen".equals(mode)) confirmReopen(game);
                 else if ("transport-reopen".equals(mode)) reopenTransport(game);
+                else if ("industrial-eu-reopen".equals(mode)) reopenIndustrialEU(game);
                 else setup(game);
                 return;
             }
             if (game.f.w() == tick) return;
             tick = game.f.w();
             long age = tick - since;
-            check(age < 340, "stage " + stage + " timed out" + state());
+            check(age < 340, "stage " + stage + " timed out" + state() + " target=" + industrialType
+                    + " reserve=" + pauseReserve + " delivered=" + pauseMoved);
             if ("reopen".equals(mode) || "dimension".equals(mode) && stage == 3) {
                 if (count(output) > pausedOutput) finish(game);
             } else if ("stress".equals(mode)) {
@@ -125,6 +135,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 if (age >= 120) stress(game);
             } else if (mode.startsWith("transport")) {
                 transport(game, age);
+            } else if (mode.startsWith("industrial")) {
+                industrial(game, age);
             } else if ("combat".equals(mode)) {
                 combat(game, age);
             } else if ("terrain".equals(mode)) {
@@ -161,7 +173,9 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         game.f.g(HOPPER_X - 1, Y, Z - 1, 50);
         player(game, X + 1.5D, Z + 2.4D, -65);
         check(!game.h.aT.a && !game.h.aT.d, "player is vulnerable in Survival");
-        if (mode.startsWith("transport")) {
+        if (mode.startsWith("industrial")) {
+            setupIndustrial(game);
+        } else if (mode.startsWith("transport")) {
             setupTransport(game);
         } else if ("combat".equals(mode)) {
             startFight(game, 1);
@@ -244,6 +258,259 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         liquidId = receiver.getLiquidId();
         check(controlSource.fill(Orientations.YPos, FLUID_TOTAL, liquidId, true) == FLUID_TOTAL, "seed control tank");
         player(game, HOPPER_X + 4.4D, Z - 2.25D, 60);
+    }
+
+    private void setupIndustrial(Minecraft game) throws Exception {
+        int x = HOPPER_X;
+        if (mode.startsWith("industrial-eu")) {
+            String storage = mode.endsWith("-mfe") ? "mfeUnit" : mode.endsWith("-mfsu") ? "mfsUnit" : "batBox";
+            aan block = (aan) staticField("ic2.common.Ic2Items", storage);
+            game.f.d(x, Y, Z, block.c, block.i());
+            game.f.d(x, Y, Z + 1, block.c, block.i());
+            readIndustrialEU(game);
+            industrialSource.getClass().getMethod("setFacing", short.class).invoke(industrialSource, (short) 3);
+            industrialSink.getClass().getMethod("setFacing", short.class).invoke(industrialSink, (short) 3);
+            nativeTotal = 750 * ((Number) member(industrialSource, "output")).intValue();
+            industrialSource.getClass().getField("energy").setInt(industrialSource, nativeTotal);
+        } else if (mode.startsWith("industrial-ee2")) {
+            String collectorName = mode.endsWith("-mk2") ? "collector2" : mode.endsWith("-mk3") ? "collector3" : "collector";
+            aan collector = (aan) staticField("ee.EEBlock", collectorName);
+            game.f.d(x, Y, Z, collector.c, collector.i());
+            industrialTarget = industrialSource = game.f.b(x, Y, Z);
+            industrialType = "EE2_COLLECTOR";
+            if (mode.endsWith("-cover")) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx != 0 || dz != 0) {
+                            game.f.g(x + dx, Y, Z + dz, 20);
+                            game.f.g(x + dx, Y + 1, Z + dz, 20);
+                        }
+                        game.f.g(x + dx, Y + 2, Z + dz, 20);
+                    }
+                }
+            }
+        } else if ("industrial-redpower".equals(mode)) {
+            int relay = ((pb) staticField("RedPowerMachine", "blockMachine")).bO;
+            game.f.d(x, Y, Z, relay, 15);
+            game.f.g(x, Y, Z + 1, 54);
+            industrialTarget = industrialSource = game.f.b(x, Y, Z);
+            industrialSink = game.f.b(x, Y, Z + 1);
+            industrialType = "REDPOWER_RELAY_EXTRACTION";
+            industrialSource.getClass().getField("Rotation").setInt(industrialSource, 3);
+            for (int i = 0; i < 9; i++) ((io) industrialSource).a(i, new aan(ITEM, 8, 0));
+            nativeTotal = 72;
+        } else {
+            boolean liquid = "industrial-liquid".equals(mode);
+            boolean engine = "industrial-engine".equals(mode);
+            int tank = liquid ? ((pb) staticField("BuildCraftFactory", "tankBlock")).bO : 0;
+            game.f.d(x, Y, Z - 1, liquid ? tank : engine ? 61 : 54, engine ? 3 : 0);
+            game.f.g(x, Y, Z + 1, liquid ? tank : 54);
+            yr pipe = (yr) staticField("BuildCraftTransport", liquid ? "pipeLiquidsWood" : "pipeItemsWood");
+            check(pipe.a(new aan(pipe), game.h, game.f, x, Y, Z - 1, 3), "place native wood extractor");
+            game.f.f(x, Y, Z, 2);
+            woodPipe = game.f.b(x, Y, Z);
+            pipeTransport = pipeTransport(woodPipe);
+            game.f.d(x + 1, Y, Z, ((pb) staticField("BuildCraftEnergy", "engineBlock")).bO, 0);
+            industrialEngine = game.f.b(x + 1, Y, Z);
+            industrialEngine.getClass().getField("orientation").setInt(industrialEngine, 4);
+            game.f.d(x + 2, Y, Z, 76, 5);
+            industrialSource = game.f.b(x, Y, Z - 1);
+            industrialSink = game.f.b(x, Y, Z + 1);
+            industrialTarget = engine ? industrialEngine : (kw) woodPipe;
+            industrialType = engine ? "BUILDCRAFT_REDSTONE_ENGINE"
+                    : liquid ? "BUILDCRAFT_LIQUID_EXTRACTION" : "BUILDCRAFT_ITEM_EXTRACTION";
+            if (liquid) {
+                liquidId = 9;
+                nativeTotal = 14000;
+                check(((ILiquidContainer) industrialSource).fill(Orientations.YPos, nativeTotal, liquidId, true)
+                        == nativeTotal, "seed native source tank");
+            } else {
+                nativeTotal = 64;
+                ((io) industrialSource).a(engine ? 2 : 0, new aan(ITEM, nativeTotal, 0));
+            }
+        }
+        player(game, x + 4.3D, Z + 2.2D, 100);
+        baselineTick = game.f.w();
+        System.out.println("SABOTEUR " + industrialType + " target=" + industrialTarget.getClass().getName());
+    }
+
+    private void readIndustrialEU(Minecraft game) {
+        industrialTarget = industrialSource = game.f.b(HOPPER_X, Y, Z);
+        industrialSink = game.f.b(HOPPER_X, Y, Z + 1);
+        industrialType = "IC2_STORAGE_OUTPUT";
+    }
+
+    private void reopenIndustrialEU(Minecraft game) throws Exception {
+        readIndustrialEU(game);
+        nativeTotal = 24000;
+        pauseMoved = ((Number) member(industrialSink, "energy")).intValue();
+        player(game, HOPPER_X + 4.3D, Z + 2.2D, 100);
+        stage = 10;
+        since = game.f.w();
+    }
+
+    private void industrial(Minecraft game, long age) throws Exception {
+        check(game.f.b(industrialTarget.j, industrialTarget.k, industrialTarget.l) == industrialTarget, "target identity");
+        int reserve, delivered, flight = 0;
+        if (industrialType.equals("IC2_STORAGE_OUTPUT")) {
+            reserve = ((Number) member(industrialSource, "energy")).intValue();
+            delivered = ((Number) member(industrialSink, "energy")).intValue();
+        } else if (industrialType.equals("EE2_COLLECTOR")) {
+            reserve = delivered = ((Number) member(industrialSource, "collectorSunTime")).intValue();
+        } else if (industrialType.equals("BUILDCRAFT_LIQUID_EXTRACTION")) {
+            reserve = ((ILiquidContainer) industrialSource).getLiquidQuantity();
+            delivered = ((ILiquidContainer) industrialSink).getLiquidQuantity();
+            flight = pipeQuantity(pipeTransport);
+            check(delivered == 0 || ((ILiquidContainer) industrialSink).getLiquidId() == liquidId, "delivered fluid type");
+        } else {
+            reserve = count((io) industrialSource);
+            delivered = count((io) industrialSink);
+            if (pipeTransport != null) {
+                Map<?, ?> traveling = (Map<?, ?>) member(pipeTransport, "travelingEntities");
+                for (Object data : traveling.values()) {
+                    Object payload = member(data, "item");
+                    aan stack = (aan) member(payload, "item");
+                    check(stack.c == ITEM && stack.i() == 0, "in-flight item identity");
+                    flight += stack.a;
+                }
+            }
+        }
+        maxFlight = Math.max(maxFlight, flight);
+        if (nativeTotal > 0) check(reserve + delivered + flight == nativeTotal,
+                "conservation reserve=" + reserve + " in-flight=" + flight + " delivered=" + delivered);
+        if (stage == 10) {
+            if (delivered > pauseMoved) {
+                System.out.println("SABOTEUR reopened EU delivery " + pauseMoved + " -> " + delivered + ", total=" + nativeTotal);
+                finish(game);
+            }
+            return;
+        }
+        if (stage == 1 && industrialEngine != null && !industrialEngineSeeded) {
+            // Warm the native engine within the yellow range. Its real power strokes now recur inside an 80-tick sample.
+            Object engine = member(industrialEngine, "engine");
+            if (engine == null) return;
+            engine.getClass().getField("energy").setInt(engine, 530);
+            industrialEngineSeeded = true;
+        }
+        if (stage == 1 && delivered > 0 && (pipeTransport == null || age >= 110)
+                && (industrialEngine == null || "industrial-engine".equals(mode) || flight > 0)) {
+            normalMoved = delivered;
+            double spawnX = HOPPER_X + ("industrial-engine".equals(mode) ? 2.4D : -1.1D);
+            mob = spawn(game, spawnX, Z + 0.35D);
+            check(mob.canEngageEncounterPlayer(game.h), "vulnerable player in the native fixture");
+            mob.engageEncounterPlayer(game.h);
+            field(EntitySaboteur.class, "nextScan").setInt(mob, 1);
+            System.out.println("SABOTEUR baseline ticks=" + (game.f.w() - baselineTick) + " delivered=" + delivered
+                    + " reserve=" + reserve + " in-flight=" + flight);
+            advance(game);
+        } else if (stage == 2 && mode.endsWith("-cover") && age >= 100) {
+            check(delivered > normalMoved && mob.disruptions() == 0, "glass enclosure protects a working collector" + state());
+            finish(game);
+        } else if (stage == 2 && mode.endsWith("-counterplay") && !industrialCountered
+                && mob.pose() == EntitySaboteur.WINDUP && mob.windupRemaining() > 0) {
+            player(game, mob.o - 0.9D, mob.q + 0.75D, -120);
+            game.c.b(game.h, mob);
+            check("HIT".equals(mob.lastOutcome()) && mob.disruptions() == 0, "Survival hit cancels native windup");
+            player(game, HOPPER_X + 4.3D, Z + 2.2D, 100);
+            industrialCountered = true;
+            System.out.println("SABOTEUR Survival hit prevented native interruption");
+        } else if (stage == 2 && !mode.endsWith("-cover") && mob.disruptions() == 1) {
+            check(industrialType.equals(mob.targetType()), "actor selected intended native endpoint, got " + mob.targetType());
+            pauseReserve = reserve;
+            pauseMoved = delivered;
+            pauseFlight = flight;
+            // Hold off a second windup while measuring downstream recovery from the first lease.
+            field(EntitySaboteur.class, "nextAction").setInt(mob, mob.V + 500);
+            if (industrialEngine != null) priorStrokePart = ((Number) member(industrialEngine, "progressPart")).intValue();
+            if ("industrial-engine".equals(mode)) {
+                Object engine = member(industrialEngine, "engine");
+                pauseEngine = ((Number) member(engine, "energy")).intValue();
+                pauseStroke = ((Number) member(engine, "progress")).floatValue();
+            }
+            advance(game);
+        } else if (stage == 3 && industrialStopped && earlyIndustrialRecovery()) {
+            if (delivered == pauseMoved && age < 26) return;
+            check(delivered > pauseMoved && age <= 26, "native transfer resumes on release");
+            System.out.println("SABOTEUR early recovery tick=" + age + " delivered=" + delivered + " total=" + nativeTotal);
+            finish(game);
+        } else if (stage == 3 && age <= 76) {
+            check(reserve == pauseReserve, "new native operation paused, reserve=" + reserve + " expected=" + pauseReserve);
+            deliveredWhilePaused = delivered - pauseMoved;
+            if (industrialEngine != null) {
+                int part = ((Number) member(industrialEngine, "progressPart")).intValue();
+                if (part == 2 && priorStrokePart == 1) strokesDuringPause++;
+                priorStrokePart = part;
+            }
+            if ("industrial-engine".equals(mode)) {
+                Object engine = member(industrialEngine, "engine");
+                check(pauseEngine == ((Number) member(engine, "energy")).intValue()
+                        && pauseStroke == ((Number) member(engine, "progress")).floatValue(),
+                        "engine retains stored power and piston state");
+            }
+            if (age >= 20 && earlyIndustrialRecovery()) releaseIndustrialEU(game, reserve);
+            if (age >= 30) {
+                if (mode.endsWith("-quit")) {
+                    System.out.println("SABOTEUR Save and Quit during native lease, delivered=" + delivered);
+                    finish(game);
+                } else if (mode.endsWith("-halt")) {
+                    game.f.a((rw) null);
+                    System.out.println("SABOTEUR saved during native lease, delivered=" + delivered);
+                    System.out.println("SABOTEUR PASS " + mode);
+                    System.out.flush();
+                    Runtime.getRuntime().halt(23);
+                }
+            }
+        } else if (stage == 3 && age >= 80) {
+            if (delivered <= pauseMoved + deliveredWhilePaused || reserve == pauseReserve) return;
+            check(mob.disruptions() == 1 && mob.bb() > 0 && (pipeTransport == null || maxFlight > 0),
+                    "one lease and automatic recovery while the actor is alive");
+            if (pipeTransport != null && !"industrial-engine".equals(mode))
+                check(pauseFlight > 0 && deliveredWhilePaused > 0 && strokesDuringPause > 0,
+                        "powered extraction was withheld while committed resources finished normally");
+            System.out.println("SABOTEUR pause reserve=" + pauseReserve + " in-flight=" + pauseFlight + " max-in-flight="
+                    + maxFlight + " delivered during pause=" + deliveredWhilePaused + " engine strokes=" + strokesDuringPause
+                    + " restored=" + delivered
+                    + " ticks since lease=" + age + (nativeTotal > 0 ? " source+in-flight+sink=" + nativeTotal : ""));
+            finish(game);
+        }
+    }
+
+    private static Object member(Object object, String name) throws Exception {
+        return object.getClass().getField(name).get(object);
+    }
+
+    private boolean earlyIndustrialRecovery() {
+        return mode.endsWith("-counterplay") || mode.endsWith("-peaceful") || mode.endsWith("-replacement")
+                || mode.endsWith("-unload");
+    }
+
+    private void releaseIndustrialEU(Minecraft game, int reserve) throws Exception {
+        industrialStopped = true;
+        if (mode.endsWith("-counterplay")) {
+            check(mob.a(md.j, 100) && mob.bb() <= 0, "owner died during native lease");
+        } else if (mode.endsWith("-peaceful")) {
+            game.A.C = game.f.q = 0;
+        } else if (mode.endsWith("-replacement")) {
+            int block = game.f.a(HOPPER_X, Y, Z);
+            kw old = industrialSource;
+            game.f.g(HOPPER_X, Y, Z, 0);
+            game.f.d(HOPPER_X, Y, Z, block, 0);
+            readIndustrialEU(game);
+            check(industrialSource != old, "native replacement created a new tile at the same position");
+            industrialSource.getClass().getMethod("setFacing", short.class).invoke(industrialSource, (short) 3);
+            industrialSource.getClass().getField("energy").setInt(industrialSource, reserve);
+        } else {
+            ko provider = (ko) game.f.z();
+            int chunkX = HOPPER_X >> 4, chunkZ = Z >> 4;
+            kw old = industrialSource;
+            game.f.a(new uh(HOPPER_X + 256, Y, Z + 256));
+            provider.d(chunkX, chunkZ);
+            provider.a();
+            check(!provider.a(chunkX, chunkZ), "native chunk explicitly unloaded");
+            provider.b(chunkX, chunkZ);
+            readIndustrialEU(game);
+            check(industrialSource != old, "native chunk reloaded original EU data with a new tile");
+        }
     }
 
     private void readTransport(Minecraft game) throws Exception {

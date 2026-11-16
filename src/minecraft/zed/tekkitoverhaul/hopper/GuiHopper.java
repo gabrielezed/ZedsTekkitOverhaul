@@ -29,7 +29,8 @@ public final class GuiHopper extends GuiContainer {
 
     protected void drawGuiContainerForegroundLayer() {
         fontRenderer.drawString("Hopper",8,6,4210752);
-        fontRenderer.drawString(hopper.isLocked()?"Locked":"Enabled",122,6,4210752);
+        String status = hopper.isLocked() ? "Locked" : hopper.isDisrupted() ? "Output paused" : "Enabled";
+        fontRenderer.drawString(status, 168-fontRenderer.getStringWidth(status), 6, 4210752);
         fontRenderer.drawString("Inventory",8,45,4210752);
     }
     public void drawScreen(int mouseX,int mouseY,float partialTick) {
@@ -39,7 +40,8 @@ public final class GuiHopper extends GuiContainer {
         String[] directions={"Down","Up","North","South","West","East"};
         String[] lines={"5 slots; up to 64 items per slot", "Transfer: 1 item / 8 ticks (2.5/s at 20 TPS)",
             "Output: "+directions[hopper.facing()],
-            hopper.isLocked()?"Remove redstone power to enable transfers.":"Pulls from above; output needs space and a valid slot."};
+            hopper.isLocked()?"Remove redstone power to enable transfers.":hopper.isDisrupted()
+                ?"Ender disruption. Output resumes automatically.":"Pulls from above; output needs space and a valid slot."};
         int w=0; for(int i=0;i<lines.length;i++) w=Math.max(w,fontRenderer.getStringWidth(lines[i]));
         int tx=Math.max(4,Math.min(width-w-8,mouseX+12));
         int ty=Math.max(4,Math.min(height-48,mouseY+12));

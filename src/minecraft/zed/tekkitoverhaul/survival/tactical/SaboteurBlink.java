@@ -26,7 +26,8 @@ final class SaboteurBlink {
         int minZ = MathHelper.floor_double(hull.minZ);
         int maxZ = MathHelper.floor_double(hull.maxZ);
         // Leave room for vanilla's block and nearby-entity queries and legacy block shapes.
-        if (!world.checkChunksExist(minX - 3, 0, minZ - 3, maxX + 3, 0, maxZ + 3))
+        int halo = (int) Math.ceil(World.MAX_ENTITY_RADIUS) + 1;
+        if (!world.checkChunksExist(minX - halo, 0, minZ - halo, maxX + halo, 0, maxZ + halo))
             return Result.CHUNK_UNLOADED;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {

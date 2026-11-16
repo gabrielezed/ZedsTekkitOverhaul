@@ -3,12 +3,57 @@ package zed.tekkitoverhaul.hopper;
 import java.util.List;
 import net.minecraft.src.*;
 import net.minecraft.src.forge.ISidedInventory;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 
 /** Five persistent slots; only the authoritative world performs transfers. */
 public final class TileHopper extends TileEntity implements ISidedInventory {
     private ItemStack[] items = new ItemStack[5];
     private int cooldown;
     private int outputMode;
+    private EntitySaboteur disruptionOwner;
+    private int disruptionTicks;
+
+    /** Loaded-only lookup for the pinned local-world provider. Never creates a missing tile. */
+    public static TileHopper loadedAt(World world, int x, int y, int z) {
+        if (HopperRegistry.block == null || !world.blockExists(x, y, z)) return null;
+        IChunkProvider provider = world.getChunkProvider();
+        if (provider.getClass() != ChunkProvider.class) return null;
+        Chunk chunk = provider.provideChunk(x >> 4, z >> 4);
+        if (chunk.getBlockID(x & 15, y, z & 15) != HopperRegistry.block.blockID) return null;
+        Object tile = chunk.chunkTileEntityMap.get(new ChunkPosition(x & 15, y, z & 15));
+        return tile instanceof TileHopper && !((TileHopper) tile).isInvalid() ? (TileHopper) tile : null;
+    }
+
+    public boolean beginDisruption(EntitySaboteur owner) {
+        if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(worldObj) || isDisrupted()
+                || loadedAt(worldObj, xCoord, yCoord, zCoord) != this) return false;
+        disruptionOwner = owner;
+        disruptionTicks = 80;
+        return true;
+    }
+
+    public boolean isDisrupted() {
+        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(worldObj);
+    }
+
+    public int disruptionTicksRemaining() { return isDisrupted() ? disruptionTicks : 0; }
+
+    private void clearDisruption() {
+        disruptionTicks = 0;
+        disruptionOwner = null;
+    }
+
+    @Override
+    public void onChunkUnload() {
+        clearDisruption();
+        super.onChunkUnload();
+    }
+
+    @Override
+    public void invalidate() {
+        clearDisruption();
+        super.invalidate();
+    }
     public String outputModeName() {
         return outputMode == 1 ? "Input" : outputMode == 2 ? "Fuel" : "Auto";
     }
@@ -22,10 +67,16 @@ public final class TileHopper extends TileEntity implements ISidedInventory {
 
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote) return;
+        boolean paused = isDisrupted();
+        if (paused) {
+            if (disruptionTicks % 8 == 0)
+                worldObj.spawnParticle("portal", xCoord + 0.5D, yCoord + 0.95D, zCoord + 0.5D, 0, -0.15D, 0);
+            if (--disruptionTicks == 0) clearDisruption();
+        } else if (disruptionOwner != null) clearDisruption();
         if (cooldown > 0) cooldown--;
         if (cooldown > 0 || isLocked()) return;
         int face = facing();
-        boolean moved = InventoryAccess.moveOne(this, -1,
+        boolean moved = !paused && InventoryAccess.moveOne(this, -1,
             InventoryAccess.at(worldObj, xCoord + DX[face], yCoord + DY[face], zCoord + DZ[face]), face ^ 1, outputMode);
         IInventory above = InventoryAccess.at(worldObj, xCoord, yCoord + 1, zCoord);
         if (above != null) moved = InventoryAccess.moveOne(above, 0, this, -1) | moved;
@@ -80,6 +131,7 @@ public final class TileHopper extends TileEntity implements ISidedInventory {
 
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
+        clearDisruption();
         items = new ItemStack[5];
         outputMode = Math.max(0, Math.min(2, tag.getInteger("OutputMode")));
         cooldown = Math.max(0, Math.min(8, tag.getInteger("TransferCooldown")));

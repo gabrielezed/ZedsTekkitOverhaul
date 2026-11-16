@@ -36,6 +36,7 @@ final class AssaultWave {
 
     final int number;
     final int planned;
+    final AssaultComposition composition;
     final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
     int startedAt = -1;
     int closedAt = -1;
@@ -49,9 +50,10 @@ final class AssaultWave {
     int peakActive;
     String outcome;
 
-    AssaultWave(int number, int planned) {
+    private AssaultWave(int number, int planned, Profile profile, int difficulty) {
         this.number = number;
         this.planned = planned;
+        composition = AssaultComposition.select(profile, difficulty, number);
     }
 
     static AssaultWave[] plan(int budget) {
@@ -59,6 +61,10 @@ final class AssaultWave {
     }
 
     static AssaultWave[] plan(int budget, Profile profile) {
+        return plan(budget, profile, 2);
+    }
+
+    static AssaultWave[] plan(int budget, Profile profile, int difficulty) {
         int first = (budget * 4 + 7) / 15;
         int throughSecond = (budget * 9 + 7) / 15;
         int middle = throughSecond - first;
@@ -73,7 +79,9 @@ final class AssaultWave {
             last -= shift;
         }
         return new AssaultWave[] {
-            new AssaultWave(1, first), new AssaultWave(2, middle), new AssaultWave(3, last)
+            new AssaultWave(1, first, profile, difficulty),
+            new AssaultWave(2, middle, profile, difficulty),
+            new AssaultWave(3, last, profile, difficulty)
         };
     }
 

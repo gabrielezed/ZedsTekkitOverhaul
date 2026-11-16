@@ -1,12 +1,12 @@
 # Current implementation
 
-**0.2.0-alpha.2** calibrates local Overworld activity and adds experimental regional full-moon assault profiles. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Environment and build](environment.md)
+**0.2.0-alpha.3** adds experimental regional composition to natural full-moon player assaults. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Environment and build](environment.md)
 
 | Owner | Current responsibility |
 | --- | --- |
 | `mod_ZedsTekkitOverhaul`, `config` | Bootstrap and typed startup settings. Edit `minecraft/config/ZedsTekkitOverhaul.cfg`. [Configuration](configuration.md) |
 | `lunar`, `lunar.client` | Eight-day calendar, natural events, alignment, replay watermark, save and dimension lifecycle. [Lunar contract](lunar-cycle-implementation.md) |
-| `assault` | Full-moon PLAYER_ASSAULT, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Alpha.8 and recurrence](survival-alpha8.md) |
+| `assault` | Full-moon PLAYER_ASSAULT with a frozen regional wave and vanilla slot plan when enabled, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Alpha.3 composition](survival-02-alpha3.md) |
 | `territory` | Qualified activity sampling, bounded Overworld save data, lazy decay and biome-aware local threat. `assault` can use one frozen assessment at natural admission. [Alpha.2 contract](survival-02-alpha2.md) |
 | `survival`, `equipment` | Local bed anchors, equipped mobs and tactical AI. Experimental Enderkin substitutions default to off. Creative eggs are available either way. [Tactical guide](survival-alpha7.md) |
 | `creative`, `crafting`, `integration.inventory` | Asset-backed Creative UI, crafting assistance and legacy mouse dispatch. [Creative guide](../engineering/creative-inventory-backport.md) |

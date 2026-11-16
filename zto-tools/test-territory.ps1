@@ -8,10 +8,15 @@ $null = New-Item -ItemType Directory -Path $out -Force
     (Join-Path $source 'ThreatAssessment.java') (Join-Path $source 'TerritorialWorldState.java') `
     (Join-Path $source 'TerritorialNbtInput.java') `
     (Join-Path $source '../assault/AssaultWave.java') `
+    (Join-Path $source '../assault/AssaultComposition.java') `
+    (Join-Path $source '../assault/LoadoutPolicy.java') `
     (Join-Path $PSScriptRoot 'territory-tests/TerritorialSelfTest.java') `
-    (Join-Path $PSScriptRoot 'assault-tests/AssaultProfileSelfTest.java')
+    (Join-Path $PSScriptRoot 'assault-tests/AssaultProfileSelfTest.java') `
+    (Join-Path $PSScriptRoot 'assault-tests/LoadoutPolicySelfTest.java')
 if ($LASTEXITCODE -ne 0) { throw 'Territorial checks require compiled MCP classes for legacy NBT.' }
 & java -cp "$out;$classes" zed.tekkitoverhaul.territory.TerritorialSelfTest
 if ($LASTEXITCODE -ne 0) { throw 'Territorial checks failed.' }
 & java -cp "$out;$classes" zed.tekkitoverhaul.assault.AssaultProfileSelfTest
 if ($LASTEXITCODE -ne 0) { throw 'Assault profile checks failed.' }
+& java -cp "$out;$classes" zed.tekkitoverhaul.assault.LoadoutPolicySelfTest
+if ($LASTEXITCODE -ne 0) { throw 'Loadout policy checks failed.' }

@@ -1,5 +1,10 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.0-alpha.3 — Contextual assault composition
+
+- The opt-in territorial experiment freezes melee-led Quiet waves and a mixed melee/ranged Elevated opening on Easy and Normal. Ordinary keeps the legacy order. Hard keeps vanilla zombies out of assault waves to protect wooden doors.
+- The read-only assault snapshot exposes ordered vanilla slots alongside the insertion records. [Design and verification](docs/agents/survival-02-alpha3.md)
+
 ## 0.2.0-alpha.2 — Regional threat and contextual assaults
 
 - Require sustained local presence before recording territorial activity and favor still-active regions when the record cap is reached.

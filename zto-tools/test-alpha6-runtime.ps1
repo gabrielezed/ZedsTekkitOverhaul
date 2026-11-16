@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-elevated', 'territory-both')]
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-elevated', 'territory-both', 'composition-disabled', 'composition-quiet', 'composition-ordinary', 'composition-elevated', 'composition-both', 'composition-hard', 'composition-quantum')]
     [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
 )
 
@@ -19,7 +19,9 @@ if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
 }
 $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/TerritorialRuntimeProbe.java')
+$sources = 'Alpha6RuntimeProbe', 'SilentRuntimeAudio', 'AssaultRecurrenceProbe', 'TerritorialRuntimeProbe', 'AssaultPressureProbe' |
+    ForEach-Object { Join-Path $PSScriptRoot "runtime-tests/$_.java" }
+& javac -cp "$($launch.classpath);$candidate" -d $harness @sources
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
@@ -35,6 +37,8 @@ $phase['territory-legacy'] = $phase['territory-threat'] = $phase['territory-both
 $phase['territory-elevated'] = 'FULL_MOON'
 . (Join-Path $PSScriptRoot 'runtime-tests/TerritoryHttp.ps1')
 foreach ($mode in $Modes) {
+    $composition = $mode.StartsWith('composition-')
+    if ($composition) { $phase[$mode] = 'FULL_MOON' }
     $id = [Guid]::NewGuid().ToString('N')
     $save = "ZTO-Test-$id"
     & (Join-Path $PSScriptRoot 'new-assault-playtest.ps1') -Name "Test-$id" -LunarPhase $phase[$mode] -SavesDirectory (Join-Path $game 'saves') -ToolsDirectory $harness
@@ -47,9 +51,10 @@ foreach ($mode in $Modes) {
         [IO.File]::WriteAllText((Join-Path $fresh '.zto-disposable-test'), "$save-Fresh 911`n", [Text.Encoding]::ASCII)
     }
     $enabled = ($mode -ne 'disabled').ToString().ToLowerInvariant()
-    $enderkin = ($mode.StartsWith('ender-') -or $mode -eq 'territory-both').ToString().ToLowerInvariant()
-    $threat = ($mode -in 'territory-threat', 'territory-elevated', 'territory-both').ToString().ToLowerInvariant()
-    $useBridge = $mode -in 'territory-threat', 'territory-elevated'
+    $enderkin = ($mode.StartsWith('ender-') -or $mode -in 'territory-both', 'composition-both').ToString().ToLowerInvariant()
+    $threat = ($mode -in 'territory-threat', 'territory-elevated', 'territory-both' -or
+        ($composition -and $mode -ne 'composition-disabled')).ToString().ToLowerInvariant()
+    $useBridge = $composition -or $mode -in 'territory-threat', 'territory-elevated'
     $bridgeFlag = $useBridge.ToString().ToLowerInvariant()
     Set-RuntimeConfig $game ([ordered]@{
         experimentalEnderkinEncounters = $enderkin
@@ -63,7 +68,8 @@ foreach ($mode in $Modes) {
     $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if ($useBridge) {
-        Test-TerritoryHttp $process $game $save $mode $stdout (Join-Path $report "alpha2-http-$save.json")
+        $prefix = if ($composition) { 'alpha3' } else { 'alpha2' }
+        Test-TerritoryHttp $process $game $save $mode $stdout (Join-Path $report "$prefix-http-$save.json")
     }
     $timedOut = !(Wait-RuntimeClient $process 180000)
     if (!$useBridge -and (Select-String -LiteralPath $stderr -Pattern 'Dev Bridge enabled. Discovery:' -Quiet)) {

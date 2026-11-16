@@ -13,7 +13,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 | ![Skirmisher charging an Ender Pulse beneath the full moon in a torch-lit arena](docs/agents/images/alpha8-mixed-pulse.png) | ![Breacher striking a closed wooden door](docs/agents/images/enderkin-breacher-pressure.png) |
 | A Skirmisher winds up its Ender Pulse during a mixed lunar assault. | A Breacher pressures the entrance and leaves the door intact. |
 
-**0.2.0-alpha.1 · Territorial Activity & Threat.** Local Overworld activity persists and decays during active play. The optional territorial experiment lets quiet regions slightly reduce an admitted full-moon assault budget. [Territorial contract](docs/agents/survival-02-alpha1.md)
+**0.2.0-alpha.2 · Territorial Activity & Threat.** Local Overworld activity persists and decays during active play. The optional territorial experiment varies the shape of full-moon assault waves using the region and its local activity. [Territorial contract](docs/agents/survival-02-alpha2.md)
 
 ## Gameplay
 
@@ -41,7 +41,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The current build identifier is **0.2.0-alpha.1**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
+The current build identifier is **0.2.0-alpha.2**. See the [changelog](CHANGELOG.md) and [versioning policy](docs/agents/VERSIONING_POLICY.md).
 
 ```powershell
 .\zto-tools\build-and-deploy.bat

@@ -50,6 +50,7 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 - **Alpha.6 candidate:** [outdoor lunar pressure and local fortification](survival-alpha6.md). Evaluate the placement model across representative shelters and Tekkit compounds before expanding tactical roles.
 - **Alpha.8 experiment:** [bounded Enderkin substitutions](survival-alpha8.md) in existing patrols and player assaults. Owner acceptance governs broader adoption.
 - **0.2 alpha.1 candidate:** [persistent local activity and bounded threat](survival-02-alpha1.md) supply one opt-in budget decision at PLAYER_ASSAULT admission. Further 0.2 work can test regional danger and encounter pacing in ordinary Survival sessions.
+- **0.2 alpha.2 candidate:** [qualified activity, regional environment and contextual waves](survival-02-alpha2.md) give full-moon assaults a bounded local variation. Alpha.3 can use owner playtests to calibrate that variation and establish whether other existing encounters benefit from regional assessment.
 - **Later release lines:** settlement recognition in 0.3 and `SITE_SIEGE` in 0.4. Site sieges require separately established sites. Construction and provenance, automation, ambiguous older worlds and the distinction between interior protection and site identity remain open.
 - **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
 

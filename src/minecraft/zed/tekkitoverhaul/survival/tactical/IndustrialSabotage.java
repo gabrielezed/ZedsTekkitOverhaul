@@ -37,7 +37,8 @@ final class IndustrialSabotage implements SabotageTarget {
         BUILDCRAFT_LIQUID_EXTRACTION(2),
         BUILDCRAFT_REDSTONE_ENGINE(1),
         IC2_STORAGE_OUTPUT(2),
-        REDPOWER_RELAY_EXTRACTION(2);
+        REDPOWER_RELAY_EXTRACTION(2),
+        EE2_COLLECTOR(2);
 
         final int priority;
 
@@ -79,6 +80,9 @@ final class IndustrialSabotage implements SabotageTarget {
             if (RELAY_TILE.equals(name) && installed(type) && hasItems(tile, 9) && !booleanField(tile, "Powered")
                     && neighbor(tile, intField(tile, "Rotation")) != null)
                 return new IndustrialSabotage(Operation.REDPOWER_RELAY_EXTRACTION, tile, tile, null, -1);
+            if ((name.equals("ee.TileCollector") || name.equals("ee.TileCollector2") || name.equals("ee.TileCollector3"))
+                    && installed(type) && collectorOperating(tile))
+                return new IndustrialSabotage(Operation.EE2_COLLECTOR, tile, tile, null, -1);
         } catch (ReflectiveOperationException incompatible) {
             // The optional ABI can be missing in another pack. Leave that endpoint native.
         } catch (LinkageError incompatible) {
@@ -142,6 +146,12 @@ final class IndustrialSabotage implements SabotageTarget {
         TileEntity receiver = neighbor(tile, side);
         return receiver != null && Class.forName("ic2.api.IEnergyAcceptor", false, tile.getClass().getClassLoader())
                 .isInstance(receiver);
+    }
+
+    private static boolean collectorOperating(TileEntity tile) throws ReflectiveOperationException {
+        World world = tile.worldObj;
+        if (tile.yCoord + 1 >= world.getHeight() || !powerAreaLoaded(tile)) return false;
+        return ((Number) tile.getClass().getMethod("getProduction").invoke(tile)).intValue() > 1;
     }
 
     private static boolean hasItems(TileEntity tile, int limit) {

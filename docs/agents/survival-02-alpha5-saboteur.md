@@ -22,9 +22,9 @@ IC2 cables, BuildCraft item and fluid pipes, and RedPower networks require indiv
 
 ## Owner playtest
 
-1. In a disposable world, place an output chest and aim a ZTO Hopper into it by placing the Hopper against the side of that chest. Put a second chest above the Hopper. Load several stacks of cobblestone into the upper chest. Check that the lower or side chest is gaining items.
+1. In a disposable world, place an output chest and aim a ZTO Hopper into it by sneak-right-clicking the side of that chest with the Hopper held. Place a second chest above the Hopper and load it with several stacks of cobblestone. Check that the output chest is gaining items.
 2. Build a small torchlit alcove for the machine. Leave an open, level approach about eight blocks long. Add a wall or a closed door beside the open approach so you can compare an open route with a sealed one.
-3. Place a **Saboteur Spawn Egg** four to eight blocks from the Hopper, then switch to Survival on Normal. Stand within sight and a few blocks to the side. The Saboteur needs an available Survival player to begin its approach. Watch for the short blink, hands-up pose and mint link as it reaches the Hopper.
+3. Place a **Saboteur Spawn Egg** four to eight blocks from the Hopper. Set the difficulty to Normal and use the NEI game-mode control to return to Survival. Verify hearts and hunger in the HUD. Stand within sight and a few blocks to the side. Watch for the short blink, hands-up pose and mint link as the Saboteur reaches the Hopper.
 4. Strike it during the link to cancel. Let a later attempt finish, then check the Hopper GUI and receiver. Items can still enter the Hopper during the pause. Watch the receiver gain items again and reconcile the three inventories. Repeat with the approach sealed or the Hopper positioned on a raised platform.
 5. Compare recognition during torchlight and an ordinary fight. Assess whether the hands and link read from several blocks away, whether 25 ticks is enough reaction time and whether the blink, four-second pause and six-second action cooldown feel fair.
 
@@ -36,14 +36,33 @@ The authenticated `saboteur.nearby` query takes empty arguments and returns at m
 .\zto-tools\test-saboteur-runtime.ps1
 .\zto-tools\test-saboteur-runtime.ps1 -Mode restart
 .\zto-tools\test-saboteur-runtime.ps1 -Mode stress
+.\zto-tools\test-saboteur-runtime.ps1 -Mode dimension
 .\zto-tools\test-saboteur-runtime.ps1 -Bridge
+.\zto-tools\test-saboteur-runtime.ps1 -WithoutOptionalMods
 ```
 
-The default run places a real input chest, Hopper and receiver on a flat pad with a torchlit alcove and obstruction lane. It exercises the installed collision queries, actual movement, Survival controller attacks, native transfers and reopening the save. The restart probe flushes the world while the lease is active, halts the test process without shutdown hooks and reopens the same save in a separate process. The stress probe uses eight Saboteurs, captures a rendered frame and records aggregate client timing and bounded operation counts. The test entry point is separate from the gameplay selector.
+The default run places a real input chest, Hopper and receiver on a flat pad with a torchlit alcove and obstruction lane. It exercises the installed collision queries, actual movement, Survival controller attacks, native transfers and reopening the save. The restart probe flushes the world while the lease is active, halts the test process without shutdown hooks and reopens the same save in a separate process. The stress probe uses eight Saboteurs, captures a rendered frame and records aggregate client timing and bounded operation counts. The dimension probe calls the installed portal travel code in both directions during a lease. The reduced profile keeps the pinned BuildCraft Core and IC2 archives because existing distillation tiles link their APIs on startup. The test entry point is separate from the gameplay selector.
 
 ## Evidence and limitations
 
-See the completed runtime log and build sidecar for the tested archive. Final owner balance and recognition checks require manual play.
+Baseline `3ddc67b8036bb8cb9472ceae9e6e7a7d503807a7` is the integrated merge of PR #33 on `main`. The archive was built from `554bb935c21331680bdd528bf64598a29fedef1d` with SHA-256 `a102764e60faa52dd7ce32ffb4fc29e502a50f3d4152efcf99d1a730255401d3`. The sidecar reports a dirty worktree because two pre-existing, untracked owner documents were present. The tracked production source and assets matched the build commit. Later fixture and evidence commits leave those files unchanged.
+
+| Status | Evidence |
+| --- | --- |
+| PASS | JDK 8, MCP 6.2 and development Forge 3.4.9.171 compiled and reobfuscated the client. Streaming validation checked 313 archive entries, including the two Saboteur textures and renderer model. |
+| PASS | Tekkit Classic 3.1.2 ran Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 1.8.0_51. The probes verified zero music and effects and an uninitialized audio backend on a private desktop. |
+| PASS | The Survival probe observed normal movement, a valid blink, a landed player hit, target-replacement cancellation, lease exclusivity and output recovery after timeout, death, Save and Quit, native chunk unload and Peaceful. All 320 cobblestone remained accounted for across the input chest, Hopper and receiver. The input chest drained during the pause and the receiver stayed constant. The block ID, facing metadata and live tile stayed intact during transfer checks. |
+| PASS | With the Bridge disabled, the exercise observed one successful blink in two attempts and checked four candidates. An obstructed attempt failed. Direct production geometry checks also rejected closed wood, stone, glass, stairs, half steps, gaps, unsafe height and unloaded space. The trial averaged about 13 µs over 96 open sweeps, including harness reflection. |
+| PASS | A separate process reopened the same save after an abrupt halt during the lease. The fixture waited for native chunk writes before halting. The persisted Saboteur had a clean target and the Hopper resumed operating from the durable checkpoint, conserving all 320 items. A native trip to the Nether and back also cleared a live lease and preserved all 320 items. |
+| PASS | The Dev Bridge observed a visible target's windup, cancellation, a positive lease remainder and expiration over authenticated HTTP. Actual daylight and torchlight captures showed the crouched model, luminous eyes and particle link. |
+| PASS | Eight Saboteurs remained live for 120 stress ticks. The sample recorded 7 scans, 33 path plans, 9 blink checks and 7 diversions. The nearby unsupported furnace retained its block, facing and five items. The client used about 7.4 s of game-thread CPU over 7.5 s wall time. Used heap sampled 126 MB at setup and 121 MB at the end. These figures cover the whole client and include rendering and garbage collection. Per-actor tick cost and long-duration heap retention were not isolated. |
+| PASS | Both Creative catalogs and NEI listed one Saboteur egg. Placement, collision rejection, repeated Creative use and the native save names for all three roles passed. Skirmisher movement and Pulse, Breacher obstruction, lunar recurrence and replay, territorial threat and encounter cap probes passed. The configuration runtime passed five startup and migration cases. |
+| PASS | Portable config, bridge, Hopper with IC2 and BuildCraft absent, territory, assault policy, lunar, crafting, and distillation core/layout checks passed. |
+| PASS | The reduced client completed the real movement, sabotage, transfer and recovery scenario with only BuildCraft Core, IC2 and ZTO in the mods folder. The fixture did not load EE2, RedPower or BuildCraft transport. BuildCraft Core reported its missing optional power framework during startup and gameplay proceeded. |
+| BLOCKED | The mod by itself cannot start without BuildCraft Core. The existing distillation registry links `buildcraft.api.ILiquidContainer` during startup, before a fixture can run. The portable Hopper test also covers its inventory and NBT path without IC2 or BuildCraft. |
+| NOT RUN | Owner combat balance, unrestricted play across naturally generated terrain, dedicated or remote-server behavior, and standalone in-pack distillation and crafting transactions for this candidate. |
+
+Reports are under `dist-zto/test-reports/` and `dist-zto/saboteur-*.log`. The generated captures and disposable saves remain local.
 
 The prototype targets pinned local singleplayer and conservatively rejects obstructed or uneven blinks. Its sampler is intended for hand-placed test encounters and visible attack lanes. The current prototype can target an exposed, empty Hopper of the supported type. A natural encounter needs owner approval, one shared special-role allocation, role-aware safe placement, validation across terrain and player defenses, and a deliberate policy for nearby machinery before selecting this role.
 

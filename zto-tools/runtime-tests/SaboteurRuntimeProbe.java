@@ -1,4 +1,5 @@
 import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.TileHopper;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 
 /** Drives disposable fixtures through the installed 1.2.5 pack and the packaged mod. */
@@ -20,9 +22,9 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     private static File directory;
     private static String save, mode;
     private Field focus;
-    private boolean done, walked, aimed, capturedCancellation;
+    private boolean done, walked, aimed, capturedCancellation, leavingChunk;
     private int stage, priorBlinks, pausedOutput, pausedInput, hopperId;
-    private long tick = Long.MIN_VALUE, since, stressStarted;
+    private long tick = Long.MIN_VALUE, since, stressStarted, stressCpu, stressHeap;
     private double priorX, priorZ;
     private EntitySaboteur mob, contender;
     private TileHopper hopper;
@@ -94,7 +96,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             tick = game.f.w();
             long age = tick - since;
             check(age < 340, "stage " + stage + " timed out" + state());
-            if ("reopen".equals(mode)) {
+            if ("reopen".equals(mode) || "dimension".equals(mode) && stage == 3) {
                 if (count(output) > pausedOutput) finish(game);
             } else if ("stress".equals(mode)) {
                 if (age % 20 == 0) game.h.l(20);
@@ -131,6 +133,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             ((io) game.f.b(HOPPER_X, Y, Z - 1)).a(2, new aan(ITEM, 5, 0));
             for (int i = 0; i < 8; i++) spawn(game, X + 4.5D + (i % 4), Z - 0.5D + (i / 4) * 2);
             stressStarted = System.nanoTime();
+            stressCpu = ManagementFactory.getThreadMXBean().getCurrentThreadCpuTime();
+            stressHeap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
         } else {
             blinkGeometry(game);
             game.f.g(HOPPER_X, Y + 1, Z, 54);
@@ -148,6 +152,13 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
 
     private void exercise(Minecraft game, long age) throws Exception {
         identity(game);
+        if (stage == 11 && leavingChunk) {
+            player(game, HOPPER_X - 2.5D, Z + 10.5D, -180);
+        } else if (stage >= 3 && stage <= 12 || stage == 2 && capturedCancellation) {
+            double x = stage == 10 ? HOPPER_X + 2.5D : HOPPER_X - 2.5D;
+            lookAtFixture(game, x, Z + 3.7D);
+            if (age % 20 == 0) game.h.l(20);
+        }
         double distance = Math.hypot(mob.o - priorX, mob.q - priorZ);
         if (mob.blinks() == priorBlinks && distance > 0.025D && distance < 0.8D) walked = true;
         if (mob.blinks() > priorBlinks)
@@ -170,7 +181,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 check(mob.scannedBlocks() <= mob.scans() * 17 * 17 * 5, "bounded scan work");
                 check(mob.pathPlans() > 0 && mob.pathPlans() <= mob.V / 20 + 1, "bounded path requests");
                 screenshot(game, "windup");
-                if ("halt".equals(mode)) { advance(game); return; }
+                if ("halt".equals(mode) || "dimension".equals(mode)) { advance(game); return; }
                 player(game, mob.o - 0.9D, mob.q + 0.75D, -120);
                 int health = mob.bb();
                 game.c.b(game.h, mob);
@@ -180,10 +191,9 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 advance(game);
                 return;
             case 2:
-                if (!"halt".equals(mode) && !capturedCancellation && age >= 3) {
+                if ("exercise".equals(mode) && !capturedCancellation && age >= 3) {
                     screenshot(game, "cancelled");
                     capturedCancellation = true;
-                    player(game, X + 1.5D, Z + 2.4D, -65);
                 }
                 if (!hopper.isDisrupted()) return;
                 check(mob.disruptions() == 1 && "APPLIED".equals(mob.lastOutcome()), "windup applied a real pause");
@@ -194,10 +204,14 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 lookAtFixture(game, HOPPER_X - 2.5D, Z + 3.7D);
                 System.out.println("SABOTEUR applied at output=" + pausedOutput + state());
                 if ("halt".equals(mode)) {
-                    game.f.a(true, (rw) null);
+                    game.f.a((rw) null); // Save world and wait for the native chunk I/O queue.
                     System.out.println("SABOTEUR PASS halt");
                     System.out.flush();
                     Runtime.getRuntime().halt(23);
+                }
+                if ("dimension".equals(mode)) {
+                    switchDimension(game);
+                    return;
                 }
                 advance(game);
                 return;
@@ -225,6 +239,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             case 6:
                 check(mob.pose() == EntitySaboteur.CANCELLED && "TARGET_CHANGED".equals(mob.lastOutcome())
                         && !hopper.isDisrupted(), "new tile at the same block cancels stale windup");
+                System.out.println("SABOTEUR replacement cancelled the pending windup");
                 advance(game);
                 return;
             case 7:
@@ -237,8 +252,13 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             case 8:
                 if (count(output) == pausedOutput) return;
                 check(age <= 8, "output resumed after death");
+                System.out.println("SABOTEUR death recovery ticks=" + age);
                 mob = spawn(game, HOPPER_X - 1.5D, Z + 0.5D);
                 contender = spawn(game, HOPPER_X + 0.5D, Z + 2.2D);
+                // Fix two valid acquisition offsets so both candidates commit to the same target.
+                Field scan = field(EntitySaboteur.class, "nextScan");
+                scan.setInt(mob, 1);
+                scan.setInt(contender, 3);
                 priorBlinks = 0;
                 priorX = mob.o;
                 priorZ = mob.q;
@@ -250,7 +270,9 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 EntitySaboteur loser = winner == mob ? contender : mob;
                 if (!"ALREADY_PAUSED".equals(loser.lastOutcome())) return;
                 check(winner.disruptions() == 1 && loser.disruptions() == 0 && loser.cancelled() > 0,
-                        "overlapping windups produce one lease and one cancellation");
+                        "overlapping windups produce one lease and one cancellation: loser windups="
+                                + loser.windups() + " cancellations=" + loser.cancelled() + " pose=" + loser.pose());
+                System.out.println("SABOTEUR overlapping attempts produced one lease and one cancellation");
                 mob = winner;
                 check(loser.a(md.j, 100) && hopper.isDisrupted(), "loser's death leaves the winner's lease in force");
                 contender = null;
@@ -270,6 +292,11 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             case 11:
                 if (count(output) <= pausedOutput) return;
                 if (!hopper.isDisrupted()) return;
+                if (!leavingChunk) {
+                    leavingChunk = true;
+                    return;
+                }
+                if (game.h.ag == (Z >> 4)) return;
                 verifyChunkUnload(game);
                 advance(game);
                 return;
@@ -307,6 +334,17 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         priorZ = mob.q;
     }
 
+    private void switchDimension(Minecraft game) throws Exception {
+        xd overworld = game.f;
+        player(game, HOPPER_X - 9.5D, Z + 10.5D, -90);
+        game.a(-1);
+        check(game.f != overworld && !hopper.isDisrupted(), "native portal travel invalidated the old world's lease");
+        game.a(0);
+        game.f.z().c(HOPPER_X >> 4, Z >> 4);
+        confirmReopen(game);
+        System.out.println("SABOTEUR native dimension round trip discarded the prior lease");
+    }
+
     private void confirmReopen(Minecraft game) throws Exception {
         readFixture(game);
         identity(game);
@@ -315,8 +353,10 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         check(saved.size() == 1, "one persisted Saboteur");
         mob = saved.get(0);
         check(TacticalHostiles.SABOTEUR.equals(aao.b(mob)) && mob.pose() == EntitySaboteur.IDLE
-                && mob.disruptionTarget() == null && mob.actionCooldown() == 0,
+                && mob.disruptionTarget() == null && mob.actionCooldown() == 0
+                && field(TacticalHostile.class, "target").get(mob) == null,
                 "native name and clean tactical state after world reload" + state());
+        System.out.println("SABOTEUR reopened with native name, clean target and all " + TOTAL + " items");
         priorBlinks = 0;
         priorX = mob.o;
         priorZ = mob.q;
@@ -360,6 +400,10 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         check(!game.f.z().a(edge, z >> 4), "probe chunk starts unloaded");
         sample.c(edge * 16 + 1.5D, Y, z + 0.5D, 0, 0);
         expectBlink(check, sample, 2.75D, "CHUNK_UNLOADED");
+        Method scan = EntitySaboteur.class.getDeclaredMethod("scan");
+        scan.setAccessible(true);
+        scan.invoke(sample);
+        check(sample.scans() == 1 && sample.scannedBlocks() == 0, "scan skips unloaded columns");
         check(!game.f.z().a(edge, z >> 4), "blink validation never loads the probe chunk");
         System.out.println("SABOTEUR blink open, narrow, wall, closed door, half step, gap, range, height and unloaded cases passed");
     }
@@ -380,6 +424,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             diversions += entity.diversions();
             check(entity.disruptions() == 0, "unsupported target cannot be disrupted");
             check(entity.blinkChecks() <= 3 * entity.blinkAttempts(), "stress candidate bound");
+            check(entity.scans() <= entity.V / 24 + 1 && entity.pathPlans() <= entity.V / 20 + 1,
+                    "per-actor scan and planning cadence");
         }
         check(diversions > 0, "fallback produces harmless diversion");
         check(game.f.a(HOPPER_X, Y, Z - 1) == 61 && game.f.e(HOPPER_X, Y, Z - 1) == 3
@@ -387,6 +433,10 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         System.out.println("SABOTEUR stress actors=8 ticks=120 realMs=" + (System.nanoTime() - stressStarted) / 1000000
                 + " scans=" + scans + " pathPlans=" + plans + " blinkChecks=" + checks + " diversions=" + diversions
                 + " entities=" + game.f.b.size());
+        long currentCpu = ManagementFactory.getThreadMXBean().getCurrentThreadCpuTime();
+        System.out.println("SABOTEUR stress clientThreadCpuMs=" + (stressCpu < 0 || currentCpu < 0
+                ? "unsupported" : Long.toString((currentCpu - stressCpu) / 1000000))
+                + " heapBytesStart=" + stressHeap + " heapBytesEnd=" + ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed());
         screenshot(game, "stress");
         finish(game);
     }

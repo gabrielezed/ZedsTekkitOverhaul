@@ -1,12 +1,16 @@
 [CmdletBinding()]
-param([ValidateSet('exercise', 'restart', 'stress')][string]$Mode = 'exercise', [switch]$Bridge)
+param(
+    [ValidateSet('exercise', 'restart', 'stress', 'dimension')][string]$Mode = 'exercise',
+    [switch]$Bridge,
+    [switch]$WithoutOptionalMods
+)
 
 $ErrorActionPreference = 'Stop'
 if ($Bridge -and $Mode -ne 'exercise') { throw 'Use -Bridge with exercise.' }
 $root = Split-Path $PSScriptRoot
 $runtime = Join-Path $root 'dist-zto/survival-hud-runtime'
 . (Join-Path $PSScriptRoot 'runtime-tests/IsolatedRuntime.ps1')
-$game = New-IsolatedRuntimeGame $runtime
+$game = New-IsolatedRuntimeGame $runtime -WithoutOptionalMods:$WithoutOptionalMods
 $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
 $deployed = Join-Path $game 'mods/ZedsTekkitOverhaul.jar'
 Copy-Item -LiteralPath $candidate -Destination $deployed -Force
@@ -78,6 +82,7 @@ function Invoke-Probe([string]$Phase, [int]$ExpectedExit) {
 }
 
 Write-Output "SABOTEUR $Mode $save SHA-256 $hash"
+if ($WithoutOptionalMods) { Write-Output 'SABOTEUR optional mods omitted from the disposable mods directory' }
 Write-Output "SABOTEUR game $game"
 if ($Mode -eq 'restart') {
     Invoke-Probe 'halt' 23

@@ -4,9 +4,9 @@ The Saboteur and Tank are approved creative directions. [Alpha.5 implements the 
 
 ## Saboteur prototype
 
-A short Enderkin with quick, intermittent movement draws the player's attention away from the main assault. Test a footprint roughly 0.45 blocks wide and 1.1 tall, with a low silhouette, a bright hand pose and a distinct target-facing windup. Its direct attack is a low-damage escape tool. Its priority is a visible, accessible point of interruption. An exposed player can decide whether to abandon cover, send fire toward the Saboteur, or let the interruption expire.
+A short Enderkin with quick, intermittent movement draws the player's attention away from the main assault. Test a footprint roughly 0.45 blocks wide and 1.1 tall, with a low silhouette and a distinct target-facing windup. Its direct attack is a low-damage escape tool. Its priority is a visible, accessible point of interruption. An exposed player can decide whether to abandon cover, send fire toward the Saboteur, or let the interruption expire.
 
-Alpha.5 uses the real ZTO Hopper as the sender. Only initiation of new outgoing transfers stops under a short in-memory lease. The Hopper can still pull and collect. An Ender effect appears on the Hopper and its GUI reports the output pause. The Saboteur can perform a harmless diversion when no supported target is accessible.
+Alpha.5 pauses outgoing transfers at the ZTO Hopper or at a ZTO Distillation Receiver serving a verified wooden liquid extractor. The [owner-feedback revision](saboteur-owner-revision.md) describes the implemented targets, separate evasive blink and remaining integration boundaries. The table records the original prototype before that revision.
 
 | Step | Alpha.5 implementation and design envelope |
 | --- | --- |

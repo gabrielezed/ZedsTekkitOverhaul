@@ -5,11 +5,19 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import buildcraft.api.ILiquidContainer;
+import buildcraft.api.Orientations;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.opengl.GL11;
+import zed.tekkitoverhaul.distillation.DistillateType;
+import zed.tekkitoverhaul.distillation.DistillationLayout;
+import zed.tekkitoverhaul.distillation.DistillationPartType;
+import zed.tekkitoverhaul.distillation.DistillationRegistry;
+import zed.tekkitoverhaul.distillation.TileEntityDistillationBoiler;
+import zed.tekkitoverhaul.distillation.TileEntityDistillationReceiver;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.TileHopper;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
@@ -22,13 +30,22 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     private static File directory;
     private static String save, mode;
     private Field focus;
-    private boolean done, walked, aimed, capturedCancellation, leavingChunk;
+    private boolean done, walked, aimed, capturedCancellation, leavingChunk, captureEvade;
     private int stage, priorBlinks, pausedOutput, pausedInput, hopperId;
     private long tick = Long.MIN_VALUE, since, stressStarted, stressCpu, stressHeap;
     private double priorX, priorZ;
     private EntitySaboteur mob, contender;
     private TileHopper hopper;
     private io input, output;
+    private static final int FLUID_TOTAL = 6000;
+    private TileEntityDistillationReceiver receiver;
+    private ILiquidContainer tank, controlSource, controlTank;
+    private Object woodPipe, pipeTransport, controlPipe, controlTransport;
+    private int liquidId, paidOut, atPause, controlAtPause, blockedFor, realHits, finishedFights, combatBlinks;
+    private int previousReserve = FLUID_TOTAL;
+    private int rangedHits, lastCombatHealth;
+    private long fightStart, combatTicks;
+    private double initialGround, minGround, maxGround;
 
     public static final class Bootstrap implements ITickHandler {
         private boolean ready;
@@ -93,6 +110,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 open(game);
                 hopperId = HopperRegistry.block.bO;
                 if ("reopen".equals(mode)) confirmReopen(game);
+                else if ("transport-reopen".equals(mode)) reopenTransport(game);
                 else setup(game);
                 return;
             }
@@ -105,6 +123,12 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             } else if ("stress".equals(mode)) {
                 if (age % 20 == 0) game.h.l(20);
                 if (age >= 120) stress(game);
+            } else if (mode.startsWith("transport")) {
+                transport(game, age);
+            } else if ("combat".equals(mode)) {
+                combat(game, age);
+            } else if ("terrain".equals(mode)) {
+                terrain(game, age);
             } else {
                 exercise(game, age);
             }
@@ -117,6 +141,11 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
 
     private void setup(Minecraft game) throws Exception {
         game.f.a(6000L);
+        if ("terrain".equals(mode)) {
+            setupTerrain(game);
+            advance(game);
+            return;
+        }
         for (int x = X - 12; x <= X + 14; x++) {
             for (int z = Z - 11; z <= Z + 10; z++) {
                 game.f.g(x, Y - 1, z, 1);
@@ -132,7 +161,11 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
         game.f.g(HOPPER_X - 1, Y, Z - 1, 50);
         player(game, X + 1.5D, Z + 2.4D, -65);
         check(!game.h.aT.a && !game.h.aT.d, "player is vulnerable in Survival");
-        if ("stress".equals(mode)) {
+        if (mode.startsWith("transport")) {
+            setupTransport(game);
+        } else if ("combat".equals(mode)) {
+            startFight(game, 1);
+        } else if ("stress".equals(mode)) {
             game.f.d(HOPPER_X, Y, Z - 1, 61, 3);
             ((io) game.f.b(HOPPER_X, Y, Z - 1)).a(2, new aan(ITEM, 5, 0));
             for (int i = 0; i < 8; i++) spawn(game, X + 4.5D + (i % 4), Z - 0.5D + (i / 4) * 2);
@@ -152,6 +185,293 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             identity(game);
         }
         advance(game);
+    }
+
+    private void setupTerrain(Minecraft game) {
+        for (int x = X - 20; x <= X + 16; x++) {
+            for (int z = Z - 20; z <= Z + 20; z++) {
+                if (!game.f.z().a(x >> 4, z >> 4) || !game.f.z().a((x + 4) >> 4, z >> 4)) continue;
+                int lower = game.f.g(x, z), upper = game.f.g(x + 4, z);
+                if (upper - lower != 1 || game.f.a(x, lower - 1, z) != 2
+                        || game.f.a(x + 4, upper - 1, z) != 2) continue;
+                boolean continuous = true;
+                for (int dx = 1; dx < 4; dx++) {
+                    int y = game.f.g(x + dx, z);
+                    if ((y != lower && y != upper) || game.f.a(x + dx, y - 1, z) != 2) continuous = false;
+                }
+                if (!continuous) continue;
+                game.h.c(x + 4.5D, upper, z + 0.5D, 90, 8);
+                mob = spawnAt(game, x + 0.5D, lower, z + 0.5D);
+                initialGround = minGround = maxGround = mob.y.b;
+                priorX = mob.o;
+                priorZ = mob.q;
+                System.out.println("SABOTEUR generated terrain ground " + lower + " to " + upper + " at " + x + "," + z);
+                return;
+            }
+        }
+        throw new AssertionError("No generated grass slope in the loaded fixture area");
+    }
+
+    private void terrain(Minecraft game, long age) throws Exception {
+        minGround = Math.min(minGround, mob.y.b);
+        maxGround = Math.max(maxGround, mob.y.b);
+        if (age < 100) return;
+        double travel = Math.hypot(mob.o - priorX, mob.q - priorZ);
+        check(travel > 1 && mob.scans() > 0 && maxGround > initialGround + 0.75D,
+                "actor moved and climbed in generated terrain" + state());
+        System.out.println("SABOTEUR terrain traveled " + travel + " blocks; ground range=" + minGround + ".."
+                + maxGround + "; " + state());
+        finish(game);
+    }
+
+    private void setupTransport(Minecraft game) throws Exception {
+        game.f.d(HOPPER_X - 1, Y, Z, DistillationRegistry.blockId(DistillationPartType.BOILER), 2);
+        TileEntityDistillationBoiler boiler = (TileEntityDistillationBoiler) game.f.b(HOPPER_X - 1, Y, Z);
+        for (int i = 0; i < 6; i++) {
+            DistillationLayout.Placement p = DistillationLayout.placement(HOPPER_X - 1, Y, Z,
+                    DistillationLayout.Facing.EAST, i);
+            game.f.d(p.x, p.y, p.z, DistillationRegistry.blockId(p.part), 2);
+        }
+        // Seed the ordinary fluid buffer; all transfers below are native BuildCraft ticks.
+        int fraction = DistillateType.GASOLINE.id;
+        boiler.getProcess().restore(0, 0, FLUID_TOTAL, fraction, fraction, 0);
+        int tankId = ((pb) staticField("BuildCraftFactory", "tankBlock")).bO;
+        placeWoodLine(game, HOPPER_X, tankId);
+        int controlX = HOPPER_X - 5;
+        game.f.g(controlX, Y + 1, Z, tankId);
+        placeWoodLine(game, controlX, tankId);
+        readTransport(game);
+        liquidId = receiver.getLiquidId();
+        check(controlSource.fill(Orientations.YPos, FLUID_TOTAL, liquidId, true) == FLUID_TOTAL, "seed control tank");
+        player(game, HOPPER_X + 4.4D, Z - 2.25D, 60);
+    }
+
+    private void readTransport(Minecraft game) throws Exception {
+        receiver = (TileEntityDistillationReceiver) game.f.b(HOPPER_X, Y + 1, Z);
+        tank = (ILiquidContainer) game.f.b(HOPPER_X, Y + 1, Z + 2);
+        woodPipe = game.f.b(HOPPER_X, Y + 1, Z + 1);
+        pipeTransport = pipeTransport(woodPipe);
+        int controlX = HOPPER_X - 5;
+        controlSource = (ILiquidContainer) game.f.b(controlX, Y + 1, Z);
+        controlTank = (ILiquidContainer) game.f.b(controlX, Y + 1, Z + 2);
+        controlPipe = game.f.b(controlX, Y + 1, Z + 1);
+        controlTransport = pipeTransport(controlPipe);
+    }
+
+    private void placeWoodLine(Minecraft game, int x, int tankId) throws Exception {
+        game.f.g(x, Y + 1, Z + 2, tankId);
+        yr pipe = (yr) staticField("BuildCraftTransport", "pipeLiquidsWood");
+        check(pipe.a(new aan(pipe), game.h, game.f, x, Y + 1, Z, Orientations.ZPos.ordinal()), "place native pipe");
+        game.f.f(x, Y + 1, Z + 1, Orientations.ZNeg.ordinal());
+        int engine = ((pb) staticField("BuildCraftEnergy", "engineBlock")).bO;
+        game.f.d(x + 1, Y + 1, Z + 1, engine, 0);
+        Object engineTile = game.f.b(x + 1, Y + 1, Z + 1);
+        engineTile.getClass().getField("orientation").setInt(engineTile, Orientations.XNeg.ordinal());
+        game.f.g(x + 1, Y, Z + 2, 1);
+        game.f.d(x + 1, Y + 1, Z + 2, 76, 5);
+    }
+
+    private void reopenTransport(Minecraft game) throws Exception {
+        readTransport(game);
+        liquidId = receiver.getLiquidId();
+        check(!receiver.isDisrupted() && receiver.blockedOffers() == 0 && receiver.getLiquidQuantity() > 0,
+                "native reopen has a stocked receiver and a clean endpoint lease");
+        atPause = receiver.getLiquidQuantity();
+        paidOut = tank.getLiquidQuantity();
+        stage = 3;
+        advance(game);
+    }
+
+    private static Object staticField(String owner, String name) throws Exception {
+        return Class.forName(owner).getField(name).get(null);
+    }
+
+    private static Object pipeTransport(Object tile) throws Exception {
+        Object pipe = tile.getClass().getField("pipe").get(tile);
+        return pipe.getClass().getField("transport").get(pipe);
+    }
+
+    private int pipeQuantity(Object transport) throws Exception {
+        Object center = transport.getClass().getField("center").get(transport);
+        int total = bufferQuantity(center);
+        for (Object side : (Object[]) transport.getClass().getField("side").get(transport)) total += bufferQuantity(side);
+        return total;
+    }
+
+    private int bufferQuantity(Object buffer) throws Exception {
+        int amount = field(buffer.getClass(), "qty").getShort(buffer);
+        check(amount >= 0 && (amount == 0 || buffer.getClass().getField("liquidId").getShort(buffer) == liquidId),
+                "pipe conserves fluid type");
+        return amount;
+    }
+
+    private void transport(Minecraft game, long age) throws Exception {
+        check(game.f.b(HOPPER_X, Y + 1, Z + 1) == woodPipe
+                && pipeTransport(woodPipe) == pipeTransport && game.f.b(HOPPER_X, Y + 1, Z) == receiver,
+                "receiver, pipe tile and transport identities");
+        int reserve = receiver.getLiquidQuantity(), delivered = tank.getLiquidQuantity();
+        boolean extractedThisTick = reserve < previousReserve;
+        previousReserve = reserve;
+        int controlDelivered = controlTank.getLiquidQuantity();
+        check(reserve + pipeQuantity(pipeTransport) + delivered == FLUID_TOTAL, "supported fluid conservation");
+        check(controlSource.getLiquidQuantity() + pipeQuantity(controlTransport) + controlDelivered == FLUID_TOTAL,
+                "standalone wood pipe fluid conservation");
+        check((delivered == 0 || tank.getLiquidId() == liquidId)
+                && (controlDelivered == 0 || controlTank.getLiquidId() == liquidId), "tank retains fluid type");
+        if (stage == 1 && delivered > 0 && controlDelivered > 0 && extractedThisTick
+                && receiver.activeExtractionPipe() == woodPipe) {
+            player(game, HOPPER_X + 4.4D, Z - 2.25D, 60);
+            mob = spawn(game, HOPPER_X + 1.5D, Z - 0.5D);
+            check(mob.canEngageEncounterPlayer(game.h), "vulnerable player near the exposed receiver");
+            mob.engageEncounterPlayer(game.h);
+            // Align the first scan with the live, newly observed feed from the stock engine.
+            field(EntitySaboteur.class, "nextScan").setInt(mob, 1);
+            advance(game);
+        } else if (stage == 2 && !receiver.isDisrupted()) {
+            if (age % 10 == 0) player(game, HOPPER_X + 4.4D, Z - 2.25D, 60);
+        } else if (stage == 2 && receiver.isDisrupted()) {
+            check(mob.disruptions() == 1 && "BUILDCRAFT_RECEIVER".equals(mob.targetType()), "real endpoint lease");
+            atPause = reserve;
+            controlAtPause = controlDelivered;
+            System.out.println("SABOTEUR BuildCraft lease began with " + pipeQuantity(pipeTransport) + " mB in flight");
+            advance(game);
+        } else if (stage == 3) {
+            if (receiver.isDisrupted()) {
+                check(reserve == atPause, "source stops draining at the gated endpoint");
+                if (age >= 5 && receiver.blockedOffers() > 0 && !"transport".equals(mode)) {
+                    System.out.println("SABOTEUR BuildCraft lifecycle checkpoint: "
+                            + pipeQuantity(pipeTransport) + " mB in flight, blockedOffers=" + receiver.blockedOffers());
+                    if ("transport-halt".equals(mode)) {
+                        game.f.a((rw) null);
+                        System.out.println("SABOTEUR PASS transport-halt");
+                        System.out.flush();
+                        Runtime.getRuntime().halt(23);
+                    } else {
+                        saveQuit(game);
+                        open(game);
+                        reopenTransport(game);
+                    }
+                    return;
+                }
+                if (age == 20) screenshot(game, "buildcraft-paused");
+                if (pipeQuantity(pipeTransport) == 0) {
+                    if (blockedFor++ == 0) paidOut = delivered;
+                    check(delivered == paidOut, "finished pipe buffer stays empty during the pause");
+                }
+            } else {
+                check(receiver.blockedOffers() > 0 && blockedFor > 0 && controlDelivered > controlAtPause,
+                        "actual interrupted offers, exhausted in-flight payload and continued standalone line");
+                System.out.println("SABOTEUR BuildCraft endpoint paused for " + age + " ticks, blockedOffers="
+                        + receiver.blockedOffers() + ", sourceMB=" + atPause + ", deliveredMB=" + paidOut
+                        + ", idleTicks=" + blockedFor + ", standaloneDeliveredMB=" + controlDelivered);
+                advance(game);
+            }
+        } else if (stage == 4 && reserve < atPause && delivered > paidOut) {
+            System.out.println("SABOTEUR BuildCraft resumed after " + age + " ticks, conserved " + FLUID_TOTAL
+                    + " mB on each line, liquidId=" + liquidId);
+            finish(game);
+        }
+    }
+
+    private void startFight(Minecraft game, int fight) {
+        double x = X + 0.5D, z = Z + 5.5D;
+        if (fight == 4) {
+            for (int dx = -4; dx <= 1; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int y = Y; y <= Y + 1; y++) game.f.g(X + dx, y, Z + 5 + dz, 0);
+                }
+            }
+        }
+        if (fight == 2 || fight == 3) {
+            for (int dz = -2; dz <= 2; dz++)
+                for (int y = Y; y <= Y + 1; y++) game.f.g(X + 1, y, Z + 5 + dz, 1);
+        }
+        if (fight == 3) {
+            for (int dx = -4; dx <= 1; dx++) {
+                for (int y = Y; y <= Y + 1; y++) {
+                    game.f.g(X + dx, y, Z + 4, 1);
+                    game.f.g(X + dx, y, Z + 6, 1);
+                }
+            }
+        }
+        if (fight == 5) {
+            // Leave the pad edge and ordinary generated terrain ahead of the shooter.
+            x = X - 9.5D;
+            z = Z - 4.5D;
+        }
+        if (fight == 5) {
+            player(game, x + 7, z, 90);
+        } else {
+            player(game, x - 1.15D, z, -90);
+        }
+        mob = spawn(game, x, z);
+        lastCombatHealth = mob.bb();
+        fightStart = game.f.w();
+        priorBlinks = 0;
+    }
+
+    private void combat(Minecraft game, long age) throws Exception {
+        if (captureEvade) {
+            screenshot(game, "evade");
+            captureEvade = false;
+        }
+        if (age % 20 == 0) game.h.l(20);
+        if (stage == 5) {
+            if (mob.bb() < lastCombatHealth) rangedHits++;
+            lastCombatHealth = mob.bb();
+            if (age == 8 || age == 25 || age == 42 || age == 59) {
+                double dx = mob.o - game.h.o, dz = mob.q - game.h.q;
+                double range = Math.hypot(dx, dz);
+                nm arrow = new nm(game.f, game.h, 2.2F);
+                double height = game.h.y.b + 1.5D;
+                arrow.d(game.h.o, height, game.h.q);
+                arrow.a(dx, mob.y.b + 0.55D - height + 0.02D * range, dz, 2.2F, 0);
+                check(game.f.a(arrow), "native arrow projectile inserted");
+            }
+        }
+        if (mob.blinks() > priorBlinks) {
+            combatBlinks += mob.blinks() - priorBlinks;
+            if (stage == 2 && priorBlinks == 0 && mob.o <= X + 0.78D
+                    && Math.abs(mob.q - (Z + 5.5D)) > 2) {
+                System.out.println("SABOTEUR combat lateral escape beside wall at " + mob.o + "," + mob.q);
+                double dx = mob.o - game.h.o, dz = mob.q - game.h.q;
+                player(game, game.h.o, game.h.q, (float) Math.toDegrees(Math.atan2(dz, dx)) - 90);
+                game.h.v = 14;
+                captureEvade = true;
+            }
+            priorBlinks = mob.blinks();
+        }
+        if (stage < 5 && age > 14 && age % 11 == 0 && mob.bb() > 0) {
+            // A pursuing player closes on the new location; the native Survival controller lands the blow.
+            if (stage == 1 || stage == 2) player(game, mob.o - 1.13D, mob.q, -90);
+            if (Math.hypot(game.h.o - mob.o, game.h.q - mob.q) < 2) {
+                int before = mob.bb();
+                game.c.b(game.h, mob);
+                if (before > mob.bb()) realHits++;
+            }
+        }
+        if (stage == 3 && age < 12) check(mob.o < X + 1, "cannot evade through sealed rear wall");
+        if (mob.bb() <= 0 || age >= (stage == 3 ? 175 : 100)) {
+            if (mob.bb() <= 0) finishedFights++;
+            int attempts = mob.blinkAttempts();
+            long ticks = game.f.w() - fightStart;
+            combatTicks += ticks;
+            System.out.println("SABOTEUR combat engagement=" + stage + " ticks=" + ticks + " health=" + mob.bb()
+                    + " blinks=" + mob.blinks() + "/" + attempts + " result=" + mob.lastBlinkResult());
+            if (stage < 5) {
+                if (mob.bb() > 0) mob.a(md.j, 100);
+                startFight(game, stage + 1);
+                advance(game);
+            } else {
+                check(realHits >= 6 && finishedFights > 0, "Survival strikes land and finish a Saboteur");
+                check(rangedHits > 0, "arrows in flight can land meaningful damage");
+                System.out.println("SABOTEUR combat engagements=5, landedHits=" + realHits + ", rangedHits="
+                        + rangedHits + ", kills=" + finishedFights
+                        + ", blinks=" + combatBlinks + ", blinksPerMinute=" + 1200.0 * combatBlinks / combatTicks
+                        + ", blinksPerEngagement=" + combatBlinks / 5.0);
+                finish(game);
+            }
+        }
     }
 
     private void exercise(Minecraft game, long age) throws Exception {
@@ -181,7 +501,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 if (mob.windupRemaining() > 19) return;
                 check(mob.disruptionTarget() == hopper, "acquired the exact Hopper");
                 check(walked && mob.blinks() > 0 && count(output) > 0, "normal movement, blink and real transfer before windup" + state());
-                check(mob.blinkChecks() <= mob.blinkAttempts() * 3, "bounded blink attempts");
+                check(mob.blinkChecks() <= mob.blinkAttempts() * 6, "bounded blink attempts");
                 check(mob.scannedBlocks() <= mob.scans() * 17 * 17 * 5, "bounded scan work");
                 check(mob.pathPlans() > 0 && mob.pathPlans() <= mob.V / 20 + 1, "bounded path requests");
                 screenshot(game, "windup");
@@ -286,7 +606,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             case 10:
                 if (age < 4) return;
                 check(hopper.isDisrupted(), "winning lease still present before Save and Quit");
-                if (age == 4) screenshot(game, "torchlight");
+                if (age == 22) screenshot(game, "torchlight");
                 if (age < 23) return;
                 pausedOutput = count(output);
                 saveQuit(game);
@@ -435,7 +755,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             checks += entity.blinkChecks();
             diversions += entity.diversions();
             check(entity.disruptions() == 0, "unsupported target cannot be disrupted");
-            check(entity.blinkChecks() <= 3 * entity.blinkAttempts(), "stress candidate bound");
+            check(entity.blinkChecks() <= 6 * entity.blinkAttempts(), "stress candidate bound");
             check(entity.scans() <= entity.V / 24 + 1 && entity.pathPlans() <= entity.V / 20 + 1,
                     "per-actor scan and planning cadence");
         }
@@ -454,9 +774,13 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     }
 
     private static EntitySaboteur spawn(Minecraft game, double x, double z) {
+        return spawnAt(game, x, Y, z);
+    }
+
+    private static EntitySaboteur spawnAt(Minecraft game, double x, int y, double z) {
         EntitySaboteur actor = (EntitySaboteur) aao.a(TacticalHostiles.SABOTEUR, game.f);
         check(actor != null && TacticalHostiles.SABOTEUR.equals(aao.b(actor)), "native Saboteur registration");
-        actor.c(x, Y, z, 0, 0);
+        actor.c(x, y, z, 0, 0);
         check(game.f.a(actor) && Math.abs(actor.I - 0.45F) < 0.001F && Math.abs(actor.J - 1.1F) < 0.001F,
                 "native entity insertion and hitbox");
         check(ahu.a.a(actor).getClass().getName().contains("TacticalRenderer"), "custom native renderer");

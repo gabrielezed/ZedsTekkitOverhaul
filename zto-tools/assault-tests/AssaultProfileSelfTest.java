@@ -59,24 +59,41 @@ public final class AssaultProfileSelfTest {
             // Check the carry slot as well as the admission allocation.
             for (int slot = 0; slot <= wave.planned; slot++) {
                 boolean skeleton = wave.composition.skeleton(slot);
-                if (difficulty == 3) expect(skeleton, "Hard cannot select a vanilla zombie");
+                if (difficulty == 3) {
+                    int zombieSlot = wave.number == 1 && profile == Profile.QUIET ? 0
+                            : wave.number == 1 && profile == Profile.ELEVATED ? 1 : 2;
+                    expect(skeleton == (slot % 3 != zombieSlot), "one native breaching zombie per Hard slot cycle");
+                }
                 if (difficulty < 3 && profile == Profile.QUIET) expect(skeleton == (slot % 4 == 3), "quiet ranged bound");
                 if (difficulty < 3 && profile == Profile.ELEVATED && wave.number == 1) {
                     expect(skeleton == (slot % 2 == 0), "elevated alternating opening");
                 }
-                if (profile != Profile.QUIET && (profile != Profile.ELEVATED || wave.number != 1)) {
-                    boolean legacy = difficulty == 3 || (wave.number == 3 ? slot % 2 == 0 : slot % 3 == 2);
+                if (difficulty < 3 && profile != Profile.QUIET && (profile != Profile.ELEVATED || wave.number != 1)) {
+                    boolean legacy = wave.number == 3 ? slot % 2 == 0 : slot % 3 == 2;
                     expect(skeleton == legacy, "legacy order including carry");
                 }
             }
-            for (boolean enderkin : new boolean[] {false, true}) {
+        }
+        for (boolean enderkin : new boolean[] {false, true}) {
+            for (AssaultWave wave : plan) {
                 EnderkinRole role = EnderkinRole.select(enderkin, -7184827518270584220L, 8, LunarPhase.FULL_MOON, wave.number);
                 EnderkinRole expected = !enderkin || wave.number == 1 ? null
                         : wave.number == 2 ? EnderkinRole.SKIRMISHER : EnderkinRole.BREACHER;
                 expect(role == expected && role == EnderkinRole.select(enderkin, -7184827518270584220L, 8,
                         LunarPhase.FULL_MOON, wave.number), "independent same-seed special role");
-                if (wave.planned == 0) continue;
-                wave.special.reset(role);
+                wave.special.reset(enderkin && wave.planned > 0, -7184827518270584220L, 8,
+                        LunarPhase.FULL_MOON, wave.number);
+            }
+            for (int index = 0; index < plan.length; index++) {
+                AssaultWave wave = plan[index];
+                int reserved = 0;
+                for (int i = index + 1; i < plan.length; i++) {
+                    if (enderkin && plan[i].planned > 0) reserved++;
+                }
+                for (int cap = 2; cap <= 12; cap++) {
+                    expect(AssaultWave.vanillaCeiling(plan, index, cap) == Math.max(1, cap - reserved),
+                            "headroom only for future eligible selected slots");
+                }
                 boolean first = wave.composition.skeleton(wave.inserted);
                 for (int i = 0; i < 4; i++) {
                     wave.reject("NOT_OPEN_TO_SKY");
@@ -84,6 +101,11 @@ public final class AssaultProfileSelfTest {
                     expect(wave.composition.skeleton(wave.inserted) == first, "failed candidate keeps current vanilla slot");
                 }
                 expect(wave.special.pending() == null, "ordinary fallback after rejected special");
+                if (wave.special.selected != null) {
+                    wave.special.reset(true, -7184827518270584220L, 8, LunarPhase.FULL_MOON, wave.number);
+                    wave.special.record(null);
+                    expect(wave.special.inserted && wave.special.pending() == null, "success spends the substitution");
+                }
                 expect(plan[2].composition == AssaultWave.plan(budget, profile, difficulty)[2].composition,
                         "rejections leave later composition frozen");
             }

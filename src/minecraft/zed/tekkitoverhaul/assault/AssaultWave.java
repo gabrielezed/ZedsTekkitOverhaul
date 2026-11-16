@@ -90,6 +90,14 @@ final class AssaultWave {
     int skipped() { return closedAt < 0 ? 0 : unspent(); }
     int deferred() { return closedAt < 0 ? unspent() : 0; }
 
+    static int vanillaCeiling(AssaultWave[] waves, int currentIndex, int activeCap) {
+        int reserved = 0;
+        for (int i = currentIndex + 1; i < waves.length; i++) {
+            if (waves[i].unspent() > 0 && waves[i].special.pending() != null) reserved++;
+        }
+        return Math.max(1, activeCap - reserved);
+    }
+
     int nextStart(int interval, int activeAssault) {
         if (closedAt < 0) return startedAt + interval;
         int spacing = activeAssault == 0 ? Math.max(360, interval / 2) : interval;

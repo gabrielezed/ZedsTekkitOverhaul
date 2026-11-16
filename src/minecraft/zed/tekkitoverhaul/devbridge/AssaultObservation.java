@@ -23,6 +23,7 @@ final class AssaultObservation {
                 .append(",\"budget\":").append(view.budget).append(",\"configuredBudget\":").append(view.configuredBudget)
                 .append(",\"territorialAdaptation\":").append(view.territorialAdaptation)
                 .append(",\"admissionProfile\":").append(code(view.admissionProfile))
+                .append(",\"admissionDifficulty\":").append(view.admissionDifficulty)
                 .append(",\"admissionThreat\":").append(TerritoryObservation.threat(view.admissionThreat))
                 .append(",\"deferred\":").append(view.deferred)
                 .append(",\"skipped\":").append(view.skipped).append(",\"active\":").append(view.active)
@@ -88,6 +89,8 @@ final class AssaultObservation {
 
     private static void enderkin(StringBuilder json, EnderkinSnapshot slot, int total) {
         json.append("{\"selected\":").append(code(slot.selected)).append(",\"attempts\":").append(slot.attempts)
+                .append(",\"eligible\":").append(slot.eligible)
+                .append(",\"capDeferrals\":").append(slot.capDeferrals)
                 .append(",\"inserted\":").append(slot.inserted)
                 .append(",\"ordinaryInserted\":").append(total - (slot.inserted ? 1 : 0))
                 .append(",\"rejections\":{");

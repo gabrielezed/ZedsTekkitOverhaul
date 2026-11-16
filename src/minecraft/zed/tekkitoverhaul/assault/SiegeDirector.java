@@ -187,8 +187,8 @@ public final class SiegeDirector implements LunarService.Listener {
             peakActive = tracked.size();
             waves = AssaultWave.plan(selectedBudget, admissionProfile, difficulty);
             for (AssaultWave wave : waves) {
-                if (wave.planned > 0) wave.special.reset(EnderkinRole.select(experimentalEnderkin,
-                        world.getSeed(), boundary.logicalDay, boundary.phase, wave.number));
+                wave.special.reset(experimentalEnderkin && wave.planned > 0, world.getSeed(),
+                        boundary.logicalDay, boundary.phase, wave.number);
             }
             loadouts.reset(boundary.phase);
             starts++;
@@ -265,13 +265,20 @@ public final class SiegeDirector implements LunarService.Listener {
         wave.peakActive = Math.max(wave.peakActive, tracked.size());
         if (tracked.size() >= activeCap || localHostiles >= SpawnController.LOCAL_CAP) {
             spawns.rejection = tracked.size() >= activeCap ? "ASSAULT_CAP" : "LOCAL_MOB_CAP";
+            if (wave.special.pending() != null) wave.special.capDeferrals++;
             wave.reject(spawns.rejection);
             return;
         }
+        int vanillaCeiling = AssaultWave.vanillaCeiling(waves, waveIndex, activeCap);
         boolean skeleton = wave.composition.skeleton(wave.inserted);
         for (int tries = 0; tries < AssaultWave.CANDIDATES_PER_RETRY; tries++) {
-            wave.attempts++;
             EnderkinRole role = wave.special.pending();
+            if (role == null && tracked.size() >= vanillaCeiling) {
+                spawns.rejection = "ENDERKIN_HEADROOM";
+                wave.reject(spawns.rejection);
+                return;
+            }
+            wave.attempts++;
             EntityMob mob = spawns.trySpawn(world, player, skeleton, role);
             if (role != null) {
                 wave.special.record(spawns.rejection);
@@ -432,13 +439,15 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public static final class EnderkinSnapshot {
         public final String selected;
-        public final int attempts;
-        public final boolean inserted;
+        public final int attempts, capDeferrals;
+        public final boolean eligible, inserted;
         public final Map<String, Integer> rejections;
 
         EnderkinSnapshot(EnderkinSlot slot) {
             selected = slot.selected == null ? null : slot.selected.name();
+            eligible = slot.eligible;
             attempts = slot.attempts;
+            capDeferrals = slot.capDeferrals;
             inserted = slot.inserted;
             rejections = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(slot.rejections));
         }
@@ -488,6 +497,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final ThreatAssessment admissionThreat;
         public final String admissionProfile;
         public final int activeEnderkin;
+        public final int admissionDifficulty;
 
         private Snapshot(SiegeDirector director) {
             state = director.state;
@@ -532,6 +542,7 @@ public final class SiegeDirector implements LunarService.Listener {
             territorialAdaptation = director.territorialAdaptation;
             admissionThreat = director.admissionThreat;
             admissionProfile = director.admissionProfile == null ? null : director.admissionProfile.name();
+            admissionDifficulty = starts == 0 ? -1 : director.difficulty;
             trigger = starts == 0 ? null : "NATURAL_FULL_MOON";
             spawns = Collections.unmodifiableList(new ArrayList<Spawn>(director.evidence));
             patrol = new PatrolSnapshot(director);

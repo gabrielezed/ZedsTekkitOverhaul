@@ -8,7 +8,7 @@ enum EnderkinRole {
     SKIRMISHER, BREACHER;
 
     static EnderkinRole select(boolean enabled, long seed, long day, LunarPhase phase, int wave) {
-        if (!enabled) return null;
+        if (!enabled || !eligible(phase, wave)) return null;
         if (phase == LunarPhase.WAXING_GIBBOUS && wave == 0)
             return roll(seed, day, 0) < 25 ? SKIRMISHER : null;
         if (phase == LunarPhase.FULL_MOON && wave == 2)
@@ -16,6 +16,11 @@ enum EnderkinRole {
         if (phase == LunarPhase.FULL_MOON && wave == 3)
             return roll(seed, day, 3) < 40 ? BREACHER : null;
         return null;
+    }
+
+    static boolean eligible(LunarPhase phase, int wave) {
+        return (phase == LunarPhase.WAXING_GIBBOUS && wave == 0)
+                || (phase == LunarPhase.FULL_MOON && (wave == 2 || wave == 3));
     }
 
     private static int roll(long seed, long day, int wave) {

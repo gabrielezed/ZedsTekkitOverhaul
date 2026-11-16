@@ -38,7 +38,7 @@ final class LunarPatrol {
         reason = enabled ? "WAITING_FOR_NATURAL_DUSK" : "DISABLED";
         target = null;
         budget = 0;
-        special.reset(null);
+        special.reset(false, 0, 0, LunarPhase.NEW_MOON, 0);
         loadouts.reset(LunarPhase.NEW_MOON);
         clearProgress();
     }
@@ -60,8 +60,7 @@ final class LunarPatrol {
             state = State.ACTIVE;
             reason = "NATURAL_DUSK";
             budget = PatrolSchedule.budget(event.after.phase);
-            special.reset(EnderkinRole.select(experimentalEnderkin, world.getSeed(), event.after.logicalDay,
-                    event.after.phase, 0));
+            special.reset(experimentalEnderkin, world.getSeed(), event.after.logicalDay, event.after.phase, 0);
             if (diagnostics != null) diagnostics.selected(event.after.rawTime, "Patrol", special);
             loadouts.reset(event.after.phase);
             clearProgress();
@@ -124,6 +123,7 @@ final class LunarPatrol {
         if (spawned == budget) {
             finish(moon.rawTime, State.RESOLVED, "COMPLETED", diagnostics);
         } else if (localHostiles >= SpawnController.LOCAL_CAP) {
+            if (special.pending() != null) special.capDeferrals++;
             finish(moon.rawTime, State.RESOLVED, "LOCAL_MOB_CAP", diagnostics);
         }
     }

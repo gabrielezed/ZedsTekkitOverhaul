@@ -172,47 +172,49 @@ final class AssaultRecurrenceProbe implements LunarService.Listener {
                 expected += CYCLE;
                 game.f.a(expected - LEAD);
                 game.h.aT.d = false;
+                game.A.C = game.f.q = 3;
                 stage = 11;
                 return false;
             case 11:
                 if (now.rawTime < expected) return false;
                 event(LunarEvent.Kind.NIGHT_STARTED, LunarEvent.Cause.NATURAL, expected);
-                check(view.starts == 1 && view.boundary == expected && view.state == SiegeDirector.State.ACTIVE,
-                        "a later eligible dusk can start from ABORTED");
+                check(view.starts == 1 && view.boundary == expected && view.state == SiegeDirector.State.ACTIVE
+                        && admissionDifficulty(view) == 3, "a later Hard admission freezes its composition");
                 trace(game, view);
-                overworld = game.f;
-                game.a(-1);
+                game.A.C = game.f.q = 2;
                 stage = 12;
                 return false;
             case 12:
+                if (view.state == SiegeDirector.State.ACTIVE) return false;
+                check(view.state == SiegeDirector.State.ABORTED && "DIFFICULTY_CHANGED".equals(view.reason)
+                        && admissionDifficulty(view) == 3 && view.boundary == expected && view.spawns.isEmpty(),
+                        "difficulty change closes the plan and retains the consumed boundary");
+                trace(game, view);
+                expected += CYCLE;
+                game.f.a(expected - LEAD);
+                stage = 13;
+                return false;
+            case 13:
+                if (now.rawTime < expected) return false;
+                event(LunarEvent.Kind.NIGHT_STARTED, LunarEvent.Cause.NATURAL, expected);
+                check(view.starts == 2 && view.boundary == expected && view.state == SiegeDirector.State.ACTIVE,
+                        "a new Normal encounter can start after the Hard abort");
+                trace(game, view);
+                overworld = game.f;
+                game.a(-1);
+                stage = 14;
+                return false;
+            case 14:
                 check(now.dimension == -1 && view.starts == 0
                         && lunar.assaultSnapshot(overworld) == null, "dimension change detached Overworld director");
                 event(LunarEvent.Kind.RESYNC, LunarEvent.Cause.DIMENSION_CHANGED, now.rawTime);
                 trace(game, view);
                 game.a(0);
-                stage = 13;
-                return false;
-            case 13:
-                check(now.dimension == 0 && view.starts == 0 && view.boundary == expected
-                        && view.state == SiegeDirector.State.ABORTED, "dimension return preserved interrupted boundary");
-                trace(game, view);
-                expected += CYCLE;
-                game.A.C = game.f.q = 3;
-                game.f.a(expected - LEAD);
-                stage = 14;
-                return false;
-            case 14:
-                if (now.rawTime < expected) return false;
-                check(view.starts == 1 && view.boundary == expected && view.state == SiegeDirector.State.ACTIVE
-                        && admissionDifficulty(view) == 3, "Hard admission freezes its composition");
-                game.A.C = game.f.q = 2;
                 stage = 15;
                 return false;
             case 15:
-                if (view.state == SiegeDirector.State.ACTIVE) return false;
-                check(view.state == SiegeDirector.State.ABORTED && "DIFFICULTY_CHANGED".equals(view.reason)
-                        && admissionDifficulty(view) == 3 && view.boundary == expected && view.spawns.isEmpty(),
-                        "difficulty change closes the plan and retains the consumed boundary");
+                check(now.dimension == 0 && view.starts == 0 && view.boundary == expected
+                        && view.state == SiegeDirector.State.ABORTED, "dimension return preserved interrupted boundary");
                 trace(game, view);
                 return true;
             default: throw new AssertionError("Unknown recurrence stage " + stage);

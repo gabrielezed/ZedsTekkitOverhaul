@@ -8,9 +8,9 @@ Hard plans repeat two skeleton slots and one zombie slot. Quiet opens with `ZSS`
 
 | Profile | Player-facing pressure |
 | --- | --- |
-| Quiet | Smaller opening allows time to intercept or withdraw. Easy and Normal are melee-led. The first Hard opening slot may immediately put a door-breaking zombie on the approach. |
-| Ordinary or adaptation disabled | Established wave allocation. Hard opens with ranged pressure and introduces zombies periodically. |
-| Elevated | Larger mixed opening raises the value of cover, early target selection and a retreat path. Hard inserts a zombie between the first two skeleton slots. |
+| Quiet, threat below 16 | Smaller opening allows time to intercept or withdraw. Easy and Normal are melee-led. The first Hard opening slot may immediately put a door-breaking zombie on the approach. |
+| Ordinary, threat 16–23, or adaptation disabled | Established wave allocation. Hard opens with ranged pressure and introduces zombies periodically. |
+| Elevated, threat 24 or higher | Larger mixed opening raises the value of cover, early target selection and a retreat path. Hard inserts a zombie between the first two skeleton slots. |
 
 The installed Minecraft 1.2.5 classes `is` and `ue` match MCP's door interaction and break tasks. A vanilla zombie enables break-door navigation and registers the break task at priority 1. The task requires horizontal collision, an unfinished eligible navigator path and a closed `Block.doorWood` on a nearby path point or under the zombie's upper body. The path point check uses a horizontal distance of at most 1.5 blocks and a continuation condition within two blocks of the target. A sustained attempt consumes 240 task ticks, about 12 seconds at 20 TPS. Destruction requires live difficulty 3 at expiration. Easy and Normal can exhibit the attempt without destruction. The check is for the vanilla wooden-door ID, so iron doors and modded doors on separate IDs are outside this task. A mod reusing or patching the vanilla ID would need its own verification.
 
@@ -57,7 +57,7 @@ The installed QuantumSuit consumed 14,040 EU while sustaining 20 health. Among o
 
 ### Hard open-arena comparison
 
-The same passive leather fixture compared the actual alpha.3 archive (SHA-256 `c0ca2c62381e8e25897a27cb7cf11bbf86846bb1d69ec70239d2df4ddff49356`), alpha.4 production and an alternating Hard slot order set only by the test harness. Each used a 6/5/4 plan and reached a peak of eight with three overlapping waves.
+The same passive leather fixture compared the actual alpha.3 archive (production source `51b34d27f22f38532e18152ecc617b95ef30eaad`, SHA-256 `c0ca2c62381e8e25897a27cb7cf11bbf86846bb1d69ec70239d2df4ddff49356`), alpha.4 production and an alternating Hard slot order set only by the test harness. Each used a 6/5/4 plan and reached a peak of eight with three overlapping waves.
 
 | Hard slot policy | Insertion by wave / zombies total | First projectile / first damage | Damage samples / safety heals | Cap samples / deferrals | Deaths / remaining / timeout |
 | --- | --- | --- | --- | --- | --- |
@@ -66,6 +66,8 @@ The same passive leather fixture compared the actual alpha.3 archive (SHA-256 `c
 | Fixture alternating mix | 6/4/3 / 6 | 126 / 132 | 112 / 54 | 1656 / 21 | 5 / 8 / 3080 |
 
 The bounded mix delivered the first damage sooner than the all-skeleton sample and sustained a full population for more sampled ticks while requiring a comparable number of fixture heals. The alternating mix stayed at cap for substantially longer and needed more interventions in this sample. Keep the smaller share to expose a real breach threat and leave more room for responses. Open samples used recentering, so the record supports a conservative initial policy and a follow-up owner comparison across cover and retreat routes.
+
+In a basic compound fixture, the script supplied normal movement input along a walled approach and used a native lever to close the iron door after crossing. First player acquisition, projectile and health loss were observed at ticks 101, 126 and 131. The player reached shelter and closed the door at tick 270. It took two health-loss samples, ended with a minimum of 13 health and used zero heals and zero recenterings. The 6/5/4 plan inserted 6/2/1 mobs, peaked at eight with three overlapping waves, deferred 25 retries at cap, and timed out at tick 3080 with four active, five removed from tracking and no observed deaths. The machine, stocked chest and door survived. The route demonstrates an available defense in this layout. Human navigation, combat and other approach shapes remain open.
 
 ### Selected versus inserted
 
@@ -77,7 +79,20 @@ One seed selected both roles in each of the three representative Normal profiles
 | Ordinary | Inserted at 1000 on attempt 1. Aiming observed at 1114. Present in 959 sampled ticks. | Inserted at 1900 on attempt 3 after two sky-light rolls. Present in 1,149 sampled ticks. |
 | Elevated | Four rejections, comprising three sky-light rolls and one roof check. Ordinary fallback took the slot. | Inserted at 1900 on attempt 2 after an approach rejection. Present in 1,167 sampled ticks. |
 
-These fixtures demonstrate insertion and two ranged telegraphs. The open arena did not elicit Breacher obstruction swings. Presence samples count a role while it stays within the arena observation volume. Outdoor visibility, clearance and line-of-sight opportunities remain distinct from the selection roll. The three same-seed samples do not estimate the natural rate across worlds. The logs and bounded HTTP records under `dist-zto/test-reports` retain wave attempts, rejections, insertion ticks and outcomes.
+Matched alpha.3 scenarios also selected all six roles. They inserted two Skirmishers and one Breacher. In Quiet, the earlier waves filled all eight places and the selected Breacher had zero placement attempts over 14 cap-blocked retries. In Ordinary it attempted placement four times and failed three sky-light checks and one approach check. The Elevated Skirmisher failed four sky-light checks. The alpha.4 reservation directly addresses the Quiet starvation case. The Ordinary placement outcome can also vary with the sampler sequence and player movement. These samples give a paired result of 3/6 versus 5/6 for the chosen seed, with three fewer ordinary insertions across the matched samples and the same peak of eight.
+
+These fixtures demonstrate insertion and two ranged telegraphs. The open arena did not elicit Breacher obstruction swings. The separate `ender-waves` ability probe observed a cast Ender Pulse, a Breacher pressure swing at a closed wooden door, and a successful reopen without replay. It uses a directed doorway and clears mobs between samples. The Pulse capture shows the narrow silhouette and bright eyes at range. The doorway capture also illustrates that the barrier can occlude the Breacher's silhouette. Presence samples count a role while it stays within the arena observation volume. Outdoor visibility, clearance and line-of-sight opportunities remain distinct from the selection roll. The three same-seed samples do not estimate the natural rate across worlds. Human recognition and audio feedback remain open. The logs and bounded HTTP records under `dist-zto/test-reports` retain wave attempts, rejections, insertion ticks and outcomes.
+
+### Pack regressions
+
+- **PASS:** Ten persistent pressure cases, three additional alpha.4 Hard comparator/retreat cases and four alpha.3 comparators. Every pressure peak was within the configured cap.
+- **PASS:** `ender-waves`, general outdoor placement, multi-wave, quiet and disabled-mode probes. With local population saturated, the selected patrol Skirmisher received zero attempts. A separate fallback probe exhausted four special attempts at an out-of-reach surface before completing the ordinary patrol.
+- **PASS on retry:** Natural recurrence, replay suppression, save/reopen, NEI time-skip, phase alignment, Peaceful and Creative eligibility, difficulty-change abort and dimension return. The initial augmented fixture crossed the generated portal again before its new difficulty assertion. The corrected fixture checks Hard admission and its abort before changing dimensions.
+- **PASS:** All four territory scenarios with persistence and authenticated Bridge checks in Quiet and Elevated. Tactical combat passed save/reopen, death cleanup, Breacher contact at a closed door and melee through the reopened entrance. The Pulse regression verified cover, dodging, one-hit behavior, armor, expiry and cleanup.
+- **PASS:** The backported and native Creative catalogs and all five configuration starts passed, including legacy import, reopen, canonical precedence and blocked-write handling. The configuration probes asserted the absent sound backend even after explicit playback calls.
+- **PASS:** Tekkit Dev lifecycle checks passed for Hopper (9 restart assertions), Distillation (12), 3×3 and 5×5 crafting and hotbar locking. All four lifecycle launches verified the candidate hash and exited gracefully. The isolated JAR, JVM settings and audio options were restored.
+- **BLOCKED:** The installed Inventory Tweaks profile supplied no hard-protected crafting slot to the lifecycle fixture. The crafting result for that specific assertion was `BLOCKED`.
+- **NOT RUN:** Human combat, naturally generated varied terrain, a powered RedPower entrance, and an assault on a running industrial assembly. The vanilla torch and lever cases cover real redstone behavior on the installed iron door.
 
 ### Owner playtest
 

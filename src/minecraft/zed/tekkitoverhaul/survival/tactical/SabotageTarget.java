@@ -1,6 +1,6 @@
 package zed.tekkitoverhaul.survival.tactical;
 
-/** A transfer boundary owned by ZTO. Its tile retains ownership of resources and the pause. */
+/** A local simulation boundary with a transient pause. The machine retains its resources. */
 public interface SabotageTarget {
     boolean isDisrupted();
     boolean beginDisruption(EntitySaboteur owner);

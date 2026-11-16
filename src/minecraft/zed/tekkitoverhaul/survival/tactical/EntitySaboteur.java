@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.survival.tactical;
 
+import net.minecraft.src.Block;
 import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.MathHelper;
@@ -8,10 +9,7 @@ import net.minecraft.src.PathEntity;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
-import zed.tekkitoverhaul.distillation.DistillationPartType;
-import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.TileEntityDistillationReceiver;
-import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.hopper.TileHopper;
 import zed.tekkitoverhaul.integration.LoadedTile;
 
@@ -47,8 +45,8 @@ public final class EntitySaboteur extends TacticalHostile {
     private int scans, scannedBlocks, windups, cancelled, disruptions, diversions;
     private TileEntity machine;
     private TileEntity connection;
-    private enum TargetType { NONE, HOPPER, BUILDCRAFT_RECEIVER }
-    private TargetType targetType = TargetType.NONE;
+    private SabotageTarget disruption;
+    private String targetType = "NONE";
     private int machineX, machineY, machineZ;
     private long heartbeat = Long.MIN_VALUE;
     private enum Outcome { NONE, NO_SUPPORTED_TARGET, UNSUPPORTED_CONNECTION, OUT_OF_REACH, NO_SIGHT, TARGET_CHANGED, ALREADY_PAUSED,
@@ -78,7 +76,7 @@ public final class EntitySaboteur extends TacticalHostile {
     public int windupRemaining() { return windingUp() ? Math.max(0, windupEnd - ticksExisted) : 0; }
     public TileEntity disruptionTarget() { return machine; }
     public TileEntity disruptionConnection() { return connection; }
-    public String targetType() { return targetType.name(); }
+    public String targetType() { return targetType; }
     public String lastOutcome() { return outcome.name(); }
     public String lastBlinkResult() { return blinkResult.name(); }
     public String lastBlinkCause() { return blinkCause.name(); }
@@ -128,7 +126,7 @@ public final class EntitySaboteur extends TacticalHostile {
             Outcome rejection = approachRejection();
             if (rejection != Outcome.NONE) {
                 outcome = rejection;
-                machine = connection = null;
+                clearTarget();
                 nextScan = Math.max(nextScan, ticksExisted + SCAN_INTERVAL);
                 getNavigator().clearPathEntity();
             }
@@ -150,7 +148,7 @@ public final class EntitySaboteur extends TacticalHostile {
     private Outcome approachRejection() {
         if (machine == null) return Outcome.NONE;
         if (!sameMachine()) return Outcome.TARGET_CHANGED;
-        if (((SabotageTarget) machine).isDisrupted()) return Outcome.ALREADY_PAUSED;
+        if (disruption.isDisrupted()) return Outcome.ALREADY_PAUSED;
         return ticksExisted >= approachEnd ? Outcome.OUT_OF_REACH : Outcome.NONE;
     }
 
@@ -158,43 +156,66 @@ public final class EntitySaboteur extends TacticalHostile {
         nextScan = ticksExisted + SCAN_INTERVAL;
         scans++;
         outcome = Outcome.NO_SUPPORTED_TARGET;
-        targetType = TargetType.NONE;
+        targetType = "NONE";
         int baseX = MathHelper.floor_double(posX);
         int baseY = MathHelper.floor_double(boundingBox.minY);
         int baseZ = MathHelper.floor_double(posZ);
-        int hopperId = HopperRegistry.block == null ? -1 : HopperRegistry.block.blockID;
-        int receiverId = DistillationRegistry.blockId(DistillationPartType.RECEIVER);
-        double best = 64.0D;
+        int bestPriority = -1;
+        double bestDistance = 64.0D;
         for (int x = baseX - 8; x <= baseX + 8; x++) {
             double dx = x + 0.5D - posX;
             for (int z = baseZ - 8; z <= baseZ + 8; z++) {
                 double dz = z + 0.5D - posZ;
                 double horizontal = dx * dx + dz * dz;
-                if (horizontal > best || !worldObj.blockExists(x, baseY, z)) continue;
+                if (horizontal > 64.0D || !worldObj.blockExists(x, baseY, z)) continue;
                 for (int y = Math.max(0, baseY - 2); y <= Math.min(worldObj.getHeight() - 1, baseY + 2); y++) {
                     scannedBlocks++;
                     double distance = horizontal + (y + 0.5D - posY) * (y + 0.5D - posY);
-                    if (distance > best) continue;
-                    int id = worldObj.getBlockId(x, y, z);
-                    if (id != hopperId && id != receiverId) continue;
+                    if (distance > 64.0D) continue;
+                    Block block = Block.blocksList[worldObj.getBlockId(x, y, z)];
+                    if (block == null || !block.hasTileEntity(worldObj.getBlockMetadata(x, y, z))) continue;
                     TileEntity candidate = LoadedTile.at(worldObj, x, y, z);
-                    if (!(candidate instanceof TileHopper) && !(candidate instanceof TileEntityDistillationReceiver)) {
-                        outcome = Outcome.TARGET_CHANGED;
-                    } else if (((SabotageTarget) candidate).isDisrupted()) {
+                    TileEntity pipe = null;
+                    SabotageTarget effect;
+                    String type;
+                    int priority;
+                    if (candidate instanceof TileHopper) {
+                        effect = (TileHopper) candidate;
+                        type = "HOPPER";
+                        priority = 0;
+                    } else if (candidate instanceof TileEntityDistillationReceiver) {
+                        TileEntityDistillationReceiver receiver = (TileEntityDistillationReceiver) candidate;
+                        if (receiver.isDisrupted()) {
+                            outcome = Outcome.ALREADY_PAUSED;
+                            continue;
+                        }
+                        pipe = receiver.activeExtractionPipe();
+                        if (pipe == null) {
+                            outcome = Outcome.UNSUPPORTED_CONNECTION;
+                            continue;
+                        }
+                        effect = receiver;
+                        type = "BUILDCRAFT_RECEIVER";
+                        priority = 2;
+                    } else {
+                        IndustrialSabotage industrial = IndustrialSabotage.find(candidate);
+                        if (industrial == null) continue;
+                        effect = industrial;
+                        type = industrial.operation.name();
+                        priority = industrial.operation.priority;
+                    }
+                    if (priority < bestPriority || priority == bestPriority && distance >= bestDistance) continue;
+                    if (effect.isDisrupted()) {
                         outcome = Outcome.ALREADY_PAUSED;
                     } else if (!seesMachine(x, y, z)) {
                         outcome = Outcome.NO_SIGHT;
                     } else {
-                        TileEntity pipe = candidate instanceof TileEntityDistillationReceiver
-                                ? ((TileEntityDistillationReceiver) candidate).activeExtractionPipe() : null;
-                        if (id == receiverId && pipe == null) {
-                            outcome = Outcome.UNSUPPORTED_CONNECTION;
-                            continue;
-                        }
-                        best = distance;
+                        bestPriority = priority;
+                        bestDistance = distance;
                         machine = candidate;
                         connection = pipe;
-                        targetType = pipe == null ? TargetType.HOPPER : TargetType.BUILDCRAFT_RECEIVER;
+                        disruption = effect;
+                        targetType = type;
                         machineX = x;
                         machineY = y;
                         machineZ = z;
@@ -234,8 +255,10 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private boolean sameMachine() {
-        return machine != null && machine.xCoord == machineX && machine.yCoord == machineY && machine.zCoord == machineZ
-                && LoadedTile.at(worldObj, machineX, machineY, machineZ) == machine
+        if (machine == null || machine.xCoord != machineX || machine.yCoord != machineY || machine.zCoord != machineZ)
+            return false;
+        if (disruption instanceof IndustrialSabotage) return ((IndustrialSabotage) disruption).stillBound();
+        return LoadedTile.at(worldObj, machineX, machineY, machineZ) == machine
                 && (connection == null || ((TileEntityDistillationReceiver) machine).activeExtractionPipe() == connection);
     }
 
@@ -276,11 +299,11 @@ public final class EntitySaboteur extends TacticalHostile {
         if (!sameMachine()) finish(Outcome.TARGET_CHANGED, true);
         else if (!inContact()) finish(Outcome.OUT_OF_REACH, true);
         else if (!seesMachine(machineX, machineY, machineZ)) finish(Outcome.NO_SIGHT, true);
-        else if (((SabotageTarget) machine).isDisrupted()) finish(Outcome.ALREADY_PAUSED, true);
+        else if (disruption.isDisrupted()) finish(Outcome.ALREADY_PAUSED, true);
         else {
             lookAtMachine();
             if (ticksExisted >= windupEnd) {
-                if (((SabotageTarget) machine).beginDisruption(this)) {
+                if (disruption.beginDisruption(this)) {
                     disruptions++;
                     if (connection == null) burst(machineX + 0.5D, machineY + 0.85D, machineZ + 0.5D, "portal");
                     finish(Outcome.APPLIED, false);
@@ -304,7 +327,7 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private void finish(Outcome result, boolean interrupted) {
-        machine = connection = null;
+        clearTarget();
         outcome = result;
         nextAction = ticksExisted + ACTION_COOLDOWN;
         recoverEnd = ticksExisted + RECOVERY_TICKS;
@@ -312,6 +335,11 @@ public final class EntitySaboteur extends TacticalHostile {
         pose(interrupted ? CANCELLED : RECOVER);
         if (interrupted) cancelled++;
         if (interrupted || result == Outcome.DECOY) burst(posX, boundingBox.minY + 0.7D, posZ, "smoke");
+    }
+
+    private void clearTarget() {
+        machine = connection = null;
+        disruption = null;
     }
 
     @Override
@@ -432,7 +460,7 @@ public final class EntitySaboteur extends TacticalHostile {
     protected void resetTactics() {
         stalledRoutes = 0;
         closeTicks = hitEvadeEnd = evadeEnd = 0;
-        machine = connection = null;
+        clearTarget();
         if (windingUp()) finish(Outcome.PLAYER_LOST, true);
         else if (ticksExisted >= recoverEnd) pose(IDLE);
     }

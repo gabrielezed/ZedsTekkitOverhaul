@@ -23,6 +23,7 @@ final class IndustrialSabotage implements SabotageTarget {
     private static final String ITEM_PIPE = "buildcraft.transport.pipes.PipeItemsWood";
     private static final String LIQUID_PIPE = "buildcraft.transport.pipes.PipeLiquidsWood";
     private static final String ENGINE_TILE = "buildcraft.energy.TileEngine";
+    private static final String ELECTRIC_BLOCK = "ic2.common.TileEntityElectricBlock";
     private static final int[] DX = {0, 0, 0, 0, -1, 1};
     private static final int[] DY = {-1, 1, 0, 0, 0, 0};
     private static final int[] DZ = {0, 0, -1, 1, 0, 0};
@@ -33,7 +34,8 @@ final class IndustrialSabotage implements SabotageTarget {
     enum Operation {
         BUILDCRAFT_ITEM_EXTRACTION(2),
         BUILDCRAFT_LIQUID_EXTRACTION(2),
-        BUILDCRAFT_REDSTONE_ENGINE(1);
+        BUILDCRAFT_REDSTONE_ENGINE(1),
+        IC2_STORAGE_OUTPUT(2);
 
         final int priority;
 
@@ -65,6 +67,12 @@ final class IndustrialSabotage implements SabotageTarget {
                 TileEntity receiver = neighbor(tile, side);
                 if (isolatedEngineOutput(tile, side, receiver))
                     return new IndustrialSabotage(Operation.BUILDCRAFT_REDSTONE_ENGINE, tile, tile, receiver, side);
+            }
+            if (name.equals("ic2.common.TileEntityElectricBatBox") || name.equals("ic2.common.TileEntityElectricMFE")
+                    || name.equals("ic2.common.TileEntityElectricMFSU")) {
+                Class<?> base = type.getSuperclass();
+                if (ELECTRIC_BLOCK.equals(base.getName()) && installed(base) && supplyingEU(tile))
+                    return new IndustrialSabotage(Operation.IC2_STORAGE_OUTPUT, tile, tile, null, -1);
             }
         } catch (ReflectiveOperationException incompatible) {
             // The optional ABI can be missing in another pack. Leave that endpoint native.
@@ -118,6 +126,19 @@ final class IndustrialSabotage implements SabotageTarget {
         return true;
     }
 
+    private static boolean supplyingEU(TileEntity tile) throws ReflectiveOperationException {
+        int energy = intField(tile, "energy");
+        if (energy < intField(tile, "output") || !booleanField(tile, "addedToEnergyNet")) return false;
+        int mode = intField(tile, "redstoneMode");
+        if ((mode == 4 || mode == 5 && energy < intField(tile, "maxStorage"))
+                && (!powerAreaLoaded(tile) || tile.worldObj.isBlockGettingPowered(tile.xCoord, tile.yCoord, tile.zCoord)))
+            return false;
+        int side = ((Number) tile.getClass().getMethod("getFacing").invoke(tile)).intValue();
+        TileEntity receiver = neighbor(tile, side);
+        return receiver != null && Class.forName("ic2.api.IEnergyAcceptor", false, tile.getClass().getClassLoader())
+                .isInstance(receiver);
+    }
+
     private static boolean hasItems(TileEntity tile, int limit) {
         if (!(tile instanceof IInventory)) return false;
         IInventory inventory = (IInventory) tile;
@@ -148,6 +169,10 @@ final class IndustrialSabotage implements SabotageTarget {
 
     private static int intField(Object target, String name) throws ReflectiveOperationException {
         return ((Number) field(target, name)).intValue();
+    }
+
+    private static boolean booleanField(Object target, String name) throws ReflectiveOperationException {
+        return Boolean.TRUE.equals(field(target, name));
     }
 
     private static Method connectAgent() {

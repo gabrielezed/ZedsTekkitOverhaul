@@ -122,7 +122,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 }
                 check(settings.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
                 check(settings.experimentalEnderkinEncounters == (mode.startsWith("ender-") || "territory-both".equals(mode)
-                        || "composition-both".equals(mode)),
+                        || "composition-both".equals(mode) || mode.endsWith("-enderkin")),
                         "experimental setting loaded from startup configuration");
                 check(settings.experimentalTerritorialThreat == ("territory-threat".equals(mode)
                         || "territory-elevated".equals(mode) || "territory-both".equals(mode)

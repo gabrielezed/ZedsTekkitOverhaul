@@ -196,6 +196,24 @@ final class AssaultRecurrenceProbe implements LunarService.Listener {
                 check(now.dimension == 0 && view.starts == 0 && view.boundary == expected
                         && view.state == SiegeDirector.State.ABORTED, "dimension return preserved interrupted boundary");
                 trace(game, view);
+                expected += CYCLE;
+                game.A.C = game.f.q = 3;
+                game.f.a(expected - LEAD);
+                stage = 14;
+                return false;
+            case 14:
+                if (now.rawTime < expected) return false;
+                check(view.starts == 1 && view.boundary == expected && view.state == SiegeDirector.State.ACTIVE
+                        && admissionDifficulty(view) == 3, "Hard admission freezes its composition");
+                game.A.C = game.f.q = 2;
+                stage = 15;
+                return false;
+            case 15:
+                if (view.state == SiegeDirector.State.ACTIVE) return false;
+                check(view.state == SiegeDirector.State.ABORTED && "DIFFICULTY_CHANGED".equals(view.reason)
+                        && admissionDifficulty(view) == 3 && view.boundary == expected && view.spawns.isEmpty(),
+                        "difficulty change closes the plan and retains the consumed boundary");
+                trace(game, view);
                 return true;
             default: throw new AssertionError("Unknown recurrence stage " + stage);
         }
@@ -205,6 +223,10 @@ final class AssaultRecurrenceProbe implements LunarService.Listener {
         expected = boundary + CYCLE;
         game.f.a(expected - LEAD);
         stage = 1;
+    }
+
+    private static int admissionDifficulty(Snapshot view) throws ReflectiveOperationException {
+        return Snapshot.class.getField("admissionDifficulty").getInt(view);
     }
 
     private void event(LunarEvent.Kind kind, LunarEvent.Cause cause, long at) {

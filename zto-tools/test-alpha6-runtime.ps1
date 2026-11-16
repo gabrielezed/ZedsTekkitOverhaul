@@ -1,7 +1,12 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-elevated', 'territory-both', 'composition-disabled', 'composition-quiet', 'composition-ordinary', 'composition-elevated', 'composition-both', 'composition-hard', 'composition-quantum')]
-    [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-elevated', 'territory-both',
+        'composition-disabled', 'composition-quiet', 'composition-ordinary', 'composition-elevated', 'composition-both',
+        'composition-quiet-enderkin', 'composition-ordinary-enderkin', 'composition-elevated-enderkin',
+        'composition-hard', 'composition-hard-iron', 'composition-hard-powered', 'composition-hard-open',
+        'composition-hard-baseline-open', 'composition-hard-balanced', 'composition-hard-retreat', 'composition-quantum')]
+    [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled'),
+    [string]$CandidateJar
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,8 +16,12 @@ $runtime = Join-Path $root 'dist-zto/survival-hud-runtime'
 $game = New-IsolatedRuntimeGame $runtime
 $harness = Join-Path $game 'harness'
 $report = Join-Path $root 'dist-zto/test-reports'
-$candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
 $deployed = Join-Path $game 'mods/ZedsTekkitOverhaul.jar'
+$candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
+if ($CandidateJar) {
+    $candidate = (Resolve-Path -LiteralPath $CandidateJar).Path
+    Copy-Item -LiteralPath $candidate -Destination $deployed -Force
+}
 $hash = (Get-FileHash -LiteralPath $candidate).Hash
 if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
     throw 'Deploy the candidate into the isolated Tekkit Dev copy first.'
@@ -51,7 +60,8 @@ foreach ($mode in $Modes) {
         [IO.File]::WriteAllText((Join-Path $fresh '.zto-disposable-test'), "$save-Fresh 911`n", [Text.Encoding]::ASCII)
     }
     $enabled = ($mode -ne 'disabled').ToString().ToLowerInvariant()
-    $enderkin = ($mode.StartsWith('ender-') -or $mode -in 'territory-both', 'composition-both').ToString().ToLowerInvariant()
+    $enderkin = ($mode.StartsWith('ender-') -or $mode.EndsWith('-enderkin') -or
+        $mode -in 'territory-both', 'composition-both').ToString().ToLowerInvariant()
     $threat = ($mode -in 'territory-threat', 'territory-elevated', 'territory-both' -or
         ($composition -and $mode -ne 'composition-disabled')).ToString().ToLowerInvariant()
     $useBridge = $composition -or $mode -in 'territory-threat', 'territory-elevated'
@@ -68,7 +78,7 @@ foreach ($mode in $Modes) {
     $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if ($useBridge) {
-        $prefix = if ($composition) { 'alpha3' } else { 'alpha2' }
+        $prefix = if ($composition) { 'alpha4' } else { 'alpha2' }
         Test-TerritoryHttp $process $game $save $mode $stdout (Join-Path $report "$prefix-http-$save.json")
     }
     $timedOut = !(Wait-RuntimeClient $process 180000)

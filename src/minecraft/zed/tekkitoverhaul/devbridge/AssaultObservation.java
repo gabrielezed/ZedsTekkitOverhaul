@@ -47,7 +47,13 @@ final class AssaultObservation {
             json.append("{\"number\":").append(wave.number).append(",\"state\":").append(code(wave.state))
                     .append(",\"outcome\":").append(code(wave.outcome)).append(",\"startedAt\":").append(wave.startedAt)
                     .append(",\"closedAt\":").append(wave.closedAt).append(",\"planned\":").append(wave.planned)
-                    .append(",\"allocation\":").append(wave.allocation).append(",\"attempts\":").append(wave.attempts)
+                    .append(",\"allocation\":").append(wave.allocation)
+                    .append(",\"composition\":").append(code(wave.composition)).append(",\"vanillaSlots\":[");
+            for (int i = 0; i < wave.vanillaSlots.size(); i++) {
+                if (i > 0) json.append(',');
+                json.append(code(wave.vanillaSlots.get(i)));
+            }
+            json.append("],\"attempts\":").append(wave.attempts)
                     .append(",\"inserted\":").append(wave.inserted).append(",\"active\":").append(wave.active)
                     .append(",\"outdoorLight\":").append(wave.outdoorLight)
                     .append(",\"vanillaLight\":").append(wave.inserted - wave.outdoorLight)

@@ -185,7 +185,7 @@ public final class SiegeDirector implements LunarService.Listener {
             waveIndex = -1;
             localHostiles = -1;
             peakActive = tracked.size();
-            waves = AssaultWave.plan(selectedBudget, admissionProfile);
+            waves = AssaultWave.plan(selectedBudget, admissionProfile, difficulty);
             for (AssaultWave wave : waves) {
                 if (wave.planned > 0) wave.special.reset(EnderkinRole.select(experimentalEnderkin,
                         world.getSeed(), boundary.logicalDay, boundary.phase, wave.number));
@@ -268,10 +268,9 @@ public final class SiegeDirector implements LunarService.Listener {
             wave.reject(spawns.rejection);
             return;
         }
+        boolean skeleton = wave.composition.skeleton(wave.inserted);
         for (int tries = 0; tries < AssaultWave.CANDIDATES_PER_RETRY; tries++) {
             wave.attempts++;
-            // Vanilla Hard zombies can break wooden doors. Keep vanilla AI and use skeletons there.
-            boolean skeleton = difficulty == 3 || (wave.number == 3 ? wave.inserted % 2 == 0 : wave.inserted % 3 == 2);
             EnderkinRole role = wave.special.pending();
             EntityMob mob = spawns.trySpawn(world, player, skeleton, role);
             if (role != null) {
@@ -393,6 +392,8 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public static final class WaveSnapshot {
         public final EnderkinSnapshot enderkin;
+        public final String composition;
+        public final List<String> vanillaSlots;
         public final int equipped, equipmentCap;
         public final int outdoorLight;
         public final int number, planned, allocation, inserted, attempts, deferred, skipped, active;
@@ -407,6 +408,10 @@ public final class SiegeDirector implements LunarService.Listener {
             number = wave.number;
             planned = wave.planned;
             allocation = wave.allocation();
+            composition = wave.composition.name();
+            List<String> slots = new ArrayList<String>(allocation);
+            for (int i = 0; i < allocation; i++) slots.add(wave.composition.skeleton(i) ? "SKELETON" : "ZOMBIE");
+            vanillaSlots = Collections.unmodifiableList(slots);
             inserted = wave.inserted;
             outdoorLight = wave.outdoorLight;
             attempts = wave.attempts;

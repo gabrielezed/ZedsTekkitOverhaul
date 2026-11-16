@@ -4,6 +4,7 @@ import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ISaveHandler;
 import net.minecraft.src.World;
+import net.minecraft.src.WorldChunkManager;
 
 /** Local simulation adapter. The save handler identifies one save across portal transitions. */
 public final class TerritorialActivityService {
@@ -55,13 +56,27 @@ public final class TerritorialActivityService {
 
     private ThreatAssessment assess(int x, int z) {
         // The legacy biome manager consults its biome cache and generation layers, with no chunk lookup.
-        BiomeGenBase biome = world.getWorldChunkManager().getBiomeGenAt(x, z);
-        ThreatAssessment.Environment environment = biome == BiomeGenBase.swampland
-                ? ThreatAssessment.Environment.SWAMPLAND : ThreatAssessment.Environment.BASELINE;
+        WorldChunkManager biomes = world.getWorldChunkManager();
+        ThreatAssessment.Environment environment = environmentAt(biomes, x, z);
+        int nearby = environmentAt(biomes, x - 8, z).contribution + environmentAt(biomes, x + 8, z).contribution
+                + environmentAt(biomes, x, z - 8).contribution + environmentAt(biomes, x, z + 8).contribution;
+        int environmental = (2 * environment.contribution + nearby + 3) / 6;
         int regionX = TerritorialActivity.cell(x), regionZ = TerritorialActivity.cell(z);
         TerritorialActivity activity = state.activity;
-        return new ThreatAssessment(0, regionX, regionZ, activity.blended(x, z), environment,
+        return new ThreatAssessment(0, regionX, regionZ, activity.blended(x, z), environment, environmental,
                 activity.records.containsKey(TerritorialActivity.key(regionX, regionZ)));
+    }
+
+    private static ThreatAssessment.Environment environmentAt(WorldChunkManager biomes, int x, int z) {
+        if (!TerritorialActivity.inBounds(x) || !TerritorialActivity.inBounds(z)) {
+            return ThreatAssessment.Environment.BASELINE;
+        }
+        BiomeGenBase biome = biomes.getBiomeGenAt(x, z);
+        if (biome == BiomeGenBase.swampland) return ThreatAssessment.Environment.SWAMPLAND;
+        if (biome == BiomeGenBase.desert || biome == BiomeGenBase.desertHills
+                || biome == BiomeGenBase.extremeHills || biome == BiomeGenBase.extremeHillsEdge
+                || biome == BiomeGenBase.iceMountains) return ThreatAssessment.Environment.EXPOSED;
+        return ThreatAssessment.Environment.BASELINE;
     }
 
     public Snapshot snapshot(World context, EntityPlayer player) {
@@ -98,7 +113,7 @@ public final class TerritorialActivityService {
             capacity = TerritorialActivity.CAPACITY;
             count = activity == null ? 0 : activity.records.size();
             clock = activity == null ? 0 : activity.clock;
-            lastEviction = activity != null && activity.evicted ? "OLDEST_OBSERVATION" : "NONE";
+            lastEviction = activity != null && activity.evicted ? "LEAST_DECAYED_ACTIVITY" : "NONE";
             TerritorialActivity.Record record = threat == null ? null
                     : activity.records.get(TerritorialActivity.key(threat.regionX, threat.regionZ));
             presence = record == null ? 0 : record.presenceAt(clock);

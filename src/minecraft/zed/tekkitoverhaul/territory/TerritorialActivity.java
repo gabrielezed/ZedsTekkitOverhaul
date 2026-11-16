@@ -1,6 +1,5 @@
 package zed.tekkitoverhaul.territory;
 
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -12,7 +11,8 @@ final class TerritorialActivity {
     static final int PRESENCE_MAX = 24;
     static final int RETURN_MAX = 8;
     static final int RETURN_AFTER = 3600;
-    static final int RETURN_SAMPLES = 3;
+    static final int PRESENCE_SAMPLES = 2;
+    static final int RETURN_SAMPLES = 4;
     static final int PRESENCE_DECAY = 1200;
     static final int RETURN_DECAY = 6000;
     static final int WORLD_LIMIT = 30000000;
@@ -22,6 +22,7 @@ final class TerritorialActivity {
     boolean evicted;
     private Long visit;
     private int visitSamples;
+    private int presenceSamples;
     private boolean spacedReturn;
 
     static boolean inBounds(double position) {
@@ -37,6 +38,7 @@ final class TerritorialActivity {
     void clearVisit() {
         visit = null;
         visitSamples = 0;
+        presenceSamples = 0;
         spacedReturn = false;
     }
 
@@ -46,22 +48,23 @@ final class TerritorialActivity {
 
     boolean observe(int blockX, int blockZ) {
         Long position = key(cell(blockX), cell(blockZ));
-        Record record = records.remove(position);
         if (!position.equals(visit)) {
             visit = position;
             visitSamples = 0;
+            presenceSamples = 0;
+            Record record = records.get(position);
             spacedReturn = record != null && clock - record.seen >= RETURN_AFTER
                     && record.score(clock) > 0;
         }
         if (visitSamples < RETURN_SAMPLES) visitSamples++;
+        if (++presenceSamples < PRESENCE_SAMPLES) return false;
+        presenceSamples = 0;
+        Record record = records.remove(position);
         int previousPresence = record == null ? 0 : record.presence;
         int previousReturns = record == null ? 0 : record.returns;
         if (record == null) {
             if (records.size() == CAPACITY) {
-                Iterator<Long> oldest = records.keySet().iterator();
-                oldest.next();
-                oldest.remove();
-                evicted = true;
+                evictLeastActive();
             }
             record = new Record();
         }
@@ -74,6 +77,20 @@ final class TerritorialActivity {
         record.seen = clock;
         records.put(position, record);
         return record.presence != previousPresence || record.returns != previousReturns;
+    }
+
+    private void evictLeastActive() {
+        Long victim = null;
+        int lowest = Integer.MAX_VALUE;
+        for (Map.Entry<Long, Record> entry : records.entrySet()) {
+            int score = entry.getValue().score(clock);
+            if (score >= lowest) continue;
+            victim = entry.getKey();
+            lowest = score;
+            if (score == 0) break;
+        }
+        records.remove(victim);
+        evicted = true;
     }
 
     int score(int x, int z) {

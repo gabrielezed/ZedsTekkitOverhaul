@@ -22,6 +22,7 @@ final class AssaultObservation {
                 .append(",\"attempts\":").append(view.attempts).append(",\"elapsed\":").append(view.elapsed)
                 .append(",\"budget\":").append(view.budget).append(",\"configuredBudget\":").append(view.configuredBudget)
                 .append(",\"territorialAdaptation\":").append(view.territorialAdaptation)
+                .append(",\"admissionProfile\":").append(code(view.admissionProfile))
                 .append(",\"admissionThreat\":").append(TerritoryObservation.threat(view.admissionThreat))
                 .append(",\"deferred\":").append(view.deferred)
                 .append(",\"skipped\":").append(view.skipped).append(",\"active\":").append(view.active)

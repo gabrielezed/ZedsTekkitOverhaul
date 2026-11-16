@@ -38,6 +38,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private int selectedBudget;
     private boolean territorialAdaptation;
     private ThreatAssessment admissionThreat;
+    private AssaultWave.Profile admissionProfile;
     private final int interval;
     private final int activeCap;
     private final int outerRadius;
@@ -95,6 +96,7 @@ public final class SiegeDirector implements LunarService.Listener {
         target = null;
         selectedBudget = budget;
         admissionThreat = null;
+        admissionProfile = null;
         territorialAdaptation = false;
         evidence.clear();
         loadouts.reset(LunarPhase.NEW_MOON);
@@ -172,7 +174,8 @@ public final class SiegeDirector implements LunarService.Listener {
             }
             territorialAdaptation = territory != null;
             admissionThreat = territory == null ? null : territory.assess(world, player);
-            selectedBudget = admissionThreat == null ? budget : admissionThreat.assaultBudget(budget);
+            admissionProfile = AssaultWave.Profile.select(territorialAdaptation, admissionThreat);
+            selectedBudget = admissionProfile.budget(budget);
             storage.start(boundary.rawTime);
             state = State.ACTIVE;
             reason = "NATURAL_FULL_MOON";
@@ -182,7 +185,7 @@ public final class SiegeDirector implements LunarService.Listener {
             waveIndex = -1;
             localHostiles = -1;
             peakActive = tracked.size();
-            waves = AssaultWave.plan(selectedBudget);
+            waves = AssaultWave.plan(selectedBudget, admissionProfile);
             for (AssaultWave wave : waves) {
                 if (wave.planned > 0) wave.special.reset(EnderkinRole.select(experimentalEnderkin,
                         world.getSeed(), boundary.logicalDay, boundary.phase, wave.number));
@@ -196,7 +199,7 @@ public final class SiegeDirector implements LunarService.Listener {
                 diagnostics.assault(boundary.rawTime, "Player assault started");
                 if (territorialAdaptation) diagnostics.assault(boundary.rawTime,
                         "Territorial threat " + (admissionThreat == null ? "unavailable" : admissionThreat.threat)
-                                + " | Budget " + selectedBudget + "/" + budget);
+                                + " | " + admissionProfile + " | Budget " + selectedBudget + "/" + budget);
             }
             world.playSoundEffect(player.posX, player.posY, player.posZ, "ambient.cave.cave", 0.5F, 0.85F);
             return;
@@ -478,6 +481,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final boolean territorialAdaptation;
         public final int configuredBudget;
         public final ThreatAssessment admissionThreat;
+        public final String admissionProfile;
         public final int activeEnderkin;
 
         private Snapshot(SiegeDirector director) {
@@ -522,6 +526,7 @@ public final class SiegeDirector implements LunarService.Listener {
             configuredBudget = director.budget;
             territorialAdaptation = director.territorialAdaptation;
             admissionThreat = director.admissionThreat;
+            admissionProfile = director.admissionProfile == null ? null : director.admissionProfile.name();
             trigger = starts == 0 ? null : "NATURAL_FULL_MOON";
             spawns = Collections.unmodifiableList(new ArrayList<Spawn>(director.evidence));
             patrol = new PatrolSnapshot(director);

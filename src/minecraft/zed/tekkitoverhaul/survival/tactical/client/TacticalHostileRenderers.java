@@ -13,6 +13,7 @@ import net.minecraft.src.RenderLiving;
 import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 
 public final class TacticalHostileRenderers {
@@ -21,6 +22,7 @@ public final class TacticalHostileRenderers {
     public static void register(Map<Class<? extends Entity>, Render> renderers) {
         renderers.put(EntitySkirmisher.class, new TacticalRenderer(new SkirmisherModel(), 0.30F, 2.76F, "skirmisher"));
         renderers.put(EntityBreacher.class, new TacticalRenderer(new BreacherModel(), 0.58F, 2.43F, "breacher"));
+        renderers.put(EntitySaboteur.class, new TacticalRenderer(new SaboteurModel(), 0.22F, 1.1F, "saboteur"));
         renderers.put(EntityEnderPulse.class, new EnderPulseRenderer());
     }
 
@@ -57,7 +59,7 @@ public final class TacticalHostileRenderers {
 
         @Override
         protected void preRenderCallback(EntityLiving mob, float partialTick) {
-            if (mob.deathTime > 0) return;
+            if (mob.deathTime > 0 || visualEnvelope <= mob.height) return;
             float scale = clearanceScale(mob, partialTick);
             if (scale < 1) GL11.glScalef(1, scale, 1);
         }

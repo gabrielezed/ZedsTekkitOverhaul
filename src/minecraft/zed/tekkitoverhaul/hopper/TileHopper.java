@@ -3,10 +3,12 @@ package zed.tekkitoverhaul.hopper;
 import java.util.List;
 import net.minecraft.src.*;
 import net.minecraft.src.forge.ISidedInventory;
+import zed.tekkitoverhaul.integration.LoadedTile;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
+import zed.tekkitoverhaul.survival.tactical.SabotageTarget;
 
 /** Five persistent slots; only the authoritative world performs transfers. */
-public final class TileHopper extends TileEntity implements ISidedInventory {
+public final class TileHopper extends TileEntity implements ISidedInventory, SabotageTarget {
     private ItemStack[] items = new ItemStack[5];
     private int cooldown;
     private int outputMode;
@@ -15,13 +17,10 @@ public final class TileHopper extends TileEntity implements ISidedInventory {
 
     /** Loaded-only lookup for the pinned local-world provider. Never creates a missing tile. */
     public static TileHopper loadedAt(World world, int x, int y, int z) {
-        if (HopperRegistry.block == null || !world.blockExists(x, y, z)) return null;
-        IChunkProvider provider = world.getChunkProvider();
-        if (provider.getClass() != ChunkProvider.class) return null;
-        Chunk chunk = provider.provideChunk(x >> 4, z >> 4);
-        if (chunk.getBlockID(x & 15, y, z & 15) != HopperRegistry.block.blockID) return null;
-        Object tile = chunk.chunkTileEntityMap.get(new ChunkPosition(x & 15, y, z & 15));
-        return tile instanceof TileHopper && !((TileHopper) tile).isInvalid() ? (TileHopper) tile : null;
+        if (HopperRegistry.block == null) return null;
+        TileEntity tile = LoadedTile.at(world, x, y, z);
+        return tile instanceof TileHopper && world.getBlockId(x, y, z) == HopperRegistry.block.blockID
+                ? (TileHopper) tile : null;
     }
 
     public boolean beginDisruption(EntitySaboteur owner) {

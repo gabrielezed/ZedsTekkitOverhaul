@@ -29,6 +29,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
     private int cleared;
     private LocalLunarCalendar lunar;
     private AssaultRecurrenceProbe recurrence;
+    private TerritorialRuntimeProbe territory;
     private EntitySkirmisher caster;
     private EntityBreacher breacher;
     private boolean sawPulse, sawPressure;
@@ -108,11 +109,20 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 initialize();
                 directory = (File) field(Minecraft.class, "aj").get(null);
                 check(!settings.survivalDebugHud && settings.lunarDebugKey == 0
-                        && !settings.lunarVerboseLogging
-                        && !Boolean.getBoolean("zto.devBridge.enabled"), "diagnostics disabled");
+                        && !settings.lunarVerboseLogging, "HUD and verbose diagnostics disabled");
+                check(Boolean.getBoolean("zto.devBridge.enabled") == (mode.equals("territory-threat")
+                        || mode.equals("territory-elevated")), "bridge mode");
+                if (!Boolean.getBoolean("zto.devBridge.enabled")) {
+                    for (Thread thread : Thread.getAllStackTraces().keySet()) {
+                        check(!"ZTO Dev Bridge listener".equals(thread.getName()), "no disabled bridge listener");
+                    }
+                }
                 check(settings.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
-                check(settings.experimentalEnderkinEncounters == mode.startsWith("ender-"),
+                check(settings.experimentalEnderkinEncounters == (mode.startsWith("ender-") || "territory-both".equals(mode)),
                         "experimental setting loaded from startup configuration");
+                check(settings.experimentalTerritorialThreat == ("territory-threat".equals(mode)
+                        || "territory-elevated".equals(mode) || "territory-both".equals(mode)),
+                        "territorial experiment setting loaded");
                 System.out.println("ALPHA6 JAR " + mod_ZedsTekkitOverhaul.class.getProtectionDomain()
                         .getCodeSource().getLocation() + " Java " + System.getProperty("java.version"));
                 lunar = (LocalLunarCalendar) field(mod_ZedsTekkitOverhaul.class, "LUNAR").get(null);
@@ -123,8 +133,23 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                     game.h.aT.a = false;
                     field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
                 }
+                if (mode.startsWith("territory-")) {
+                    if (settings.experimentalEnderkinEncounters) game.h.aT.a = false;
+                    field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
+                    territory = new TerritorialRuntimeProbe(lunar, settings.experimentalTerritorialThreat,
+                            settings.experimentalEnderkinEncounters, directory, save, mode.equals("territory-elevated"));
+                }
                 if (mode.startsWith("ender-")) seedPlacement();
                 stage++;
+                return;
+            }
+            if (territory != null) {
+                if (territory.tick(game)) {
+                    saveQuit(game);
+                    System.out.println("ALPHA6 PASS " + mode);
+                    done = true;
+                    game.f();
+                }
                 return;
             }
             Snapshot view = lunar.assaultSnapshot(game.f);
@@ -611,8 +636,12 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
     }
 
     static void open(Minecraft game) throws Exception {
+        open(game, save, null);
+    }
+
+    static void open(Minecraft game, String name, fj settings) throws Exception {
         field(Minecraft.class, "c").set(game, new aes(game));
-        game.a(save, save, (fj) null);
+        game.a(name, name, settings);
         game.a((vp) null);
         game.f.q = 2;
     }

@@ -36,6 +36,7 @@ public final class DevBridgeTest {
             expect("/capabilities", null, token, 200, "world.block@1");
             expect("/capabilities", null, token, 200, "lunar.events@1");
             expect("/capabilities", null, token, 200, "assault.snapshot@1");
+            expect("/capabilities", null, token, 200, "territory.snapshot@1");
             expect("/status", null, token, 200, "no_world");
             expect("/query", QUERY, token, 503, "NOT_READY");
             expect("/query", "{", token, 400, "INVALID_ARGUMENT");

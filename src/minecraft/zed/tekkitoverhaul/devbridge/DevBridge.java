@@ -124,6 +124,7 @@ public final class DevBridge implements ITickHandler {
         if ("lunar.snapshot".equals(query.op)) return lunarObserver.snapshot();
         if ("lunar.events".equals(query.op)) return lunarObserver.poll(query.worldId, query.afterSequence);
         if ("assault.snapshot".equals(query.op)) return AssaultObservation.read(worldId, lunar.assaultSnapshot(world));
+        if ("territory.snapshot".equals(query.op)) return TerritoryObservation.read(worldId, lunar.territorialSnapshot(world));
         return read(world, dimension, query);
     }
 

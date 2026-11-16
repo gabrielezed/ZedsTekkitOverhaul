@@ -50,6 +50,8 @@ final class AssaultRecurrenceProbe implements LunarService.Listener {
             lastEvent = null;
         }
         LunarSnapshot now = service.snapshot();
+        // A render can follow a fixture clock write before the next post-world callback.
+        if (now.rawTime != game.f.w()) return false;
         switch (stage) {
             case 0:
                 if (now.timeOfDay < 10820) return false;

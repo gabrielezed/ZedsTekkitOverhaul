@@ -9,7 +9,7 @@ import zed.tekkitoverhaul.distillation.DistillationPartType;
 /** Validated startup settings shared by the local client features. */
 public final class ZtoConfig {
     public final boolean playerAssault, lunarPatrols, lunarOutdoorLightPressure;
-    public final boolean experimentalEnderkinEncounters, disableNightSkipping;
+    public final boolean experimentalEnderkinEncounters, experimentalTerritorialThreat, disableNightSkipping;
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
     public final boolean creativeInventoryBackport, partialRecipeFill;
     public final int craftingUxShortcut;
@@ -31,6 +31,7 @@ public final class ZtoConfig {
         lunarPatrols = values.flag("lunarPatrols", true);
         lunarOutdoorLightPressure = values.flag("lunarOutdoorLightPressure", true);
         experimentalEnderkinEncounters = values.flag("experimentalEnderkinEncounters", false);
+        experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
         disableNightSkipping = values.flag("disableNightSkipping", true);
         assaultSpawnBudget = values.bounded("assaultSpawnBudget", 15, 1, 24);
         assaultWaveInterval = values.bounded("assaultWaveInterval", 900, 400, 1200);

@@ -26,6 +26,7 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
+import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Owns the one active single-player save session. */
 public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler {
@@ -37,6 +38,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private LunarCalendar calendar;
     private LunarDiagnostics diagnostics;
     private SiegeDirector assault;
+    private final TerritorialActivityService territory = new TerritorialActivityService();
+    private boolean experimentalTerritorialThreat;
     private SurvivalDebugHud survivalHud;
     private AssaultDiagnostics survivalDiagnostics;
     private int survivalLogCapacity;
@@ -47,11 +50,12 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private String storageStatus = "No active local save";
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
-                         boolean survivalDebug, int survivalKey, int logCapacity) {
+                         boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
         this.assault = assault;
+        this.experimentalTerritorialThreat = experimentalTerritorialThreat;
         if (keyCode > 0 && keyCode < 256) {
             key = new KeyBinding("Open ZTO Lunar Debug", keyCode);
             ModLoader.registerKey(mod, key, false);
@@ -80,6 +84,11 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public SiegeDirector.Snapshot assaultSnapshot(World context) {
         return context != null && context == game.theWorld ? assault.snapshot(context) : null;
+    }
+
+    public TerritorialActivityService.Snapshot territorialSnapshot(World context) {
+        return Thread.currentThread() == owner && context != null && context == game.theWorld
+                ? territory.snapshot(context, game.thePlayer) : null;
     }
 
     AssaultDiagnostics survivalDiagnostics(World context) {
@@ -135,6 +144,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (!sameSave) detach();
         world = active;
         save = handler;
+        territory.bind(active);
         if (sameSave) {
             if (calendar != null) {
                 assault.bind(null, null);
@@ -190,6 +200,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     }
 
     private void detach() {
+        territory.bind(null);
         assault.bind(null, null);
         assault.setDiagnostics(null);
         survivalDiagnostics = null;
@@ -223,9 +234,10 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (survivalHud != null && ticks.contains(TickType.RENDER)) survivalHud.render();
         if (!ticks.contains(TickType.WORLD)) return;
         bind(game.theWorld);
+        territory.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {
             calendar.observe(world.getWorldTime());
-            assault.tick(game.thePlayer, game.isGamePaused);
+            assault.tick(game.thePlayer, game.isGamePaused, experimentalTerritorialThreat ? territory : null);
         }
     }
 

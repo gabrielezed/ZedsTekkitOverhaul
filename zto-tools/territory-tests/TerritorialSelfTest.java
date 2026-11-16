@@ -1,0 +1,267 @@
+package zed.tekkitoverhaul.territory;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.zip.GZIPOutputStream;
+import net.minecraft.src.CompressedStreamTools;
+import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.NBTTagList;
+
+public final class TerritorialSelfTest {
+    private static volatile int blackhole;
+
+    public static void main(String[] args) throws Exception {
+        regions();
+        observations();
+        smoothing();
+        persistence();
+        legacyObservation();
+        measure();
+        System.out.println("PASS territorial activity, threat policy and legacy NBT");
+    }
+
+    private static void regions() {
+        expect(TerritorialActivity.cell(-65) == -2 && TerritorialActivity.cell(-64) == -1
+                && TerritorialActivity.cell(-1) == -1 && TerritorialActivity.cell(64) == 1, "signed cells");
+        for (int size : new int[] {16, 64, 128}) {
+            Set<Long> walk = new HashSet<Long>(), work = new HashSet<Long>(), outposts = new HashSet<Long>();
+            for (int i = 0; i < 1000; i++) walk.add(cell(i * 21, 0, size));
+            for (int i = 0; i < 720; i++) work.add(cell(62 + i % 7, 70 + i % 9, size));
+            for (int i = 0; i < 960; i++) outposts.add(cell(i % 240 < 120 ? 4 : 100, 4, size));
+            System.out.printf("grid %d: walk=%d work=%d outposts=%d%n", size, walk.size(), work.size(), outposts.size());
+        }
+    }
+
+    private static long cell(int x, int z, int size) {
+        return TerritorialActivity.key(Math.floorDiv(x, size), Math.floorDiv(z, size));
+    }
+
+    private static void observations() {
+        TerritorialActivity activity = new TerritorialActivity();
+        sample(activity, 0, 0, 1);
+        expect(activity.records.isEmpty(), "single-sample passage");
+        sample(activity, 0, 0, 1);
+        expect(activity.score(0, 0) == 1, "qualified presence");
+        sample(activity, 0, 0, 22);
+        expect(activity.score(0, 0) == 12, "two-minute work trace");
+        sample(activity, 0, 0, 1000);
+        expect(activity.score(0, 0) == 24, "saturation");
+        sample(activity, 256, 0, 38);
+        sample(activity, 0, 0, 3);
+        expect(activity.records.get(cell(0, 0, 64)).returns == 0, "return must remain four samples");
+        sample(activity, 0, 0, 1);
+        expect(activity.records.get(cell(0, 0, 64)).returns == 2 && activity.score(4, 0) == 19, "spaced return and independent outpost");
+        for (int i = 0; i < 1000; i++) sample(activity, i % 2 == 0 ? 64 : 63, 0, 1);
+        expect(activity.score(0, 0) == 0 && !activity.records.containsKey(cell(64, 0, 64)),
+                "alternating samples earn neither presence nor return credit");
+        activity.clock += 48_000;
+        expect(activity.score(0, 0) == 0 && activity.score(4, 0) == 0, "complete lazy decay");
+        activity.clock = Long.MAX_VALUE;
+        activity.advance();
+        expect(activity.clock == Long.MAX_VALUE && activity.score(0, 0) == 0, "clock saturation");
+
+        TerritorialActivity outposts = new TerritorialActivity();
+        sample(outposts, 32, 32, 10);
+        for (int visit = 0; visit < 6; visit++) {
+            sample(outposts, 320, 32, 36);
+            sample(outposts, 32, 32, 4);
+        }
+        expect(outposts.records.get(cell(32, 32, 64)).returns == TerritorialActivity.RETURN_MAX
+                && outposts.score(5, 0) > 0, "repeated visits saturate returns and maintain both outposts");
+
+        TerritorialActivity exploration = new TerritorialActivity();
+        sample(exploration, 0, 0, 48);
+        // Fill the cap with older records, then revisit the base before inserting a new cell.
+        for (int i = 1; i < TerritorialActivity.CAPACITY; i++) sample(exploration, 64 * i, 0, 2);
+        expect(exploration.score(0, 0) == 0, "extended exploration lets even mature presence decay");
+        sample(exploration, 0, 0, 48);
+        sample(exploration, 512 * 64, 0, 2);
+        expect(exploration.records.size() == 512 && exploration.evicted && exploration.score(0, 0) > 0
+                && !exploration.records.containsKey(cell(64, 0, 64)), "oldest tie at zero");
+        TerritorialActivity recent = new TerritorialActivity();
+        sample(recent, 0, 0, 48);
+        recent.advance();
+        // Equivalent saved observations made recently across the map.
+        for (int i = 1; i < TerritorialActivity.CAPACITY; i++) {
+            TerritorialActivity.Record record = new TerritorialActivity.Record();
+            record.presence = 1;
+            record.seen = recent.clock;
+            recent.records.put(TerritorialActivity.key(i, 0), record);
+        }
+        sample(recent, 512 * 64, 0, 2);
+        expect(recent.score(0, 0) == 24 && !recent.records.containsKey(cell(64, 0, 64)),
+                "retain an older active region over a newer weak region");
+    }
+
+    private static void smoothing() {
+        TerritorialActivity activity = new TerritorialActivity();
+        sample(activity, 32, 32, 48);
+        expect(activity.blended(32, 32) == 24 && activity.blended(160, 160) == 0, "locality");
+        expect(Math.abs(activity.blended(63, 32) - activity.blended(64, 32)) <= 1, "horizontal edge");
+        expect(Math.abs(activity.blended(63, 63) - activity.blended(64, 64)) <= 1, "corner");
+        sample(activity, -32, -32, 48);
+        expect(Math.abs(activity.blended(-1, -1) - activity.blended(0, 0)) <= 1, "signed corner");
+        ThreatAssessment baseline = assessment(0, ThreatAssessment.Environment.BASELINE);
+        ThreatAssessment exposed = assessment(0, ThreatAssessment.Environment.EXPOSED);
+        ThreatAssessment swamp = assessment(0, ThreatAssessment.Environment.SWAMPLAND);
+        ThreatAssessment mature = assessment(100, ThreatAssessment.Environment.SWAMPLAND);
+        expect(baseline.threat == 12 && exposed.threat == 16 && swamp.threat == 18
+                && !swamp.observed && mature.threat == ThreatAssessment.MAX,
+                "independent environmental threat and cap");
+        expect(assessment(100, ThreatAssessment.Environment.BASELINE).threat == 44
+                && assessment(0, ThreatAssessment.Environment.SWAMPLAND).environment == mature.environment,
+                "ordinary activity is capped and environmental identity survives decay");
+    }
+
+    private static ThreatAssessment assessment(int activity, ThreatAssessment.Environment environment) {
+        return new ThreatAssessment(0, 0, 0, activity, environment, environment.contribution, activity > 0);
+    }
+
+    private static void persistence() throws Exception {
+        TerritorialWorldState source = new TerritorialWorldState("test");
+        TerritorialWorldState loaded = new TerritorialWorldState("test");
+        for (int count : new int[] {1, 32, 128, 512}) {
+            for (int i = source.activity.records.size(); i < count; i++) sample(source.activity, 64 * i, -64, 2);
+            NBTTagCompound tag = encode(source);
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            NBTTagCompound envelope = new NBTTagCompound();
+            envelope.setCompoundTag("data", tag);
+            CompressedStreamTools.writeCompressed(envelope, bytes);
+            loaded.readFromNBT(TerritorialNbtInput.read(new ByteArrayInputStream(bytes.toByteArray())).getCompoundTag("data"));
+            expect("READY".equals(loaded.status) && loaded.activity.records.size() == count
+                    && source.activity.clock == loaded.activity.clock, "round trip and repeated save");
+            System.out.printf("NBT %d records: %d compressed bytes%n", count, bytes.size());
+        }
+        sample(loaded.activity, -64, 0, 2);
+        expect(loaded.activity.records.size() == 512 && !loaded.activity.records.containsKey(cell(0, -64, 64)),
+                "eviction order survives reopen");
+        NBTTagCompound invalid = encode(source);
+        invalid.setInteger("Schema", 2);
+        loaded.readFromNBT(invalid);
+        expect("UNSUPPORTED_SCHEMA".equals(loaded.status) && !loaded.isDirty(), "future schema stays read-only");
+        invalid = encode(source);
+        NBTTagList records = invalid.getTagList("Regions");
+        ((NBTTagCompound) records.tagAt(0)).setInteger("Presence", 99);
+        loaded.readFromNBT(invalid);
+        expect("UNREADABLE".equals(loaded.status) && !loaded.isDirty(), "bad record stays read-only");
+        invalid = encode(source);
+        records = invalid.getTagList("Regions");
+        records.appendTag(records.tagAt(0));
+        loaded.readFromNBT(invalid);
+        expect("UNREADABLE".equals(loaded.status), "oversized list rejected");
+        oversizedFrame(9, "Regions");
+        oversizedFrame(7, "UnexpectedArray");
+        TerritorialWorldState dirty = new TerritorialWorldState("test");
+        int marks = 0;
+        for (int n = 0; n < 12000; n++) {
+            dirty.activity.advance();
+            boolean changed = n % 100 == 99 && dirty.activity.observe(0, 0);
+            dirty.checkpoint(changed);
+            if (dirty.isDirty()) {
+                marks++;
+                dirty.setDirty(false);
+            }
+        }
+        expect(marks == 30, "saturated sampling uses bounded checkpoints");
+        System.out.println("Dirty marks in 12,000 stationary simulation ticks: " + marks);
+    }
+
+    private static void oversizedFrame(int type, String name) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(bytes))) {
+            out.writeByte(10);
+            out.writeUTF("");
+            out.writeByte(10);
+            out.writeUTF("data");
+            out.writeByte(type);
+            out.writeUTF(name);
+            if (type == 9) out.writeByte(10);
+            out.writeInt(Integer.MAX_VALUE);
+        }
+        try {
+            TerritorialNbtInput.read(new ByteArrayInputStream(bytes.toByteArray()));
+            throw new AssertionError("Oversized NBT declaration was accepted");
+        } catch (IOException expected) {
+            expect("Invalid territorial NBT framing".equals(expected.getMessage()), "reject declaration before allocation");
+        }
+    }
+
+    private static void legacyObservation() {
+        NBTTagCompound data = new NBTTagCompound(), row = new NBTTagCompound();
+        NBTTagList rows = new NBTTagList();
+        data.setInteger("Schema", 1);
+        data.setInteger("Grid", 1);
+        data.setInteger("Dimension", 0);
+        data.setLong("Clock", 1800);
+        row.setInteger("X", -1);
+        row.setInteger("Z", 2);
+        row.setInteger("Presence", 1);
+        row.setInteger("Returns", 4);
+        row.setLong("Seen", 1200);
+        rows.appendTag(row);
+        data.setTag("Regions", rows);
+        TerritorialWorldState world = new TerritorialWorldState("legacy");
+        world.readFromNBT(data);
+        expect("READY".equals(world.status) && world.activity.score(-1, 2) == 5, "alpha.1 activity preserved");
+        sample(world.activity, -32, 160, 1);
+        expect(world.activity.score(-1, 2) == 5, "alpha.2 qualification on subsequent observations");
+        sample(world.activity, -32, 160, 1);
+        expect(world.activity.score(-1, 2) == 6, "credited sample incorporates legacy history");
+    }
+
+    private static NBTTagCompound encode(TerritorialWorldState state) {
+        NBTTagCompound tag = new NBTTagCompound();
+        state.writeToNBT(tag);
+        return tag;
+    }
+
+    private static void measure() {
+        final int samples = 100000;
+        for (int run = 0; run < 6; run++) {
+            TerritorialActivity activity = new TerritorialActivity();
+            for (int i = 0; i < 512; i++) sample(activity, i * 64, 0, 2);
+            int checksum = 0;
+            long begin = System.nanoTime();
+            for (int i = 0; i < samples; i++) checksum += TerritorialActivity.cell((int) Math.floor(i * 1.3));
+            long positioned = System.nanoTime();
+            for (int i = 0; i < samples; i++) sample(activity, (i & 511) * 64, 0, 2);
+            long updated = System.nanoTime();
+            for (int i = 0; i < samples; i++) checksum += activity.score(i & 511, 0);
+            long lookedUp = System.nanoTime();
+            for (int i = 0; i < samples; i++) checksum += activity.blended(i & 32767, 0);
+            long blended = System.nanoTime();
+            for (int i = 0; i < samples; i++) sample(activity, (i + 512) * 64, 0, 2);
+            long evicted = System.nanoTime();
+            TerritorialActivity dense = new TerritorialActivity();
+            for (int i = 0; i < 512; i++) {
+                dense.observe(i * 64, 0);
+                dense.observe(i * 64, 0);
+            }
+            long denseBegin = System.nanoTime();
+            for (int i = 512; i < samples + 512; i++) {
+                dense.observe(i * 64, 0);
+                dense.observe(i * 64, 0);
+            }
+            long denseEvicted = System.nanoTime();
+            blackhole = checksum;
+            if (run >= 3) System.out.printf("ns/op position=%d update=%d lookup=%d blend=%d eviction=%d denseEviction=%d%n",
+                    (positioned - begin) / samples, (updated - positioned) / samples, (lookedUp - updated) / samples,
+                    (blended - lookedUp) / samples, (evicted - blended) / samples, (denseEvicted - denseBegin) / samples);
+        }
+    }
+
+    private static void sample(TerritorialActivity activity, int x, int z, int count) {
+        for (int i = 0; i < count; i++) {
+            activity.clock += TerritorialActivity.SAMPLE_TICKS;
+            activity.observe(x, z);
+        }
+    }
+
+    private static void expect(boolean condition, String message) {
+        if (!condition) throw new AssertionError(message);
+    }
+}

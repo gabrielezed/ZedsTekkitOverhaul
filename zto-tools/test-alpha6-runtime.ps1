@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence')]
+    [ValidateSet('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled', 'ender-first', 'ender-gibbous', 'ender-waves', 'ender-fallback', 'ender-cap', 'ender-peaceful', 'assault-recurrence', 'territory-legacy', 'territory-threat', 'territory-elevated', 'territory-both')]
     [string[]]$Modes = @('first', 'gibbous', 'full', 'waves', 'quiet', 'disabled')
 )
 
@@ -19,7 +19,7 @@ if ((Get-FileHash -LiteralPath $deployed).Hash -ne $hash) {
 }
 $launch = Get-Content (Join-Path $runtime 'launch.json') -Raw | ConvertFrom-Json
 $null = New-Item -ItemType Directory -Path $harness, $report -Force
-& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java')
+& javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha6RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java') (Join-Path $PSScriptRoot 'runtime-tests/AssaultRecurrenceProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/TerritorialRuntimeProbe.java')
 if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
 $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
@@ -31,6 +31,9 @@ $phase['ender-fallback'] = 'WAXING_GIBBOUS'
 $phase['ender-cap'] = 'WAXING_GIBBOUS'
 $phase['ender-peaceful'] = 'WAXING_GIBBOUS'
 $phase['assault-recurrence'] = 'FULL_MOON'
+$phase['territory-legacy'] = $phase['territory-threat'] = $phase['territory-both'] = 'FULL_MOON'
+$phase['territory-elevated'] = 'FULL_MOON'
+. (Join-Path $PSScriptRoot 'runtime-tests/TerritoryHttp.ps1')
 foreach ($mode in $Modes) {
     $id = [Guid]::NewGuid().ToString('N')
     $save = "ZTO-Test-$id"
@@ -38,19 +41,34 @@ foreach ($mode in $Modes) {
     if ($LASTEXITCODE -ne 0) { throw 'Could not generate a disposable save.' }
     [IO.File]::WriteAllText((Join-Path $game "saves/$save/.zto-disposable-test"),
         "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
+    if ($mode -eq 'territory-threat') {
+        $fresh = Join-Path $game "saves/$save-Fresh"
+        $null = New-Item -ItemType Directory -Path $fresh
+        [IO.File]::WriteAllText((Join-Path $fresh '.zto-disposable-test'), "$save-Fresh 911`n", [Text.Encoding]::ASCII)
+    }
     $enabled = ($mode -ne 'disabled').ToString().ToLowerInvariant()
-    $enderkin = $mode.StartsWith('ender-').ToString().ToLowerInvariant()
+    $enderkin = ($mode.StartsWith('ender-') -or $mode -eq 'territory-both').ToString().ToLowerInvariant()
+    $threat = ($mode -in 'territory-threat', 'territory-elevated', 'territory-both').ToString().ToLowerInvariant()
+    $useBridge = $mode -in 'territory-threat', 'territory-elevated'
+    $bridgeFlag = $useBridge.ToString().ToLowerInvariant()
     Set-RuntimeConfig $game ([ordered]@{
         experimentalEnderkinEncounters = $enderkin
+        experimentalTerritorialThreat = $threat
         lunarOutdoorLightPressure = $enabled
     })
-    $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha6RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $mode
+    $arguments = '-Xmx1G -Dzto.dev={7} -Dzto.devBridge.enabled={7} "-Djava.io.tmpdir={4}" "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha6RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $mode, $bridgeFlag
     $stdout = Join-Path $report "alpha6-$mode-$save.txt"
     $stderr = Join-Path $report "alpha6-$mode-$save.stderr.txt"
     $java = Join-Path (Split-Path $launch.java) 'java.exe'
     $process = Start-Process -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    if ($useBridge) {
+        Test-TerritoryHttp $process $game $save $mode $stdout (Join-Path $report "alpha2-http-$save.json")
+    }
     $timedOut = !(Wait-RuntimeClient $process 180000)
+    if (!$useBridge -and (Select-String -LiteralPath $stderr -Pattern 'Dev Bridge enabled. Discovery:' -Quiet)) {
+        throw 'The probe found a listener announcement with Dev Bridge disabled.'
+    }
     Write-Output "ALPHA6 $mode $save SHA-256 $hash"
     Get-Content -LiteralPath $stdout | Select-String '^ALPHA6|MinecraftForge' | ForEach-Object Line
     Select-String -LiteralPath $stderr -Pattern 'Forge Mod Loader version|Forge Mod Loader load complete|\[ZTO\] PATROL' |

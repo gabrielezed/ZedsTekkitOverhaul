@@ -80,7 +80,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 new SiegeDirector(settings.playerAssault, settings.assaultSpawnBudget, settings.assaultWaveInterval,
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
-                settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity);
+                settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
+                settings.experimentalTerritorialThreat);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);

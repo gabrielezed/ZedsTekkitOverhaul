@@ -1,6 +1,6 @@
 # Future territorial activity and threat
 
-Design contract for a later milestone.
+Design direction for Survival 0.2 and later. See the [alpha.1 implementation contract](survival-02-alpha1.md) for the current behavior.
 
 | Responsibility | Contract |
 | --- | --- |

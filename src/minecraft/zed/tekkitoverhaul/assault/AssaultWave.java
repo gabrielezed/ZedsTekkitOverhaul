@@ -2,9 +2,29 @@ package zed.tekkitoverhaul.assault;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import zed.tekkitoverhaul.territory.ThreatAssessment;
 
 /** Per-wave accounting in simulation ticks. Carry-over transfers existing budget. */
 final class AssaultWave {
+    enum Profile {
+        DISABLED, ASSESSMENT_UNAVAILABLE, QUIET, ORDINARY, ELEVATED;
+
+        static Profile select(boolean enabled, ThreatAssessment assessment) {
+            if (!enabled) return DISABLED;
+            if (assessment == null) return ASSESSMENT_UNAVAILABLE;
+            return forThreat(assessment.threat);
+        }
+
+        static Profile forThreat(int threat) {
+            if (threat < 16) return QUIET;
+            return threat < 24 ? ORDINARY : ELEVATED;
+        }
+
+        int budget(int configured) {
+            return this == QUIET ? Math.max(1, configured - 1) : configured;
+        }
+    }
+
     final EnderkinSlot special = new EnderkinSlot();
     int equipped;
     static final int COUNT = 3;
@@ -35,11 +55,25 @@ final class AssaultWave {
     }
 
     static AssaultWave[] plan(int budget) {
+        return plan(budget, Profile.DISABLED);
+    }
+
+    static AssaultWave[] plan(int budget, Profile profile) {
         int first = (budget * 4 + 7) / 15;
-        int second = (budget * 9 + 7) / 15;
+        int throughSecond = (budget * 9 + 7) / 15;
+        int middle = throughSecond - first;
+        int last = budget - throughSecond;
+        if (profile == Profile.QUIET && middle > 0 && first > 1) {
+            int shift = Math.min(2, first - 1);
+            first -= shift;
+            middle += shift;
+        } else if (profile == Profile.ELEVATED && first > 0 && last > 1) {
+            int shift = Math.min(2, last - 1);
+            first += shift;
+            last -= shift;
+        }
         return new AssaultWave[] {
-            new AssaultWave(1, first), new AssaultWave(2, second - first),
-            new AssaultWave(3, budget - second)
+            new AssaultWave(1, first), new AssaultWave(2, middle), new AssaultWave(3, last)
         };
     }
 

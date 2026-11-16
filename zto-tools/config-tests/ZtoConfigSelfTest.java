@@ -19,7 +19,8 @@ public final class ZtoConfigSelfTest {
         Path canonical = fresh.resolve(ZtoConfigLoader.FILE_NAME);
         ZtoConfig defaults = ZtoConfigLoader.load(fresh, false, LOG);
         check(defaults.playerAssault && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
-                && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters, "survival flags");
+                && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters
+                && !defaults.experimentalTerritorialThreat, "survival flags");
         check(defaults.assaultSpawnBudget == 15 && defaults.assaultWaveInterval == 900
                 && defaults.assaultActiveCap == 8 && defaults.assaultOuterRadius == 16, "assault defaults");
         check(defaults.creativeInventoryBackport && !defaults.partialRecipeFill && defaults.craftingUxShortcut == 0,

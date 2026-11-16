@@ -51,7 +51,8 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 - **Alpha.8 experiment:** [bounded Enderkin substitutions](survival-alpha8.md) in existing patrols and player assaults. Owner acceptance governs broader adoption.
 - **0.2 alpha.1 candidate:** [persistent local activity and bounded threat](survival-02-alpha1.md) supply one opt-in budget decision at PLAYER_ASSAULT admission. Further 0.2 work can test regional danger and encounter pacing in ordinary Survival sessions.
 - **0.2 alpha.2 candidate:** [qualified activity, regional environment and contextual waves](survival-02-alpha2.md) give full-moon assaults a bounded local variation.
-- **0.2 alpha.3 candidate:** [contextual vanilla composition](survival-02-alpha3.md) changes the balance and timing of melee and ranged pressure on Easy and Normal. Alpha.4 should validate player recognition and counterplay across shelters, terrain and equipment.
+- **0.2 alpha.3 candidate:** [contextual vanilla composition](survival-02-alpha3.md) changes the balance and timing of melee and ranged pressure on Easy and Normal.
+- **0.2 alpha.4 candidate:** [Hard assault pressure and Enderkin presence](survival-02-alpha4.md) restores native wooden-door risk and reserves room for opt-in roles in later waves. Calibrate player recognition, retreat and active defense in owner playtests. Prototype each of the [future Enderkin roles](enderkin-future-roles.md) separately.
 - **Later release lines:** settlement recognition in 0.3 and `SITE_SIEGE` in 0.4. Site sieges require separately established sites. Construction and provenance, automation, ambiguous older worlds and the distinction between interior protection and site identity remain open.
 - **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
 

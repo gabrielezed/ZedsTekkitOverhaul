@@ -144,7 +144,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                     territory = new TerritorialRuntimeProbe(lunar, settings.experimentalTerritorialThreat,
                             settings.experimentalEnderkinEncounters, directory, save, mode.equals("territory-elevated"));
                 }
-                if (mode.startsWith("ender-")) seedPlacement();
+                if (mode.startsWith("ender-") || mode.equals("territory-both")) seedPlacement();
                 if (composition) {
                     field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
                     pressure = new AssaultPressureProbe(game, lunar, directory, save, mode, X, Y, Z, seedPlacement());

@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Random;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
 import cpw.mods.fml.common.TickType;
@@ -30,6 +31,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
     private LocalLunarCalendar lunar;
     private AssaultRecurrenceProbe recurrence;
     private TerritorialRuntimeProbe territory;
+    private AssaultPressureProbe pressure;
     private EntitySkirmisher caster;
     private EntityBreacher breacher;
     private boolean sawPulse, sawPressure;
@@ -110,7 +112,8 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                 directory = (File) field(Minecraft.class, "aj").get(null);
                 check(!settings.survivalDebugHud && settings.lunarDebugKey == 0
                         && !settings.lunarVerboseLogging, "HUD and verbose diagnostics disabled");
-                check(Boolean.getBoolean("zto.devBridge.enabled") == (mode.equals("territory-threat")
+                boolean composition = mode.startsWith("composition-");
+                check(Boolean.getBoolean("zto.devBridge.enabled") == (composition || mode.equals("territory-threat")
                         || mode.equals("territory-elevated")), "bridge mode");
                 if (!Boolean.getBoolean("zto.devBridge.enabled")) {
                     for (Thread thread : Thread.getAllStackTraces().keySet()) {
@@ -118,10 +121,12 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                     }
                 }
                 check(settings.lunarOutdoorLightPressure != "disabled".equals(mode), "loaded configuration");
-                check(settings.experimentalEnderkinEncounters == (mode.startsWith("ender-") || "territory-both".equals(mode)),
+                check(settings.experimentalEnderkinEncounters == (mode.startsWith("ender-") || "territory-both".equals(mode)
+                        || "composition-both".equals(mode)),
                         "experimental setting loaded from startup configuration");
                 check(settings.experimentalTerritorialThreat == ("territory-threat".equals(mode)
-                        || "territory-elevated".equals(mode) || "territory-both".equals(mode)),
+                        || "territory-elevated".equals(mode) || "territory-both".equals(mode)
+                        || (composition && !"composition-disabled".equals(mode))),
                         "territorial experiment setting loaded");
                 System.out.println("ALPHA6 JAR " + mod_ZedsTekkitOverhaul.class.getProtectionDomain()
                         .getCodeSource().getLocation() + " Java " + System.getProperty("java.version"));
@@ -140,6 +145,10 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
                             settings.experimentalEnderkinEncounters, directory, save, mode.equals("territory-elevated"));
                 }
                 if (mode.startsWith("ender-")) seedPlacement();
+                if (composition) {
+                    field(aft.class, "d").setFloat(field(Minecraft.class, "X").get(game), 6.0F);
+                    pressure = new AssaultPressureProbe(game, lunar, directory, save, mode, X, Y, Z, seedPlacement());
+                }
                 stage++;
                 return;
             }
@@ -154,6 +163,15 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             }
             Snapshot view = lunar.assaultSnapshot(game.f);
             if (view == null) return;
+            if (pressure != null) {
+                if (pressure.tick(game, view)) {
+                    saveQuit(game);
+                    System.out.println("ALPHA6 PASS " + mode);
+                    done = true;
+                    game.f();
+                }
+                return;
+            }
             if (recurrence != null) {
                 try {
                     if (recurrence.tick(game, view)) {
@@ -215,17 +233,22 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
             reopenAt = game.f.w();
             stage = 5;
         } catch (Throwable error) {
+            System.out.println("ALPHA6 FAIL " + mode + " " + error);
             error.printStackTrace();
             System.exit(1);
         }
     }
 
-    private void seedPlacement() throws Exception {
+    private Random seedPlacement() throws Exception {
         Object director = field(LocalLunarCalendar.class, "assault").get(lunar);
         Object owner = director;
-        if (!"ender-waves".equals(mode)) owner = field(director.getClass(), "patrol").get(director);
+        if (mode.startsWith("ender-") && !"ender-waves".equals(mode)) {
+            owner = field(director.getClass(), "patrol").get(director);
+        }
         Object spawns = field(owner.getClass(), "spawns").get(owner);
-        ((java.util.Random) field(spawns.getClass(), "random").get(spawns)).setSeed(6001L);
+        Random placement = (Random) field(spawns.getClass(), "random").get(spawns);
+        placement.setSeed(6001L);
+        return placement;
     }
 
     private boolean verifyEnderkin(Minecraft game, Snapshot view) throws Exception {
@@ -660,7 +683,7 @@ public final class Alpha6RuntimeProbe implements ITickHandler {
         return field;
     }
 
-    private static void check(boolean condition, String message) {
+    static void check(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
     }
 }

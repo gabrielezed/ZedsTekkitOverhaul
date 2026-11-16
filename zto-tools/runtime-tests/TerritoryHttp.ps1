@@ -2,7 +2,8 @@
 function Test-TerritoryHttp($Process, [string]$Game, [string]$Save, [string]$Mode, [string]$Stdout, [string]$Report) {
     $client = Join-Path $PSScriptRoot '../zed-dev.ps1'
     $observations = [ordered]@{}
-    $deadline = [DateTime]::UtcNow.AddMinutes(3)
+    $pressure = $Mode.StartsWith('composition-')
+    $deadline = [DateTime]::UtcNow.AddMinutes($(if ($pressure) { 6 } else { 3 }))
     $discovery = $null
     function Read-Bridge([string]$Action, [string]$Operation) {
         $raw = if ($Operation) { & $client $Action $Operation -Discovery $discovery -Json }
@@ -13,7 +14,10 @@ function Test-TerritoryHttp($Process, [string]$Game, [string]$Save, [string]$Mod
     }
     try {
         while (!$Process.HasExited -and [DateTime]::UtcNow -lt $deadline) {
-            foreach ($line in @(Get-Content -LiteralPath $Stdout -ErrorAction SilentlyContinue | Where-Object {
+            $lines = @(Get-Content -LiteralPath $Stdout -ErrorAction SilentlyContinue)
+            $failure = $lines | Where-Object { $_ -match '^ALPHA6 FAIL ' } | Select-Object -First 1
+            if ($failure) { throw $failure }
+            foreach ($line in @($lines | Where-Object {
                 $_ -match '^ALPHA6 HTTP '
             })) {
                 $parts = $line.Split(' ')
@@ -36,8 +40,8 @@ function Test-TerritoryHttp($Process, [string]$Game, [string]$Save, [string]$Mod
                 $threat = $territory.threat
                 if ($parts[4] -eq 'null') {
                     if ($null -ne $threat) { throw "Unexpected threat at $label." }
-                } elseif (!$threat -or $parts[4] -ne (@($threat.regionX, $threat.regionZ, $threat.activity,
-                        $threat.environmental, $threat.environment, $threat.value, $threat.observed) -join ',') -or
+                } elseif (!$threat -or (!$pressure -and $parts[4] -ne (@($threat.regionX, $threat.regionZ, $threat.activity,
+                        $threat.environmental, $threat.environment, $threat.value, $threat.observed) -join ',')) -or
                         $threat.value -ne ($threat.environmental + $threat.activity) -or
                         $threat.observed -ne ($territory.observationAge -ge 0)) {
                     throw "Territory HTTP assessment diverged at $label."
@@ -45,17 +49,49 @@ function Test-TerritoryHttp($Process, [string]$Game, [string]$Save, [string]$Mod
                 $assault = $null
                 if ($parts[5] -ne 'null') {
                     $assault = Read-Bridge query assault.snapshot
+                    $admissionThreat = if ($assault.admissionThreat) { $assault.admissionThreat.value }
+                                       else { '-' }
                     if ($assault.worldId -ne $territory.worldId -or $assault.configuredBudget -ne 15 -or
-                            $parts[5] -cne (@($assault.admissionProfile, $assault.budget, $assault.admissionThreat.value,
+                            $parts[5] -cne (@($assault.admissionProfile, $assault.budget, $admissionThreat,
                                 $assault.activeCap, $assault.state) + @($assault.waves | ForEach-Object planned) -join ',') -or
                             $assault.peakActive -gt $assault.activeCap -or @($assault.spawns).Count -gt $assault.budget) {
                         throw "Assault HTTP admission or limits diverged at $label."
                     }
+                    if ($label -eq 'pressure') {
+                        $slots = foreach ($wave in $assault.waves) {
+                            $types = ($wave.vanillaSlots | ForEach-Object { $_[0] }) -join ''
+                            "$($wave.composition):$types"
+                        }
+                        $frozen = $assault.admissionThreat
+                        $frozenInputs = if ($frozen) { "$($frozen.activity),$($frozen.environmental),$($frozen.environment)" }
+                                        else { '-' }
+                        if ($parts[6] -cne (($slots -join ',') + ',') -or
+                                $parts[7] -cne ((($assault.spawns | ForEach-Object mob) -join ',') + ',') -or
+                                $parts[8] -cne "$($assault.peakActive),$($assault.reason)" -or
+                                $parts[9] -cne $frozenInputs) {
+                            throw 'Assault HTTP composition, insertions or terminal state diverged.'
+                        }
+                    }
                 }
                 $observations[$label] = [ordered]@{ territory = $territory; assault = $assault }
+                if ($label -eq 'pressure') {
+                    $lunar = Read-Bridge query lunar.snapshot
+                    if ($lunar.worldId -ne $assault.worldId -or $lunar.phase -ne 'FULL_MOON' -or
+                            $assault.boundary -ne 205000 -or !$lunar.night) {
+                        throw 'Pressure snapshot is outside the expected natural full-moon window.'
+                    }
+                    $observations[$label]['lunar'] = $lunar
+                }
                 New-Item -ItemType File -Path (Join-Path $Game "$Save-territory-http-$label.ack") | Out-Null
             }
             Start-Sleep -Milliseconds 75
+        }
+        if ($pressure) {
+            if (!$observations.Contains('pressure') -or (Test-Path -LiteralPath $discovery)) {
+                throw 'Missing pressure HTTP checkpoint or discovery was left behind.'
+            }
+            Write-Output "PASS authenticated composition and pressure snapshot ($Report)"
+            return
         }
         foreach ($label in 'unvisited', 'sustained', 'admitted', 'resolved', 'nether', 'returned', 'reopened') {
             if (!$observations.Contains($label)) { throw "Missing territory HTTP checkpoint $label." }

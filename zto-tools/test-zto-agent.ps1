@@ -25,10 +25,12 @@ try {
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
-        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java','IndustrialTheftProbe.java') |
+        $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
+        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
+            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft) -join ';') -d $out.FullName @headlessSources
-        if ($LASTEXITCODE) { throw 'Natural spawning probe compilation failed.' }
+        if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
         $mods = @(Get-ChildItem -LiteralPath (Join-Path $game 'mods') -File |
@@ -47,8 +49,10 @@ try {
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Thief behavior probe failed.' }
-            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') IndustrialTheftProbe $out.FullName
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft + $industrialCraft) -join ';') IndustrialTheftProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Industrial theft and Ender Trail probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') SurvivalIntegrationProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Survival integration probe failed.' }
         } finally { Pop-Location }
     }
 } finally {

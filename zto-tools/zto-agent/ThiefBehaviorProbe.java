@@ -53,6 +53,11 @@ public final class ThiefBehaviorProbe {
                 "compass directs the trail to the live carrier's saved position without releasing loot");
 
         double startX = thief.o, startZ = thief.q;
+        for (int z : new int[] {285, 288, 291}) {
+            for (int y = 4; y <= 7; y++) world.g(305, y, z, 17);
+            world.g(304, 4, z, 3);
+            world.g(304, 4, z + 1, 3);
+        }
         int beforeChase = player.bb();
         for (int tick = 0; tick < 270; tick++) {
             double dx = thief.o - player.o, dz = thief.q - player.q;
@@ -66,6 +71,9 @@ public final class ThiefBehaviorProbe {
         player.c(600, 4, 288, 0, 0);
         world.n();
         check(thief.carryingLoot(), "distance despawn leaves carrier alive");
+        uh distant = ThiefTrail.inspect(world, player);
+        check(distant != null && Math.abs(distant.a - thief.o) <= 8 && Math.abs(distant.c - thief.q) <= 8
+                && world.b(fq.class) == 0, "distant compass reading returns the stored vicinity without releasing loot");
         player.c(thief.o - 2, 4, thief.q, 0, 0);
         world.a(true, null);
         ce.a.a();

@@ -1,6 +1,6 @@
 # Survival 0.2.1 implementation
 
-The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation, ordinary Enderkin ecology and the Thief encounter for local single-player Tekkit Classic 3.1.2.
+The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation, ordinary Enderkin ecology, the Thief encounter and the Saboteur pipe theft for local single-player Tekkit Classic 3.1.2. See the [integration campaign](survival-021-integration.md) for paired runs and owner playtests.
 
 ## Debug Hub
 
@@ -24,7 +24,11 @@ The single ZTOAgent checks the fingerprint of the pack's `vf.class` and adjusts 
 
 The Tank keeps its 1.85×3.15 block collision box and has 64 health points. Native damage still applies, with 40% of the ordinary melee knockback impulse. A frontal strike deals 9 base damage and pushes the target on a successful hit. The Tank locks its facing while winding up for 24 ticks. At the contact keyframe it checks the frontal arc, distance and a strike lane through cover. A miss still incurs 26 ticks of recovery.
 
-On Hard, the Tank first tries normal navigation. After roughly 2.4 seconds without meaningful progress it can commit that same animation to a nearby obstruction between it and its target. One strike can remove up to four blocks in one exposed column. It can complete at most three breach strikes over its lifetime. Planks, logs, cobblestone, glass and bricks are eligible. Reinforced blocks, doors, complex blocks and TileEntities stay protected. Destruction uses ordinary block removal and drops. Leaving the attack arc, changing the obstruction, or landing a hit of at least five incoming damage during the windup can foil a breach. Lower difficulties keep the heavy combat and suppress block removal. Existing Tanks keep the health from their saves. Only the breach count is persisted, and existing tags without the counter get a fresh budget.
+On Hard, a Tank with a breach remaining can acquire a nearby player through an eligible first obstruction in its direct lane. Acquisition through cover is capped at 12 horizontal blocks and about two blocks of elevation difference. The Tank prefers a useful native route. When an incomplete route stops bringing it closer for roughly 2.4 seconds, it can commit the same animation to a barrier within reach. One strike can remove up to four blocks in one exposed column. It can complete at most three breach strikes over its lifetime. Planks, logs, cobblestone, glass and bricks are eligible. Reinforced blocks, doors, complex blocks and TileEntities stay protected. Destruction uses ordinary block removal and drops. Leaving the attack arc, changing the obstruction, or landing a hit of at least five incoming damage during the windup can foil a breach. Lower difficulties keep the heavy combat and suppress block removal. Existing Tanks keep the health from their saves. Only the breach count is persisted, and existing tags without the counter get a fresh budget.
+
+## Lunar placement on irregular terrain
+
+For candidates requiring outdoor approaches, the placer now checks two outward walkable corridors, each reaching 14 blocks forward and able to turn up to three blocks to either side. Approach queries can use walkable ground under vanilla leaves. The actual spawn column still needs an exposed, valid surface. Existing bounds for loaded terrain, elevation, separation, cover, collision, liquids, light, role clearance and population apply. The Survival & Assault view still reports per-wave rejections, including `NO_OPEN_APPROACHES`, `NOT_OPEN_TO_SKY` and `LOCAL_MOB_CAP`.
 
 ## Enderkin mobility
 
@@ -76,7 +80,4 @@ The focused pack probe exercises actual pipe removal, the resulting BuildCraft d
 
 Equipped armor theft, cooperative theft and broader integration acceptance remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
 
-### Owner observations for acceptance testing
-
-- A Hard-mode Tank reportedly failed to breach the wall between it and the player. Reproduce with the wall material, collision dimensions, line of sight and pursuit progress recorded separately.
-- A fresh Survival world in an outdoor swamp produced one lunar assault insertion from 113 attempts. Another ordinary Survival world showed similarly low rates. Use the existing Survival & Assault diagnostics to compare rejection reasons, terrain, approach lanes and eligibility. These observations have no confirmed cause yet.
+The [integration campaign](survival-021-integration.md) reproduces failures related to the owner reports through real AI updates and natural dusk dispatch. It records what remains to be checked in the owner's scenes.

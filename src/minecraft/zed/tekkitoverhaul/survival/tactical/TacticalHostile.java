@@ -56,6 +56,11 @@ public abstract class TacticalHostile extends EntityMob {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
+        if (independentTactics()) {
+            super.updateAITasks();
+            updateAttackPose();
+            return;
+        }
         if (target == null && ticksExisted >= nextTargetSearch) {
             nextTargetSearch = ticksExisted + 20;
             EntityPlayer player = worldObj.getClosestVulnerablePlayerToEntity(this, TARGET_RANGE);
@@ -130,6 +135,8 @@ public abstract class TacticalHostile extends EntityMob {
     }
 
     protected void idle() {}
+
+    protected boolean independentTactics() { return false; }
 
     protected void updateAttackPose() {}
 

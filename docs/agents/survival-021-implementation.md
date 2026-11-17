@@ -1,6 +1,6 @@
 # Survival 0.2.1 implementation
 
-The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation and ordinary Enderkin ecology for local single-player Tekkit Classic 3.1.2.
+The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation, ordinary Enderkin ecology and the Thief encounter for local single-player Tekkit Classic 3.1.2.
 
 ## Debug Hub
 
@@ -36,6 +36,18 @@ With `naturalEnderkinSpawning=true`, the pinned hook can substitute a Skirmisher
 
 An exposed BuildCraft wooden item or liquid extractor, or a ZTO sabotage-capable tile, raises the nominal Saboteur roll from 0.5% to 11.1%. Candidates check within 12 horizontal and four vertical blocks, up to 32 tiles per already loaded chunk, and require sight to the signal. The habitat check reads component identity and leaves the machine operating normally. The existing hostile cap and lunar encounter selection remain separate controls. Disable the ecology setting to compare against ordinary vanilla species under the same territorial cap.
 
+## Thief encounter
+
+A grounded Thief in the local Overworld can wind up a grab within 2.2 horizontal blocks of a visible, vulnerable player. The reach animation lasts 16 ticks. A landed hit, loss of sight or reach, or displacement interrupts it. The transfer occurs at contact. It removes one item from a nonempty ordinary inventory or hotbar slot. The hotbar is preferred one third of the time when both categories have candidates. Armor, held cursor items, active-use stacks and foreign container inventories are outside the grab. Inventory Tweaks sorting rules still apply to its own actions. The Thief's gameplay selection uses the actual 36 player slots independently of sorting priorities.
+
+An ordinary grab plays a low pickup sound. A hotbar grab plays a sharper portal sound. A brief burst of portal particles and a chat line identify the theft and the item. The Thief tucks one arm against its torso while carrying the loot. During the chase, short portal blinks and intermittent particles mark its movement.
+
+Carrying loot switches the Thief from combat to escape. It uses successive native paths to seek ground away from the pursuer, favors routes that break sight, and can make a short diagonal blink when cornered or stalled. It runs for at least 130 ticks, can continue while pursued, and settles once it has opened a substantial gap. It flees again if approached. It can cross chunk and biome boundaries through ordinary movement. Routes and blinks stay within the loaded terrain.
+
+The local Overworld save stores one outstanding stack in `data/zto_thief_trail.dat`. The Thief entity stores only its matching custody token. Native stack splitting and save tags preserve count, metadata, durability and nested NBT. Ordinary despawn remains available before theft and is suppressed while carrying. The position is updated during the chase and survives chunk unloading and normal save and reopen. There is no migration for old Thieves without a custody token. Player inventory, chunk data and the trail use the normal legacy save cycle, which writes separate files.
+
+Sneaking with a vanilla compass once shows the last recorded location. Death or Peaceful removal releases the stack once as a normal dropped item on nearby loaded, safe footing, after which normal item-drop risks apply. If there is no safe surface near the Thief, the stack stays in a cache at the original theft site. The same compass gesture within six blocks of the cache releases the item onto safe footing. It can also claim an orphaned trail at the last location after the nearby chunks have loaded and no matching carrier is present. Go back to the Overworld to inspect a trail after taking a portal. The one-loot limit applies until the outstanding stack is dropped or recovered.
+
 ## Verification and pending work
 
 Run `zto-tools/test-zto-agent.ps1 -Pack` after building. The headless comparison exercises the reobfuscated mod against the pinned Forge 3.3.8.164 world, real terrain and native spawner. It compares saturated nighttime populations with identical terrain and player position, then checks daylight restrictions for light-sensitive mobs, saved activity reload, return qualification, decay-driven cap reduction and the off setting. The fixture retains mobs and runs spawn passes directly to measure density independently of combat and despawning.
@@ -44,4 +56,6 @@ In a disposable Tekkit Dev guest, play comparable nights in quiet and sustained-
 
 The same command checks Tank timing, dodge and recovery, Hard-only damage to a plank barrier, protected blocks, role movement and the persisted breach budget. It checks actual native Enderkin insertions and compares the same ecology roll beside an exposed BuildCraft pipe and behind a wall. The combat fixture runs on the pinned legacy world and silences the graphical client's audio hook. Owner playtesting still needs to judge combat feel, pathing across varied terrain, graphical pose readability and ordinary encounter frequency.
 
-Thief theft, extended escape and loot recovery, and Saboteur physical component theft remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
+The Thief probe checks a canceled grab, the contact tick, distinct sound dispatch, a sustained pursuit with native navigation, ordinary despawn resistance, Anvil save and reopen, and release of a tagged item exactly once. For a graphical playtest, carry inexpensive items in both inventory categories, then intercept one grab and allow another to finish. Follow the Thief through mixed terrain, lose sight and use a compass, and test recovery after reopening and after a hazardous death. Combat feel, audio balance and cross-biome chase behavior remain owner playtest targets.
+
+Equipped armor theft, cooperative theft and Saboteur physical component theft remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.

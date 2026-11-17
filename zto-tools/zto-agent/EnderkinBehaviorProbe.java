@@ -171,9 +171,7 @@ public final class EnderkinBehaviorProbe {
     private static void fight(TacticalHostile mob, int tick, boolean visible) throws Exception {
         mob.V = tick;
         // The fixture holds position so each attack and route timer can be checked independently.
-        Method method = mob.getClass() == EntityThief.class ? mob.getClass().getSuperclass()
-                .getDeclaredMethod("fight", double.class, boolean.class) : mob.getClass()
-                .getDeclaredMethod("fight", double.class, boolean.class);
+        Method method = mob.getClass().getDeclaredMethod("fight", double.class, boolean.class);
         method.setAccessible(true);
         Field target = TacticalHostile.class.getDeclaredField("target");
         target.setAccessible(true);

@@ -25,7 +25,7 @@ try {
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
-        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java') |
+        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Natural spawning probe compilation failed.' }
@@ -45,6 +45,8 @@ try {
             if ($LASTEXITCODE) { throw 'Natural spawning comparison failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') EnderkinBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Thief behavior probe failed.' }
         } finally { Pop-Location }
     }
 } finally {

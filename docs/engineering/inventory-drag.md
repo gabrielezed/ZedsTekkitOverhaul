@@ -30,6 +30,11 @@ The compact actions use the same atlas and complete four-corner border as legacy
 
 In single and double chests, ZTO's 10×10 storage actions share the player inventory label row. Hover over `#`, `M`, `D`, or `T` for totals, deposit matching, deposit all, or take all. Inventory Tweaks adds its sorting and settings buttons to the chest header independently.
 
+## TODO
+
+- Apply the compact chest button style to the remaining ZTO inventory controls, including the crafting table and NEI screens. Check the layout alongside Inventory Tweaks at legacy GUI scales.
+- Extend the chest action row to IronChest and EE2 chests. Verify each supported layout and its storage slots, preserving Inventory Tweaks protections and the existing click handling.
+
 ## Verification
 
 - Run `zto-tools/test-crafting-ux.bat` for the distribution and slot policy.

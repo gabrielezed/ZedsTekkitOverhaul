@@ -14,7 +14,7 @@ Keep marked saves disposable. Keep output in ignored staging and report paths. R
 
 The Saboteur runtime suite covers `exercise`, `restart` and `stress` modes. Both alpha.7 Creative modes check the Saboteur egg alongside the existing eggs. The [Saboteur guide](survival-02-alpha5-saboteur.md) describes the fixture and historical evidence. The Windows launch restriction below applies to all graphical runners.
 
-Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct industrial hooks without a graphical process. The [compatibility manifest](compatibility-acceptance.md) tracks live gesture, rendering and throughput checks separately.
+Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct industrial hooks without a graphical process. It also compares ordinary hostile populations in matched quiet and occupied Tekkit worlds. The [compatibility manifest](compatibility-acceptance.md) tracks live gesture, rendering and throughput checks separately.
 
 For territory, run `zto-tools/test-territory.ps1` after MCP compilation to use the legacy NBT classes. Run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-elevated,territory-both` with the reobfuscated JAR in the isolated staging copy. The quiet and elevated modes use authenticated HTTP to compare game-thread observations with Bridge replies. [Territorial evidence](survival-02-alpha2.md#verification)
 

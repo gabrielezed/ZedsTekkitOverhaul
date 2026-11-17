@@ -11,6 +11,7 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `lunarOutdoorLightPressure` | true | Limited lunar outdoor artificial-light exception. Set false for alpha.5 placement rules. |
 | `experimentalEnderkinEncounters` | false | Set true to allow opt-in substitutions. Set false for ordinary lunar composition. Creative spawn eggs work either way. |
 | `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. |
+| `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |
 | `assaultWaveInterval` | 900 | 400–1200 simulation ticks between waves while enemies remain |
@@ -24,11 +25,11 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `creativeInventoryBackport` | true | Use the backport in local Creative when its optional assets are installed. False uses native Creative with NEI. |
 | `partialRecipeFill` | false | Alt-click the recipe prepare button to place available ingredients. |
 | `craftingUxShortcut` | 0 | Shortcut for the hovered crafting UX button. |
-| `lunarDebugKey` | 0 | Open Lunar Debug. F9 is 67. |
+| `lunarDebugKey` | 0 | Optional direct shortcut for Lunar Debug. F9 is 67. Numpad 1 opens the Debug Hub. |
 | `lunarVerboseLogging` | false | Log lunar transitions, initialization and listener failures. |
-| `survivalDebugHud` | false | Enable the local Survival Debug HUD and history. |
-| `survivalDebugHudKey` | 68 | Open Survival Debug. 68 is F10. |
-| `survivalDebugLogCapacity` | 250 | 20–300 entries per save session when the HUD is enabled. |
+| `survivalDebugHud` | false | Enable the local overlay and its direct shortcut. The Hub can open Survival & Assault with the overlay disabled. |
+| `survivalDebugHudKey` | 68 | Optional direct shortcut for Survival Debug when the HUD is enabled. 68 is F10. Shift with the shortcut toggles the overlay. |
+| `survivalDebugLogCapacity` | 250 | 20–300 entries per save session for Survival & Assault diagnostics. |
 
 Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero disables the shortcut. Controls can persist registered key bindings in Minecraft's own `options.txt`.
 

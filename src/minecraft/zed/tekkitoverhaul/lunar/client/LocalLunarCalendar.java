@@ -27,6 +27,7 @@ import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
+import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 
 /** Owns the one active single-player save session. */
 public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler {
@@ -39,30 +40,37 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private LunarDiagnostics diagnostics;
     private SiegeDirector assault;
     private final TerritorialActivityService territory = new TerritorialActivityService();
+    private NaturalSpawnPressure naturalSpawning;
     private boolean experimentalTerritorialThreat;
     private SurvivalDebugHud survivalHud;
     private AssaultDiagnostics survivalDiagnostics;
     private int survivalLogCapacity;
     private long sessionId;
     private boolean verbose;
-    private KeyBinding key;
-    private long lastKeyEvent;
+    private KeyBinding key, hubKey;
+    private long lastKeyEvent = Long.MIN_VALUE;
+    private long polledKeyEvent = Long.MIN_VALUE;
     private String storageStatus = "No active local save";
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
-                         boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat) {
+                         boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
+                         int territorialHostileCapBonusPercent) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
         this.assault = assault;
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
-        if (keyCode > 0 && keyCode < 256) {
+        naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent);
+        naturalSpawning.register();
+        hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
+        ModLoader.registerKey(mod, hubKey, false);
+        if (keyCode > 0 && keyCode < 256 && keyCode != hubKey.keyCode) {
             key = new KeyBinding("Open ZTO Lunar Debug", keyCode);
             ModLoader.registerKey(mod, key, false);
         }
+        survivalLogCapacity = logCapacity;
         if (survivalDebug) {
-            survivalHud = new SurvivalDebugHud(this, game, mod, survivalKey, keyCode);
-            survivalLogCapacity = logCapacity;
+            survivalHud = new SurvivalDebugHud(this, game, mod, survivalKey, key == null ? 0 : key.keyCode);
         }
         MinecraftForge.registerSaveHandler(this);
         FMLCommonHandler.instance().registerTickHandler(this);
@@ -71,11 +79,19 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public void onKeyPressed(KeyBinding pressed) {
         if (survivalHud != null) survivalHud.onKeyPressed(pressed);
-        if (key != null && key == pressed && game.currentScreen == null && local(game.theWorld)) {
+        if ((hubKey == pressed || key == pressed) && game.currentScreen == null && local(game.theWorld)
+                && lastKeyEvent != Keyboard.getEventNanoseconds()) {
             lastKeyEvent = Keyboard.getEventNanoseconds();
-            game.displayGuiScreen(new GuiLunarDebug(this, game.theWorld));
+            game.displayGuiScreen(pressed == hubKey ? new GuiZtoDebugHub(this, game.theWorld)
+                    : new GuiLunarDebug(this, game.theWorld, null));
         }
     }
+
+    SurvivalDebugHud survivalHud() { return survivalHud; }
+
+    NaturalSpawnPressure.Snapshot naturalSpawnSnapshot(World context) { return naturalSpawning.snapshot(context); }
+
+    boolean territorialAssaultsEnabled() { return experimentalTerritorialThreat; }
 
     public LunarService service(World context) {
         return context != null && context == world && context == game.theWorld && calendar != null
@@ -145,6 +161,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         world = active;
         save = handler;
         territory.bind(active);
+        naturalSpawning.bind(active);
         if (sameSave) {
             if (calendar != null) {
                 assault.bind(null, null);
@@ -184,16 +201,12 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                 if (verbose) ModLoader.getLogger().log(Level.WARNING, "[ZTO lunar] Listener failed", failure);
             }
         });
-        if (key != null || verbose) {
-            diagnostics = new LunarDiagnostics(verbose);
-            calendar.view().subscribe(diagnostics);
-        }
-        if (survivalHud != null) {
-            survivalDiagnostics = new AssaultDiagnostics(survivalLogCapacity);
-            survivalDiagnostics.record(active.getWorldTime(), "WORLD", "Loaded dimension " + active.worldProvider.worldType);
-            calendar.view().subscribe(survivalDiagnostics);
-            assault.setDiagnostics(survivalDiagnostics);
-        }
+        diagnostics = new LunarDiagnostics(verbose);
+        calendar.view().subscribe(diagnostics);
+        survivalDiagnostics = new AssaultDiagnostics(survivalLogCapacity);
+        survivalDiagnostics.record(active.getWorldTime(), "WORLD", "Loaded dimension " + active.worldProvider.worldType);
+        calendar.view().subscribe(survivalDiagnostics);
+        assault.setDiagnostics(survivalDiagnostics);
         LunarEvent.Cause cause = state.initializedHere ? LunarEvent.Cause.INITIALIZED : LunarEvent.Cause.LOADED;
         calendar.rebaseline(active.worldProvider.worldType, active.getWorldTime(), cause);
         assault.bind(active, calendar.view());
@@ -201,6 +214,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     private void detach() {
         territory.bind(null);
+        naturalSpawning.bind(null);
         assault.bind(null, null);
         assault.setDiagnostics(null);
         survivalDiagnostics = null;
@@ -218,13 +232,13 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (ticks.contains(TickType.WORLDLOAD)) bind(game.theWorld);
         if (!ticks.contains(TickType.RENDER)) return;
         if (!local(game.theWorld) && world != null) detach();
-        if (key != null) {
-            // FML polls the held state. Both edges of a short tap can occur between polls.
-            long event = Keyboard.getEventNanoseconds();
-            if (event != lastKeyEvent) {
-                lastKeyEvent = event;
-                if (key.keyCode > 0 && Keyboard.getEventKey() == key.keyCode) onKeyPressed(key);
-            }
+        // FML polls the held state. A press and release can occur between polls.
+        long event = Keyboard.getEventNanoseconds();
+        if (event != polledKeyEvent) {
+            polledKeyEvent = event;
+            int code = Keyboard.getEventKey();
+            if (hubKey.keyCode > 0 && code == hubKey.keyCode) onKeyPressed(hubKey);
+            else if (key != null && key.keyCode > 0 && code == key.keyCode) onKeyPressed(key);
         }
         if (survivalHud != null) survivalHud.pollKey();
     }

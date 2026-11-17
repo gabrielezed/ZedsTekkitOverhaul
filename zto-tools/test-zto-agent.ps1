@@ -21,8 +21,12 @@ try {
         if ($LASTEXITCODE) { throw "Standalone agent probe failed for $runtime" }
     }
     if ($Pack) {
+        $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
+        $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
+        & javac -source 8 -target 8 -cp ($headless -join ';') -d $out.FullName (Join-Path $PSScriptRoot 'zto-agent/NaturalSpawnProbe.java')
+        if ($LASTEXITCODE) { throw 'Natural spawning probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
-        $classpath = @($out.FullName, $launch.classpath, (Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'))
+        $classpath = @($out.FullName, $launch.classpath, $candidate)
         $mods = @(Get-ChildItem -LiteralPath (Join-Path $game 'mods') -File |
             Where-Object { $_.Extension -in '.jar','.zip' -and $_.Name -notlike 'ZedsTekkitOverhaul*.jar' })
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
@@ -33,6 +37,8 @@ try {
             $reduced = @($mods | Where-Object Name -in 'buildcraft-client-A-core-2.2.14.zip','industrialcraft-2-client_1.97.jar')
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($classpath + $reduced.FullName) -join ';') zed.tekkitoverhaul.agent.AgentProbe reduced
             if ($LASTEXITCODE) { throw 'Reduced pack ABI agent probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') NaturalSpawnProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Natural spawning comparison failed.' }
         } finally { Pop-Location }
     }
 } finally {

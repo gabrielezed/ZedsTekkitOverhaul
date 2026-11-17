@@ -81,7 +81,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
-                settings.experimentalTerritorialThreat);
+                settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);

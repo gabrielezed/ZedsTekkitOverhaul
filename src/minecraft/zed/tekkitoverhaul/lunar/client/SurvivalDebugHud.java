@@ -29,9 +29,10 @@ final class SurvivalDebugHud extends Gui {
         this.local = local;
         this.game = game;
         if (keyCode > 0 && keyCode < 256) {
-            if (keyCode == lunarKey) {
+            if (keyCode == lunarKey || keyCode == Keyboard.KEY_NUMPAD1) {
                 keyCode = lunarKey == Keyboard.KEY_F10 ? Keyboard.KEY_F9 : Keyboard.KEY_F10;
-                ModLoader.getLogger().info("[ZTO] Survival Debug key overlaps Lunar Debug. Using " + Keyboard.getKeyName(keyCode));
+                ModLoader.getLogger().info("[ZTO] Survival Debug shortcut overlaps another ZTO debug key. Using "
+                        + Keyboard.getKeyName(keyCode));
             }
             key = new KeyBinding("Open ZTO Survival Debug", keyCode);
             ModLoader.registerKey(mod, key, false);
@@ -45,7 +46,7 @@ final class SurvivalDebugHud extends Gui {
                 || local.survivalDiagnostics(game.theWorld) == null || handledEvent == Keyboard.getEventNanoseconds()) return;
         handledEvent = Keyboard.getEventNanoseconds();
         if (GuiSurvivalDebug.isShiftKeyDown()) toggleOverlay();
-        else game.displayGuiScreen(new GuiSurvivalDebug(local, game.theWorld, this));
+        else game.displayGuiScreen(new GuiSurvivalDebug(local, game.theWorld, this, null));
     }
 
     void pollKey() {

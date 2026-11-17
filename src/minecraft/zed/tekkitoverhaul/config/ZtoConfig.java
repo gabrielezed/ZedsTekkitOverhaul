@@ -11,6 +11,7 @@ public final class ZtoConfig {
     public final boolean playerAssault, lunarPatrols, lunarOutdoorLightPressure;
     public final boolean experimentalEnderkinEncounters, experimentalTerritorialThreat, disableNightSkipping;
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
+    public final int territorialHostileCapBonusPercent;
     public final boolean creativeInventoryBackport, partialRecipeFill;
     public final int craftingUxShortcut;
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
@@ -33,6 +34,7 @@ public final class ZtoConfig {
         lunarOutdoorLightPressure = values.flag("lunarOutdoorLightPressure", true);
         experimentalEnderkinEncounters = values.flag("experimentalEnderkinEncounters", false);
         experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
+        territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
         disableNightSkipping = values.flag("disableNightSkipping", true);
         assaultSpawnBudget = values.bounded("assaultSpawnBudget", 15, 1, 24);
         assaultWaveInterval = values.bounded("assaultWaveInterval", 900, 400, 1200);

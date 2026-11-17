@@ -13,6 +13,10 @@ final class SaboteurBlink {
     private SaboteurBlink() {}
 
     static Result check(EntitySaboteur mob, double dx, double dz) {
+        return check((TacticalHostile) mob, dx, dz);
+    }
+
+    static Result check(TacticalHostile mob, double dx, double dz) {
         if (!mob.onGround || Math.abs(mob.motionY) > 0.1D) return Result.NOT_GROUNDED;
         double distanceSq = dx * dx + dz * dz;
         if (!(distanceSq >= 1 && distanceSq <= 16)) return Result.RANGE;
@@ -42,9 +46,9 @@ final class SaboteurBlink {
                 if (!crosses(body, dx, dz, x, x + 1, z, z + 1)) continue;
                 if (!world.isBlockNormalCube(x, feet - 1, z)) return Result.FLOOR;
                 for (int y = feet; y <= MathHelper.floor_double(hull.maxY); y++) {
-                    int id = world.getBlockId(x, y, z);
-                    if (id == Block.fire.blockID || id == Block.portal.blockID
-                            || id != 0 && Block.blocksList[id].blockMaterial.isLiquid())
+                    Block block = Block.blocksList[world.getBlockId(x, y, z)];
+                    if (block != null && (block == Block.fire || block == Block.portal || block == Block.cactus
+                            || block.blockMaterial.isLiquid()))
                         return Result.OBSTRUCTED;
                 }
             }

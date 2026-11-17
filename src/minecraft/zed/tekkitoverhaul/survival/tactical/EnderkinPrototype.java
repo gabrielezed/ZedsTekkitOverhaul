@@ -2,7 +2,7 @@ package zed.tekkitoverhaul.survival.tactical;
 
 import net.minecraft.src.World;
 
-/** Short walks and ordinary melee for inspecting Creative-spawned prototypes. */
+/** Short walks and opportunistic melee for the Thief. */
 abstract class EnderkinPrototype extends TacticalHostile {
     private final float speed;
     private int nextRoute;
@@ -22,8 +22,10 @@ abstract class EnderkinPrototype extends TacticalHostile {
 
     @Override
     protected final void fight(double distanceSq, boolean visible) {
+        if (reposition(distanceSq, visible)) return;
         double reach = 1.5D + width * 0.5D;
-        if (visible && distanceSq < reach * reach && target.boundingBox.maxY > boundingBox.minY
+        double dx = target.posX - posX, dz = target.posZ - posZ;
+        if (visible && dx * dx + dz * dz < reach * reach && target.boundingBox.maxY > boundingBox.minY
                 && target.boundingBox.minY < boundingBox.maxY) {
             getNavigator().clearPathEntity();
             if (attackTime == 0) {
@@ -36,6 +38,8 @@ abstract class EnderkinPrototype extends TacticalHostile {
             getNavigator().setPath(plan(target.posX, target.boundingBox.minY, target.posZ), speed);
         }
     }
+
+    protected boolean reposition(double distanceSq, boolean visible) { return false; }
 
     @Override
     protected final int unseenLimit() { return 60; }

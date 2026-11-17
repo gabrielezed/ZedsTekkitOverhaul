@@ -2,8 +2,11 @@ package zed.tekkitoverhaul.survival.tactical;
 
 import net.minecraft.src.DamageSource;
 import net.minecraft.src.Entity;
+import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.MathHelper;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.PathEntity;
+import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 
@@ -37,6 +40,15 @@ public final class EntityTank extends TacticalHostile {
     protected int unseenLimit() { return 200; }
 
     @Override
+    protected boolean canAcquireUnseen(EntityPlayer player) {
+        return canBreach() && TankBarrier.detect(this, player);
+    }
+
+    private boolean canBreach() {
+        return worldObj.difficultySetting == 3 && breachStrikes < BREACH_LIMIT;
+    }
+
+    @Override
     protected void idle() {
         if (ticksExisted < recoverUntil || ticksExisted < nextRoute || !getNavigator().noPath()) return;
         nextRoute = ticksExisted + 55 + rand.nextInt(40);
@@ -62,16 +74,19 @@ public final class EntityTank extends TacticalHostile {
         if (ticksExisted < nextRoute) return;
         nextRoute = ticksExisted + ROUTE_INTERVAL;
 
+        PathEntity path = plan(target.posX, target.boundingBox.minY, target.posZ);
+        boolean fullRoute = reachesPursuitGoal(path);
         double movedX = posX - progressX, movedZ = posZ - progressZ;
-        if (lastProgress == 0 || movedX * movedX + movedZ * movedZ >= 0.36D) markProgress();
+        double remaining = distanceToTarget(posX, posZ);
+        if (lastProgress == 0 || fullRoute && movedX * movedX + movedZ * movedZ >= 0.36D
+                || remaining + 0.36D < distanceToTarget(progressX, progressZ)) markProgress();
         int stalled = ticksExisted - lastProgress;
         if (stalled >= 176) {
             disengage();
             return;
         }
-        PathEntity path = plan(target.posX, target.boundingBox.minY, target.posZ);
         if (onGround && stalled >= 3 * ROUTE_INTERVAL) {
-            if (worldObj.difficultySetting == 3 && breachStrikes < BREACH_LIMIT) {
+            if (canBreach() && (!fullRoute || getNavigator().noPath())) {
                 barrier = TankBarrier.find(this, target);
                 if (barrier != null) {
                     start(Attack.BREACH);
@@ -86,6 +101,19 @@ public final class EntityTank extends TacticalHostile {
             }
         }
         getNavigator().setPath(path, SPEED);
+    }
+
+    private double distanceToTarget(double x, double z) {
+        return Math.hypot(target.posX - x, target.posZ - z);
+    }
+
+    private boolean reachesPursuitGoal(PathEntity path) {
+        // Legacy path points use the minimum corner of the Tank's footprint.
+        PathPoint end = path == null ? null : path.getFinalPathPoint();
+        double centerShift = 0.5D - width / 2.0D;
+        return end != null && end.xCoord == MathHelper.floor_double(MathHelper.floor_double(target.posX) + centerShift)
+                && end.yCoord == MathHelper.floor_double(target.boundingBox.minY)
+                && end.zCoord == MathHelper.floor_double(MathHelper.floor_double(target.posZ) + centerShift);
     }
 
     private boolean inReach() {

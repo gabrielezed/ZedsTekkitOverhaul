@@ -12,6 +12,7 @@ import zed.tekkitoverhaul.integration.LoadedTile;
 final class TankBarrier {
     private static final double[] LANES = {0, 0.80D, -0.80D};
     private static final double REACH = 2.8D;
+    private static final double TARGET_RANGE = 12.0D;
     private final int x, y, z;
     private final int[] blocks = new int[4];
 
@@ -22,17 +23,26 @@ final class TankBarrier {
     }
 
     static TankBarrier find(EntityTank tank, EntityPlayer target) {
+        return find(tank, target, REACH);
+    }
+
+    static boolean detect(EntityTank tank, EntityPlayer target) {
+        return find(tank, target, TARGET_RANGE) != null;
+    }
+
+    private static TankBarrier find(EntityTank tank, EntityPlayer target, double reach) {
         World world = tank.worldObj;
         double feet = tank.boundingBox.minY;
         double dx = target.posX - tank.posX, dz = target.posZ - tank.posZ;
         double range = Math.sqrt(dx * dx + dz * dz);
-        if (range < 1.25D || range > 7.0D || Math.abs(feet - target.boundingBox.minY) > 1.1D) return null;
+        if (range < 1.25D || range > TARGET_RANGE || Math.abs(feet - target.boundingBox.minY) > 2.25D) return null;
         int sx = MathHelper.floor_double(tank.posX), sz = MathHelper.floor_double(tank.posZ);
         int base = MathHelper.floor_double(feet + 0.01D);
+        int radius = (int) Math.ceil(reach) + 1;
         if (base < 1 || base + 4 >= world.getHeight()
-                || !world.checkChunksExist(sx - 5, 0, sz - 5, sx + 5, 0, sz + 5)) return null;
+                || !world.checkChunksExist(sx - radius, 0, sz - radius, sx + radius, 0, sz + radius)) return null;
         double sideX = -dz / range, sideZ = dx / range;
-        double fraction = Math.min(1, REACH / range);
+        double fraction = Math.min(1, reach / range);
         TankBarrier result = null;
         for (double lane : LANES) {
             double x = tank.posX + lane * sideX, z = tank.posZ + lane * sideZ;

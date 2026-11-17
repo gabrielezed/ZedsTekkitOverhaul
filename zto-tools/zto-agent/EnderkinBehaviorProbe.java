@@ -53,13 +53,16 @@ public final class EnderkinBehaviorProbe {
         check(player.bb() == after, "dodging the committed arc prevents damage");
         check(Math.abs(dodged.r) < 0.01, "stays at the committed position during the windup");
 
+        for (int z = 269; z <= 307; z++) {
+            if (z == 288) continue;
+            for (int y = 4; y <= 7; y++) world.g(290, y, z, 49);
+        }
         for (int difficulty : new int[] {2, 3}) {
             world.q = difficulty;
             EntityTank blocked = new EntityTank(world);
             place(blocked, player, 5);
             for (int y = 4; y <= 7; y++) {
                 world.g(290, y, 288, 5);  // Planks.
-                world.g(290, y, 289, 49); // Obsidian.
             }
             for (int tick = 1; tick <= 63; tick++) fight(blocked, tick, false);
             check(world.a(290, 4, 288) == 5, "no structural damage during windup");
@@ -84,7 +87,9 @@ public final class EnderkinBehaviorProbe {
         for (int tick = 56; tick <= 74; tick++) fight(interrupted, tick, false);
         check(interrupted.heavyPose(0) < 0 && world.a(290, 5, 288) == 5, "a strong hit interrupts the breach");
         world.g(290, 5, 288, 0);
-        for (int y = 4; y <= 7; y++) world.g(290, y, 289, 0);
+        for (int z = 269; z <= 307; z++) {
+            for (int y = 4; y <= 7; y++) world.g(290, y, z, 0);
+        }
         EntitySkirmisher skirmisher = new EntitySkirmisher(world);
         place(skirmisher, player, 4);
         fight(skirmisher, 33, true);

@@ -10,6 +10,7 @@ Start with the [current implementation map](docs/agents/current-state.md), then 
 - Present machine controls, status, units, capacity and actionable failures in the GUI. Preserve bucket transfers and held-block placement. Keep processing separate from presentation and respect the client/server boundary. Reserve logs for diagnostics.
 - Keep lunar authority independent of client classes. Gameplay consumes snapshots and event causes. Keep scheduling, placement and diagnostics separate. PLAYER_ASSAULT has no settlement ownership.
 - Read the [Dev Bridge guide](docs/agents/dev-bridge.md) before extending the protocol. Keep reads bounded and allowlisted, run them on the owning thread and keep credentials out of Git and logs.
+- Preserve established behavior and its activation when changing packaging or tests. Use the single ZTOAgent for justified, version-pinned compatibility hooks. Check the [feature-preservation matrix](docs/agents/compatibility-acceptance.md) and treat a missing mandatory feature or behavioral check as a merge blocker.
 
 ## Workflow
 

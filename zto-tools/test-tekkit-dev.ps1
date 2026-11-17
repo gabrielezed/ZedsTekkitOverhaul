@@ -15,6 +15,7 @@ param(
     [switch]$InterruptAssault,
     [switch]$InterruptPatrol,
     [switch]$ProtectedPatrol,
+    [switch]$KeepGame,
     [ValidateRange(0, 24)]
     [int]$AssaultMinimumSpawns = 1
 )
@@ -22,6 +23,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 . (Join-Path $PSScriptRoot 'runtime-tests/SilentMinecraft.ps1')
+. (Join-Path $PSScriptRoot 'runtime-tests/BackgroundMinecraft.ps1')
+. (Join-Path $PSScriptRoot 'runtime-tests/RuntimeArtifacts.ps1')
 $prismData = Join-Path $env:APPDATA 'PrismLauncher'
 $instance = Join-Path $prismData 'instances/Tekkit Dev'
 $game = Join-Path $instance 'minecraft'
@@ -50,6 +53,7 @@ $optionsPath = Join-Path $game 'options.txt'
 $optionsBackup = Join-Path $game 'zto-options-before-automation.bak'
 $optionsPrepared = $false
 $hadOptions = $false
+$ownsCopy = $false
 
 function Invoke-Bridge([string]$Verb, [string]$Op, [hashtable]$Arguments = @{}) {
     $cli = Join-Path $PSScriptRoot 'zed-dev.ps1'
@@ -80,6 +84,14 @@ function Get-TekkitDevJava {
     Get-CimInstance Win32_Process -Filter "Name = 'java.exe' OR Name = 'javaw.exe'" | Where-Object {
         $_.CommandLine -and $_.CommandLine -match '\borg\.prismlauncher\.EntryPoint(?:\s|$)' -and
             $_.CommandLine.Replace('\', '/') -match ('(?:^|[\s"])' + $nativeArgument + '(?:[\s"]|$)')
+    }
+}
+
+function Assert-PrismAvailable {
+    # An existing Prism process can receive --launch for the same data directory.
+    $names = 'prismlauncher', [IO.Path]::GetFileNameWithoutExtension($PrismExe)
+    if (Get-Process -Name ($names | Select-Object -Unique) -ErrorAction SilentlyContinue) {
+        throw 'PRISM_BUSY: Close Prism before running the lifecycle, or use a direct runtime probe.'
     }
 }
 
@@ -119,7 +131,7 @@ function Stop-DevClient {
         Write-Request "$($launch.nonce) stop`n"
         $stopped = $client.WaitForExit(30000)
     } else {
-        $stopped = $client.CloseMainWindow() -and $client.WaitForExit(15000)
+        $stopped = $false
     }
     $launch.exitCode = if ($client.HasExited) { $client.ExitCode } else { $null }
     $acknowledged = !$requested -or (Select-String -LiteralPath $log -Quiet -Pattern (
@@ -142,6 +154,15 @@ function Stop-DevClient {
     }
 }
 
+function Stop-OwnedPrism {
+    if (!$launcher -or $launcher.HasExited -or (Get-TekkitDevJava)) { return }
+    # A Prism startup dialog can stay open on the private desktop without starting Java.
+    if (!$launcher.WaitForExit(3000)) {
+        $launcher.Kill()
+        if (!$launcher.WaitForExit(10000)) { throw 'STOP_TIMEOUT: The owned Prism process did not exit.' }
+    }
+}
+
 function Write-Request([string]$Content) {
     $stream = [IO.File]::Open($request, 'CreateNew', 'Write', 'None')
     $script:payload = $Content
@@ -152,6 +173,9 @@ function Write-Request([string]$Content) {
 }
 
 function Start-DevClient {
+    Stop-OwnedPrism
+    Assert-PrismAvailable
+    $script:launcher = $null
     Set-SilentMinecraftOptions $game
     $script:client = $null
     $script:discovery = $null
@@ -161,8 +185,8 @@ function Start-DevClient {
     }
     $report.launches += $launch
     Write-Request "$($launch.nonce) $copyName $($report.buildSha256)`n"
-    $script:launcher = Start-Process -FilePath $PrismExe -ArgumentList "--dir `"$prismData`" --launch `"Tekkit Dev`"" `
-        -WindowStyle Hidden -PassThru
+    $script:launcher = Start-BackgroundMinecraft -FilePath $PrismExe `
+        -ArgumentList "--dir `"$prismData`" --launch `"Tekkit Dev`"" -WorkingDirectory $prismData
 
     $deadline = [Diagnostics.Stopwatch]::StartNew()
     $openedPattern = '\[ZTO\] Autoload ' + $launch.nonce + ' WORLD_OPENED ' + $copyName + '$'
@@ -440,6 +464,7 @@ function Test-PatrolRestart($Context) {
 $mutex = [Threading.Mutex]::new($false, 'Local\ZTO-Tekkit-Dev-Lifecycle')
 $locked = $false
 try {
+    Assert-BackgroundMinecraftAvailable
     if ($Persistence -eq 'Patrol' -and (!$SkipCore -or $PhysicalDistillation)) {
         throw 'PREREQUISITES: Patrol requires -SkipCore and its own disposable run.'
     }
@@ -456,6 +481,7 @@ try {
     if (!$locked) { throw 'INSTANCE_BUSY: A Tekkit Dev lifecycle is already in progress.' }
     if (Test-Path -LiteralPath $request) { throw 'REQUEST_PRESENT: Inspect the pending Tekkit Dev autoload request before retrying.' }
     if (Get-TekkitDevJava) { throw 'INSTANCE_BUSY: Close the running Tekkit Dev client before starting the lifecycle.' }
+    Assert-PrismAvailable
     if (Test-Path -LiteralPath $optionsBackup) {
         throw 'OPTIONS_RECOVERY: Restore zto-options-before-automation.bak as options.txt in Tekkit Dev with the client closed.'
     }
@@ -486,7 +512,11 @@ try {
     }
     $seed = $Matches[1]
     $report.worldSeed = $seed
-    Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
+    $null = New-Item -ItemType Directory -Path $target
+    $ownsCopy = $true
+    foreach ($item in Get-ChildItem -LiteralPath $source -Force) {
+        Copy-Item -LiteralPath $item.FullName -Destination $target -Recurse -Force
+    }
     [IO.File]::WriteAllText((Join-Path $target '.zto-disposable-test'), "$copyName $seed`n", [Text.Encoding]::ASCII)
 
     $hadOptions = Test-Path -LiteralPath $optionsPath -PathType Leaf
@@ -541,6 +571,7 @@ try {
     if ($launch -and !$launch.stop) {
         try { Stop-DevClient } catch { $launch.diagnostics += $_.Exception.Message }
     }
+    try { Stop-OwnedPrism } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     try { Remove-OwnedRequest } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     if ($optionsPrepared) {
         try {
@@ -556,6 +587,20 @@ try {
     if ($report.status -ne 'PASS' -and $launch -and (Test-Path -LiteralPath $log)) {
         $launch.diagnostics += @(Select-String -LiteralPath $log -Pattern '\[ZTO\] Disposable world autoload|\[SEVERE\]|Exception in thread' |
             Select-Object -Last 12 | ForEach-Object { $_.Line })
+    }
+    if ($ownsCopy -and !$KeepGame) {
+        try {
+            if (Get-TekkitDevJava) { throw 'The scratch save still has a running Tekkit Dev client.' }
+            $copy = Assert-RegularPath $target
+            $parent = Assert-RegularPath $saves
+            if (!$copy.PSIsContainer -or $copy.Parent.FullName -ne $parent.FullName -or
+                $copy.Name -cne $copyName -or $copy.Name -cnotmatch '^ZTO-Test-[a-f0-9]{32}$') {
+                throw "Unexpected lifecycle fixture path: $target"
+            }
+            $entries = @(Get-RuntimeTree $copy)
+            Assert-RuntimeFilesClosed $entries
+            Remove-Item -LiteralPath $copy.FullName -Recurse -Force
+        } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     }
     if ($locked) { $mutex.ReleaseMutex() }
     $mutex.Dispose()

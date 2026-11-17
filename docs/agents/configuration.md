@@ -43,6 +43,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `block.gasolineFlowing`, `block.keroseneFlowing`, `block.dieselFlowing`, `block.heavygasoilFlowing` | 3016, 3018, 3020, 3022. The still block uses the next ID. |
 | `item.gasolineBucket`, `item.keroseneBucket`, `item.dieselBucket`, `item.heavygasoilBucket` | 22000–22003 in this order |
 | `item.skirmisherEgg`, `item.breacherEgg` | 22004, 22005 |
+| `item.saboteurEgg` | 22006 (stack ID 22262). Added to the unified config with the existing ID rules. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 

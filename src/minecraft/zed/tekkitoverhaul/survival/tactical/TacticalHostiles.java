@@ -14,13 +14,16 @@ import net.minecraft.src.forge.MinecraftForge;
 public final class TacticalHostiles {
     public static final String SKIRMISHER = "ZTO.Skirmisher";
     public static final String BREACHER = "ZTO.Breacher";
+    public static final String SABOTEUR = "ZTO.Saboteur";
 
     private TacticalHostiles() {}
 
     public static void register() {
+        IndustrialSabotage.register();
         ModLoader.registerEntityID(EntitySkirmisher.class, SKIRMISHER, ModLoader.getUniqueEntityId());
         ModLoader.registerEntityID(EntityBreacher.class, BREACHER, ModLoader.getUniqueEntityId());
         ModLoader.registerEntityID(EntityEnderPulse.class, "ZTO.EnderPulse", ModLoader.getUniqueEntityId());
+        ModLoader.registerEntityID(EntitySaboteur.class, SABOTEUR, ModLoader.getUniqueEntityId());
         MinecraftForge.registerChunkLoadHandler(new IChunkLoadHandler() {
             @Override
             public void addActiveChunks(World world, Set<ChunkCoordIntPair> chunks) {}
@@ -39,13 +42,18 @@ public final class TacticalHostiles {
     public static void registerEggs(ZtoConfig config) {
         int skirmisher = config.skirmisherEgg;
         int breacher = config.breacherEgg;
-        if (skirmisher == breacher) throw new IllegalStateException("ZTO: Duplicate tactical spawn egg item IDs");
+        int saboteur = config.saboteurEgg;
+        if (skirmisher == breacher || saboteur == skirmisher || saboteur == breacher)
+            throw new IllegalStateException("ZTO: Duplicate tactical spawn egg item IDs");
         checkItemSlot(skirmisher);
         checkItemSlot(breacher);
+        checkItemSlot(saboteur);
         ModLoader.addName(new ItemTacticalSpawnEgg(skirmisher, SKIRMISHER, "ztoSkirmisherEgg", 0x17171C, 0x535170),
                 "Skirmisher Spawn Egg");
         ModLoader.addName(new ItemTacticalSpawnEgg(breacher, BREACHER, "ztoBreacherEgg", 0x1C171B, 0x785469),
                 "Breacher Spawn Egg");
+        ModLoader.addName(new ItemTacticalSpawnEgg(saboteur, SABOTEUR, "ztoSaboteurEgg", 0x211A32, 0x65D9C0),
+                "Saboteur Spawn Egg");
     }
 
     private static void checkItemSlot(int id) {

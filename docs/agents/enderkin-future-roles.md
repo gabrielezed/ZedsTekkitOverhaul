@@ -1,19 +1,19 @@
 # Future Enderkin roles
 
-The Saboteur and Tank are approved creative directions. The behaviors and prototype limits below need validation in Tekkit Dev and owner approval before becoming production rules. Alpha.4 ships neither role. Allocate stable entity names, IDs, spawn eggs and save fields in their individual implementation changes.
+The Saboteur and Tank are approved creative directions. [Alpha.5 implements the Creative Saboteur prototype](survival-02-alpha5-saboteur.md). The Tank, natural composition and third-party industrial targets are proposals. Tuning and adoption still require owner playtests.
 
 ## Saboteur prototype
 
-A short Enderkin with quick, intermittent movement draws the player's attention away from the main assault. Test a footprint roughly 0.45 blocks wide and 1.1 tall, with a low silhouette, a bright hand pose and a distinct target-facing windup. Its direct attack is a low-damage escape tool. Its priority is a visible, accessible point of interruption. An exposed player can decide whether to abandon cover, send fire toward the Saboteur, or let the interruption expire.
+A short Enderkin with quick, intermittent movement draws the player's attention away from the main assault. Test a footprint roughly 0.45 blocks wide and 1.1 tall, with a low silhouette and a distinct target-facing windup. Its direct attack is a low-damage escape tool. Its priority is a visible, accessible point of interruption. An exposed player can decide whether to abandon cover, send fire toward the Saboteur, or let the interruption expire.
 
-Prototype with a disposable, opt-in ZTO transfer fixture. Its sender stops offering **new** transfers while a short in-memory lease applies. Receivers, pipes, inventories and in-flight payloads continue their normal simulation. Represent the effect visibly at the fixture during the lease. Use the same entity and visual sequence for a harmless decoy when there is no supported target. Measure whether players recognize the approach, windup and recovery before attaching the behavior to an installed network.
+Alpha.5 pauses outgoing transfers at the ZTO Hopper or at a ZTO Distillation Receiver serving a verified wooden liquid extractor. The [owner-feedback revision](saboteur-owner-revision.md) describes the implemented targets, separate evasive blink and remaining integration boundaries. The table records the original prototype before that revision.
 
-| Step | Proposed prototype contract |
+| Step | Alpha.5 implementation and design envelope |
 | --- | --- |
-| Acquire | Search only a loaded, bounded 8-block radius around the actor, on a staggered cadence of at most one scan per second. Consider only the fixture allowlist. Reject sealed destinations and unsupported or replaced targets. |
-| Approach | Follow normal paths. A short blink of at most four blocks may reposition within the same accessible approach. Validate source-to-destination clearance and the destination footprint, floor and loaded chunks. Reject travel across closed doors, opaque walls or inaccessible height changes. Use a small fixed candidate list and at least two seconds between attempts. |
+| Acquire | Scan a loaded eight-block radius within two vertical blocks of the actor's feet, at most once every 24 ticks. The ZTO Hopper is the supported target. Recheck loaded identity and sight. |
+| Approach | Follow native paths. Test up to three 2.75-block horizontal blink candidates every 48 ticks at most. Check the entire swept body, grounded corridor and loaded halo. |
 | Signal and interrupt | Expose the actor through a 25-tick windup with a visible link to the target. A landed player hit, lost line of sight, target invalidation, unload or loss of valid approach cancels it. Revalidate on the owning thread immediately before applying the lease. |
-| Pause and recover | Propose an 80-tick maximum pause, non-stacking, with at most one lease per actor and target. Remain exposed briefly before retreat. A cooldown of at least 120 ticks begins after the windup resolves. No refresh while a lease is active. |
+| Pause and recover | Pause output for up to 80 ticks, with one lease per actor and target. Hold a recovery or cancellation pose for 18 ticks and wait 120 ticks before another action. |
 | Disengage | Stop targeting on invalid world, chunk, actor or player. Clear lease state across world unload and Save/Quit. The transfer owner must resume normally when a lease is absent, including on reopen and on restart after an abrupt exit. |
 
 ### Adapter boundary and installed pack audit

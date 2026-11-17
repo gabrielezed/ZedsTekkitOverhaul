@@ -6,11 +6,40 @@ import ic2.api.EnergyNet;
 import ic2.api.IEnergySource;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.TileEntity;
+import zed.tekkitoverhaul.integration.LoadedTile;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
+import zed.tekkitoverhaul.survival.tactical.SabotageTarget;
 
 /** Receives adjacent EE2 collector packets and emits IC2 power on all faces. */
-public final class TileAlchemicalConverter extends TileEntity implements IEEPowerNet, IEnergySource {
+public final class TileAlchemicalConverter extends TileEntity implements IEEPowerNet, IEnergySource, SabotageTarget {
     private final AlchemicalBuffer buffer = new AlchemicalBuffer();
     private boolean registered;
+    private EntitySaboteur disruptionOwner;
+    private long disruptionStart, lastDelivery = Long.MIN_VALUE;
+
+    public String activeIndustrialOperation() {
+        if (!registered || lastDelivery == Long.MIN_VALUE) return null;
+        long age = worldObj.getWorldTime() - lastDelivery;
+        return age >= 0 && age <= 32 && strongestCollectorMark() > 0 ? "ALCHEMICAL_POWER_LINK" : null;
+    }
+
+    public boolean beginDisruption(EntitySaboteur owner) {
+        if (isDisrupted() || activeIndustrialOperation() == null || !owner.canStartDisruption(this)
+                || !owner.canMaintainDisruption(worldObj)
+                || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return false;
+        disruptionOwner = owner;
+        disruptionStart = worldObj.getWorldTime();
+        return true;
+    }
+
+    public boolean isDisrupted() { return disruptionTicksRemaining() > 0; }
+
+    int disruptionTicksRemaining() {
+        if (disruptionOwner == null || !disruptionOwner.canMaintainDisruption(worldObj)
+                || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return 0;
+        long age = worldObj.getWorldTime() - disruptionStart;
+        return age >= 0 && age < 80 ? 80 - (int) age : 0;
+    }
 
     int strongestCollectorMark() {
         int mark = 0;
@@ -39,7 +68,7 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
 
     public boolean receiveEnergy(int amount, byte side, boolean commit) {
         if (worldObj == null || worldObj.isRemote || isInvalid()
-                || side < 0 || side >= CollectorFace.PACKET_SIDES.length) return false;
+                || side < 0 || side >= CollectorFace.PACKET_SIDES.length || isDisrupted()) return false;
         CollectorFace face = CollectorFace.PACKET_SIDES[side];
         int mark = collectorMark(face);
         if (mark == 0) return false;
@@ -69,12 +98,25 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
             registered = true;
         }
         int mark = strongestCollectorMark();
+        if (disruptionOwner != null) {
+            int remaining = disruptionTicksRemaining();
+            if (remaining == 0 || mark == 0) {
+                disruptionOwner = null;
+            } else {
+                if (remaining % 8 == 0)
+                    worldObj.spawnParticle("portal", xCoord + 0.5D, yCoord + 0.95D, zCoord + 0.5D, 0, -0.15D, 0);
+                return;
+            }
+        }
         if (mark == 0) return;
         int sent = buffer.offer(worldObj.getWorldTime(), outputLimit(mark));
         if (sent == 0) return;
         int remainder = net.emitEnergyFrom(this, sent);
         buffer.finishOffer(sent, remainder);
-        if (remainder < sent) onInventoryChanged();
+        if (remainder < sent) {
+            lastDelivery = worldObj.getWorldTime();
+            onInventoryChanged();
+        }
     }
 
     @Override
@@ -90,6 +132,8 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
     }
 
     private void disconnect() {
+        disruptionOwner = null;
+        lastDelivery = Long.MIN_VALUE;
         if (registered && worldObj != null && !worldObj.isRemote) {
             EnergyNet.getForWorld(worldObj).removeTileEntity(this);
             registered = false;
@@ -99,6 +143,8 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
+        disruptionOwner = null;
+        lastDelivery = Long.MIN_VALUE;
         buffer.restore(tag.getInteger("AlchemicalUnits"));
     }
 

@@ -85,6 +85,8 @@ call "zto-tools\prepare-buildcraft-dev-stubs.bat"
 if errorlevel 1 goto :fail
 call "zto-tools\prepare-ee2-dev-stubs.bat"
 if errorlevel 1 goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-zto-agent.ps1"
+if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
 if not exist "dist-zto\" mkdir "dist-zto"
@@ -219,16 +221,21 @@ if errorlevel 1 goto :fail
 set "BUILD_JAR=dist-zto\%JAR_NAME%"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%BUILD_JAR%"
 if errorlevel 1 goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "dist-zto\ZTOAgent.jar"
+if errorlevel 1 goto :fail
 
-copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
-if errorlevel 1 (
-    echo [ZTO] ERROR: Failed to copy the JAR into PrismLauncher.
-    goto :fail
+if defined ZTO_PRISM_MODS (
+    copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
+    if errorlevel 1 goto :fail
+) else (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\install-zto-prism.ps1" -Instance "%APPDATA%\PrismLauncher\instances\Tekkit Dev"
+    if errorlevel 1 goto :fail
 )
 
 echo.
 echo [ZTO] SUCCESS: Build and deployment completed.
 echo [ZTO] JAR: "%CD%\%BUILD_JAR%"
+echo [ZTO] Compatibility launcher artifact: "%CD%\dist-zto\ZTOAgent.jar"
 echo [ZTO] Prism: "%DEPLOY_JAR%"
 echo [ZTO] Close Minecraft before starting the updated build.
 popd

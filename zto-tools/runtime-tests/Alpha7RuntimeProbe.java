@@ -21,12 +21,16 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 
 /** Runs against the reobfuscated mod and pack on the local game thread. */
 public final class Alpha7RuntimeProbe implements ITickHandler {
+    private static final String[] EGG_NAMES = {"Skirmisher", "Breacher", "Saboteur"};
+    private static final Class<?>[] EGG_MOBS = {EntitySkirmisher.class, EntityBreacher.class, EntitySaboteur.class};
+    private static final int[] EGG_HEALTH = {16, 22, 12};
     private static final int X = 34, Y = 121, Z = 215;
     private static String save, mode;
     private static File directory;
@@ -536,8 +540,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             check(mobs(game).isEmpty(), "fresh world has no naturally spawned Enderkin");
             game.c = new aff(game);
             aff.d(game.h);
-            game.h.ap.a(0, null);
-            game.h.ap.a(1, null);
+            for (int i = 0; i < EGG_NAMES.length; i++) game.h.ap.a(i, null);
             game.a(new sr(game.h));
             next(game);
             return;
@@ -552,7 +555,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             checkEggCatalog(game, screen, backport);
             game.a((vp) null);
             check(mobs(game).isEmpty(), "catalog transfer did not spawn entities");
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < EGG_NAMES.length; i++) {
                 aan egg = game.h.ap.k_(i);
                 int count = egg.a;
                 int z = Z + i * 3;
@@ -564,8 +567,8 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                     check(game.c.a(game.h, game.f, egg, x, Y - 1, z, 1), "Creative controller uses egg");
                     check(egg.a == count, "Creative keeps the stack");
                     TacticalHostile mob = mobs(game).get(mobs(game).size() - 1);
-                    check((i == 0 ? mob instanceof EntitySkirmisher : mob instanceof EntityBreacher), "egg spawns the right entity");
-                    check(mob.bb() == (i == 0 ? 16 : 22), "egg initializes full health");
+                    check(mob.getClass() == EGG_MOBS[i], "egg spawns the right entity");
+                    check(mob.bb() == EGG_HEALTH[i], "egg initializes full health");
                     check(mob.o == x + 0.5D && mob.y.b == Y && mob.q == z + 0.5D, "egg uses the native face offset");
                     checkRenderer(game, mob);
                 }
@@ -582,13 +585,14 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             open(game);
             next(game);
         } else if (stage == 4 && age >= 10) {
-            int ranged = 0, heavy = 0;
+            int ranged = 0, heavy = 0, sabotage = 0;
             for (TacticalHostile mob : mobs(game)) {
                 if (TacticalHostiles.SKIRMISHER.equals(aao.b(mob))) ranged++;
                 if (TacticalHostiles.BREACHER.equals(aao.b(mob))) heavy++;
+                if (TacticalHostiles.SABOTEUR.equals(aao.b(mob))) sabotage++;
                 checkRenderer(game, mob);
             }
-            check(ranged == 2 && heavy == 2, "all four egg-spawned entities persist with their save names");
+            check(ranged == 2 && heavy == 2 && sabotage == 2, "all six egg-spawned entities persist with their save names");
             screenshot(game, "creative-reopened");
             finish(game);
         }
@@ -597,8 +601,8 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
     private void checkEggCatalog(Minecraft game, gb screen, boolean backport) throws Exception {
         String original = NEIConfig.getSearchExpression();
         try {
-            for (int i = 0; i < 2; i++) {
-                String name = i == 0 ? "Skirmisher" : "Breacher";
+            for (int i = 0; i < EGG_NAMES.length; i++) {
+                String name = EGG_NAMES[i];
                 NEIConfig.setSearchExpression(name);
                 NEIUtils.loadItems();
                 check(eggIndex(neiStacks(NEIController.items), name) >= 0, "NEI general catalog includes " + name);
@@ -706,7 +710,7 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
         check(TacticalHostile.class.getResource(mob.v_()) != null, "packaged skin " + mob.v_());
         try {
             BufferedImage skin = ImageIO.read(TacticalHostile.class.getResource(mob.v_()));
-            check(skin.getHeight() == 64 && skin.getWidth() == (mob instanceof EntitySkirmisher ? 64 : 128),
+            check(skin.getHeight() == 64 && skin.getWidth() == (mob instanceof EntityBreacher ? 128 : 64),
                     "native UV atlas dimensions");
         } catch (java.io.IOException failure) {
             throw new AssertionError("texture decode", failure);

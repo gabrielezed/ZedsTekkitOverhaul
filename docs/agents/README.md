@@ -5,11 +5,11 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Task | Current references |
 | --- | --- |
 | Settings, build and deploy | [Configuration](configuration.md), [environment](environment.md), [build provenance](VERSIONING_POLICY.md) |
-| Selecting checks and launching a client | [Test tiers and silent launch](testing.md), [Dev Bridge lifecycle](test-automation.md) |
+| Selecting checks and managing fixtures | [Test tiers and host launch restriction](testing.md), [Dev Bridge lifecycle](test-automation.md), [workspace hygiene](workspace-hygiene.md) |
 | Calendar, world ownership or rendering | [Lunar implementation](lunar-cycle-implementation.md), [lunar specification](lunar-cycle-system.md) |
 | Natural encounters and replay | [Survival contract](SURVIVAL_SIEGE_SPEC.md), [alpha.8](survival-alpha8.md), [HUD](survival-debug-hud.md) |
 | Tactical mobs and mob equipment | [Tactical guide](survival-alpha7.md), [equipment contract](MOB_EQUIPMENT_BACKPORT_SPEC.md), [future Enderkin prototypes](enderkin-future-roles.md) |
-| Inventory, crafting and Creative | [Crafting UX](crafting-inventory-ux.md), [Creative backport](../engineering/creative-inventory-backport.md) |
+| Inventory, crafting and Creative | [Compatibility acceptance](compatibility-acceptance.md), [crafting UX](crafting-inventory-ux.md), [Creative backport](../engineering/creative-inventory-backport.md) |
 | Machines, rendering and external APIs | [Architecture](architecture.md), [integrations](integrations.md), [distillation](distillation.md), [pack ABI](../reference/tekkit-classic-3.1.2/README.md) |
 | Diagnostics protocol | [Dev Bridge](dev-bridge.md) |
 | Territorial activity and threat | [0.2 alpha.4 balance](survival-02-alpha4.md), [alpha.3 composition](survival-02-alpha3.md), [alpha.2 activity and assessment](survival-02-alpha2.md), [design direction](territorial-threat-design.md), [roadmap](roadmap.md) |

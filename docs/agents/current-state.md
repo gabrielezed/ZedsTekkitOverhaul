@@ -1,6 +1,6 @@
 # Current implementation
 
-**0.2.0-alpha.4** restores bounded native zombie pressure on Hard and reserves existing active-population space for selected opt-in Enderkin. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Environment and build](environment.md)
+**0.2.0-alpha.5** adds a Creative-spawned Enderkin Saboteur with approach and evasive blinks and interruptible machine disruption. The mod owns its native transfer gates and the Prism-managed ZTOAgent connects the pinned inventory, moon rendering and direct industrial hooks. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Compatibility evidence](compatibility-acceptance.md)
 
 | Owner | Current responsibility |
 | --- | --- |
@@ -8,7 +8,7 @@
 | `lunar`, `lunar.client` | Eight-day calendar, natural events, alignment, replay watermark, save and dimension lifecycle. [Lunar contract](lunar-cycle-implementation.md) |
 | `assault` | Full-moon PLAYER_ASSAULT with frozen regional wave and vanilla slot plans, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Alpha.4 pressure](survival-02-alpha4.md) |
 | `territory` | Qualified activity sampling, bounded Overworld save data, lazy decay and biome-aware local threat. `assault` can use one frozen assessment at natural admission. [Alpha.2 contract](survival-02-alpha2.md) |
-| `survival`, `equipment` | Local bed anchors, equipped mobs and tactical AI. Experimental Enderkin substitutions default to off. Creative eggs are available either way. [Tactical guide](survival-alpha7.md) |
+| `survival`, `equipment` | Local bed anchors, equipped mobs and tactical AI. Experimental Enderkin substitutions default to off. Creative eggs are available either way. The Saboteur prototype uses its own egg. [Saboteur guide](survival-02-alpha5-saboteur.md) |
 | `creative`, `crafting`, `integration.inventory` | Asset-backed Creative UI, crafting assistance and legacy mouse dispatch. [Creative guide](../engineering/creative-inventory-backport.md) |
 | `hopper`, `render`, `power`, `distillation`, `fluids`, `emc` | Experimental machines, Foundry visuals and pack adapters. Preserve IDs, NBT and economic behavior. [Integration boundaries](integrations.md) |
 | `devbridge`, lunar debug views | Optional observations and gated disposable-world tools. [Diagnostics protocol](dev-bridge.md) |

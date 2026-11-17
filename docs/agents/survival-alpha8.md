@@ -52,7 +52,7 @@ The remaining owner question is whether the two roles produce readable decisions
 
 ## Configuration regression
 
-Deploy using the isolated copy described in [alpha.5 reproduction](survival-alpha5.md#reproduction). The PowerShell runners clone the staging instance into unique directories below `dist-zto/survival-hud-runtime/runs`. The original config remains in place even if a runner is interrupted. Each child client uses its own settings, save and reports. Do not run two graphical clients concurrently when checking gameplay timing.
+Deploy using the isolated copy described in [alpha.5 reproduction](survival-alpha5.md#reproduction). The PowerShell runners stage writable fixtures below `dist-zto/survival-hud-runtime/runs` and remove them by default. Each child client uses its own settings, save and reports. Run timing-sensitive clients serially in a separate input environment. See the [Windows launch restriction](testing.md#background-client-launch).
 
 ```powershell
 .\zto-tools\test-config.ps1

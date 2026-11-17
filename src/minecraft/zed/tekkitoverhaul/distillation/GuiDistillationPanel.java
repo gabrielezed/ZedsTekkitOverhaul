@@ -103,6 +103,10 @@ final class GuiDistillationPanel extends GuiMachinePanel {
                 status(58, "Contents: " + (product == null ? "Empty" : product.displayName), TEXT);
                 meter(78, "Stored distillate", process.getDistillateMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFF63BCA0);
                 status(110, "Right-click with an empty bucket or extract through a powered wooden waterproof pipe.", TEXT);
+                if (tile instanceof TileEntityDistillationReceiver) {
+                    int paused = ((TileEntityDistillationReceiver) tile).disruptionTicksRemaining();
+                    if (paused > 0) status(141, "BuildCraft extraction paused (" + paused + " ticks left).", NOTICE);
+                }
                 break;
             case THERMOMETER:
                 status(57, "Selected: " + selected.displayName + " (" + selected.temperatureCelsius + " C)", NOTICE);

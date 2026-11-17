@@ -31,6 +31,8 @@ An EE2→EU converter or alternative thermal power source can create exploitativ
 
 Avoid introducing direct references to optional mod classes into the core bootstrap. Reflection is currently used where appropriate. If compile-time dependencies are required for new APIs, document how to obtain/remap them for MCP and validate startup both with and without the optional mod, as applicable.
 
+The Saboteur uses ZTO-owned sided inventory, liquid, EE2 and IC2 transfer boundaries. Layout admission and pack evidence are recorded in the [industrial acceptance record](saboteur-industrial.md).
+
 ## Fractional distillation
 
 The distillation heater implements the IC2 1.97 `IEnergySink` interface. The boiler, condenser and receiver use the BuildCraft 2.2.14 liquid ABI. The converter implements EE2's adjacent power receiver and IC2's energy source. MCP uses compile-only placeholders for these APIs. Package only original ZTO classes and resources and verify network and transport behavior in Tekkit Dev.

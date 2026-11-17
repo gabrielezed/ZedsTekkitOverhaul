@@ -29,7 +29,8 @@ public final class ZtoConfigSelfTest {
                 && defaults.survivalDebugHudKey == 68 && defaults.survivalDebugLogCapacity == 250, "debug defaults");
         check(defaults.hopper == null && defaults.foundry == 3001 && defaults.advancedCraftingTable == 3000
                 && defaults.alchemicalConverter == 3024 && defaults.breacherEgg == 22005
-                && defaults.skirmisherEgg == 22004 && defaults.emcProfile.isEmpty(), "other defaults");
+                && defaults.skirmisherEgg == 22004 && defaults.saboteurEgg == 22006 && defaults.emcProfile.isEmpty(),
+                "other defaults");
         byte[] generated = Files.readAllBytes(canonical);
         try (java.util.stream.Stream<Path> files = Files.list(fresh)) {
             check(files.count() == 1, "exactly one file");
@@ -55,7 +56,8 @@ public final class ZtoConfigSelfTest {
         write(older, "IC2.cfg", "# unrelated\n");
         ZtoConfig migrated = ZtoConfigLoader.load(older, false, LOG);
         check(migrated.experimentalEnderkinEncounters && !migrated.playerAssault && !migrated.lunarPatrols, "MLProp precedence");
-        check(migrated.foundry == 3074 && migrated.alchemicalConverter == 3075 && migrated.breacherEgg == 23222,
+        check(migrated.foundry == 3074 && migrated.alchemicalConverter == 3075 && migrated.breacherEgg == 23222
+                && migrated.saboteurEgg == 22006,
                 "registry migrations");
         check(migrated.partId(DistillationPartType.COLUMN) == 3080
                 && migrated.bucketId(DistillateType.HEAVY_GAS_OIL) == 23000

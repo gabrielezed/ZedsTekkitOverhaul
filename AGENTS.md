@@ -10,11 +10,14 @@ Start with the [current implementation map](docs/agents/current-state.md), then 
 - Present machine controls, status, units, capacity and actionable failures in the GUI. Preserve bucket transfers and held-block placement. Keep processing separate from presentation and respect the client/server boundary. Reserve logs for diagnostics.
 - Keep lunar authority independent of client classes. Gameplay consumes snapshots and event causes. Keep scheduling, placement and diagnostics separate. PLAYER_ASSAULT has no settlement ownership.
 - Read the [Dev Bridge guide](docs/agents/dev-bridge.md) before extending the protocol. Keep reads bounded and allowlisted, run them on the owning thread and keep credentials out of Git and logs.
+- Preserve established behavior and its activation when changing packaging or tests. Use the single ZTOAgent for justified, version-pinned compatibility hooks. Check the [feature-preservation matrix](docs/agents/compatibility-acceptance.md) and treat a missing mandatory feature or behavioral check as a merge blocker.
 
 ## Workflow
 
 1. Check the branch, working tree and relevant source. Keep edits focused and separate migrations from behavior changes where practical.
 2. Use the [test tiers](docs/agents/testing.md). Run MCP compilation and reobfuscation before packaging with `zto-tools/build-and-deploy.bat`. Use isolated Tekkit Dev and marked disposable saves for runtime evidence.
-3. **Automated Minecraft/Tekkit Dev clients must be launched silently by default. Never modify host-wide audio settings. Scope audio suppression to isolated test instances and verify it before running audible gameplay fixtures.** Follow the [silent launch procedure](docs/agents/testing.md#silent-client-launch).
+3. **Keep the owner's desktop, keyboard and mouse available.** Automated graphical clients are blocked on the Windows host. See [background client launch](docs/agents/testing.md#background-client-launch) for VM testing and [silent launch](docs/agents/testing.md#silent-client-launch) for per-fixture audio. Reserve interactive host launches for owner-requested manual playtests.
 4. Review the diff and report what actually ran. Keep portable, build, runtime and owner observations distinct. Add a focused runtime test for new gameplay where the isolated client can exercise it.
 5. Write all repository content and commit/PR text in English. Communicate with the owner in Italian unless requested otherwise. Use focused commits and keep local/generated work out of Git.
+
+Runtime runners own their disposable copies through shutdown and cleanup. Keep compact evidence and require explicit retention for complete fixtures. Use the [artifact retention procedure](docs/agents/workspace-hygiene.md) when adding tooling or cleaning old runs.

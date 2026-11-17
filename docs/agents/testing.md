@@ -12,9 +12,21 @@ Select tiers by the change. An integration candidate should cover release regres
 
 Keep marked saves disposable. Keep output in ignored staging and report paths. Run graphical fixtures serially when timing matters. Verify that the process exits and report unresolved shutdown issues. Compare measurements for the same fixture and artifact when claiming a performance change.
 
+The Saboteur runtime suite covers `exercise`, `restart` and `stress` modes. Both alpha.7 Creative modes check the Saboteur egg alongside the existing eggs. The [Saboteur guide](survival-02-alpha5-saboteur.md) describes the fixture and historical evidence. The Windows launch restriction below applies to all graphical runners.
+
+Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct industrial hooks without a graphical process. The [compatibility manifest](compatibility-acceptance.md) tracks live gesture, rendering and throughput checks separately.
+
 For territory, run `zto-tools/test-territory.ps1` after MCP compilation to use the legacy NBT classes. Run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-elevated,territory-both` with the reobfuscated JAR in the isolated staging copy. The quiet and elevated modes use authenticated HTTP to compare game-thread observations with Bridge replies. [Territorial evidence](survival-02-alpha2.md#verification)
 
 For concurrent assault pressure, run `zto-tools/test-alpha6-runtime.ps1 -Modes composition-disabled,composition-quiet,composition-ordinary,composition-elevated,composition-quantum`. These modes retain hostiles and compare the planned slots and actual insertions over authenticated HTTP. For Hard entrances use `composition-hard,composition-hard-iron,composition-hard-powered,composition-hard-retreat`. Use `composition-hard-open,composition-hard-balanced` to compare production and a fixture-only 50:50 mix. Use `-Modes composition-hard-baseline-open -CandidateJar <alpha.3 JAR>` for the historical all-skeleton comparator in a disposable instance. For selected-versus-inserted roles use `composition-quiet-enderkin,composition-ordinary-enderkin,composition-elevated-enderkin`. The staged role fixture remains available as `composition-both`. [Balance and evidence](survival-02-alpha4.md)
+
+## Background client launch
+
+The shared Windows launcher returns `INPUT_ISOLATION_UNVERIFIED` before any client, copy or live profile mutation. The retired Win32 desktop launcher only verified window placement. The legacy client can grab and recenter the mouse, and the installed LWJGL build has native cursor clipping and an AWT-parent exception to its foreground check.
+
+Use the portable test tiers on the host. For a graphical pack test, use a separate VM with its own OS input session, an isolated Tekkit Dev profile, and host input integration disengaged. The host runners remain blocked and require a guest-specific launch integration before unattended graphical use. Run an interactive host test only at the owner's request.
+
+The read-only [Windows input sampler](../../zto-tools/runtime-tests/BackgroundMinecraft.cs) records the input and thread desktops, foreground, focus and capture PIDs, cursor position and clip rectangle from the interactive session. Use it alongside process identity and exit checks when validating a replacement, including startup, normal exit, crash, timeout and force-stop cases. Keep test processes away from the host session while gathering evidence. See [workspace hygiene](workspace-hygiene.md) for fixture lifetime and evidence.
 
 ## Silent client launch
 

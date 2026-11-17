@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.devbridge;
 
 import net.minecraft.src.Chunk;
+import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ChunkPosition;
 import net.minecraft.src.ChunkProvider;
 import net.minecraft.src.IChunkProvider;
@@ -13,7 +14,9 @@ import net.minecraft.src.World;
 import zed.tekkitoverhaul.distillation.FractionationProcess;
 import zed.tekkitoverhaul.distillation.TileEntityDistillationBoiler;
 import zed.tekkitoverhaul.distillation.TileEntityDistillationHeater;
+import zed.tekkitoverhaul.distillation.TileEntityDistillationReceiver;
 import zed.tekkitoverhaul.hopper.TileHopper;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 
 /** Copies allowlisted state on the game thread without creating tiles or loading chunks. */
 final class BridgeSnapshots {
@@ -40,6 +43,50 @@ final class BridgeSnapshots {
                 + ",\"slots\":" + slots(inventory, 40) + ",\"cursor\":" + stack(inventory.getItemStack()) + "}";
     }
 
+    /** At most four local records, scoped to a sixteen-block horizontal and eight-block vertical radius. */
+    static String saboteurs(EntityPlayer player, long worldId) {
+        StringBuilder reply = new StringBuilder("{\"worldId\":" + worldId + ",\"saboteurs\":[");
+        int count = 0;
+        for (Object item : player.worldObj.getEntitiesWithinAABB(EntitySaboteur.class,
+                player.boundingBox.expand(16, 8, 16))) {
+            EntitySaboteur mob = (EntitySaboteur) item;
+            if (!mob.isEntityAlive()) continue;
+            if (count++ > 0) reply.append(',');
+            TileEntity target = mob.disruptionTarget();
+            reply.append("{\"entityId\":").append(mob.entityId)
+                    .append(",\"pose\":").append(mob.pose())
+                    .append(",\"blinkCooldown\":").append(mob.blinkCooldown())
+                    .append(",\"blinkBackoff\":").append(mob.blinkBackoff())
+                    .append(",\"actionCooldown\":").append(mob.actionCooldown())
+                    .append(",\"windupRemaining\":").append(mob.windupRemaining())
+                    .append(",\"outcome\":\"").append(mob.lastOutcome()).append('"')
+                    .append(",\"blinkResult\":\"").append(mob.lastBlinkResult()).append('"')
+                    .append(",\"blinkCause\":\"").append(mob.lastBlinkCause()).append('"')
+                    .append(",\"targetType\":\"").append(mob.targetType()).append('"')
+                    .append(",\"scans\":").append(mob.scans())
+                    .append(",\"scannedBlocks\":").append(mob.scannedBlocks())
+                    .append(",\"pathPlans\":").append(mob.pathPlans())
+                    .append(",\"blinkAttempts\":").append(mob.blinkAttempts())
+                    .append(",\"blinkChecks\":").append(mob.blinkChecks())
+                    .append(",\"blinks\":").append(mob.blinks())
+                    .append(",\"evasiveAttempts\":").append(mob.evasiveAttempts())
+                    .append(",\"evasiveBlinks\":").append(mob.evasiveBlinks())
+                    .append(",\"failedBlinks\":").append(mob.failedBlinks())
+                    .append(",\"rejectedDestinations\":").append(mob.rejectedDestinations())
+                    .append(",\"windups\":").append(mob.windups())
+                    .append(",\"cancelled\":").append(mob.cancelled())
+                    .append(",\"disruptions\":").append(mob.disruptions())
+                    .append(",\"diversions\":").append(mob.diversions())
+                    .append(",\"target\":");
+            if (target == null) reply.append("null");
+            else reply.append("{\"x\":").append(target.xCoord).append(",\"y\":").append(target.yCoord)
+                    .append(",\"z\":").append(target.zCoord).append('}');
+            reply.append('}');
+            if (count == 4) break;
+        }
+        return reply.append("]}").toString();
+    }
+
     static String inspect(World world, BridgeProtocol.Query query, long simulationTicks) throws BridgeProtocol.Error {
         Chunk chunk = loaded(world, query.x, query.z);
         TileEntity tile = tile(chunk, query.x, query.y, query.z);
@@ -56,7 +103,8 @@ final class BridgeSnapshots {
                 }
                 int face = chunk.getBlockMetadata(query.x & 15, query.y, query.z & 15) & 7;
                 state = ",\"facing\":" + (face == 1 || face > 5 ? 0 : face)
-                        + ",\"locked\":" + hopper.isLocked() + ",\"outputMode\":\"" + hopper.outputModeName() + "\"";
+                        + ",\"locked\":" + hopper.isLocked() + ",\"outputMode\":\"" + hopper.outputModeName() + "\""
+                        + ",\"disruptionTicks\":" + hopper.disruptionTicksRemaining();
             }
             return prefix + ",\"type\":\"hopper\",\"stackLimit\":64,\"slots\":" + slots(hopper, 5) + state + "}";
         }
@@ -73,6 +121,12 @@ final class BridgeSnapshots {
                 TileEntityDistillationHeater heater = (TileEntityDistillationHeater) tile;
                 return prefix + ",\"type\":\"distillation.heater\",\"storedEU\":" + heater.getStoredEnergy()
                         + ",\"energyNetJoined\":" + heater.isAddedToEnergyNet() + "}";
+            }
+            if ("zed.tekkitoverhaul.distillation.TileEntityDistillationReceiver".equals(className)) {
+                TileEntityDistillationReceiver receiver = (TileEntityDistillationReceiver) tile;
+                return prefix + ",\"type\":\"distillation.receiver\",\"liquidMB\":" + receiver.getLiquidQuantity()
+                        + ",\"liquidId\":" + receiver.getLiquidId() + ",\"disruptionTicks\":"
+                        + receiver.disruptionTicksRemaining() + ",\"blockedOffers\":" + receiver.blockedOffers() + "}";
             }
             if ("buildcraft.factory.TileTank".equals(className)) {
                 buildcraft.api.ILiquidContainer tank = (buildcraft.api.ILiquidContainer) tile;

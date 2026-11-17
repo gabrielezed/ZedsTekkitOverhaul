@@ -40,7 +40,7 @@ try {
         [IO.File]::WriteAllText((Join-Path $game "saves/$secondSave/.zto-disposable-test"),
             "$secondSave -7184827518270584220`n", [Text.Encoding]::ASCII)
     }
-    $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
+    $agents = Install-IsolatedZtoAgent $run $harness (Join-Path $root 'dist-zto/ZTOAgent.jar')
     $arguments = '-Xmx1G -Dzto.dev=false -Dzto.devBridge.enabled=false "-Djava.library.path={0}" {1} -cp "{2};{3}" Alpha7RuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $Mode
     if ($secondSave) { $arguments += " $secondSave" }
     $stdout = Join-Path $report "alpha7-$Mode-$save.txt"

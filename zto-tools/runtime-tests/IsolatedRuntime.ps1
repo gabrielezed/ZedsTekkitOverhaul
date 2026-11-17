@@ -25,7 +25,7 @@ function New-IsolatedRuntimeRun([string]$Runtime, [string]$Family, [bool]$KeepGa
         }
         Result = [ordered]@{
             id = $id; family = $Family; status = 'FAIL'; error = $null
-            candidateSha256 = $null; sourceCommit = $null; logs = @(); observations = @()
+            candidateSha256 = $null; agentSha256 = $null; sourceCommit = $null; logs = @(); observations = @()
             target = 'Tekkit Classic 3.1.2 / Minecraft 1.2.5 / Forge 3.3.8.164 / FML 2.2.106.176'
         }
     }
@@ -77,6 +77,14 @@ function Initialize-IsolatedRuntimeGame($Run, [string]$Runtime, [switch]$Without
     $null = New-Item -ItemType Directory -Path (Join-Path $game 'saves')
     Set-SilentMinecraftOptions $game
     return $game
+}
+
+function Install-IsolatedZtoAgent($Run, [string]$Harness, [string]$Archive) {
+    $source = (Assert-RegularPath $Archive).FullName
+    $isolated = Join-Path $Harness 'ZTOAgent.jar'
+    Copy-Item -LiteralPath $source -Destination $isolated
+    $Run.Result.agentSha256 = (Get-FileHash -LiteralPath $isolated).Hash
+    return '"-javaagent:' + $isolated + '"'
 }
 
 function Start-IsolatedRuntimeClient {

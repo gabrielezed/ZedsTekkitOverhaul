@@ -24,7 +24,7 @@ try {
     $canonical = Join-Path $config 'ZedsTekkitOverhaul.cfg'
     $mlProp = Join-Path $config 'mod_ZedsTekkitOverhaul.cfg'
     $forgeBackup = "$canonical.legacy"
-    $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
+    $agents = Install-IsolatedZtoAgent $run $harness (Join-Path $root 'dist-zto/ZTOAgent.jar')
     $java = Join-Path (Split-Path $launch.java) 'java.exe'
 
     function Test-Launch([string]$Mode) {

@@ -41,7 +41,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
 
-The current build identifier is **0.2.0-alpha.5**. Install or replace `ZedsTekkitOverhaul.jar` in the Tekkit Classic `mods` directory and keep the instance's usual launch settings. The Saboteur and its supported industrial interactions are included in that JAR. [Industrial setups](docs/agents/saboteur-industrial.md)
+The current build identifier is **0.2.0-alpha.5**. The managed Prism instance installs `ZedsTekkitOverhaul.jar` and loads one ZTOAgent component for inventory gestures, custom moon rendering and direct industrial sabotage. A plain mod install still provides ZTO-owned industrial transfer gates. [Industrial setups](docs/agents/saboteur-industrial.md)
 
 ```powershell
 .\zto-tools\build-and-deploy.bat
@@ -65,7 +65,7 @@ The opt-in viewing pen in **Tekkit Dev** puts equipped Zombies and Skeletons bes
 
 ### Optional features
 
-- **Moon rendering:** run `.\zto-tools\build-lunar-agent.bat` and add `-javaagent:<absolute-path-to-ZTOLunarAgent.jar>` to Tekkit Dev's Java 8 arguments. The agent can run alongside the inventory agent. Unsupported renderer fingerprints keep the native phase selection.
+- **Compatibility:** the managed Prism deployment adds the ZTO Agent component. The game uses its native phase selection when the renderer fingerprint is unsupported. [Deployment and verification](docs/deploy-prism.md)
 - **Configuration:** Edit `minecraft/config/ZedsTekkitOverhaul.cfg` while the game is closed. Alpha.8 imports settings and registry IDs on first startup. [Settings and migration](docs/agents/configuration.md)
 - **Lunar Debug:** set `lunarDebugKey=67` in `config/ZedsTekkitOverhaul.cfg` for F9. The default `0` disables the shortcut. Optionally set `lunarVerboseLogging=true` for transition logs. Restart after changing these settings.
 - **Lunar encounter settings** are in the same config. Use `lunarPatrols=false` to disable patrols, `playerAssault=false` to disable full-moon assaults, or `lunarOutdoorLightPressure=false` to restore alpha.5 placement. Older configs with `assaultSpawnBudget=6` need an explicit change to 15 to use the current default. Set `survivalDebugHud=true` to see encounter timing, insertions and placement constraints with F10. Restart after editing the config. [Patrols](docs/agents/lunar-pressure.md) · [Assault settings](docs/agents/survival-assault-alpha2.md#tuning-and-compatibility) · [Outdoor placement](docs/agents/survival-alpha6.md)

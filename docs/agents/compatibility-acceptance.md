@@ -15,3 +15,25 @@ Evidence levels are `SOURCE_PRESENT`, `HOOK_ACTIVE` (transformation and callback
 | IC2 BatBox/MFE/MFSU and CompactSolars LV/MV/HV (IC2/CompactSolars) | Historical EU offer gates | Historical live EU measurements passed. Direct hooks were removed. | Restore the exact offers and exercise direct native EU receivers. | Yes when installed |
 | RedPower Relay and EE2 Collectors Mk1–Mk3 (RedPower/EE2) | Historical Relay extraction and Collector tick gates | Historical native output and conservation passed. Direct hooks were removed. | Restore and repeat the Relay and Collector fixtures. | Yes when installed |
 | Hopper, Receiver, Transposer and Alchemical Converter (ZTO/pack) | Existing sided slots, liquid, EE2 and IC2 APIs | BEHAVIOR_VERIFIED with the preceding candidate. | Keep the native gates, check isolated throughput, recovery and shared target ownership. | Yes when installed |
+
+## Current candidate acceptance
+
+**NOT READY.** Headless checks exercise the installed overlay and stock mod class bytes. Live checks need a separate OS input session with guest-specific launch support. The Windows launcher stops at `INPUT_ISOLATION_UNVERIFIED` before starting a game or creating a playable copy.
+
+| Mandatory area | Current evidence | Remaining focused check |
+| --- | --- | --- |
+| Left/right drag, preview, remainders, modified and ordinary clicks, close/cancellation, quick equip, Inventory Tweaks and NEI | HOOK_ACTIVE for the exact production GUI dispatcher and registered ZTO callback. NEI's override and non-container passthrough verified headlessly. The crafting and mod-specific slot policy harness passed. | Physical drag and shortcuts in the required GUIs, with preview and item conservation. See the [interactive checklist](../engineering/inventory-drag.md#verification). |
+| Native sky and ZTO moon phase | HOOK_ACTIVE for the pinned Tekkit renderer and registered ZTO callback. Verified one atlas selector, correct callback selection for its matching context and fallback. | Observe the actual rendered phase and unchanged surrounding sky in a marked save. |
+| Direct third-party sabotage | HOOK_ACTIVE for nine classes covering all restored families. The headless probe rejects changed fingerprints and loads an IC2-only industrial subset. | Run the `direct-*` modes listed in the [industrial fixture table](saboteur-industrial.md#direct-hook-ownership). Observe throughput before, during and after each lease and account for resources. |
+| ZTO-owned native transfer gates | SOURCE_PRESENT in this candidate. The preceding release candidate has historical BEHAVIOR_VERIFIED results. | Run `industrial-power` or `transport` with `-WithAgent`, and test recovery and shared BuildCraft line ownership. |
+| Prism compatibility component | The staged installer produces one local agent component and keeps other JVM settings. JVM activation and the mod's registered callbacks are verified by the explicit headless launch. | Launch a disposable imported Prism profile in the guest and confirm its generated launch and full behavior. |
+
+Run `zto-tools/test-zto-agent.ps1 -Pack` for the installed pack ABI and callback checks. Use its `-Java` argument for a list of standalone runtimes. Agent smoke results describe JVM startup and fixture-byte transformations. Full legacy rendering and input use Java 8.
+
+### Build and headless evidence
+
+- **PASS.** Tested source `f4ab56de45e60b4e67abafaa4a442bfe864a0e5d`. The workspace sidecars flag documentation, runner and unrelated local entries. The production code and packaging scripts match that commit.
+- **PASS.** JDK 8u504, MCP 6.2 and development Forge 3.4.9.171 compiled and reobfuscated the mod. The mod archive passed streaming validation of 322 entries. Mod SHA-256 `988d883f1cc703cdefbe32024b21f89669987cd3e3a10f8b79d081d7619fd9f6`. Agent SHA-256 `bb2ceb7df5618af8ab718b51d6225ef1009580640843fb76e28e092fe7e236c5`.
+- **PASS.** Standalone agent startup and pinned overlay transformation with `-Xverify:all` under Java 8u511, 11.0.33, 17.0.21 and 21.0.13. Full and reduced pack linkage passed on the pack's Java 8u51. The ASM classes and license are packaged under the agent's own namespace.
+- **PASS.** Staged a Prism 11.1.1-format instance, migrated the old arguments, ran a repeated install and verified one component, one agent entry and preservation of unrelated settings.
+- **BLOCKED.** The `direct-item` fixture requests the safe launcher and receives `INPUT_ISOLATION_UNVERIFIED`. Current-candidate live acceptance is **NOT RUN**.

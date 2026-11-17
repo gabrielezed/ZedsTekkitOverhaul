@@ -2,17 +2,9 @@
 
 ## Enable inventory drag in Tekkit Dev
 
-1. Build the mod with `zto-tools/build-and-deploy.bat` after exiting Tekkit Dev.
-2. Run `zto-tools/build-drag-agent.bat` with JDK 8. It creates `dist-zto/ZTOInventoryDragAgent.jar`.
-3. From the MDK root, run the PowerShell command below. Paste its output into the Java 8 JVM arguments of the isolated Prism **Tekkit Dev** instance. Keep the agent JAR outside the mods directory.
+Use the [managed Prism deployment](../deploy-prism.md) with Java 8. Prism loads the unified ZTOAgent at startup. The log line `[ZTO] Inventory drag connected to the legacy mouse dispatcher` confirms registration.
 
-   ```powershell
-   '"-javaagent:{0}"' -f (Resolve-Path -LiteralPath '.\dist-zto\ZTOInventoryDragAgent.jar' -ErrorAction Stop).Path
-   ```
-
-4. Start the game. The log line `[ZTO] Inventory drag connected to the legacy mouse dispatcher` confirms registration. Removing the JVM argument disables the production hook.
-
-The main mod JAR contains the NEI rendering changes and the drag logic. The launch agent enables mouse event interception. The agent uses JDK 8's bundled ASM and contains only original ZTO classes. It matches the SHA-256 fingerprint of the installed Minecraft 1.2.5 `vp.class` (GuiScreen), from the client JAR under the Tekkit overlay. It inserts a callback in `vp.f()V` before the ordinary LWJGL dispatcher. This preserves NEI's installed `gb.class` subclass, its original click/release methods and its scroll dispatch. An unrecognized class body leaves drag disabled.
+The mod JAR contains the NEI presentation and drag session. The inventory hook matches the pinned SHA-256 of Minecraft 1.2.5 `vp.class` and inserts one callback in `vp.f()V` before the ordinary LWJGL dispatcher. NEI's installed `gb.class` keeps its override, click/release methods and scroll dispatch. An unsupported dispatcher keeps its original behavior.
 
 ## Behavior and boundaries
 
@@ -38,8 +30,8 @@ The compact actions use the same atlas and complete four-corner border as legacy
 
 ## Verification
 
-- `zto-tools/test-crafting-ux.bat` runs against real MCP classes and checks both split policies, a capped slot, remainders and empty/full targets. It also verifies mod slot boundaries, including the Condenser target and machine outputs.
-- `zto-tools/test-drag-agent.ps1` verifies the injected dispatch under `-Xverify:all` with Tekkit Dev's actual modpack, Minecraft and LWJGL artifacts. It checks that the callback receives the correct screen once and that the NEI subclass still owns its mouse override.
-- Live acceptance still covers left and right drags in each supported GUI, normal clicks and NEI overlays, closing mid-gesture, rapid input, display scales, and the four reported layout cases. Use an expendable world in **Tekkit Dev**.
+- Run `zto-tools/test-crafting-ux.bat` for the distribution and slot policy.
+- Run `zto-tools/test-zto-agent.ps1 -Pack` for headless identification of the real transformed dispatcher, production callback and NEI override.
+- In an input-isolated guest, pick up ten matching items, drag left over three empty slots and check for a preview of three per slot with one on the cursor. Right-drag three slots and check for one per slot with seven on the cursor. Revisit a slot, close mid-gesture and repeat with Shift/Ctrl/Alt and unsupported outputs. Verify a single normal click, Shift armor quick equip, Inventory Tweaks bulk actions and NEI buttons and recipe overlays. Exercise the player inventory, a chest, 2x2, 3x3 and 5x5 crafting, and an audited modded inventory. Reconcile all stacks and cursor contents.
 
-MCP client compilation, reobfuscation, packaging, and the crafting transaction harness passed. The production probe also passed with Prism's assembled Tekkit Dev `minecraft.jar`, its Java 8u51 runtime, and the reobfuscated ZTO JAR. It observed successful registration, one injected callback, and pass-through for a non-container screen. The package was staged while a Java GUI was running, so the visual fixes and physical drag gestures have not been checked in-game on this build.
+See the [feature acceptance matrix](../agents/compatibility-acceptance.md) for evidence levels and outstanding results. Windows host automation remains disabled until input isolation is verified.

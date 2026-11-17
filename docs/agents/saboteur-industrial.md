@@ -1,6 +1,6 @@
 # Alpha.5 Saboteur industrial integration
 
-Install or update **ZedsTekkitOverhaul.jar** in Tekkit Classic 3.1.2 and use the instance's usual JVM settings. The ordinary mod build packages the Saboteur and all supported industrial endpoints. If you tested the prior instrumented candidate, remove its industrial JVM entry from the test profile. The existing optional inventory compatibility and lunar rendering tools are independent.
+In Tekkit Classic 3.1.2 the mod JAR provides the actor and native transfer gates. The managed Prism deployment adds the single ZTOAgent for direct industrial gates, using the same startup component as mouse gestures and moon rendering. [Installation](../deploy-prism.md)
 
 A nearby Saboteur must reach and see the ZTO endpoint. Its 25-tick visible windup gives a Survival player time to interrupt it. A successful windup applies an exclusive lease for at most 80 simulation ticks. This gives the player a reason to shield vulnerable parts of a line and time a response, as described in the project's controlled-griefing direction. Endpoints remain local to the machine and actor. Future site encounters can use them through the same targeting contract.
 
@@ -13,23 +13,23 @@ A nearby Saboteur must reach and see the ZTO endpoint. Its 25-tick visible windu
 
 The Hopper's own push gate still applies. Hopper intake, player inventory access and unbound faces retain their ordinary rules. The item lease releases when its exact extraction peer or supported layout changes. Player redstone and native machine settings stay under their original owners. There is no saved settings snapshot to restore. All three lease strategies use transient fields on their loaded ZTO tile, with ordinary invalidation, unload and reopening behavior. Registry identities, recipes and NBT formats require no migration.
 
-## Capability audit
+## Direct hook ownership
 
-The previous agent inserted checks before operations that the installed public APIs did not expose as cancellable. The table maps each former interception to the current behavior.
+The compatibility hooks restore the pinned pre-intervention boundaries listed below. An actor's 120-tick action cooldown outlasts each 80-tick lease. The extractor and its engine share one line claim. A ZTO-source pipe uses the native gate, including during a source or orientation change. A Collector adjacent to a ZTO converter leaves its link to the converter. A native storage unit's own downstream output remains distinct from EU arriving from a converter.
 
-| Previous capability | Classification | Installed implementation and current limit |
+| Installed target | Gate | Focused runner mode |
 | --- | --- | --- |
-| BuildCraft 2.2.14 wooden item extraction | PARTIAL_NATIVE | The former `PipeItemsWood.doWork` gate worked with a native chest. The pipe's public provider setter does not assign its field in this build. Its native sided inventory query supports the dedicated Hopper layout above. |
-| BuildCraft 2.2.14 wooden liquid extraction | PARTIAL_NATIVE | The former agent stopped `doWork` and the pending source drain in `updateEntity`. The native liquid API now refuses new draws at a ZTO Distillation Receiver. A standard BuildCraft tank continues delivering. |
-| BuildCraft 2.2.14 redstone engine | UNSUPPORTED_WITHOUT_TRANSFORMATION | The former engine tick gate froze generation and piston motion. The native engine reads its existing world redstone input. No separate transient disable API was found. In the supported item line, the engine continues stroking while new withdrawals pause. |
-| IC2 1.97 BatBox, MFE and MFSU output | REPLACED_NATIVE | The original gate withheld offers from charged native storage. Modes 4 and 5 use player-controlled redstone and the native splitter changes EnergyNet registration. The supported replacement withholds EU at the ZTO converter's `IEnergySource` boundary. Storage outputs, generators and splitter behavior remain native. |
-| CompactSolars 2.3.2.10 output | UNSUPPORTED_WITHOUT_TRANSFORMATION | LV, MV and HV arrays emit from their tick based on daylight. The source API provides no external pause or cancellation in this build. A separately controllable downstream switch would be needed to interrupt an array-fed line. This build adds no array-specific interruption. |
-| RedPower 2.0pr5b2 Relay extraction | REPLACED_NATIVE | The old gate intercepted `TileRelay.handleExtract` on internal slots. The replacement uses the native Transposer's `ISidedInventory` query against the Hopper. Timers, Relay internals, Retrievers and bundled or BluePower wiring remain outside the lease. |
-| EE2 1.4.6.5 Collector Mk1–Mk3 tick | PARTIAL_NATIVE | The old tick gate suppressed local production, upgrades and packet emission. The native `IEEPowerNet` receiver can decline packets at the converter. Collector production and fuel conversion continue, and other receivable routes can remain active. Runtime throughput evidence is for Mk1. |
+| BuildCraft 2.2.14 wooden item pipe, chest source | New `doWork` withdrawals | `direct-item` |
+| BuildCraft 2.2.14 wooden liquid pipe, tank source | New credit and source drain, after native transport update | `direct-liquid` |
+| BuildCraft 2.2.14 redstone engine with a distinct native extractor output | Engine work after base tile update | `direct-engine` |
+| IC2 1.97 BatBox, MFE and MFSU | Withhold an EU offer and return its full remainder | `direct-eu`, `direct-eu-mfe`, `direct-eu-mfsu` |
+| CompactSolars 2.3.2.10 LV, MV, HV | Withhold new EU offers | `direct-solar`, `direct-solar-mv`, `direct-solar-hv` |
+| RedPower 2.0pr5b2 Relay | Pause new extraction before a buffer mutation | `direct-redpower` |
+| EE2 1.4.6.5 Collector Mk1, Mk2 and Mk3 | Pause Collector tick work for the standalone layout | `direct-ee2`, `direct-ee2-mk2`, `direct-ee2-mk3` |
 
 ## Focused verification
 
-The probe compiles against the installed pack ABI, copies the candidate to an isolated Tekkit Dev instance, creates a marked disposable save and starts muted on a private desktop. It checks the loaded candidate and rejects any `-javaagent` JVM option. Reports are written to local `dist-zto/test-reports`.
+The Saboteur probe uses a marked disposable save and checks the loaded candidate. Direct modes require the unified agent. Add `-WithAgent` to a native mode to verify coexistence. Host Windows graphical launches remain blocked until input isolation is verified. Run live fixtures in a separate guest with a verified launcher. [Runtime restrictions](testing.md#background-client-launch)
 
 ~~~powershell
 .\zto-tools\test-saboteur-runtime.ps1 -Mode industrial-item
@@ -42,7 +42,7 @@ The probe compiles against the installed pack ABI, copies the candidate to an is
 .\zto-tools\test-saboteur-runtime.ps1 -Mode smoke -WithoutOptionalMods
 ~~~
 
-## Candidate measurements and provenance
+## Historical native baseline and provenance
 
 Baseline `bb48cad6155a681de1ac08f90f49ebfede9a4970`. Production source `bea34fba0854380fc596408c6d0fd54fa6478f35`. The candidate mod JAR SHA-256 is `461dd37d200b85ac9dacd1cb350adcdd2dccad2736088480a356ec3d2208cf48`. The sidecar flags unrelated working-tree entries. The production sources and build scripts match the production commit.
 

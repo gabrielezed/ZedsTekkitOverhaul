@@ -4,7 +4,8 @@
 
 - Add a Creative-spawned Saboteur with a crouched model, luminous eyes, rapid pursuit and short blinks across clear, level ground.
 - A visible, interruptible windup can pause new output from a ZTO Hopper for up to 80 ticks. Input, collection and stored stacks remain available. The pause expires automatically and is transient across saves.
-- Support dedicated BuildCraft wooden extraction lines and RedPower Transposers drawing from a ZTO Hopper, BuildCraft liquid extraction from a Distillation Receiver, and the EE2-to-IC2 Alchemical Converter link. Deploy the ordinary mod JAR with the instance's existing launch settings. [Supported layouts](docs/agents/saboteur-industrial.md)
+- Support dedicated BuildCraft wooden extraction lines and RedPower Transposers drawing from a ZTO Hopper, BuildCraft liquid extraction from a Distillation Receiver, and the EE2-to-IC2 Alchemical Converter link. [Supported layouts](docs/agents/saboteur-industrial.md)
+- Consolidate inventory gestures, moon rendering and the restored direct industrial hooks into one Prism-managed ZTOAgent. [Compatibility acceptance](docs/agents/compatibility-acceptance.md)
 - Correct the Alchemical Converter's north and south EE2 packet source offsets. Existing converter saves use the same buffer format.
 - Add local read-only diagnostics and a silent Tekkit Dev fixture for counterplay, transfers and recovery. [Rules and evidence](docs/agents/survival-02-alpha5-saboteur.md)
 

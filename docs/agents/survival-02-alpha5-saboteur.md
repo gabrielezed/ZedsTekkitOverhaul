@@ -1,6 +1,6 @@
 # Survival 0.2.0-alpha.5 — Enderkin Saboteur
 
-The [owner-feedback revision](saboteur-owner-revision.md) supersedes the original model and blink tuning documented below. The [industrial acceptance record](saboteur-industrial.md) covers the current single-JAR build. The earlier runtime evidence remains a historical baseline for PR #34.
+The [owner-feedback revision](saboteur-owner-revision.md) supersedes the original model and blink tuning documented below. The [industrial acceptance record](saboteur-industrial.md) covers the native endpoints and the restored direct compatibility hooks. The earlier runtime evidence remains a historical baseline for PR #34.
 
 The Saboteur tests one decision in the project vision. A player can interrupt an exposed attacker, defend the approach or ride out a short interruption of a useful machine. The prototype uses Creative placement in the local simulation. The lunar calendar, outdoor placement and the Skirmisher and Breacher selection rules retain their existing roles. Site ownership remains a separate future design.
 

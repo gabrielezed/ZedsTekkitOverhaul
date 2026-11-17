@@ -50,11 +50,8 @@ try {
     $java = Join-Path (Split-Path $launch.java) 'java.exe'
     $agentOption = ''
     if ($WithAgent -or $Mode.StartsWith('direct')) {
-        $agent = (Resolve-Path -LiteralPath (Join-Path $root 'dist-zto/ZTOAgent.jar')).Path
-        $isolatedAgent = Join-Path $harness 'ZTOAgent.jar'
-        Copy-Item -LiteralPath $agent -Destination $isolatedAgent
-        $run.Result.agentSha256 = (Get-FileHash -LiteralPath $isolatedAgent).Hash
-        $agentOption = ' "-javaagent:' + $isolatedAgent + '" -Dzto.test.agent=true'
+        $agent = Install-IsolatedZtoAgent $run $harness (Join-Path $root 'dist-zto/ZTOAgent.jar')
+        $agentOption = " $agent -Dzto.test.agent=true"
     }
 
     function Read-ProbeBridge([Diagnostics.Process]$Process) {

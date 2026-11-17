@@ -38,7 +38,7 @@ try {
     & javac -cp "$($launch.classpath);$candidate" -d $harness @sources
     if ($LASTEXITCODE -ne 0) { throw 'Could not compile against the installed pack ABI.' }
 
-    $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
+    $agents = Install-IsolatedZtoAgent $run $harness (Join-Path $root 'dist-zto/ZTOAgent.jar')
     $phase = @{ first = 'FIRST_QUARTER'; gibbous = 'WAXING_GIBBOUS'; full = 'FULL_MOON'; waves = 'FULL_MOON'; quiet = 'NEW_MOON'; disabled = 'FIRST_QUARTER' }
     $phase['ender-first'] = 'FIRST_QUARTER'
     $phase['ender-gibbous'] = 'WAXING_GIBBOUS'

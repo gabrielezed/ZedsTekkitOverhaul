@@ -37,7 +37,7 @@ try {
     & javac -cp "$($launch.classpath);$candidate" -d $harness (Join-Path $PSScriptRoot 'runtime-tests/Alpha5RuntimeProbe.java') (Join-Path $PSScriptRoot 'runtime-tests/SilentRuntimeAudio.java')
     if ($LASTEXITCODE -ne 0) { throw 'Could not compile the runtime probe against the installed classes.' }
 
-    $agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
+    $agents = Install-IsolatedZtoAgent $run $harness (Join-Path $root 'dist-zto/ZTOAgent.jar')
     $classpath = $launch.classpath + ';' + $harness
     $failed = @()
     foreach ($mode in 'anchor', 'vanilla') {

@@ -47,8 +47,10 @@ public final class ThiefBehaviorProbe {
         check(source.a == 2 && thief.carryingLoot() && thief.theftPose(0) == 1, "one item changes custody at contact");
         check(world.sounds.contains("random.pop") && player.lastMessage.contains("stole"), "ordinary theft cue");
         check(world.a(thief), "spawn the acting Thief");
-        ThiefTrail.inspect(world, player);
-        check(player.lastMessage.contains("last seen") && world.b(fq.class) == 0, "compass locates a live carrier without releasing loot");
+        uh lastSeen = ThiefTrail.inspect(world, player);
+        check(lastSeen != null && lastSeen.a == (int) thief.o && lastSeen.c == (int) thief.q
+                && player.lastMessage.contains("last seen") && world.b(fq.class) == 0,
+                "compass directs the trail to the live carrier's saved position without releasing loot");
 
         double startX = thief.o, startZ = thief.q;
         int beforeChase = player.bb();
@@ -101,9 +103,13 @@ public final class ThiefBehaviorProbe {
         hazard.z.a();
         SilentWorld cached = new SilentWorld(root, "thief-cache");
         ProbePlayer recovering = new ProbePlayer(cached);
+        recovering.c(270.5, 4, 288.5, 0, 0);
+        uh cache = ThiefTrail.inspect(cached, recovering);
+        check(cache != null && cache.a == 288 && cache.c == 288 && cached.b(fq.class) == 0,
+                "compass directs the trail to the recovery cache from outside recovery range");
         recovering.c(288.5, 4, 288.5, 0, 0);
-        ThiefTrail.inspect(cached, recovering);
-        ThiefTrail.inspect(cached, recovering);
+        check(ThiefTrail.inspect(cached, recovering) == null && ThiefTrail.inspect(cached, recovering) == null,
+                "the trail clears when the cache is recovered");
         check(cached.b(fq.class) == 1, "cache survives save and can be recovered exactly once");
         System.out.printf("PASS Thief theft, interruption, hotbar cue, Anvil reload and one-shot recovery; chased %.1f blocks%n", travelled);
     }

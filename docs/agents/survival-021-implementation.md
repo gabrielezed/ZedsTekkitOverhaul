@@ -48,6 +48,20 @@ The local Overworld save stores one outstanding stack in `data/zto_thief_trail.d
 
 Sneaking with a vanilla compass once shows the last recorded location. Death or Peaceful removal releases the stack once as a normal dropped item on nearby loaded, safe footing, after which normal item-drop risks apply. If there is no safe surface near the Thief, the stack stays in a cache at the original theft site. The same compass gesture within six blocks of the cache releases the item onto safe footing. It can also claim an orphaned trail at the last location after the nearby chunks have loaded and no matching carrier is present. Go back to the Overworld to inspect a trail after taking a portal. The one-loot limit applies until the outstanding stack is dropped or recovered.
 
+## Saboteur pipe theft
+
+On Normal or Hard in the local Overworld, a Saboteur can prioritize an exposed BuildCraft 2.2.14 stone or cobblestone **item** transport pipe during its normal industrial scan. The dismantling pose lasts 35 ticks. A player hit, lost reach or visibility, replacement of the block or tile, or cargo entering the pipe interrupts the attempt. The mob can steal once over its lifetime. Temporary disruption still works when it chooses another supported target.
+
+At contact the implementation checks the installed block, loaded tile, pipe implementation, registered item and both native item transport queues again. It removes the block using Minecraft's normal notified removal path. BuildCraft tears down the tile and updates the neighboring network, and the mob stores one stack with the stock pipe's exact item ID and metadata zero. Fluid, power, extractor and inventory-bearing pipes are ineligible, as are item pipes with cargo in transit or awaiting restoration after chunk load. The Saboteur uses fast short routes and its existing evasive blinks to get away.
+
+The component and theft flag persist in the Saboteur's entity NBT. The carrier is exempt from ordinary despawn. Death or Peaceful removal tries to release the item once on nearby safe, loaded footing, with the loaded theft site as a fallback. If neither is suitable, the entity retains the cargo and retries rather than clearing it. Ordinary dropped-item rules apply once the pipe is released. Existing Saboteurs have no stored cargo or theft flag.
+
+## Ender Trail
+
+Sneak with a vanilla compass to see the existing chat report and request a short violet trail toward the last recorded Thief location or cache. A moving brighter marker shows direction. The trail lasts about four seconds, fades near the end and can be refreshed with another sneak press after roughly one second. It remains visible after releasing sneak. The compass can still retrieve a nearby cache.
+
+The route uses up to three native land-path queries through already loaded terrain, toward waypoints within eight blocks. It shows up to 12 actual path nodes, including partial paths that make measurable progress toward the saved location. If there is no usable route, chat retains the coordinates and asks the player to try another approach. The trail represents the last saved position at request time.
+
 ## Verification and pending work
 
 Run `zto-tools/test-zto-agent.ps1 -Pack` after building. The headless comparison exercises the reobfuscated mod against the pinned Forge 3.3.8.164 world, real terrain and native spawner. It compares saturated nighttime populations with identical terrain and player position, then checks daylight restrictions for light-sensitive mobs, saved activity reload, return qualification, decay-driven cap reduction and the off setting. The fixture retains mobs and runs spawn passes directly to measure density independently of combat and despawning.
@@ -58,4 +72,11 @@ The same command checks Tank timing, dodge and recovery, Hard-only damage to a p
 
 The Thief probe checks a canceled grab, the contact tick, distinct sound dispatch, a sustained pursuit with native navigation, ordinary despawn resistance, Anvil save and reopen, and release of a tagged item exactly once. For a graphical playtest, carry inexpensive items in both inventory categories, then intercept one grab and allow another to finish. Follow the Thief through mixed terrain, lose sight and use a compass, and test recovery after reopening and after a hazardous death. Combat feel, audio balance and cross-biome chase behavior remain owner playtest targets.
 
-Equipped armor theft, cooperative theft and Saboteur physical component theft remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
+The focused pack probe exercises actual pipe removal, the resulting BuildCraft disconnection, interrupted dismantling, cargo recovery and temporary guidance around a wall. In an isolated playtest, place a draining item line with a stone or cobblestone segment at foot level. Interrupt one dismantle, let another finish, pursue the Saboteur and reinstall the recovered pipe. Try refreshing the Ender Trail beside a wall or hillside and around a Thief cache.
+
+Equipped armor theft, cooperative theft and broader integration acceptance remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
+
+### Owner observations for acceptance testing
+
+- A Hard-mode Tank reportedly failed to breach the wall between it and the player. Reproduce with the wall material, collision dimensions, line of sight and pursuit progress recorded separately.
+- A fresh Survival world in an outdoor swamp produced one lunar assault insertion from 113 attempts. Another ordinary Survival world showed similarly low rates. Use the existing Survival & Assault diagnostics to compare rejection reasons, terrain, approach lanes and eligibility. These observations have no confirmed cause yet.

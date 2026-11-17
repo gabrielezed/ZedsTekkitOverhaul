@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.UUID;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.Block;
+import net.minecraft.src.ChunkCoordinates;
 import net.minecraft.src.EntityItem;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Item;
@@ -98,22 +99,23 @@ public final class ThiefTrail extends WorldSavedData {
         }
     }
 
-    public static void inspect(World world, EntityPlayer player) {
+    public static ChunkCoordinates inspect(World world, EntityPlayer player) {
         ThiefTrail trail = get(world, false);
         if (trail == null || !trail.occupied() || !trail.samePlayer(player)) {
             player.addChatMessage("The compass finds no Enderkin trail.");
-            return;
+            return null;
         }
         if (player.getDistanceSq(trail.x + 0.5, trail.y, trail.z + 0.5) <= 36
                 && (trail.cached || trail.missingCarrier(world))) {
             if (trail.drop(world, MathHelper.floor_double(player.posX),
                     MathHelper.floor_double(player.boundingBox.minY + 0.01), MathHelper.floor_double(player.posZ))) {
                 player.addChatMessage("You recovered the Thief's cache.");
-                return;
+                return null;
             }
         }
         player.addChatMessage((trail.cached ? "Thief cache near " : "Enderkin trail last seen near ")
                 + trail.coordinates() + ".");
+        return new ChunkCoordinates(trail.x, trail.y, trail.z);
     }
 
     private boolean samePlayer(EntityPlayer player) { return player != null && victim.equals(player.username); }

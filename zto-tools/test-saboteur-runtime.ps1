@@ -2,17 +2,22 @@
 param(
     [ValidateSet('exercise', 'restart', 'stress', 'dimension', 'transport', 'transport-quit', 'transport-restart', 'combat', 'terrain',
         'smoke', 'industrial-item', 'industrial-redpower', 'industrial-redpower-quit',
-        'industrial-power', 'industrial-power-quit')]
+        'industrial-power', 'industrial-power-quit',
+        'direct-item', 'direct-liquid', 'direct-engine', 'direct-eu', 'direct-eu-mfe', 'direct-eu-mfsu',
+        'direct-eu-quit', 'direct-eu-restart', 'direct-eu-counterplay', 'direct-eu-peaceful', 'direct-eu-unload',
+        'direct-eu-replacement', 'direct-solar', 'direct-solar-mv', 'direct-solar-hv', 'direct-redpower',
+        'direct-ee2', 'direct-ee2-mk2', 'direct-ee2-mk3', 'direct-ee2-cover')]
     [string]$Mode = 'exercise',
     [switch]$Bridge,
     [switch]$WithoutOptionalMods,
+    [switch]$WithAgent,
     [switch]$KeepGame,
     [string]$CandidateJar
 )
 
 $ErrorActionPreference = 'Stop'
 if ($Bridge -and $Mode -notin 'exercise', 'transport') { throw 'Use -Bridge with exercise or transport.' }
-if ($WithoutOptionalMods -and ($Mode.StartsWith('transport') -or $Mode.StartsWith('industrial'))) {
+if ($WithoutOptionalMods -and ($Mode.StartsWith('transport') -or $Mode.StartsWith('industrial') -or $Mode.StartsWith('direct'))) {
     throw 'This fixture requires the corresponding native mods.'
 }
 $root = Split-Path $PSScriptRoot
@@ -43,6 +48,14 @@ try {
         "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
     Set-RuntimeConfig $game ([ordered]@{ playerAssault = 'false'; lunarPatrols = 'false' })
     $java = Join-Path (Split-Path $launch.java) 'java.exe'
+    $agentOption = ''
+    if ($WithAgent -or $Mode.StartsWith('direct')) {
+        $agent = (Resolve-Path -LiteralPath (Join-Path $root 'dist-zto/ZTOAgent.jar')).Path
+        $isolatedAgent = Join-Path $harness 'ZTOAgent.jar'
+        Copy-Item -LiteralPath $agent -Destination $isolatedAgent
+        $run.Result.agentSha256 = (Get-FileHash -LiteralPath $isolatedAgent).Hash
+        $agentOption = ' "-javaagent:' + $isolatedAgent + '" -Dzto.test.agent=true'
+    }
 
     function Read-ProbeBridge([Diagnostics.Process]$Process) {
         $cli = Join-Path $PSScriptRoot 'zed-dev.ps1'
@@ -82,7 +95,7 @@ try {
         $stdout = Join-Path $report "saboteur-$Phase-$save.txt"
         $stderr = Join-Path $report "saboteur-$Phase-$save.stderr.txt"
         $enabled = $Bridge.IsPresent.ToString().ToLowerInvariant()
-        $arguments = '-Xmx1G -Dzto.dev={6} -Dzto.devBridge.enabled={6} "-Djava.io.tmpdir={2}" "-Djava.library.path={0}" -cp "{1};{2}" SaboteurRuntimeProbe$Bootstrap "{3}" {4} {5}' -f (Join-Path $runtime 'natives'), $launch.classpath, $harness, $game, $save, $Phase, $enabled
+        $arguments = '-Xmx1G -Dzto.dev={6} -Dzto.devBridge.enabled={6} "-Djava.io.tmpdir={2}" "-Djava.library.path={0}"{7} -cp "{1};{2}" SaboteurRuntimeProbe$Bootstrap "{3}" {4} {5}' -f (Join-Path $runtime 'natives'), $launch.classpath, $harness, $game, $save, $Phase, $enabled, $agentOption
         $process = Start-IsolatedRuntimeClient -Run $run -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
             -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         $bridgeFailure = $null
@@ -113,6 +126,10 @@ try {
     } elseif ($Mode -in 'industrial-power-quit', 'industrial-redpower-quit') {
         Invoke-Probe $Mode 0
         Invoke-Probe ($Mode -replace '-quit$', '-reopen') 0
+    } elseif ($Mode -in 'direct-eu-quit', 'direct-eu-restart') {
+        if ($Mode -eq 'direct-eu-quit') { Invoke-Probe $Mode 0 }
+        else { Invoke-Probe 'direct-eu-halt' 23 }
+        Invoke-Probe 'direct-eu-reopen' 0
     } else {
         Invoke-Probe $Mode 0
     }

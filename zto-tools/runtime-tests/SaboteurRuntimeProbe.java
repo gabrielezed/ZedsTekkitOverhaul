@@ -56,6 +56,14 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     private boolean engineWarmed, signal;
     private long baselineTick;
 
+    private kw directTarget, directSource, directSink, directEngine;
+    private String directType;
+    private int directTotal, directNormalMoved, directPauseMoved, directPauseReserve, directPauseFlight;
+    private int directPauseEngine, directMaxFlight, directDeliveredWhilePaused, directPriorStrokePart, directStrokesDuringPause;
+    private boolean directCountered, directStopped, directEngineSeeded;
+    private float directPauseStroke;
+    private long directBaselineTick;
+
     public static final class Bootstrap implements ITickHandler {
         private boolean ready;
 
@@ -115,7 +123,13 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 check(running.equals(new File(directory, "mods/ZedsTekkitOverhaul.jar").getCanonicalFile()),
                         "load the entity from the deployed candidate archive");
                 List<String> jvmOptions = ManagementFactory.getRuntimeMXBean().getInputArguments();
-                for (String option : jvmOptions) check(!option.startsWith("-javaagent:"), "agent-free JVM");
+                int agentCount = 0;
+                for (String option : jvmOptions) {
+                    if (!option.startsWith("-javaagent:")) continue;
+                    check(option.endsWith("ZTOAgent.jar"), "only the unified agent can be loaded");
+                    agentCount++;
+                }
+                check(agentCount == (Boolean.getBoolean("zto.test.agent") ? 1 : 0), "expected startup agent count");
                 System.out.println("SABOTEUR JVM options=" + jvmOptions);
                 System.out.println("SABOTEUR Java " + System.getProperty("java.version")
                         + ", audio backend uninitialized, Bridge=" + Boolean.getBoolean("zto.devBridge.enabled"));
@@ -123,6 +137,7 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 hopperId = HopperRegistry.block.bO;
                 if ("reopen".equals(mode)) confirmReopen(game);
                 else if ("transport-reopen".equals(mode)) reopenTransport(game);
+                else if ("direct-eu-reopen".equals(mode)) reopenDirectEU(game);
                 else if ("industrial-power-reopen".equals(mode)) reopenIndustrialPower(game);
                 else if ("industrial-redpower-reopen".equals(mode)) reopenIndustrialRedPower(game);
                 else setup(game);
@@ -140,6 +155,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 if (age >= 120) stress(game);
             } else if (mode.startsWith("transport")) {
                 transport(game, age);
+            } else if (mode.startsWith("direct")) {
+                direct(game, age);
             } else if (mode.startsWith("industrial")) {
                 industrial(game, age);
             } else if ("combat".equals(mode)) {
@@ -182,6 +199,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             spawn(game, HOPPER_X + 0.5D, Z + 0.5D);
             finish(game);
             return;
+        } else if (mode.startsWith("direct")) {
+            setupDirect(game);
         } else if (mode.startsWith("industrial")) {
             setupIndustrial(game);
         } else if (mode.startsWith("transport")) {
@@ -447,6 +466,270 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
 
     private static Object member(Object object, String name) throws Exception {
         return object.getClass().getField(name).get(object);
+    }
+
+    private void setupDirect(Minecraft game) throws Exception {
+        int x = HOPPER_X;
+        if (mode.startsWith("direct-solar")) {
+            int tier = mode.endsWith("-mv") ? 1 : mode.endsWith("-hv") ? 2 : 0;
+            pb array = (pb) staticField("mod_CompactSolars", "compactSolarBlock");
+            String storage = tier == 0 ? "batBox" : tier == 1 ? "mfeUnit" : "mfsUnit";
+            aan sink = (aan) staticField("ic2.common.Ic2Items", storage);
+            game.f.d(x, Y, Z, array.bO, tier);
+            game.f.d(x, Y, Z + 1, sink.c, sink.i());
+            directTarget = directSource = game.f.b(x, Y, Z);
+            directSink = game.f.b(x, Y, Z + 1);
+            directSink.getClass().getMethod("setFacing", short.class).invoke(directSink, (short) 3);
+            directType = "COMPACT_SOLARS_OUTPUT";
+        } else if (mode.startsWith("direct-eu")) {
+            String storage = mode.endsWith("-mfe") ? "mfeUnit" : mode.endsWith("-mfsu") ? "mfsUnit" : "batBox";
+            aan block = (aan) staticField("ic2.common.Ic2Items", storage);
+            game.f.d(x, Y, Z, block.c, block.i());
+            game.f.d(x, Y, Z + 1, block.c, block.i());
+            readDirectEU(game);
+            directSource.getClass().getMethod("setFacing", short.class).invoke(directSource, (short) 3);
+            directSink.getClass().getMethod("setFacing", short.class).invoke(directSink, (short) 3);
+            directTotal = 750 * ((Number) member(directSource, "output")).intValue();
+            directSource.getClass().getField("energy").setInt(directSource, directTotal);
+        } else if (mode.startsWith("direct-ee2")) {
+            String collectorName = mode.endsWith("-mk2") ? "collector2" : mode.endsWith("-mk3") ? "collector3" : "collector";
+            aan collector = (aan) staticField("ee.EEBlock", collectorName);
+            game.f.d(x, Y, Z, collector.c, collector.i());
+            directTarget = directSource = game.f.b(x, Y, Z);
+            directType = "EE2_COLLECTOR";
+            if (mode.endsWith("-cover")) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx != 0 || dz != 0) {
+                            game.f.g(x + dx, Y, Z + dz, 20);
+                            game.f.g(x + dx, Y + 1, Z + dz, 20);
+                        }
+                        game.f.g(x + dx, Y + 2, Z + dz, 20);
+                    }
+                }
+            }
+        } else if ("direct-redpower".equals(mode)) {
+            int relay = ((pb) staticField("RedPowerMachine", "blockMachine")).bO;
+            game.f.d(x, Y, Z, relay, 15);
+            game.f.g(x, Y, Z + 1, 54);
+            directTarget = directSource = game.f.b(x, Y, Z);
+            directSink = game.f.b(x, Y, Z + 1);
+            directType = "REDPOWER_RELAY_EXTRACTION";
+            directSource.getClass().getField("Rotation").setInt(directSource, 3);
+            for (int i = 0; i < 9; i++) ((io) directSource).a(i, new aan(ITEM, 8, 0));
+            directTotal = 72;
+        } else {
+            boolean liquid = "direct-liquid".equals(mode);
+            boolean engine = "direct-engine".equals(mode);
+            int tank = liquid ? ((pb) staticField("BuildCraftFactory", "tankBlock")).bO : 0;
+            game.f.d(x, Y, Z - 1, liquid ? tank : engine ? 61 : 54, engine ? 3 : 0);
+            game.f.g(x, Y, Z + 1, liquid ? tank : 54);
+            yr pipe = (yr) staticField("BuildCraftTransport", liquid ? "pipeLiquidsWood" : "pipeItemsWood");
+            check(pipe.a(new aan(pipe), game.h, game.f, x, Y, Z - 1, 3), "place native wood extractor");
+            game.f.f(x, Y, Z, 2);
+            woodPipe = game.f.b(x, Y, Z);
+            pipeTransport = pipeTransport(woodPipe);
+            game.f.d(x + 1, Y, Z, ((pb) staticField("BuildCraftEnergy", "engineBlock")).bO, 0);
+            directEngine = game.f.b(x + 1, Y, Z);
+            directEngine.getClass().getField("orientation").setInt(directEngine, 4);
+            game.f.d(x + 2, Y, Z, 76, 5);
+            directSource = game.f.b(x, Y, Z - 1);
+            directSink = game.f.b(x, Y, Z + 1);
+            directTarget = engine ? directEngine : (kw) woodPipe;
+            directType = engine ? "BUILDCRAFT_REDSTONE_ENGINE"
+                    : liquid ? "BUILDCRAFT_LIQUID_EXTRACTION" : "BUILDCRAFT_ITEM_EXTRACTION";
+            if (liquid) {
+                liquidId = 9;
+                directTotal = 14000;
+                check(((ILiquidContainer) directSource).fill(Orientations.YPos, directTotal, liquidId, true)
+                        == directTotal, "seed native source tank");
+            } else {
+                directTotal = 64;
+                ((io) directSource).a(engine ? 2 : 0, new aan(ITEM, directTotal, 0));
+            }
+        }
+        player(game, x + 4.3D, Z + 2.2D, 100);
+        directBaselineTick = game.f.w();
+        System.out.println("SABOTEUR " + directType + " target=" + directTarget.getClass().getName());
+    }
+
+    private void readDirectEU(Minecraft game) {
+        directTarget = directSource = game.f.b(HOPPER_X, Y, Z);
+        directSink = game.f.b(HOPPER_X, Y, Z + 1);
+        directType = "IC2_STORAGE_OUTPUT";
+    }
+
+    private void reopenDirectEU(Minecraft game) throws Exception {
+        readDirectEU(game);
+        directTotal = 24000;
+        directPauseMoved = ((Number) member(directSink, "energy")).intValue();
+        player(game, HOPPER_X + 4.3D, Z + 2.2D, 100);
+        stage = 10;
+        since = game.f.w();
+    }
+
+    private void direct(Minecraft game, long age) throws Exception {
+        check(game.f.b(directTarget.j, directTarget.k, directTarget.l) == directTarget, "target identity");
+        if (directSink != null)
+            check(game.f.b(directSink.j, directSink.k, directSink.l) == directSink, "native receiver identity");
+        int reserve, delivered, flight = 0;
+        if (directType.equals("IC2_STORAGE_OUTPUT")) {
+            reserve = ((Number) member(directSource, "energy")).intValue();
+            delivered = ((Number) member(directSink, "energy")).intValue();
+        } else if (directType.equals("EE2_COLLECTOR")) {
+            reserve = delivered = ((Number) member(directSource, "collectorSunTime")).intValue();
+        } else if (directType.equals("COMPACT_SOLARS_OUTPUT")) {
+            reserve = delivered = ((Number) member(directSink, "energy")).intValue();
+        } else if (directType.equals("BUILDCRAFT_LIQUID_EXTRACTION")) {
+            reserve = ((ILiquidContainer) directSource).getLiquidQuantity();
+            delivered = ((ILiquidContainer) directSink).getLiquidQuantity();
+            flight = pipeQuantity(pipeTransport);
+            check(delivered == 0 || ((ILiquidContainer) directSink).getLiquidId() == liquidId, "delivered fluid type");
+        } else {
+            reserve = count((io) directSource);
+            delivered = count((io) directSink);
+            if (pipeTransport != null) {
+                Map<?, ?> traveling = (Map<?, ?>) member(pipeTransport, "travelingEntities");
+                for (Object data : traveling.values()) {
+                    Object payload = member(data, "item");
+                    aan stack = (aan) member(payload, "item");
+                    check(stack.c == ITEM && stack.i() == 0, "in-flight item identity");
+                    flight += stack.a;
+                }
+            }
+        }
+        directMaxFlight = Math.max(directMaxFlight, flight);
+        if (directTotal > 0) check(reserve + delivered + flight == directTotal,
+                "conservation reserve=" + reserve + " in-flight=" + flight + " delivered=" + delivered);
+        if (stage == 10) {
+            if (delivered > directPauseMoved) {
+                System.out.println("SABOTEUR reopened EU delivery " + directPauseMoved + " -> " + delivered + ", total=" + directTotal);
+                finish(game);
+            }
+            return;
+        }
+        if (stage == 1 && directEngine != null && !directEngineSeeded) {
+            // Warm the native engine within the yellow range. Its real power strokes now recur inside an 80-tick sample.
+            Object engine = member(directEngine, "engine");
+            if (engine == null) return;
+            engine.getClass().getField("energy").setInt(engine, 530);
+            directEngineSeeded = true;
+        }
+        if (stage == 1 && delivered > 0 && (pipeTransport == null || age >= 110)
+                && (directEngine == null || "direct-engine".equals(mode) || flight > 0)) {
+            directNormalMoved = delivered;
+            double spawnX = HOPPER_X + ("direct-engine".equals(mode) ? 2.4D : -1.1D);
+            mob = spawn(game, spawnX, Z + 0.35D);
+            check(mob.canEngageEncounterPlayer(game.h), "vulnerable player in the native fixture");
+            mob.engageEncounterPlayer(game.h);
+            field(EntitySaboteur.class, "nextScan").setInt(mob, 1);
+            System.out.println("SABOTEUR baseline ticks=" + (game.f.w() - directBaselineTick) + " delivered=" + delivered
+                    + " reserve=" + reserve + " in-flight=" + flight);
+            advance(game);
+        } else if (stage == 2 && mode.endsWith("-cover") && age >= 100) {
+            check(delivered > directNormalMoved && mob.disruptions() == 0, "glass enclosure protects a working collector" + state());
+            finish(game);
+        } else if (stage == 2 && mode.endsWith("-counterplay") && !directCountered
+                && mob.pose() == EntitySaboteur.WINDUP && mob.windupRemaining() > 0) {
+            player(game, mob.o - 0.9D, mob.q + 0.75D, -120);
+            game.c.b(game.h, mob);
+            check("HIT".equals(mob.lastOutcome()) && mob.disruptions() == 0, "Survival hit cancels native windup");
+            player(game, HOPPER_X + 4.3D, Z + 2.2D, 100);
+            directCountered = true;
+            System.out.println("SABOTEUR Survival hit prevented native interruption");
+        } else if (stage == 2 && !mode.endsWith("-cover") && mob.disruptions() == 1) {
+            check(directType.equals(mob.targetType()), "actor selected intended native endpoint, got " + mob.targetType());
+            directPauseReserve = reserve;
+            directPauseMoved = delivered;
+            directPauseFlight = flight;
+            // Hold off a second windup while measuring downstream recovery from the first lease.
+            field(EntitySaboteur.class, "nextAction").setInt(mob, mob.V + 500);
+            if (directEngine != null) directPriorStrokePart = ((Number) member(directEngine, "progressPart")).intValue();
+            if ("direct-engine".equals(mode)) {
+                Object engine = member(directEngine, "engine");
+                directPauseEngine = ((Number) member(engine, "energy")).intValue();
+                directPauseStroke = ((Number) member(engine, "progress")).floatValue();
+            }
+            advance(game);
+        } else if (stage == 3 && directStopped && earlyDirectRecovery()) {
+            if (delivered == directPauseMoved && age < 26) return;
+            check(delivered > directPauseMoved && age <= 26, "native transfer resumes on release");
+            System.out.println("SABOTEUR early recovery tick=" + age + " delivered=" + delivered + " total=" + directTotal);
+            finish(game);
+        } else if (stage == 3 && age <= 76) {
+            check(reserve == directPauseReserve, "new native operation paused, reserve=" + reserve + " expected=" + directPauseReserve);
+            directDeliveredWhilePaused = delivered - directPauseMoved;
+            if (directEngine != null) {
+                int part = ((Number) member(directEngine, "progressPart")).intValue();
+                if (part == 2 && directPriorStrokePart == 1) directStrokesDuringPause++;
+                directPriorStrokePart = part;
+            }
+            if ("direct-engine".equals(mode)) {
+                Object engine = member(directEngine, "engine");
+                check(directPauseEngine == ((Number) member(engine, "energy")).intValue()
+                        && directPauseStroke == ((Number) member(engine, "progress")).floatValue(),
+                        "engine retains stored power and piston state");
+            }
+            if (age >= 20 && earlyDirectRecovery()) releaseDirectEU(game, reserve);
+            if (age >= 30) {
+                if (mode.endsWith("-quit")) {
+                    System.out.println("SABOTEUR Save and Quit during native lease, delivered=" + delivered);
+                    finish(game);
+                } else if (mode.endsWith("-halt")) {
+                    game.f.a((rw) null);
+                    System.out.println("SABOTEUR saved during native lease, delivered=" + delivered);
+                    System.out.println("SABOTEUR PASS " + mode);
+                    System.out.flush();
+                    Runtime.getRuntime().halt(23);
+                }
+            }
+        } else if (stage == 3 && age >= 80) {
+            if (delivered <= directPauseMoved + directDeliveredWhilePaused || reserve == directPauseReserve) return;
+            check(mob.disruptions() == 1 && mob.bb() > 0 && (pipeTransport == null || directMaxFlight > 0),
+                    "one lease and automatic recovery while the actor is alive");
+            if (pipeTransport != null && !"direct-engine".equals(mode))
+                check(directPauseFlight > 0 && directDeliveredWhilePaused > 0 && directStrokesDuringPause > 0,
+                        "powered extraction was withheld while committed resources finished normally");
+            System.out.println("SABOTEUR pause reserve=" + directPauseReserve + " in-flight=" + directPauseFlight + " max-in-flight="
+                    + directMaxFlight + " delivered during pause=" + directDeliveredWhilePaused + " engine strokes=" + directStrokesDuringPause
+                    + " restored=" + delivered
+                    + " ticks since lease=" + age + (directTotal > 0 ? " source+in-flight+sink=" + directTotal : ""));
+            finish(game);
+        }
+    }
+
+    private boolean earlyDirectRecovery() {
+        return mode.endsWith("-counterplay") || mode.endsWith("-peaceful") || mode.endsWith("-replacement")
+                || mode.endsWith("-unload");
+    }
+
+    private void releaseDirectEU(Minecraft game, int reserve) throws Exception {
+        directStopped = true;
+        if (mode.endsWith("-counterplay")) {
+            check(mob.a(md.j, 100) && mob.bb() <= 0, "owner died during native lease");
+        } else if (mode.endsWith("-peaceful")) {
+            game.A.C = game.f.q = 0;
+        } else if (mode.endsWith("-replacement")) {
+            int block = game.f.a(HOPPER_X, Y, Z);
+            kw old = directSource;
+            game.f.g(HOPPER_X, Y, Z, 0);
+            game.f.d(HOPPER_X, Y, Z, block, 0);
+            readDirectEU(game);
+            check(directSource != old, "native replacement created a new tile at the same position");
+            directSource.getClass().getMethod("setFacing", short.class).invoke(directSource, (short) 3);
+            directSource.getClass().getField("energy").setInt(directSource, reserve);
+        } else {
+            ko provider = (ko) game.f.z();
+            int chunkX = HOPPER_X >> 4, chunkZ = Z >> 4;
+            kw old = directSource;
+            game.f.a(new uh(HOPPER_X + 256, Y, Z + 256));
+            provider.d(chunkX, chunkZ);
+            provider.a();
+            check(!provider.a(chunkX, chunkZ), "native chunk explicitly unloaded");
+            provider.b(chunkX, chunkZ);
+            readDirectEU(game);
+            check(directSource != old, "native chunk reloaded original EU data with a new tile");
+        }
     }
 
     private void readTransport(Minecraft game) throws Exception {

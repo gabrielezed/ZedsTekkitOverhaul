@@ -28,7 +28,7 @@ The session checks the live screen, window, player, cursor, slot ownership, capa
 
 The compact actions use the same atlas and complete four-corner border as legacy NEI. The 2x2 controls sit in the blank area below the grid, separate from the title and Inventory Tweaks button. The prepare action has a gap beside NEI's question button. The 5x5 preview uses the installed crafting texture's recessed slots, arrow and result frame, including all nine empty interior cells. Tooltip wrapping is constrained to the active screen width.
 
-In single and double chests, ZTO's storage actions share the player inventory label row. Inventory Tweaks adds its sorting and settings buttons to the chest header independently.
+In single and double chests, ZTO's 10×10 storage actions share the player inventory label row. Hover over `#`, `M`, `D`, or `T` for totals, deposit matching, deposit all, or take all. Inventory Tweaks adds its sorting and settings buttons to the chest header independently.
 
 ## Verification
 

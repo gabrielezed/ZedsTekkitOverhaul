@@ -4,9 +4,13 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 ![Skirmisher and Breacher alongside a vanilla Enderman in Tekkit Dev](docs/agents/images/enderkin-polish-lineup-daylight.png)
 
-## Survival Foundations · Alpha.8 complete
+## Current development build · 0.2.0-alpha.5
 
-**0.1.0-alpha.8** closes the Survival Foundations milestone. Full-moon assaults, lunar patrols and experimental Enderkin encounters give the Overworld a rhythm of preparation, danger and recovery. [Changelog](CHANGELOG.md) · [Alpha.8 playtest and verification](docs/agents/survival-alpha8.md)
+The **Enderkin Saboteur** is available through a Creative spawn egg. It blinks to approach or evade and can briefly interrupt an exposed machine connection. A Survival player can interrupt its windup. [Changelog](CHANGELOG.md) · [Saboteur guide](docs/agents/survival-02-alpha5-saboteur.md)
+
+## Survival Foundations
+
+Full-moon assaults, lunar patrols and experimental Enderkin encounters give the Overworld a rhythm of preparation, danger and recovery. [Survival Foundations playtest and verification](docs/agents/survival-alpha8.md)
 
 | Under the full moon | At the door |
 | --- | --- |
@@ -19,7 +23,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 
 ### World and automation
 
-- **Lunar Cycle** persists eight phases per single-player save. New worlds begin at new moon, and existing worlds retain their initial vanilla phase. An optional launch agent displays the calendar phase in the native sky. Gameplay modules can read snapshots and subscribe to transitions. [Lunar Cycle guide](docs/agents/lunar-cycle-implementation.md)
+- **Lunar Cycle** persists eight phases per single-player save. New worlds begin at new moon, and existing worlds retain their initial vanilla phase. ZTOAgent displays the calendar phase in the native sky. [Lunar Cycle guide](docs/agents/lunar-cycle-implementation.md)
 - **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
 - **Lunar Patrols** add up to two vanilla hostiles on the first quarter and three on the waxing gibbous. Patrols and assaults can spawn in lit fields with open approaches. Roofs and physical boundaries can keep special encounters outside. [Outdoor pressure and fortification](docs/agents/survival-alpha6.md)
 - **Mob equipment** gives selected lunar Zombies and Skeletons visible, persistent equipment. Zombie swords increase melee damage, armor provides protection, and Skeletons retain their native bow. Lunar loadouts carry no added loot. [Encounter loadout rules](docs/agents/survival-alpha5.md)
@@ -35,19 +39,29 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects indust
 ### Inventory
 
 - **Creative inventory backport** adds tabs, search and a player inventory view. The **1.2.5** tab opens the classic screen, and **F6** restores the backport by default. [Asset setup and controls](docs/engineering/creative-inventory-backport.md)
-- **Inventory tools** add recipe preparation and drag support for compatible modded containers. Drag uses a separate launch agent. [Crafting and inventory guide](docs/agents/crafting-inventory-ux.md)
+- **Inventory tools** add recipe preparation and, with ZTOAgent, left and right drag distribution and Shift-click armor quick equip in supported inventories. [Inventory gestures and slot policy](docs/engineering/inventory-drag.md)
 
-## Build and run
+## Install on Tekkit Classic
 
-Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**; Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Minecraft closed, run the deployment script.
+Use **Tekkit Classic 3.1.2** with **Java 8**. To install both matching build artifacts in the isolated **Tekkit Dev** profile, close Prism and run the installer from the workspace root. It installs `ZedsTekkitOverhaul.jar` and registers `ZTOAgent.jar` as a Prism-managed component. Prism 11.1.1 adds one JVM agent argument at launch. [Deployment guide](docs/deploy-prism.md)
 
-The current build identifier is **0.2.0-alpha.5**. The managed Prism instance installs `ZedsTekkitOverhaul.jar` and loads one ZTOAgent component for inventory gestures, custom moon rendering and direct industrial sabotage. A plain mod install still provides ZTO-owned industrial transfer gates. [Industrial setups](docs/agents/saboteur-industrial.md)
+```powershell
+.\zto-tools\install-zto-prism.ps1 -Instance "$env:APPDATA\PrismLauncher\instances\Tekkit Dev"
+```
+
+ZTOAgent enables inventory gestures, custom moon rendering and direct sabotage of supported BuildCraft, IC2, CompactSolars, RedPower and EE2 machines. Installing just `ZedsTekkitOverhaul.jar` in `mods` provides the Saboteur and its native interactions with the Hopper, Distillation Receiver, RedPower Transposer layouts and Alchemical Converter. [Supported layouts](docs/agents/saboteur-industrial.md)
+
+The alpha.5 build passed headless hook and pack linkage checks. Live verification of the inventory gestures, rendered moon and restored industrial throughput is pending in an input-isolated Tekkit client. [Compatibility acceptance](docs/agents/compatibility-acceptance.md)
+
+## Build from source
+
+Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**, while Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Prism and Minecraft closed, run the deployment script.
 
 ```powershell
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script expects the isolated PrismLauncher instance `Tekkit Dev` under `%APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods`. See [deployment documentation](docs/deploy-prism.md) for overrides, prerequisites and safeguards.
+The script writes both artifacts to `dist-zto` and installs them in **Tekkit Dev** by default. Set `ZTO_PRISM_MODS` to an existing staging mods directory to build without editing a Prism profile. [Build and staging details](docs/deploy-prism.md)
 
 ### Create an assault playtest world
 
@@ -65,7 +79,6 @@ The opt-in viewing pen in **Tekkit Dev** puts equipped Zombies and Skeletons bes
 
 ### Optional features
 
-- **Compatibility:** the managed Prism deployment adds the ZTO Agent component. The game uses its native phase selection when the renderer fingerprint is unsupported. [Deployment and verification](docs/deploy-prism.md)
 - **Configuration:** Edit `minecraft/config/ZedsTekkitOverhaul.cfg` while the game is closed. Alpha.8 imports settings and registry IDs on first startup. [Settings and migration](docs/agents/configuration.md)
 - **Lunar Debug:** set `lunarDebugKey=67` in `config/ZedsTekkitOverhaul.cfg` for F9. The default `0` disables the shortcut. Optionally set `lunarVerboseLogging=true` for transition logs. Restart after changing these settings.
 - **Lunar encounter settings** are in the same config. Use `lunarPatrols=false` to disable patrols, `playerAssault=false` to disable full-moon assaults, or `lunarOutdoorLightPressure=false` to restore alpha.5 placement. Older configs with `assaultSpawnBudget=6` need an explicit change to 15 to use the current default. Set `survivalDebugHud=true` to see encounter timing, insertions and placement constraints with F10. Restart after editing the config. [Patrols](docs/agents/lunar-pressure.md) · [Assault settings](docs/agents/survival-assault-alpha2.md#tuning-and-compatibility) · [Outdoor placement](docs/agents/survival-alpha6.md)

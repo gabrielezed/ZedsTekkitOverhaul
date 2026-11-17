@@ -24,6 +24,8 @@ The script:
 3. Builds a candidate JAR and restores complete local Hopper and creative texture sets from the configured asset directories, installed JAR, last published JAR, or backup, in that order.
 4. Publishes `dist-zto/ZedsTekkitOverhaul.jar`, backs up the deployed JAR, and copies the new JAR to PrismLauncher. If the deployed JAR has lost textures found in the previous backup, the displaced JAR goes to `ZedsTekkitOverhaul.replaced.jar` so the working backup stays available.
 
+The Saboteur ships in `ZedsTekkitOverhaul.jar` and runs with the instance's existing launch settings. [Supported industrial setups](agents/saboteur-industrial.md)
+
 ### Default destination
 
 ```text

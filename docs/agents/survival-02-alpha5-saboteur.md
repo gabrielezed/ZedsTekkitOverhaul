@@ -1,6 +1,6 @@
 # Survival 0.2.0-alpha.5 — Enderkin Saboteur
 
-The [owner-feedback revision](saboteur-owner-revision.md) supersedes the original model, blink tuning and integration limits documented below. The earlier runtime evidence remains a historical baseline for PR #34.
+The [owner-feedback revision](saboteur-owner-revision.md) supersedes the original model and blink tuning documented below. The [industrial acceptance record](saboteur-industrial.md) covers the current single-JAR build. The earlier runtime evidence remains a historical baseline for PR #34.
 
 The Saboteur tests one decision in the project vision. A player can interrupt an exposed attacker, defend the approach or ride out a short interruption of a useful machine. The prototype uses Creative placement in the local simulation. The lunar calendar, outdoor placement and the Skirmisher and Breacher selection rules retain their existing roles. Site ownership remains a separate future design.
 
@@ -16,11 +16,11 @@ The Saboteur tests one decision in the project vision. A player can interrupt an
 
 ## Hopper output lease
 
-The Hopper already commits each move synchronously through `InventoryAccess.moveOne`. The lease gates only its own outgoing call, before the call starts. The intake and item collection branches still run, subject to the ordinary transfer cooldown, redstone lock and capacity. Passive access from other inventories still follows existing game rules. The receiver and already transferred items remain ordinary inventory state. The GUI reads **Output paused** while the lease applies.
+The Hopper commits each push synchronously through `InventoryAccess.moveOne`. The lease gates that call before it starts. A dedicated BuildCraft wooden pipe or RedPower Transposer that recently queried its source slots can also lose sided access on its single bound face. Intake and item collection continue subject to the normal cooldown, redstone lock and capacity. The GUI reads **Output paused** for the ordinary push gate and **Extraction paused** for the bound native line.
 
 The lease lives in memory on the exact loaded Hopper instance, is exclusive and lasts at most 80 Hopper ticks. The actor must still belong to the same authoritative world, have a valid player and be ticking in a loaded chunk. Actor death, Peaceful and loss of authority expire it. Target removal, replacement and chunk unload discard it. Native NBT contains the regular registry identity, position, health, inventory, output mode and ordinary transfer cooldown. A reopened save starts with no windups, player references or leases. The same rule applies after abrupt process termination. Inventory commits and block metadata use their original save paths throughout.
 
-IC2 cables, BuildCraft item and fluid pipes, and RedPower networks require individually verified adapters and are currently unsupported. The [installed-pack audit](enderkin-future-roles.md#adapter-boundary-and-installed-pack-audit) records possible sender-side integration paths and conservation requirements.
+The [industrial layouts](saboteur-industrial.md) describe the supported native connections, limits and current transfer measurements.
 
 ## Owner playtest
 

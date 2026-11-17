@@ -41,7 +41,7 @@ Close the game and, from the MDK root, run:
 
 The script validates the product version, calls `recompile.bat`, removes only stale `reobf/minecraft/zed/` output, calls `reobfuscate.bat`, and packages the reobfuscated `zed/` classes, assets and build metadata. It writes the archive SHA-256 to the sidecar before deploying the stable JAR. It aborts if required tools or assets are absent or if competing old `ZedsTekkitOverhaul*.jar` names are detected. See the [versioning policy](VERSIONING_POLICY.md).
 
-The build also writes `dist-zto/ZTOIndustrialAgent.jar`. To enable the Saboteur's native industrial targets, pass its path as a JVM launch argument in Tekkit Dev. See [industrial support and launch](saboteur-industrial.md).
+The Saboteur and its industrial interactions ship in `dist-zto/ZedsTekkitOverhaul.jar`. Use the instance's usual JVM settings. [Industrial layouts and evidence](saboteur-industrial.md)
 
 For a different Prism instance, set `ZTO_PRISM_MODS` before calling it. See [../deploy-prism.md](../deploy-prism.md) for the exact command and limitations.
 

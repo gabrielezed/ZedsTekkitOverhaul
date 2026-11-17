@@ -22,7 +22,9 @@ Approach and evasion choose different destinations. Approach tests up to three f
 
 The validator checks loaded chunks with a halo, legal feet height, a continuously swept collision hull, normal-cube support under that hull, hazards and an unoccupied landing. A broad-phase query returns native collision shapes. The sweep checks only where the body actually crosses those shapes, which allows a diagonal past an open corner. Closed doors, walls and gaps still block travel. The blink stays on one level and native pathing handles elevation changes. The Saboteur cannot use a teleport to cross a sealed barrier or a world boundary.
 
-## BuildCraft 2.2.14 and IC2 boundary
+## Historical BuildCraft 2.2.14 and IC2 boundary
+
+This section records the earlier receiver-only revision. See the [single-JAR industrial acceptance record](saboteur-industrial.md) for current coverage.
 
 The Tekkit Dev `buildcraft-client-B-transport-2.2.14.zip` provides the tested behavior. `TileGenericPipe` binds the pipe, runs scheduled neighbor changes and the power provider, delegates updates, and serializes the pipe ID and native pipe data. Invalidation removes the pipe from the persistent tile registry. `PipeTransportItems` owns and serializes traveling payloads, changes their ownership across handoffs and can drop them when there is no receiving path or when the pipe is removed. `PipeTransportLiquids` owns independent side and center buffers, their quantities, IDs and travel queues, and serializes them together. Both hook types are decided by the pipe's own implementation. A generic pause of native transport would require intervention inside BuildCraft. Changing connections or replacing pipes also triggers native topology and removal behavior.
 

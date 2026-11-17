@@ -1,6 +1,6 @@
 # Current implementation
 
-**0.2.0-alpha.5** adds a Creative-spawned Enderkin Saboteur with approach and evasive blinks, interruptible machine disruption and an optional launch agent for native BuildCraft, IC2, RedPower and EE2 endpoints. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Industrial support and launch](saboteur-industrial.md)
+**0.2.0-alpha.5** adds a Creative-spawned Enderkin Saboteur with approach and evasive blinks and interruptible machine disruption. Its single mod JAR supports specific BuildCraft, RedPower and EE2-to-IC2 lines through ZTO-owned transfer boundaries. Acceptance targets Tekkit Classic 3.1.2 singleplayer. [Industrial layouts and evidence](saboteur-industrial.md)
 
 | Owner | Current responsibility |
 | --- | --- |

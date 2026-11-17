@@ -24,6 +24,7 @@ public final class ZtoConfigSelfTest {
         check(defaults.assaultSpawnBudget == 15 && defaults.assaultWaveInterval == 900
                 && defaults.assaultActiveCap == 8 && defaults.assaultOuterRadius == 16, "assault defaults");
         check(defaults.territorialHostileCapBonusPercent == 70, "natural hostile cap bonus default");
+        check(defaults.naturalEnderkinSpawning, "natural Enderkin ecology defaults on");
         check(defaults.creativeInventoryBackport && !defaults.partialRecipeFill && defaults.craftingUxShortcut == 0,
                 "interface defaults");
         check(!defaults.survivalDebugHud && !defaults.lunarVerboseLogging && defaults.lunarDebugKey == 0

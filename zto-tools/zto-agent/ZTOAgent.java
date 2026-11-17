@@ -12,6 +12,7 @@ import java.util.function.Predicate;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.function.ToIntBiFunction;
 
 /** Java startup entry point and bridge. Its signatures never link game classes. */
@@ -26,6 +27,7 @@ public final class ZTOAgent {
     private static volatile WeakReference<BiFunction<Object, int[], Boolean>> spawnCap = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> spawnCandidate = new WeakReference<>(null);
     private static volatile WeakReference<Consumer<Object>> spawnInserted = new WeakReference<>(null);
+    private static volatile WeakReference<UnaryOperator<Object>> spawnReplacement = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -95,6 +97,15 @@ public final class ZTOAgent {
 
     public static boolean naturalSpawningActive(ClassLoader loader) {
         return spawnCap.get() != null && installed(loader, NaturalSpawnHook.TARGET);
+    }
+
+    public static void registerNaturalSpawnReplacement(UnaryOperator<Object> callback) {
+        spawnReplacement = new WeakReference<>(callback);
+    }
+
+    public static Object naturalSpawnReplacement(Object entity, Object type) {
+        UnaryOperator<Object> callback = spawnReplacement.get();
+        return callback != null && hostile(type) ? callback.apply(entity) : entity;
     }
 
     public static void beginNaturalSpawning(Object world, boolean hostileEnabled) {

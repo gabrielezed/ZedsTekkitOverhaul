@@ -54,13 +54,13 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
                          boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
-                         int territorialHostileCapBonusPercent) {
+                         int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
         this.assault = assault;
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
-        naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent);
+        naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);

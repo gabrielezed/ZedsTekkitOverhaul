@@ -5,8 +5,11 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
+import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.tactical.EnderkinEcology;
 
 /** Budgets the vanilla hostile pass for the active single-player world. */
 public final class NaturalSpawnPressure {
@@ -14,6 +17,16 @@ public final class NaturalSpawnPressure {
     private final TerritorialActivityService territory;
     private final Thread owner = Thread.currentThread();
     private final int maxIncreasePercent;
+    private final boolean enableEcology;
+    private final UnaryOperator<Object> ecologicalCandidate = new UnaryOperator<Object>() {
+        public Object apply(Object candidate) {
+            if (!(candidate instanceof EntityLiving)) return candidate;
+            EntityLiving mob = (EntityLiving) candidate;
+            return owns(mob.worldObj) && world.worldProvider.worldType == 0 && world.difficultySetting > 0
+                    && world.playerEntities.size() == 1
+                    ? EnderkinEcology.select(mob, Math.max(0, passActivity)) : candidate;
+        }
+    };
     private final BiConsumer<Object, Boolean> start = new BiConsumer<Object, Boolean>() {
         public void accept(Object context, Boolean enabled) { begin(context, enabled); }
     };
@@ -34,8 +47,13 @@ public final class NaturalSpawnPressure {
     private long successfulSpawns, limitedPasses;
 
     public NaturalSpawnPressure(TerritorialActivityService territory, int maxIncreasePercent) {
+        this(territory, maxIncreasePercent, false);
+    }
+
+    public NaturalSpawnPressure(TerritorialActivityService territory, int maxIncreasePercent, boolean enableEcology) {
         this.territory = territory;
         this.maxIncreasePercent = maxIncreasePercent;
+        this.enableEcology = enableEcology;
     }
 
     public void register() {
@@ -45,6 +63,12 @@ public final class NaturalSpawnPressure {
             agent.getMethod("registerNaturalSpawning", BiConsumer.class, BiFunction.class,
                     Predicate.class, Consumer.class).invoke(null, start, cap, candidate, inserted);
             agentActive = agent.getMethod("naturalSpawningActive", ClassLoader.class);
+            try {
+                agent.getMethod("registerNaturalSpawnReplacement", UnaryOperator.class)
+                        .invoke(null, enableEcology ? ecologicalCandidate : null);
+            } catch (NoSuchMethodException previousAgent) {
+                // Earlier agents still supply the territorial cap.
+            }
         } catch (ReflectiveOperationException unavailable) {
             agentActive = null;
         } catch (LinkageError unavailable) {

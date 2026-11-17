@@ -112,6 +112,21 @@ final class IndustrialSabotage implements SabotageTarget {
         return null;
     }
 
+    /** The installed BuildCraft extraction families are also a read-only habitat signal. */
+    static boolean transportSignal(TileEntity tile) {
+        if (!PIPE_TILE.equals(tile.getClass().getName())) return false;
+        try {
+            Object pipe = field(tile, "pipe");
+            if (pipe == null) return false;
+            String name = pipe.getClass().getName();
+            return ITEM_PIPE.equals(name) || LIQUID_PIPE.equals(name);
+        } catch (ReflectiveOperationException incompatible) {
+            return false;
+        } catch (LinkageError incompatible) {
+            return false;
+        }
+    }
+
     private static IndustrialSabotage extraction(TileEntity tile) throws ReflectiveOperationException {
         Object pipe = field(tile, "pipe");
         if (pipe == null || !installed(pipe.getClass())) return null;

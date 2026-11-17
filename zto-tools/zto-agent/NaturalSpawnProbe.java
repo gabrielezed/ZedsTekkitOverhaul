@@ -5,7 +5,7 @@ import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Headless comparison using the pinned Tekkit World, entity checks and ordinary spawning pass. */
 public final class NaturalSpawnProbe {
-    private static final fj SETTINGS = new fj(32021L, 0, false, false, vx.c);
+    static final fj SETTINGS = new fj(32021L, 0, false, false, vx.c);
 
     public static void main(String[] args) {
         File root = new File(args[0]);
@@ -21,7 +21,7 @@ public final class NaturalSpawnProbe {
         int lowCount = quiet.b(xf.class);
         check(baseline.hookActive && baseline.increasePercent == 0 && baseline.limitedPasses > 0,
                 "quiet world reaches the vanilla cap: " + baseline.status + " " + lowCount + "/" + baseline.vanillaCap
-                        + " (inserted " + baseline.successfulSpawns + ", skylight subtraction " + quiet.p + ")");
+                        + " (inserted " + baseline.successfulSpawns + ", skylight subtraction " + quiet.f + ")");
         check(territory.snapshot(quiet, visitor).localActivity == 0, "quiet region has no history");
 
         xd occupied = open(root, "occupied", 18000);
@@ -71,17 +71,17 @@ public final class NaturalSpawnProbe {
         System.out.println("PASS native light restrictions, disabled spawning, territorial reload, decay and return");
     }
 
-    private static xd open(File root, String name, long time) {
+    static xd open(File root, String name, long time) {
         xd world = new xd(new aia(root, name, false), name, SETTINGS);
         world.q = 2; // Normal difficulty.
         world.a(time);
-        world.p = world.a(1.0F); // Refresh skylight after setting the fixture time.
+        world.q(); // Refresh native skylight after setting the fixture time.
         world.r.setSeed(3981L);
         return world;
     }
 
     @SuppressWarnings("unchecked")
-    private static yw join(xd world) {
+    static yw join(xd world) {
         yw player = new yw(world) {
             @Override
             public void ab() {}
@@ -91,7 +91,7 @@ public final class NaturalSpawnProbe {
         return player;
     }
 
-    private static NaturalSpawnPressure.Snapshot populate(xd world, NaturalSpawnPressure pressure) {
+    static NaturalSpawnPressure.Snapshot populate(xd world, NaturalSpawnPressure pressure) {
         // The graphical client normally prepares the player's surrounding chunks.
         for (int x = 9; x <= 27; x++) {
             for (int z = 9; z <= 27; z++) world.d(x, z);

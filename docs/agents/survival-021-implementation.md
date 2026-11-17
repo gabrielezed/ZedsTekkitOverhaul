@@ -1,6 +1,6 @@
-# Survival 0.2.1 first iteration
+# Survival 0.2.1 implementation
 
-The [full design specification](survival-021-spec.md) governs the milestone. This iteration adds an experimental ordinary hostile pressure policy and live diagnostics for local single-player Tekkit Classic 3.1.2.
+The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation and ordinary Enderkin ecology for local single-player Tekkit Classic 3.1.2.
 
 ## Debug Hub
 
@@ -18,7 +18,23 @@ In the Overworld, the existing single-player territorial service supplies the sa
 
 On a standard single-player native pass, the base cap is 79. The default `territorialHostileCapBonusPercent=70` raises the effective cap to 134 at saturation. Edit the unified configuration and restart to set the maximum from 0 to 100 percent. Zero uses the native comparison and loop. The increased cap allows the ordinary pass to continue replenishing its population after it would normally stop. The native attempt frequency, chunk radius, and block, light, distance, biome and entity validation remain in place. Bonus passes stop admitting primary hostile insertions when their budget fills. Native secondary spawns, other spawn sources, and a cap that decreases while mobs remain alive can leave the loaded population above the effective cap.
 
-The single ZTOAgent checks the fingerprint of the pack's `vf.class` and adjusts only the ordinary hostile path. The patch uses the game's existing count and insertion result and adds no chunk search, entity scan or spawn loop. Remote play, other dimensions, unavailable activity, Peaceful, and missing or unsupported agent hooks receive no bonus. The monitor reports when the hook is unavailable. Keep the mod and companion agent from the same build. [Prism installation](../deploy-prism.md)
+The single ZTOAgent checks the fingerprint of the pack's `vf.class` and adjusts only the ordinary hostile path. Territorial cap management uses the game's existing count and insertion result. Remote play, other dimensions, unavailable activity, Peaceful, and missing or unsupported agent hooks receive no cap bonus. The monitor reports when the hook is unavailable. Keep the mod and companion agent from the same build. [Prism installation](../deploy-prism.md)
+
+## Tank
+
+The Tank keeps its 1.85×3.15 block collision box and has 64 health points. Native damage still applies, with 40% of the ordinary melee knockback impulse. A frontal strike deals 9 base damage and pushes the target on a successful hit. The Tank locks its facing while winding up for 24 ticks. At the contact keyframe it checks the frontal arc, distance and a strike lane through cover. A miss still incurs 26 ticks of recovery.
+
+On Hard, the Tank first tries normal navigation. After roughly 2.4 seconds without meaningful progress it can commit that same animation to a nearby obstruction between it and its target. One strike can remove up to four blocks in one exposed column. It can complete at most three breach strikes over its lifetime. Planks, logs, cobblestone, glass and bricks are eligible. Reinforced blocks, doors, complex blocks and TileEntities stay protected. Destruction uses ordinary block removal and drops. Leaving the attack arc, changing the obstruction, or landing a hit of at least five incoming damage during the windup can foil a breach. Lower difficulties keep the heavy combat and suppress block removal. Existing Tanks keep the health from their saves. Only the breach count is persisted, and existing tags without the counter get a fresh budget.
+
+## Enderkin mobility
+
+The Skirmisher blinks sideways for a new firing angle or away from close pressure. The Breacher closes through a short clear lane when route-finding stalls and can reach low platforms. The Saboteur keeps its existing short approach and evasive blinks during industrial disruption. The Thief favors a diagonal retreat after contact or injury. After a longer stall, the Tank telegraphs a rare relocation onto a visible open platform up to four blocks higher. A nearby eligible Hard-mode breach takes priority. Grounded blinks check the swept body and floor. Elevated moves require a grounded target, clear vertical and horizontal volumes, and solid footing for the whole body. All checks stay within loaded terrain.
+
+## Ordinary Enderkin ecology
+
+With `naturalEnderkinSpawning=true`, the pinned hook can substitute a Skirmisher, Breacher, Thief, Tank or Saboteur after a vanilla Zombie, Skeleton, Creeper or Enderman passes its ordinary spawn checks. The replacement must also fit its full body with solid footing. Failed substitutions keep the native entity in the same slot. The ambient roll is at most 3.9% of eligible candidates with zero activity and 5.9% at saturation, before space and population checks. Tank accounts for 0.2% of eligible rolls. The already loaded local population gate permits at most five Enderkin within the candidate's 32-block horizontal and 16-block vertical box, with one nearby Tank and one nearby Saboteur.
+
+An exposed BuildCraft wooden item or liquid extractor, or a ZTO sabotage-capable tile, raises the nominal Saboteur roll from 0.5% to 11.1%. Candidates check within 12 horizontal and four vertical blocks, up to 32 tiles per already loaded chunk, and require sight to the signal. The habitat check reads component identity and leaves the machine operating normally. The existing hostile cap and lunar encounter selection remain separate controls. Disable the ecology setting to compare against ordinary vanilla species under the same territorial cap.
 
 ## Verification and pending work
 
@@ -26,4 +42,6 @@ Run `zto-tools/test-zto-agent.ps1 -Pack` after building. The headless comparison
 
 In a disposable Tekkit Dev guest, play comparable nights in quiet and sustained-activity cells. Compare the monitor's pass activity, effective cap and insertions while observing ordinary hostile density outside a lit shelter. Repeat across a natural full moon to compare the current territorial score with the captured assault admission. Physical key navigation, perceived balance and full client regression still require a graphical Tekkit Dev run.
 
-Advanced Tank combat and structural interaction, Thief theft and recovery, Saboteur physical component theft, differentiated teleportation, and ambient and contextual Enderkin spawning remain pending. Aerial fauna and settlement recognition belong to later development. This iteration uses local activity through the existing assessment interface, leaving future settlement data and encounter ownership with their respective systems.
+The same command checks Tank timing, dodge and recovery, Hard-only damage to a plank barrier, protected blocks, role movement and the persisted breach budget. It checks actual native Enderkin insertions and compares the same ecology roll beside an exposed BuildCraft pipe and behind a wall. The combat fixture runs on the pinned legacy world and silences the graphical client's audio hook. Owner playtesting still needs to judge combat feel, pathing across varied terrain, graphical pose readability and ordinary encounter frequency.
+
+Thief theft, extended escape and loot recovery, and Saboteur physical component theft remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.

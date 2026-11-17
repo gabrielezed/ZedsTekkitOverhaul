@@ -12,6 +12,7 @@ final class NaturalSpawnHook implements Opcodes {
     static final String TARGET = "vf";
     static final String SHA256 = "59c1b4c3f6c2aa036aba1defe1c9987d83d552e0cc17e119eafdbf8822d32dec";
     private static final int CREATURE_TYPE_SLOT = 8;
+    private static final int CANDIDATE_SLOT = 30;
 
     private NaturalSpawnHook() {}
 
@@ -63,6 +64,16 @@ final class NaturalSpawnHook implements Opcodes {
 
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                        boolean insertion = owner.equals("xd") && name.equals("a") && desc.equals("(Lnn;)Z");
+                        if (insertion) {
+                            // The original entity has passed native position, lighting and category checks.
+                            super.visitVarInsn(ALOAD, CREATURE_TYPE_SLOT);
+                            super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "naturalSpawnReplacement",
+                                    "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false);
+                            super.visitTypeInsn(CHECKCAST, "acq");
+                            super.visitInsn(DUP);
+                            super.visitVarInsn(ASTORE, CANDIDATE_SLOT);
+                        }
                         super.visitMethodInsn(opcode, owner, name, desc, itf);
                         if (owner.equals("java/util/Iterator") && name.equals("hasNext")
                                 || owner.equals("acq") && name.equals("i") && desc.equals("()Z")) {
@@ -71,7 +82,7 @@ final class NaturalSpawnHook implements Opcodes {
                                     "(ZLjava/lang/Object;Ljava/lang/Object;)Z", false);
                             sites[2]++;
                         }
-                        if (owner.equals("xd") && name.equals("a") && desc.equals("(Lnn;)Z")) {
+                        if (insertion) {
                             super.visitInsn(DUP);
                             context();
                             super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "recordNaturalSpawn",

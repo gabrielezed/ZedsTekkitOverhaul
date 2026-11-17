@@ -23,7 +23,11 @@ try {
     if ($Pack) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
-        & javac -source 8 -target 8 -cp ($headless -join ';') -d $out.FullName (Join-Path $PSScriptRoot 'zto-agent/NaturalSpawnProbe.java')
+        $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
+            ForEach-Object { Join-Path $game "mods/$_" }
+        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java') |
+            ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
+        & javac -source 8 -target 8 -cp (($headless + $buildCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Natural spawning probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
@@ -39,6 +43,8 @@ try {
             if ($LASTEXITCODE) { throw 'Reduced pack ABI agent probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') NaturalSpawnProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Natural spawning comparison failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') EnderkinBehaviorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
         } finally { Pop-Location }
     }
 } finally {

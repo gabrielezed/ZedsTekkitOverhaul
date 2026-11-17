@@ -276,10 +276,12 @@ public final class CraftingUx {
                 add(existing, OPEN_BOOKMARK, left + (grid == 2 ? 142 : 5), controlsY, 12, "B");
             }
         } else if (activeChest > 0) {
-            add(existing, TOTALS, left + width - 92, top + 4, 14, "#");
-            add(existing, STORAGE, left + width - 76, top + 4, 20, "DM");
-            add(existing, STORAGE + 1, left + width - 55, top + 4, 20, "DA");
-            add(existing, STORAGE + 2, left + width - 34, top + 4, 20, "TA");
+            // Inventory Tweaks adds sorting controls to the chest title after the screen opens.
+            int storageY = top + gui.inventorySlots.getSlot(activeChest).yDisplayPosition - 14;
+            add(existing, TOTALS, left + width - 92, storageY, 14, "#");
+            add(existing, STORAGE, left + width - 76, storageY, 20, "DM");
+            add(existing, STORAGE + 1, left + width - 55, storageY, 20, "DA");
+            add(existing, STORAGE + 2, left + width - 34, storageY, 20, "TA");
         } else if (MaceratorFill.supports(gui)) {
             add(existing, MACHINE_INFO, left + 121, top + 4, 15, "i");
         }

@@ -19,6 +19,7 @@ public final class TacticalHostiles {
     private TacticalHostiles() {}
 
     public static void register() {
+        IndustrialSabotage.register();
         ModLoader.registerEntityID(EntitySkirmisher.class, SKIRMISHER, ModLoader.getUniqueEntityId());
         ModLoader.registerEntityID(EntityBreacher.class, BREACHER, ModLoader.getUniqueEntityId());
         ModLoader.registerEntityID(EntityEnderPulse.class, "ZTO.EnderPulse", ModLoader.getUniqueEntityId());

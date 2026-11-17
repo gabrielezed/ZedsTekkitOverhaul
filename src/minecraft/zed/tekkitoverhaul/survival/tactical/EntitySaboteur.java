@@ -204,7 +204,13 @@ public final class EntitySaboteur extends TacticalHostile {
                         type = effect.activeIndustrialOperation();
                         if (type == null) continue;
                         priority = 2;
-                    } else continue;
+                    } else {
+                        IndustrialSabotage direct = IndustrialSabotage.find(candidate);
+                        if (direct == null) continue;
+                        effect = direct;
+                        type = direct.activeIndustrialOperation();
+                        priority = direct.operation.priority;
+                    }
                     if (priority < bestPriority || priority == bestPriority && distance >= bestDistance) continue;
                     if (effect.isDisrupted()) {
                         outcome = Outcome.ALREADY_PAUSED;
@@ -259,6 +265,7 @@ public final class EntitySaboteur extends TacticalHostile {
         if (machine == null || machine.xCoord != machineX || machine.yCoord != machineY || machine.zCoord != machineZ)
             return false;
         if (LoadedTile.at(worldObj, machineX, machineY, machineZ) != machine) return false;
+        if (disruption instanceof IndustrialSabotage) return ((IndustrialSabotage) disruption).stillBound();
         if (connection == null) return true;
         if (machine instanceof TileHopper) return ((TileHopper) machine).activeExtractionPeer() == connection;
         return ((TileEntityDistillationReceiver) machine).activeExtractionPipe() == connection;

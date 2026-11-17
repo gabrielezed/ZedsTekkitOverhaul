@@ -1,155 +1,94 @@
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-public static class BackgroundMinecraftNative
+// Read-only. Sample from the interactive user's session and input desktop.
+public static class RuntimeInputState
 {
     [StructLayout(LayoutKind.Sequential)]
-    private struct SecurityAttributes
-    {
-        public int Size;
-        public IntPtr Descriptor;
-        public int Inherit;
-    }
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct StartupInfo
-    {
-        public int Size;
-        public string Reserved, Desktop, Title;
-        public int X, Y, Width, Height, XChars, YChars, Fill, Flags;
-        public short ShowWindow, ReservedSize;
-        public IntPtr ReservedData, Input, Output, Error;
-    }
+    public struct Point { public int X, Y; }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct ProcessInfo
+    public struct Rect { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GuiThreadInfo
     {
-        public IntPtr Process, Thread;
-        public int ProcessId, ThreadId;
+        public int Size, Flags;
+        public IntPtr Active, Focus, Capture, MenuOwner, MoveSize, Caret;
+        public Rect CaretRect;
     }
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern IntPtr CreateDesktop(string name, IntPtr device, IntPtr mode,
-        int flags, int access, ref SecurityAttributes security);
+    public sealed class Sample
+    {
+        public string WindowStation, ThreadDesktop, InputDesktop, ForegroundDesktop;
+        public uint ForegroundPid, FocusPid, CapturePid;
+        public Point Cursor;
+        public Rect Clip, VirtualScreen;
+    }
 
     [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
+    [DllImport("user32.dll")]
     private static extern bool CloseDesktop(IntPtr desktop);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern IntPtr OpenDesktop(string name, int flags, bool inherit, int access);
-
-    private delegate bool WindowCallback(IntPtr window, IntPtr state);
-
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetProcessWindowStation();
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EnumDesktopWindows(IntPtr desktop, WindowCallback callback, IntPtr state);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr window, out int pid);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsWindowVisible(IntPtr window);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")]
     private static extern IntPtr GetThreadDesktop(uint thread);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SetThreadDesktop(IntPtr desktop);
-
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool GetUserObjectInformation(IntPtr handle, int index, StringBuilder value,
+        int capacityInBytes, out int needed);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetClipCursor(out Rect rect);
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint pid);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetGUIThreadInfo(uint thread, ref GuiThreadInfo info);
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CreateProcess(string executable, StringBuilder command, IntPtr processSecurity,
-        IntPtr threadSecurity, bool inherit, int flags, IntPtr environment, string directory,
-        ref StartupInfo startup, out ProcessInfo process);
-
-    [DllImport("kernel32.dll")]
-    private static extern bool CloseHandle(IntPtr handle);
-
-    public static Process Start(string name, string executable, string arguments, string directory, string stdout, string stderr)
+    private static string Name(IntPtr handle)
     {
-        var security = new SecurityAttributes { Size = Marshal.SizeOf(typeof(SecurityAttributes)), Inherit = 1 };
-        uint thread = GetCurrentThreadId();
-        IntPtr original = GetThreadDesktop(thread);
-        const int DesktopAccess = 0x01ff;
-        IntPtr desktop = CreateDesktop(name, IntPtr.Zero, IntPtr.Zero, 0, DesktopAccess, ref security);
-        if (desktop == IntPtr.Zero) throw new Win32Exception();
-        try
+        if (handle == IntPtr.Zero) throw new Win32Exception();
+        var name = new StringBuilder(256);
+        int needed;
+        if (!GetUserObjectInformation(handle, 2, name, name.Capacity * 2, out needed)) throw new Win32Exception();
+        return name.ToString();
+    }
+
+    public static Sample Read()
+    {
+        var result = new Sample();
+        result.WindowStation = Name(GetProcessWindowStation());
+        result.ThreadDesktop = Name(GetThreadDesktop(GetCurrentThreadId()));
+        IntPtr input = OpenInputDesktop(0, false, 1); // DESKTOP_READOBJECTS
+        if (input == IntPtr.Zero) throw new Win32Exception();
+        try { result.InputDesktop = Name(input); }
+        finally { CloseDesktop(input); }
+        if (result.ThreadDesktop != result.InputDesktop)
+            throw new InvalidOperationException("Sample from the current input desktop.");
+        IntPtr foreground = GetForegroundWindow();
+        uint thread = GetWindowThreadProcessId(foreground, out result.ForegroundPid);
+        if (thread != 0)
         {
-            if (GetThreadDesktop(thread) == desktop && !SetThreadDesktop(original)) throw new Win32Exception();
-            var startup = new StartupInfo { Size = Marshal.SizeOf(typeof(StartupInfo)), Desktop = name };
-            var command = new StringBuilder("\"" + executable + "\" " + arguments);
-            using (var output = OpenLog(stdout))
-            using (var error = OpenLog(stderr))
-            using (var input = output == null ? null : new FileStream("NUL", FileMode.Open, FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Inheritable))
-            {
-                if (output != null)
-                {
-                    startup.Flags = 0x100; // STARTF_USESTDHANDLES
-                    startup.Input = input.SafeFileHandle.DangerousGetHandle();
-                    startup.Output = output.SafeFileHandle.DangerousGetHandle();
-                    startup.Error = error.SafeFileHandle.DangerousGetHandle();
-                }
-                ProcessInfo info;
-                const int CreateNoWindow = 0x08000000;
-                if (!CreateProcess(executable, command, IntPtr.Zero, IntPtr.Zero, true, CreateNoWindow,
-                    IntPtr.Zero, directory, ref startup, out info)) throw new Win32Exception();
-                try
-                {
-                    var process = Process.GetProcessById(info.ProcessId);
-                    process.EnableRaisingEvents = true;
-                    return process;
-                }
-                finally
-                {
-                    CloseHandle(info.Thread);
-                    CloseHandle(info.Process);
-                }
-            }
+            result.ForegroundDesktop = Name(GetThreadDesktop(thread));
+            var info = new GuiThreadInfo { Size = Marshal.SizeOf(typeof(GuiThreadInfo)) };
+            if (!GetGUIThreadInfo(thread, ref info)) throw new Win32Exception();
+            GetWindowThreadProcessId(info.Focus, out result.FocusPid);
+            GetWindowThreadProcessId(info.Capture, out result.CapturePid);
         }
-        finally { CloseDesktop(desktop); }
-    }
-
-    public static IntPtr GameWindow(string name, int pid)
-    {
-        const int DesktopReadObjects = 1;
-        IntPtr desktop = OpenDesktop(name, 0, false, DesktopReadObjects);
-        if (desktop == IntPtr.Zero) return IntPtr.Zero;
-        try
-        {
-            IntPtr result = IntPtr.Zero;
-            EnumDesktopWindows(desktop, delegate(IntPtr window, IntPtr state)
-            {
-                int owner;
-                GetWindowThreadProcessId(window, out owner);
-                // Prism can host LWJGL in an AWT frame rather than a top-level LWJGL window.
-                if (owner != pid || !IsWindowVisible(window)) return true;
-                result = window;
-                return false;
-            }, IntPtr.Zero);
-            return result;
-        }
-        finally { CloseDesktop(desktop); }
-    }
-
-    public static bool CloseGameWindow(string name, int pid)
-    {
-        const uint CloseWindowMessage = 0x0010;
-        IntPtr window = GameWindow(name, pid);
-        return window != IntPtr.Zero && PostMessage(window, CloseWindowMessage, IntPtr.Zero, IntPtr.Zero);
-    }
-
-    private static FileStream OpenLog(string path)
-    {
-        return String.IsNullOrEmpty(path) ? null : new FileStream(path, FileMode.Create, FileAccess.Write,
-            FileShare.Read | FileShare.Inheritable);
+        if (!GetCursorPos(out result.Cursor) || !GetClipCursor(out result.Clip)) throw new Win32Exception();
+        result.VirtualScreen.Left = GetSystemMetrics(76);
+        result.VirtualScreen.Top = GetSystemMetrics(77);
+        result.VirtualScreen.Right = result.VirtualScreen.Left + GetSystemMetrics(78);
+        result.VirtualScreen.Bottom = result.VirtualScreen.Top + GetSystemMetrics(79);
+        return result;
     }
 }

@@ -15,6 +15,7 @@ param(
     [switch]$InterruptAssault,
     [switch]$InterruptPatrol,
     [switch]$ProtectedPatrol,
+    [switch]$KeepGame,
     [ValidateRange(0, 24)]
     [int]$AssaultMinimumSpawns = 1
 )
@@ -23,6 +24,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 . (Join-Path $PSScriptRoot 'runtime-tests/SilentMinecraft.ps1')
 . (Join-Path $PSScriptRoot 'runtime-tests/BackgroundMinecraft.ps1')
+. (Join-Path $PSScriptRoot 'runtime-tests/RuntimeArtifacts.ps1')
 $prismData = Join-Path $env:APPDATA 'PrismLauncher'
 $instance = Join-Path $prismData 'instances/Tekkit Dev'
 $game = Join-Path $instance 'minecraft'
@@ -51,6 +53,7 @@ $optionsPath = Join-Path $game 'options.txt'
 $optionsBackup = Join-Path $game 'zto-options-before-automation.bak'
 $optionsPrepared = $false
 $hadOptions = $false
+$ownsCopy = $false
 
 function Invoke-Bridge([string]$Verb, [string]$Op, [hashtable]$Arguments = @{}) {
     $cli = Join-Path $PSScriptRoot 'zed-dev.ps1'
@@ -128,8 +131,7 @@ function Stop-DevClient {
         Write-Request "$($launch.nonce) stop`n"
         $stopped = $client.WaitForExit(30000)
     } else {
-        $stopped = [BackgroundMinecraftNative]::CloseGameWindow($launch.desktop, $client.Id) -and
-            $client.WaitForExit(15000)
+        $stopped = $false
     }
     $launch.exitCode = if ($client.HasExited) { $client.ExitCode } else { $null }
     $acknowledged = !$requested -or (Select-String -LiteralPath $log -Quiet -Pattern (
@@ -180,13 +182,11 @@ function Start-DevClient {
     $script:launch = [ordered]@{
         nonce = [Guid]::NewGuid().ToString('N'); started = Get-Date; pid = $null; stop = $null
         sessionId = $null; worldId = $null; worldOpened = $false; runtime = @(); log = $log; diagnostics = @()
-        desktop = $null; gameWindowIsolated = $false
     }
     $report.launches += $launch
     Write-Request "$($launch.nonce) $copyName $($report.buildSha256)`n"
     $script:launcher = Start-BackgroundMinecraft -FilePath $PrismExe `
         -ArgumentList "--dir `"$prismData`" --launch `"Tekkit Dev`"" -WorkingDirectory $prismData
-    $launch.desktop = $launcher.BackgroundDesktop
 
     $deadline = [Diagnostics.Stopwatch]::StartNew()
     $openedPattern = '\[ZTO\] Autoload ' + $launch.nonce + ' WORLD_OPENED ' + $copyName + '$'
@@ -201,10 +201,6 @@ function Start-DevClient {
             if ($refusal) { throw $refusal.Line }
             if (Select-String -LiteralPath $log -Pattern $openedPattern -Quiet) {
                 $launch.worldOpened = $true
-                $launch.gameWindowIsolated = [BackgroundMinecraftNative]::GameWindow($launch.desktop, $client.Id) -ne [IntPtr]::Zero
-                if (!$launch.gameWindowIsolated) {
-                    throw 'DESKTOP_MISMATCH: The Minecraft window was not found on the private desktop.'
-                }
                 try {
                     $status = Invoke-Bridge status
                     if ($status.state -eq 'ready') {
@@ -468,6 +464,7 @@ function Test-PatrolRestart($Context) {
 $mutex = [Threading.Mutex]::new($false, 'Local\ZTO-Tekkit-Dev-Lifecycle')
 $locked = $false
 try {
+    Assert-BackgroundMinecraftAvailable
     if ($Persistence -eq 'Patrol' -and (!$SkipCore -or $PhysicalDistillation)) {
         throw 'PREREQUISITES: Patrol requires -SkipCore and its own disposable run.'
     }
@@ -515,7 +512,11 @@ try {
     }
     $seed = $Matches[1]
     $report.worldSeed = $seed
-    Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
+    $null = New-Item -ItemType Directory -Path $target
+    $ownsCopy = $true
+    foreach ($item in Get-ChildItem -LiteralPath $source -Force) {
+        Copy-Item -LiteralPath $item.FullName -Destination $target -Recurse -Force
+    }
     [IO.File]::WriteAllText((Join-Path $target '.zto-disposable-test'), "$copyName $seed`n", [Text.Encoding]::ASCII)
 
     $hadOptions = Test-Path -LiteralPath $optionsPath -PathType Leaf
@@ -586,6 +587,20 @@ try {
     if ($report.status -ne 'PASS' -and $launch -and (Test-Path -LiteralPath $log)) {
         $launch.diagnostics += @(Select-String -LiteralPath $log -Pattern '\[ZTO\] Disposable world autoload|\[SEVERE\]|Exception in thread' |
             Select-Object -Last 12 | ForEach-Object { $_.Line })
+    }
+    if ($ownsCopy -and !$KeepGame) {
+        try {
+            if (Get-TekkitDevJava) { throw 'The scratch save still has a running Tekkit Dev client.' }
+            $copy = Assert-RegularPath $target
+            $parent = Assert-RegularPath $saves
+            if (!$copy.PSIsContainer -or $copy.Parent.FullName -ne $parent.FullName -or
+                $copy.Name -cne $copyName -or $copy.Name -cnotmatch '^ZTO-Test-[a-f0-9]{32}$') {
+                throw "Unexpected lifecycle fixture path: $target"
+            }
+            $entries = @(Get-RuntimeTree $copy)
+            Assert-RuntimeFilesClosed $entries
+            Remove-Item -LiteralPath $copy.FullName -Recurse -Force
+        } catch { $report.cleanupError = $_.Exception.Message; $report.status = 'BLOCKED'; $exitCode = 2 }
     }
     if ($locked) { $mutex.ReleaseMutex() }
     $mutex.Dispose()

@@ -12,7 +12,7 @@ Select tiers by the change. An integration candidate should cover release regres
 
 Keep marked saves disposable. Keep output in ignored staging and report paths. Run graphical fixtures serially when timing matters. Verify that the process exits and report unresolved shutdown issues. Compare measurements for the same fixture and artifact when claiming a performance change.
 
-For the Saboteur, run `zto-tools/test-saboteur-runtime.ps1` in `exercise`, `restart` and `stress` modes. The runner copies the packaged mod to an isolated client, creates a marked save and keeps the client silent on a private desktop. Both alpha.7 Creative modes check the Saboteur egg alongside the existing eggs. The [Saboteur guide](survival-02-alpha5-saboteur.md) describes the fixture and records current evidence.
+The Saboteur runtime suite covers `exercise`, `restart` and `stress` modes. Both alpha.7 Creative modes check the Saboteur egg alongside the existing eggs. The [Saboteur guide](survival-02-alpha5-saboteur.md) describes the fixture and historical evidence. The Windows launch restriction below applies to all graphical runners.
 
 For territory, run `zto-tools/test-territory.ps1` after MCP compilation to use the legacy NBT classes. Run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-elevated,territory-both` with the reobfuscated JAR in the isolated staging copy. The quiet and elevated modes use authenticated HTTP to compare game-thread observations with Bridge replies. [Territorial evidence](survival-02-alpha2.md#verification)
 
@@ -20,11 +20,11 @@ For concurrent assault pressure, run `zto-tools/test-alpha6-runtime.ps1 -Modes c
 
 ## Background client launch
 
-On Windows, the automated runners start Java or Prism on a private Win32 desktop. The legacy LWJGL window can render there without receiving input from the owner's desktop or moving, capturing or confining its cursor. The launcher never switches the active desktop. Hiding a console or minimizing a Minecraft window does not provide this isolation.
+The shared Windows launcher returns `INPUT_ISOLATION_UNVERIFIED` before any client, copy or live profile mutation. The retired Win32 desktop launcher only verified window placement. The legacy client can grab and recenter the mouse, and the installed LWJGL build has native cursor clipping and an AWT-parent exception to its foreground check.
 
-Use `Start-BackgroundMinecraft` from [the shared launcher](../../zto-tools/runtime-tests/BackgroundMinecraft.ps1) for new graphical runners. The alpha.5, alpha.6, alpha.7 and configuration probes redirect their logs as before. Use their assertions and saved frames for evidence. If desktop creation fails, report the runtime as blocked and keep the owner's desktop available.
+Use the portable test tiers on the host. For a graphical pack test, use a separate VM with its own OS input session, an isolated Tekkit Dev profile, and host input integration disengaged. The host runners remain blocked and require a guest-specific launch integration before unattended graphical use. Run an interactive host test only at the owner's request.
 
-For the Prism lifecycle, close Prism before starting the run. A running Prism launcher can receive a second process's launch request and start the game on its own desktop. The lifecycle checks for an existing launcher and verifies that the owned Java process has a game window on the private desktop after each launch. Use a direct probe when Prism needs to stay open. Launch on the owner's desktop only for an owner-requested manual playtest in an isolated profile.
+The read-only [Windows input sampler](../../zto-tools/runtime-tests/BackgroundMinecraft.cs) records the input and thread desktops, foreground, focus and capture PIDs, cursor position and clip rectangle from the interactive session. Use it alongside process identity and exit checks when validating a replacement, including startup, normal exit, crash, timeout and force-stop cases. Keep test processes away from the host session while gathering evidence. See [workspace hygiene](workspace-hygiene.md) for fixture lifetime and evidence.
 
 ## Silent client launch
 

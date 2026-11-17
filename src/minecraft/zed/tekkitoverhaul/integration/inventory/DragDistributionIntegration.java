@@ -22,6 +22,12 @@ import zed.tekkitoverhaul.crafting.InventoryPlan;
 
 /** Collects a held-stack gesture before the legacy dispatcher clicks its first slot. */
 public final class DragDistributionIntegration {
+    private static final Predicate<Object> MOUSE_CALLBACK = new Predicate<Object>() {
+        @Override
+        public boolean test(Object screen) {
+            return mouseEvent(screen);
+        }
+    };
     private static Session session;
     private static Method slotAt;
     private static Method originalClick;
@@ -35,7 +41,7 @@ public final class DragDistributionIntegration {
 
     public static void register() {
         try {
-            Class<?> agent = Class.forName("zed.tekkitoverhaul.inputagent.MouseAgent", false,
+            Class<?> agent = Class.forName("zed.tekkitoverhaul.agent.ZTOAgent", false,
                     ClassLoader.getSystemClassLoader());
             slotAt = findMethod(GuiContainer.class, "getSlotAtPosition", "a", int.class, int.class);
             originalClick = findMethod(GuiScreen.class, "mouseClicked", "a", int.class, int.class, int.class);
@@ -47,15 +53,11 @@ public final class DragDistributionIntegration {
             infinite = findField(nei, "heldStackInfinite", "heldStackInfinite");
             widgetContains = Class.forName("codechicken.nei.LayoutManager", false, gameLoader)
                     .getMethod("widgetContains", int.class, int.class);
-            boolean attached = (Boolean) agent.getMethod("register", Predicate.class).invoke(null, new Predicate<Object>() {
-                @Override
-                public boolean test(Object screen) {
-                    return mouseEvent(screen);
-                }
-            });
+            agent.getMethod("registerMouse", Predicate.class).invoke(null, MOUSE_CALLBACK);
+            boolean attached = (Boolean) agent.getMethod("mouseActive", Class.class).invoke(null, GuiScreen.class);
             if (attached) ModLoader.getLogger().info("[ZTO] Inventory drag connected to the legacy mouse dispatcher");
         } catch (ClassNotFoundException absent) {
-            // The release drag is opt-in through the launch agent.
+            // Plain mod installs keep the original dispatcher.
         } catch (ReflectiveOperationException failure) {
             ModLoader.getLogger().log(Level.WARNING, "[ZTO] Inventory drag is unavailable", failure);
         } catch (LinkageError failure) {

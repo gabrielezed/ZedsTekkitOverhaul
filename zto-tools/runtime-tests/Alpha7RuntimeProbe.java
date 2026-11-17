@@ -23,14 +23,19 @@ import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.EntityTank;
+import zed.tekkitoverhaul.survival.tactical.EntityThief;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 
 /** Runs against the reobfuscated mod and pack on the local game thread. */
 public final class Alpha7RuntimeProbe implements ITickHandler {
-    private static final String[] EGG_NAMES = {"Skirmisher", "Breacher", "Saboteur"};
-    private static final Class<?>[] EGG_MOBS = {EntitySkirmisher.class, EntityBreacher.class, EntitySaboteur.class};
-    private static final int[] EGG_HEALTH = {16, 22, 12};
+    private static final String[] EGG_NAMES = {"Skirmisher", "Breacher", "Saboteur", "Tank", "Thief"};
+    private static final String[] SAVE_NAMES = {TacticalHostiles.SKIRMISHER, TacticalHostiles.BREACHER,
+            TacticalHostiles.SABOTEUR, TacticalHostiles.TANK, TacticalHostiles.THIEF};
+    private static final Class<?>[] EGG_MOBS = {EntitySkirmisher.class, EntityBreacher.class, EntitySaboteur.class,
+            EntityTank.class, EntityThief.class};
+    private static final int[] EGG_HEALTH = {16, 22, 12, 22, 16};
     private static final int X = 34, Y = 121, Z = 215;
     private static String save, mode;
     private static File directory;
@@ -558,12 +563,12 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             for (int i = 0; i < EGG_NAMES.length; i++) {
                 aan egg = game.h.ap.k_(i);
                 int count = egg.a;
-                int z = Z + i * 3;
+                int z = Z + (i - EGG_NAMES.length / 2) * 3;
                 game.f.g(X + 6, Y, z, 1);
                 check(!egg.a().a(egg, game.h, game.f, X + 6, Y - 1, z, 1), "solid target rejects egg");
                 check(egg.a == count && mobs(game).size() == i * 2, "failed placement leaves inventory and world intact");
                 game.f.g(X + 6, Y, z, 0);
-                for (int x = X + 6; x <= X + 8; x += 2) {
+                for (int x = X + 6; x <= X + 9; x += 3) {
                     check(game.c.a(game.h, game.f, egg, x, Y - 1, z, 1), "Creative controller uses egg");
                     check(egg.a == count, "Creative keeps the stack");
                     TacticalHostile mob = mobs(game).get(mobs(game).size() - 1);
@@ -585,14 +590,18 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
             open(game);
             next(game);
         } else if (stage == 4 && age >= 10) {
-            int ranged = 0, heavy = 0, sabotage = 0;
-            for (TacticalHostile mob : mobs(game)) {
-                if (TacticalHostiles.SKIRMISHER.equals(aao.b(mob))) ranged++;
-                if (TacticalHostiles.BREACHER.equals(aao.b(mob))) heavy++;
-                if (TacticalHostiles.SABOTEUR.equals(aao.b(mob))) sabotage++;
+            List<TacticalHostile> saved = mobs(game);
+            check(saved.size() == 2 * EGG_NAMES.length, "all egg-spawned Enderkin persist");
+            int[] counts = new int[EGG_NAMES.length];
+            for (TacticalHostile mob : saved) {
+                for (int i = 0; i < SAVE_NAMES.length; i++) {
+                    if (SAVE_NAMES[i].equals(aao.b(mob)) && mob.getClass() == EGG_MOBS[i]) counts[i]++;
+                }
                 checkRenderer(game, mob);
             }
-            check(ranged == 2 && heavy == 2 && sabotage == 2, "all six egg-spawned entities persist with their save names");
+            for (int i = 0; i < counts.length; i++) {
+                check(counts[i] == 2, EGG_NAMES[i] + " entities persist with their save name");
+            }
             screenshot(game, "creative-reopened");
             finish(game);
         }
@@ -620,8 +629,11 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
                     ((agu) field(screen.getClass(), "search").get(screen)).a("");
                     Method key = vp.class.getDeclaredMethod("a", char.class, int.class);
                     key.setAccessible(true);
-                    for (char letter : name.toLowerCase(java.util.Locale.ROOT).toCharArray())
-                        key.invoke(screen, letter, Keyboard.getKeyIndex(String.valueOf(Character.toUpperCase(letter))));
+                    for (char letter : (name + " Spawn Egg").toLowerCase(java.util.Locale.ROOT).toCharArray()) {
+                        int code = letter == ' ' ? Keyboard.KEY_SPACE
+                                : Keyboard.getKeyIndex(String.valueOf(Character.toUpperCase(letter)));
+                        key.invoke(screen, letter, code);
+                    }
                     slot = (yu) screen.d.e.get(0);
                     check(matchesEgg(slot.b(), name) && ((List<?>) field(screen.getClass(), "entries").get(screen)).size() == 1,
                             "backport search returns one " + name);
@@ -708,16 +720,22 @@ public final class Alpha7RuntimeProbe implements ITickHandler {
         check(ahu.a.a(mob) instanceof fe, "native living renderer registry");
         check(ahu.a.a(mob).getClass().getName().contains("TacticalRenderer"), "custom renderer registry");
         check(TacticalHostile.class.getResource(mob.v_()) != null, "packaged skin " + mob.v_());
+        String eyes = mob.v_().replace(".png", "_eyes.png");
+        check(TacticalHostile.class.getResource(eyes) != null, "packaged eye mask " + eyes);
         try {
             BufferedImage skin = ImageIO.read(TacticalHostile.class.getResource(mob.v_()));
-            check(skin.getHeight() == 64 && skin.getWidth() == (mob instanceof EntityBreacher ? 128 : 64),
+            BufferedImage mask = ImageIO.read(TacticalHostile.class.getResource(eyes));
+            check(skin.getHeight() == 64 && skin.getWidth() == (mob instanceof EntityBreacher || mob instanceof EntityTank ? 128 : 64),
                     "native UV atlas dimensions");
+            check(mask.getHeight() == skin.getHeight() && mask.getWidth() == skin.getWidth(),
+                    "eye mask shares the skin UV layout");
         } catch (java.io.IOException failure) {
             throw new AssertionError("texture decode", failure);
         }
         int texture = game.p.b(mob.v_());
         check(texture > 0 && GL11.glIsTexture(texture), "texture uploaded");
         check(game.p.b(mob.v_()) == texture, "texture binding is stable");
+        check(GL11.glIsTexture(game.p.b(eyes)), "eye mask uploaded");
         check(GL11.glGetError() == GL11.GL_NO_ERROR, "OpenGL reports no error");
     }
 

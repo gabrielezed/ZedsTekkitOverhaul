@@ -15,6 +15,8 @@ import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.EntityTank;
+import zed.tekkitoverhaul.survival.tactical.EntityThief;
 
 public final class TacticalHostileRenderers {
     private TacticalHostileRenderers() {}
@@ -23,6 +25,8 @@ public final class TacticalHostileRenderers {
         renderers.put(EntitySkirmisher.class, new TacticalRenderer(new SkirmisherModel(), 0.30F, 2.76F, "skirmisher"));
         renderers.put(EntityBreacher.class, new TacticalRenderer(new BreacherModel(), 0.58F, 2.43F, "breacher"));
         renderers.put(EntitySaboteur.class, new TacticalRenderer(new SaboteurModel(), 0.22F, 1.1F, "saboteur"));
+        renderers.put(EntityTank.class, new TacticalRenderer(new TankModel(), 0.89F, 3.15F, "tank"));
+        renderers.put(EntityThief.class, new TacticalRenderer(new ThiefModel(), 0.36F, 1.95F, "thief"));
         renderers.put(EntityEnderPulse.class, new EnderPulseRenderer());
     }
 

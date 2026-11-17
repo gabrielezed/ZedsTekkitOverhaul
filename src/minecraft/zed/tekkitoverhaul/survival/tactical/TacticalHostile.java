@@ -76,6 +76,7 @@ public abstract class TacticalHostile extends EntityMob {
                 disengage();
             }
         }
+        if (target == null) idle();
         super.updateAITasks();
         updateAttackPose();
     }
@@ -127,6 +128,8 @@ public abstract class TacticalHostile extends EntityMob {
         if (previousSwingTicks == 0) return 0;
         return (10 - previousSwingTicks + (previousSwingTicks - swingTicks) * partialTick) / 10;
     }
+
+    protected void idle() {}
 
     protected void updateAttackPose() {}
 

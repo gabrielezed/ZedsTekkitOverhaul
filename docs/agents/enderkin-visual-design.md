@@ -1,5 +1,17 @@
 # Enderkin visual design
 
+## Survival 0.2 alpha.6 visual prototypes
+
+In a disposable Creative world on Easy or above, search for **Tank Spawn Egg** and **Thief Spawn Egg**. Place them in open space. The Tank needs a footprint about two blocks wide and more than three blocks of headroom. Both prototypes wander in Creative and use the existing local hostile targeting and melee swing in Survival. Their saved entity names are `ZTO.Tank` and `ZTO.Thief`. They have no natural encounter slots.
+
+The Tank's low-set face, wide ribbed chest and large knuckles read as a heavy front line. The Thief's narrower shoulders, bent knees, off-center stance and split fingers suggest a creature that closes distance and reaches. The separate models and entity registrations let later gameplay iterations give each archetype its own role in the Enderkin family.
+
+The palette pass samples `mob/enderman.png` and `mob/enderman_eyes.png` from the local Minecraft 1.2.5 archive and compares them with the Saboteur atlas. The body tones center on vanilla black and `#161616`, with subdued shadow and highlight shifts following the Saboteur. The eyes use vanilla `#CC00FA` and `#E079FA`. Skirmisher keeps a cool cast and Breacher keeps a slightly warmer one. The historical captures below show the previous palette.
+
+The existing `test-alpha7-runtime.ps1 -Mode creative` fixture covers the new eggs, atlas upload and saved identities when run in the isolated Tekkit Classic client.
+
+## Earlier Skirmisher and Breacher visual work
+
 The two alpha.7 prototypes share obsidian skin, a cubic face with two violet eyes, and limbs whose proportions hint at a connection to the Enderman. The designs keep the origin unexplained and make the two tactical roles readable from a distance.
 
 | | Skirmisher | Breacher |

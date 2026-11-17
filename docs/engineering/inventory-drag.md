@@ -28,6 +28,13 @@ The session checks the live screen, window, player, cursor, slot ownership, capa
 
 The compact actions use the same atlas and complete four-corner border as legacy NEI. The 2x2 controls sit in the blank area below the grid, separate from the title and Inventory Tweaks button. The prepare action has a gap beside NEI's question button. The 5x5 preview uses the installed crafting texture's recessed slots, arrow and result frame, including all nine empty interior cells. Tooltip wrapping is constrained to the active screen width.
 
+In single and double chests, ZTO's 10×10 storage actions share the player inventory label row. Hover over `#`, `M`, `D`, or `T` for totals, deposit matching, deposit all, or take all. Inventory Tweaks adds its sorting and settings buttons to the chest header independently.
+
+## TODO
+
+- Apply the compact chest button style to the remaining ZTO inventory controls, including the crafting table and NEI screens. Check the layout alongside Inventory Tweaks at legacy GUI scales.
+- Extend the chest action row to IronChest and EE2 chests. Verify each supported layout and its storage slots, preserving Inventory Tweaks protections and the existing click handling.
+
 ## Verification
 
 - Run `zto-tools/test-crafting-ux.bat` for the distribution and slot policy.

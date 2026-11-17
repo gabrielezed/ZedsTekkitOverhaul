@@ -32,6 +32,7 @@ public final class CraftingUx {
     private static final int BOOKMARK = 10;
     private static final int OPEN_BOOKMARK = 11;
     private static final int TOTALS = 12;
+    private static final int CHEST_BUTTON_SIZE = 10;
     private final ArrayDeque<GuiContainer> forward = new ArrayDeque<GuiContainer>();
     private final List<ActionButton> added = new ArrayList<ActionButton>();
     private final List<String> tooltip = new ArrayList<String>();
@@ -277,11 +278,12 @@ public final class CraftingUx {
             }
         } else if (activeChest > 0) {
             // Inventory Tweaks adds sorting controls to the chest title after the screen opens.
-            int storageY = top + gui.inventorySlots.getSlot(activeChest).yDisplayPosition - 14;
-            add(existing, TOTALS, left + width - 92, storageY, 14, "#");
-            add(existing, STORAGE, left + width - 76, storageY, 20, "DM");
-            add(existing, STORAGE + 1, left + width - 55, storageY, 20, "DA");
-            add(existing, STORAGE + 2, left + width - 34, storageY, 20, "TA");
+            int storageY = top + gui.inventorySlots.getSlot(activeChest).yDisplayPosition - 13;
+            int right = left + width;
+            add(existing, TOTALS, right - 54, storageY, CHEST_BUTTON_SIZE, "#");
+            add(existing, STORAGE, right - 42, storageY, CHEST_BUTTON_SIZE, "M");
+            add(existing, STORAGE + 1, right - 30, storageY, CHEST_BUTTON_SIZE, "D");
+            add(existing, STORAGE + 2, right - 18, storageY, CHEST_BUTTON_SIZE, "T");
         } else if (MaceratorFill.supports(gui)) {
             add(existing, MACHINE_INFO, left + 121, top + 4, 15, "i");
         }
@@ -290,15 +292,17 @@ public final class CraftingUx {
 
     private void add(List<?> existing, int action, int x, int y, int width, String title)
             throws IllegalAccessException {
-        if (x < 0 || y < 0 || x + width > screen.width || y + 12 > screen.height) return;
+        boolean chestAction = action == TOTALS || (action >= STORAGE && action <= STORAGE + 2);
+        int height = chestAction ? CHEST_BUTTON_SIZE : 12;
+        if (x < 0 || y < 0 || x + width > screen.width || y + height > screen.height) return;
         for (Object control : existing) {
             if (!(control instanceof GuiButton)) continue;
             GuiButton button = (GuiButton) control;
             // The recipe overlay and + touch edges but have disjoint hitboxes.
             if (x < button.xPosition + buttonWidth.getInt(button) && button.xPosition < x + width
-                    && y < button.yPosition + buttonHeight.getInt(button) && button.yPosition < y + 12) return;
+                    && y < button.yPosition + buttonHeight.getInt(button) && button.yPosition < y + height) return;
         }
-        added.add(new ActionButton(action, x, y, width, title));
+        added.add(new ActionButton(action, x, y, width, height, title));
     }
 
     private static Field field(Class<?> owner, String mcp, String release) throws NoSuchFieldException {
@@ -515,8 +519,8 @@ public final class CraftingUx {
     private final class ActionButton extends GuiButton {
         final int action;
 
-        ActionButton(int action, int x, int y, int width, String title) {
-            super(-18200 - action, x, y, width, 12, title);
+        ActionButton(int action, int x, int y, int width, int height, String title) {
+            super(-18200 - action, x, y, width, height, title);
             this.action = action;
         }
 
@@ -542,10 +546,13 @@ public final class CraftingUx {
             int right = width - left;
             int top = height / 2;
             int bottom = height - top;
-            drawTexturedModalRect(xPosition, yPosition, 0, v, left, top);
-            drawTexturedModalRect(xPosition + left, yPosition, 200 - right, v, right, top);
-            drawTexturedModalRect(xPosition, yPosition + top, 0, v + 20 - bottom, left, bottom);
-            drawTexturedModalRect(xPosition + left, yPosition + top, 200 - right, v + 20 - bottom, right, bottom);
+            // Skip the atlas outline for compact chest controls, as Inventory Tweaks does.
+            int inset = height == CHEST_BUTTON_SIZE ? 1 : 0;
+            drawTexturedModalRect(xPosition, yPosition, inset, v + inset, left, top);
+            drawTexturedModalRect(xPosition + left, yPosition, 200 - right - inset, v + inset, right, top);
+            drawTexturedModalRect(xPosition, yPosition + top, inset, v + 20 - bottom - inset, left, bottom);
+            drawTexturedModalRect(xPosition + left, yPosition + top, 200 - right - inset,
+                    v + 20 - bottom - inset, right, bottom);
             drawCenteredString(game.fontRenderer, displayString, xPosition + width / 2,
                     yPosition + (height - 8) / 2, !enabled ? 0xA0A0A0 : over ? 0xFFFFA0 : 0xE0E0E0);
         }

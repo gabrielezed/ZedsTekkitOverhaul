@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.0-alpha.6 — Enderkin bestiary (visual prototype)
+
+- Add Tank and Thief Spawn Eggs for Creative inspection. The Tank has a broad, recessed silhouette and a weighted stride. The Thief has an asymmetric crouch, an alert idle pose and a quick reach.
+- Bring Skirmisher and Breacher skin and eye colors closer to the original Enderman and Saboteur palettes.
+- Tank combat, Thief theft and recovery, physical Saboteur component theft, encounter integration and balancing remain in development.
+
 ## 0.2.0-alpha.5 — Enderkin Saboteur
 
 - Add a Creative-spawned Saboteur with a crouched model, luminous eyes, rapid pursuit and short blinks across clear, level ground.

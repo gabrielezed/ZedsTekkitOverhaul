@@ -33,6 +33,8 @@ final class GuiAlchemicalConverter extends GuiMachinePanel {
         meter(92, "EMC buffer", stored, AlchemicalBuffer.CAPACITY, 0xFFB2A2F3, emc);
         status(120, "1 EMC converts to "
                 + AlchemicalBuffer.UNITS_PER_EMC / AlchemicalBuffer.UNITS_PER_EU + " EU.", 0xFFD8E4ED);
-        status(140, "Connect IC2 cables to any free face.", 0xFFD8E4ED);
+        int paused = converter.disruptionTicksRemaining();
+        status(140, paused > 0 ? "EMC intake and EU output disrupted (" + paused + " ticks)"
+                : "Connect IC2 cables to any free face.", paused > 0 ? 0xFFFFD187 : 0xFFD8E4ED);
     }
 }

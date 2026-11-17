@@ -29,8 +29,8 @@ public final class AlchemicalBufferSelfTest {
         buffer.restore(-5);
         check(buffer.storedUnits() == 0, "invalid negative NBT is discarded");
 
-        int[][] expectedOffsets = {{0, -1, 0}, {0, 1, 0}, {0, 0, 1},
-                {0, 0, -1}, {-1, 0, 0}, {1, 0, 0}};
+        int[][] expectedOffsets = {{0, -1, 0}, {0, 1, 0}, {0, 0, -1},
+                {0, 0, 1}, {-1, 0, 0}, {1, 0, 0}};
         for (int side = 0; side < expectedOffsets.length; side++) {
             CollectorFace face = CollectorFace.PACKET_SIDES[side];
             int[] offset = expectedOffsets[side];

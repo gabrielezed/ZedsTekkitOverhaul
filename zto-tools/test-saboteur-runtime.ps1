@@ -1,15 +1,11 @@
 [CmdletBinding()]
 param(
     [ValidateSet('exercise', 'restart', 'stress', 'dimension', 'transport', 'transport-quit', 'transport-restart', 'combat', 'terrain',
-        'industrial-item', 'industrial-liquid', 'industrial-engine', 'industrial-eu', 'industrial-redpower', 'industrial-ee2',
-        'industrial-eu-quit', 'industrial-eu-restart', 'industrial-eu-counterplay', 'industrial-eu-peaceful',
-        'industrial-eu-unload', 'industrial-eu-replacement', 'industrial-eu-mfe', 'industrial-eu-mfsu',
-        'industrial-solar', 'industrial-solar-mv', 'industrial-solar-hv', 'industrial-ee2-cover', 'industrial-ee2-mk2',
-        'industrial-ee2-mk3')]
+        'smoke', 'industrial-item', 'industrial-redpower', 'industrial-redpower-quit',
+        'industrial-power', 'industrial-power-quit')]
     [string]$Mode = 'exercise',
     [switch]$Bridge,
     [switch]$WithoutOptionalMods,
-    [switch]$WithIndustrialAgent,
     [switch]$DiscardGame,
     [string]$CandidateJar
 )
@@ -42,13 +38,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not generate a disposable save.' }
 [IO.File]::WriteAllText((Join-Path $game "saves/$save/.zto-disposable-test"),
     "$save -7184827518270584220`n", [Text.Encoding]::ASCII)
 Set-RuntimeConfig $game ([ordered]@{ playerAssault = 'false'; lunarPatrols = 'false' })
-$agents = @($launch.agents | ForEach-Object { '"' + $_ + '"' }) -join ' '
-if ($Mode.StartsWith('industrial') -or $WithIndustrialAgent) {
-    $industrialAgent = Join-Path $root 'dist-zto/ZTOIndustrialAgent.jar'
-    if (!(Test-Path -LiteralPath $industrialAgent)) { throw 'Build ZTOIndustrialAgent.jar before running the industrial probes.' }
-    $agents += ' "-javaagent:' + $industrialAgent + '"'
-    Write-Output "SABOTEUR industrial agent SHA-256 $((Get-FileHash -LiteralPath $industrialAgent).Hash)"
-}
 $java = Join-Path (Split-Path $launch.java) 'java.exe'
 
 function Read-ProbeBridge([Diagnostics.Process]$Process) {
@@ -89,7 +78,7 @@ function Invoke-Probe([string]$Phase, [int]$ExpectedExit) {
     $stdout = Join-Path $report "saboteur-$Phase-$save.txt"
     $stderr = Join-Path $report "saboteur-$Phase-$save.stderr.txt"
     $enabled = $Bridge.IsPresent.ToString().ToLowerInvariant()
-    $arguments = '-Xmx1G -Dzto.dev={7} -Dzto.devBridge.enabled={7} "-Djava.io.tmpdir={3}" "-Djava.library.path={0}" {1} -cp "{2};{3}" SaboteurRuntimeProbe$Bootstrap "{4}" {5} {6}' -f (Join-Path $runtime 'natives'), $agents, $launch.classpath, $harness, $game, $save, $Phase, $enabled
+    $arguments = '-Xmx1G -Dzto.dev={6} -Dzto.devBridge.enabled={6} "-Djava.io.tmpdir={2}" "-Djava.library.path={0}" -cp "{1};{2}" SaboteurRuntimeProbe$Bootstrap "{3}" {4} {5}' -f (Join-Path $runtime 'natives'), $launch.classpath, $harness, $game, $save, $Phase, $enabled
     $process = Start-BackgroundMinecraft -FilePath $java -ArgumentList $arguments -WorkingDirectory $game `
         -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     $bridgeFailure = $null
@@ -118,13 +107,9 @@ try {
     } elseif ($Mode -eq 'transport-restart') {
         Invoke-Probe 'transport-halt' 23
         Invoke-Probe 'transport-reopen' 0
-    } elseif ($Mode -in 'industrial-eu-quit', 'industrial-eu-restart') {
-        if ($Mode -eq 'industrial-eu-quit') {
-            Invoke-Probe 'industrial-eu-quit' 0
-        } else {
-            Invoke-Probe 'industrial-eu-halt' 23
-        }
-        Invoke-Probe 'industrial-eu-reopen' 0
+    } elseif ($Mode -in 'industrial-power-quit', 'industrial-redpower-quit') {
+        Invoke-Probe $Mode 0
+        Invoke-Probe ($Mode -replace '-quit$', '-reopen') 0
     } else {
         Invoke-Probe $Mode 0
     }

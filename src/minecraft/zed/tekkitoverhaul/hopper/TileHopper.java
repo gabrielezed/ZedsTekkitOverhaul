@@ -14,6 +14,8 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     private int outputMode;
     private EntitySaboteur disruptionOwner;
     private int disruptionTicks;
+    private NativeItemExtraction lastExtraction, leasedExtraction;
+    private long lastExtractionTick;
 
     /** Loaded-only lookup for the pinned local-world provider. Never creates a missing tile. */
     public static TileHopper loadedAt(World world, int x, int y, int z) {
@@ -26,6 +28,10 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     public boolean beginDisruption(EntitySaboteur owner) {
         if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(worldObj) || isDisrupted()
                 || loadedAt(worldObj, xCoord, yCoord, zCoord) != this) return false;
+        if (owner.disruptionConnection() != null) {
+            if (activeExtractionPeer() != owner.disruptionConnection()) return false;
+            leasedExtraction = lastExtraction;
+        }
         disruptionOwner = owner;
         disruptionTicks = 80;
         return true;
@@ -38,20 +44,40 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
 
     public int disruptionTicksRemaining() { return isDisrupted() ? disruptionTicks : 0; }
 
+    boolean isNativeExtractionPaused() { return leasedExtraction != null && isDisrupted(); }
+
+    public TileEntity activeExtractionPeer() {
+        if (lastExtraction == null) return null;
+        long age = worldObj.getWorldTime() - lastExtractionTick;
+        return age >= 0 && age <= 100 && hasStock() && lastExtraction.matches(this) ? lastExtraction.peer : null;
+    }
+
+    public String activeIndustrialOperation() {
+        return activeExtractionPeer() == null ? null : lastExtraction.operation;
+    }
+
+    private boolean hasStock() {
+        for (ItemStack stack : items) if (stack != null && stack.stackSize > 0) return true;
+        return false;
+    }
+
     private void clearDisruption() {
         disruptionTicks = 0;
         disruptionOwner = null;
+        leasedExtraction = null;
     }
 
     @Override
     public void onChunkUnload() {
         clearDisruption();
+        lastExtraction = null;
         super.onChunkUnload();
     }
 
     @Override
     public void invalidate() {
         clearDisruption();
+        lastExtraction = null;
         super.invalidate();
     }
     public String outputModeName() {
@@ -68,6 +94,10 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote) return;
         boolean paused = isDisrupted();
+        if (paused && leasedExtraction != null && !leasedExtraction.matches(this)) {
+            clearDisruption();
+            paused = false;
+        }
         if (paused) {
             if (disruptionTicks % 8 == 0)
                 worldObj.spawnParticle("portal", xCoord + 0.5D, yCoord + 0.95D, zCoord + 0.5D, 0, -0.15D, 0);
@@ -127,11 +157,26 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     public void openChest() { }
     public void closeChest() { }
     public int getStartInventorySide(int side) { return 0; }
-    public int getSizeInventorySide(int side) { return 5; }
+    public int getSizeInventorySide(int side) {
+        if (worldObj == null || worldObj.isRemote) return items.length;
+        if (leasedExtraction != null && leasedExtraction.face == side && isDisrupted()) {
+            if (leasedExtraction.matches(this)) return 0;
+            clearDisruption();
+        }
+        if (hasStock()) {
+            NativeItemExtraction endpoint = NativeItemExtraction.at(this, side);
+            if (endpoint != null) {
+                lastExtraction = endpoint;
+                lastExtractionTick = worldObj.getWorldTime();
+            }
+        }
+        return items.length;
+    }
 
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         clearDisruption();
+        lastExtraction = null;
         items = new ItemStack[5];
         outputMode = Math.max(0, Math.min(2, tag.getInteger("OutputMode")));
         cooldown = Math.max(0, Math.min(8, tag.getInteger("TransferCooldown")));

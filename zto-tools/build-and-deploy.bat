@@ -17,7 +17,6 @@ set "JAR_NAME=ZedsTekkitOverhaul.jar"
 set "BUILD_JAR=dist-zto\ZedsTekkitOverhaul.building.jar"
 set "DEPLOY_JAR=%MODS_DIR%\%JAR_NAME%"
 set "BUILD_METADATA=dist-zto\zto-build.properties"
-set "INDUSTRIAL_AGENT=dist-zto\ZTOIndustrialAgent.jar"
 
 if not exist "recompile.bat" (
     echo [ZTO] ERROR: recompile.bat was not found in the MDK root.
@@ -85,8 +84,6 @@ if errorlevel 1 goto :fail
 call "zto-tools\prepare-buildcraft-dev-stubs.bat"
 if errorlevel 1 goto :fail
 call "zto-tools\prepare-ee2-dev-stubs.bat"
-if errorlevel 1 goto :fail
-call "zto-tools\build-industrial-agent.bat"
 if errorlevel 1 goto :fail
 
 echo [ZTO] 1/4 - Compiling with MCP...
@@ -222,8 +219,6 @@ if errorlevel 1 goto :fail
 set "BUILD_JAR=dist-zto\%JAR_NAME%"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%BUILD_JAR%"
 if errorlevel 1 goto :fail
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%INDUSTRIAL_AGENT%"
-if errorlevel 1 goto :fail
 
 copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
 if errorlevel 1 (
@@ -234,7 +229,6 @@ if errorlevel 1 (
 echo.
 echo [ZTO] SUCCESS: Build and deployment completed.
 echo [ZTO] JAR: "%CD%\%BUILD_JAR%"
-echo [ZTO] Optional industrial launch agent: "%CD%\%INDUSTRIAL_AGENT%"
 echo [ZTO] Prism: "%DEPLOY_JAR%"
 echo [ZTO] Close Minecraft before starting the updated build.
 popd

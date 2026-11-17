@@ -180,9 +180,11 @@ public final class EntitySaboteur extends TacticalHostile {
                     String type;
                     int priority;
                     if (candidate instanceof TileHopper) {
-                        effect = (TileHopper) candidate;
-                        type = "HOPPER";
-                        priority = 0;
+                        TileHopper hopper = (TileHopper) candidate;
+                        effect = hopper;
+                        pipe = hopper.activeExtractionPeer();
+                        type = pipe == null ? "HOPPER" : hopper.activeIndustrialOperation();
+                        priority = pipe == null ? 0 : 2;
                     } else if (candidate instanceof TileEntityDistillationReceiver) {
                         TileEntityDistillationReceiver receiver = (TileEntityDistillationReceiver) candidate;
                         if (receiver.isDisrupted()) {
@@ -197,13 +199,12 @@ public final class EntitySaboteur extends TacticalHostile {
                         effect = receiver;
                         type = "BUILDCRAFT_RECEIVER";
                         priority = 2;
-                    } else {
-                        IndustrialSabotage industrial = IndustrialSabotage.find(candidate);
-                        if (industrial == null) continue;
-                        effect = industrial;
-                        type = industrial.operation.name();
-                        priority = industrial.operation.priority;
-                    }
+                    } else if (candidate instanceof SabotageTarget) {
+                        effect = (SabotageTarget) candidate;
+                        type = effect.activeIndustrialOperation();
+                        if (type == null) continue;
+                        priority = 2;
+                    } else continue;
                     if (priority < bestPriority || priority == bestPriority && distance >= bestDistance) continue;
                     if (effect.isDisrupted()) {
                         outcome = Outcome.ALREADY_PAUSED;
@@ -257,9 +258,10 @@ public final class EntitySaboteur extends TacticalHostile {
     private boolean sameMachine() {
         if (machine == null || machine.xCoord != machineX || machine.yCoord != machineY || machine.zCoord != machineZ)
             return false;
-        if (disruption instanceof IndustrialSabotage) return ((IndustrialSabotage) disruption).stillBound();
-        return LoadedTile.at(worldObj, machineX, machineY, machineZ) == machine
-                && (connection == null || ((TileEntityDistillationReceiver) machine).activeExtractionPipe() == connection);
+        if (LoadedTile.at(worldObj, machineX, machineY, machineZ) != machine) return false;
+        if (connection == null) return true;
+        if (machine instanceof TileHopper) return ((TileHopper) machine).activeExtractionPeer() == connection;
+        return ((TileEntityDistillationReceiver) machine).activeExtractionPipe() == connection;
     }
 
     private boolean seesMachine(int x, int y, int z) {

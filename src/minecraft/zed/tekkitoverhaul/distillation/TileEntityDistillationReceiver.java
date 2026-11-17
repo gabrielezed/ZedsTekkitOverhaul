@@ -77,6 +77,10 @@ public final class TileEntityDistillationReceiver extends TileEntityDistillation
                 && getLiquidQuantity() > 0 ? lastExtractionPipe : null;
     }
 
+    public String activeIndustrialOperation() {
+        return activeExtractionPipe() == null ? null : "BUILDCRAFT_RECEIVER";
+    }
+
     public boolean beginDisruption(EntitySaboteur owner) {
         if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(worldObj)
                 || isDisrupted() || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return false;

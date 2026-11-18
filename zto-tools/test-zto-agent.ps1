@@ -26,7 +26,7 @@ try {
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
-        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
+        $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
@@ -46,6 +46,8 @@ try {
             if ($LASTEXITCODE) { throw 'Reduced pack ABI agent probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') NaturalSpawnProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Natural spawning comparison failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') BiomeEcologyProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') EnderkinBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName

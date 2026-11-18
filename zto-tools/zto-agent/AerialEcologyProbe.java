@@ -178,10 +178,52 @@ public final class AerialEcologyProbe {
         check(disabled.snapshot().status.contains("Disabled") && disabled.snapshot().admissions == 0,
                 "natural admission can be disabled independently of the registered species");
         verifySkelebirdEcology(root);
+        verifyChickenHunting(root);
         System.out.printf("Admission fixtures: Normal flock 3, Hard flock %d at activity %d, ground rolls %d/%d per 1000%n",
                 hardSize, hard.snapshot().activity, daytimeChance, night.snapshot().chance);
         System.out.println("PASS aerial altitude, exposure, ground day/night, ambient flight, safe spawn, "
                 + "Normal/Hard territory flocks, stagger, lost attacker, cooldown, reload, bounds and disabled admission");
+    }
+
+    private static void verifyChickenHunting(File root) throws Exception {
+        Fixture farm = new Fixture(root, "fugl-chicken-hunt", 2, 6000);
+        farm.position(288.5, 4, true);
+        farm.world.passiveAfterAdmission = true;
+        for (int i = 0; i < 45 && farm.snapshot().admissions == 0; ++i) farm.seconds(1);
+        check(farm.snapshot().activeMembers == 1 && farm.snapshot().status.contains("passing"),
+                "chicken fixture uses the ordinary passive daytime encounter");
+        EntityAerialPredator bird = farm.mobs().get(0);
+        java.lang.reflect.Field random = nn.class.getDeclaredField("U");
+        random.setAccessible(true);
+        random.set(bird, new Random(44L) {
+            @Override public int nextInt(int bound) { return bound == 8 ? 0 : super.nextInt(bound); }
+        });
+
+        farm.ticks(80); // Finish the arrival leg before placing the farm alongside the passing bird.
+        rd exposed = chicken(farm, bird.o + 7, bird.q);
+        rd roofed = chicken(farm, bird.o - 9, bird.q - 7);
+        for (int x = (int) roofed.o - 2; x <= (int) roofed.o + 2; ++x) {
+            for (int z = (int) roofed.q - 2; z <= (int) roofed.q + 2; ++z) farm.world.g(x, 7, z, 1);
+        }
+        rd second = chicken(farm, bird.o + 10, bird.q + 2);
+        boolean activePrey = false;
+        for (int tick = 0; tick < 365; ++tick) {
+            farm.ticks(1);
+            activePrey |= farm.snapshot().preyStatus.contains("Chicken #" + exposed.f);
+        }
+        check(activePrey && exposed.bb() <= 0 && farm.commitments == 1,
+                "the passing Fugl selects exposed prey and commits one damaging dive; " + bird.lastExit()
+                        + " / " + bird.lastFailure() + " / " + farm.commitments + " health " + exposed.bb());
+        check(roofed.bb() == 4 && second.bb() == 4,
+                "roofed and subsequent chickens take no damage");
+        System.out.println("PASS occasional Fugl predation, exposed chicken damage, shelter and one-prey budget");
+    }
+
+    private static rd chicken(Fixture farm, double x, double z) {
+        rd prey = new rd(farm.world);
+        prey.c(x, 4, z, 0, 0);
+        check(farm.world.a(prey), "insert farm chicken");
+        return prey;
     }
 
     private static void verifySkelebirdEcology(File root) throws Exception {

@@ -16,6 +16,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |
 | `electricJetpackWeather` | true | Progressive exposure and temporary lift restriction for the installed IC2 1.97 Electric Jetpack in local play. Requires the matching ZTOAgent. |
 | `lunarAerialEncounters` | true | Allow selected natural full-moon assaults to spend up to two of their slots on aerial predators. |
+| `forestMagpies` | true | Admit small ambient magpies in loaded temperate forest clearings during dry daylight. |
+| `fuglChickenHunting` | true | Allow a passing solitary daytime Fugl to attempt one hunt on an exposed chicken. |
 | `aerialEncounterCooldownSeconds` | 180 | Quiet period after an admitted encounter, in active Overworld seconds. Bounds 90–600. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |

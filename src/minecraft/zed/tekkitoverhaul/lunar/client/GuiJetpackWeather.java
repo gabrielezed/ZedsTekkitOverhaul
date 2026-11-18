@@ -30,7 +30,7 @@ final class GuiJetpackWeather extends GuiScreen {
             "Weather " + (storm ? "thunderstorm" : rain ? "rain" : "clear")
                     + " | Rain exposure " + (gear.available() ? gear.exposed() ? "yes" : "no" : "-"),
             gear.phase() + " | Wetness " + gear.wetness() + "/100 | Timer " + gear.remaining() + " ticks",
-            gear.phase() == JetpackWeather.Phase.FAULT ? "Lift limited, powered descent braking available" : "Native propulsion"
+            gear.phase() == JetpackWeather.Phase.FAULT ? "Ascent interrupted. Hold thrust to brake descent." : "Native propulsion"
         };
         for (int i = 0; i < lines.length; ++i) drawCenteredString(fontRenderer, lines[i], width / 2, 25 + i * 14, 0xDFEBE7);
         super.drawScreen(mouseX, mouseY, partialTick);

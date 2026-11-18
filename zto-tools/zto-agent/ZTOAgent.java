@@ -11,6 +11,7 @@ import java.util.WeakHashMap;
 import java.util.function.Predicate;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.ObjDoubleConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.function.ToIntBiFunction;
@@ -29,7 +30,7 @@ public final class ZTOAgent {
     private static volatile WeakReference<Consumer<Object>> spawnInserted = new WeakReference<>(null);
     private static volatile WeakReference<UnaryOperator<Object>> spawnReplacement = new WeakReference<>(null);
 
-    private static volatile WeakReference<BiConsumer<Object, Object>> jetpack = new WeakReference<>(null);
+    private static volatile WeakReference<ObjDoubleConsumer<Object>> jetpack = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -86,15 +87,16 @@ public final class ZTOAgent {
         return hooks != null && Boolean.TRUE.equals(hooks.get(name));
     }
 
-    public static void registerJetpack(BiConsumer<Object, Object> callback) { jetpack = new WeakReference<>(callback); }
+    public static void registerJetpackMotion(ObjDoubleConsumer<Object> callback) { jetpack = new WeakReference<>(callback); }
 
     public static boolean jetpackActive(ClassLoader loader) {
         return jetpack.get() != null && installed(loader, JetpackHook.TARGET);
     }
 
-    public static void jetpackThrust(boolean used, Object item, Object player) {
-        BiConsumer<Object, Object> callback = jetpack.get();
-        if (used && callback != null) callback.accept(item, player);
+    public static void jetpackThrust(Object item, Object player, double previousY) {
+        ObjDoubleConsumer<Object> callback = jetpack.get();
+        if (callback != null && "ic2.common.ItemArmorJetpackElectric".equals(item.getClass().getName()))
+            callback.accept(player, previousY);
     }
 
     public static void registerMouse(Predicate<Object> callback) { mouse = new WeakReference<>(callback); }

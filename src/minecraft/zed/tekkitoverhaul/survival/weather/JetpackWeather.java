@@ -1,7 +1,7 @@
 package zed.tekkitoverhaul.survival.weather;
 
 import java.lang.reflect.Method;
-import java.util.function.BiConsumer;
+import java.util.function.ObjDoubleConsumer;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.MathHelper;
@@ -12,9 +12,9 @@ public final class JetpackWeather {
     public enum Phase { DRY, WET, UNSTABLE, FAULT, RECOVERING }
     private static final String ELECTRIC = "ic2.common.ItemArmorJetpackElectric";
     public static final JetpackWeather LOCAL = new JetpackWeather();
-    private final BiConsumer<Object, Object> thrust = new BiConsumer<Object, Object>() {
-        @Override public void accept(Object item, Object player) {
-            if (player instanceof EntityPlayer) onThrust(item, (EntityPlayer) player);
+    private final ObjDoubleConsumer<Object> thrust = new ObjDoubleConsumer<Object>() {
+        @Override public void accept(Object player, double previousY) {
+            if (player instanceof EntityPlayer) onThrust((EntityPlayer) player, previousY);
         }
     };
     private Method activeHook;
@@ -35,7 +35,7 @@ public final class JetpackWeather {
         bind(null, null);
         try {
             Class<?> agent = Class.forName("zed.tekkitoverhaul.agent.ZTOAgent", false, ClassLoader.getSystemClassLoader());
-            agent.getMethod("registerJetpack", BiConsumer.class).invoke(null, enabled ? thrust : null);
+            agent.getMethod("registerJetpackMotion", ObjDoubleConsumer.class).invoke(null, enabled ? thrust : null);
             activeHook = agent.getMethod("jetpackActive", ClassLoader.class);
         } catch (ReflectiveOperationException unavailable) {
             activeHook = null;
@@ -70,14 +70,15 @@ public final class JetpackWeather {
                 ? chest : null;
     }
 
-    private void onThrust(Object item, EntityPlayer player) {
+    private void onThrust(EntityPlayer player, double previousY) {
         if (Thread.currentThread() != owner || !enabled || player != pilot || world == null || player.worldObj != world
-                || !eligible(player) || pack == null || player.inventory.armorInventory[2] != pack || pack.getItem() != item)
+                || !eligible(player) || pack == null || player.inventory.armorInventory[2] != pack)
             return;
         used = true;
         if (phase == Phase.FAULT && !player.onGround) {
-            // Preserve every bit of powered descent braking. Shed upward speed gradually.
-            if (player.motionY > 0.02) player.motionY = Math.max(0.02, player.motionY - 0.22);
+            // Brake a fast fall with available native thrust, then hold a descending speed.
+            double descent = Math.max(-0.24, previousY - 0.24);
+            player.motionY = Math.min(player.motionY, descent);
         }
     }
 
@@ -129,7 +130,7 @@ public final class JetpackWeather {
             case UNSTABLE:
                 if (wetness <= 36) transition(Phase.RECOVERING, 70);
                 else if (remaining == 0 && wetness >= 78 && exposed && !player.onGround
-                        && poweredRain && justPowered) transition(Phase.FAULT, 22);
+                        && poweredRain && justPowered) transition(Phase.FAULT, 46);
                 break;
             case FAULT:
                 if (remaining == 0 || player.onGround) {

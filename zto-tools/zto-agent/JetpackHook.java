@@ -11,6 +11,8 @@ final class JetpackHook implements Opcodes {
     static final String TARGET = "ic2/common/ItemArmorJetpack";
     static final String SHA256 = "60a24a25b2702e54c96b011f46f7366bb18a923ee4d83de57e9585e8112a01d6";
 
+    private static final int NATIVE_PRE_THRUST_Y = 11;
+
     private JetpackHook() {}
 
     static byte[] patch(byte[] bytes) {
@@ -25,13 +27,13 @@ final class JetpackHook implements Opcodes {
                 return new MethodVisitor(ASM9, method) {
                     @Override
                     public void visitInsn(int opcode) {
-                        if (opcode == IRETURN) {
-                            super.visitInsn(DUP);
+                        // The first return is IC2 rejecting empty equipment. Slot 11 is live on success.
+                        if (opcode == IRETURN && ++returns[0] == 2) {
                             super.visitVarInsn(ALOAD, 0);
                             super.visitVarInsn(ALOAD, 1);
+                            super.visitVarInsn(DLOAD, NATIVE_PRE_THRUST_Y);
                             super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "jetpackThrust",
-                                    "(ZLjava/lang/Object;Ljava/lang/Object;)V", false);
-                            ++returns[0];
+                                    "(Ljava/lang/Object;Ljava/lang/Object;D)V", false);
                         }
                         super.visitInsn(opcode);
                     }

@@ -57,6 +57,8 @@ public final class JetpackWeatherProbe {
         powered(world, player, electric, 20);
         check(weather.phase() == Phase.DRY && player.s > 0.13 && electric.getCharge(pack) == charge - 140,
                 "clear air preserves native thrust and EU use");
+        double normalFlight = continuousFlight(world, player, electric, pack, false, false);
+        double normalHover = continuousFlight(world, player, electric, pack, true, false);
         world.rain = true;
         position(player, 4, true);
         powered(world, player, electric, 240);
@@ -110,6 +112,9 @@ public final class JetpackWeatherProbe {
         air.bind(world);
         check(air.admitLunar(world, player, 15, 8, 4) == 0 && air.lunarStatus().contains("jetpack"),
                 "a moving pilot with an active fault blocks new lunar air pressure");
+        double faultFlight = continuousFlight(world, player, electric, pack, false, true);
+        check(normalFlight > 10 && faultFlight < -5 && faultFlight > -15,
+                "continuous activation changes ascent into controlled descent: " + normalFlight + " / " + faultFlight);
 
         position(player, 24, false);
         world.g((int) player.o, 32, (int) player.q, 20);
@@ -120,6 +125,9 @@ public final class JetpackWeatherProbe {
         world.storm = true;
         int stormTime = untilFault(world, player, electric);
         check(stormTime < rainTime - 100, "thunder accelerates the warning and fault: " + stormTime + " / " + rainTime);
+        double faultHover = continuousFlight(world, player, electric, pack, true, true);
+        check(faultHover < -5 && faultHover > -15 && normalHover > faultHover + 5,
+                "continuous hover activation also loses altitude: " + normalHover + " / " + faultHover);
         int faults = count(world.cues, "zto.jetpack.fault");
         powered(world, player, electric, 120);
         check(count(world.cues, "zto.jetpack.fault") == faults && weather.phase() == Phase.RECOVERING,
@@ -168,6 +176,26 @@ public final class JetpackWeatherProbe {
 
     private static int count(List<String> values, String value) {
         return java.util.Collections.frequency(values, value);
+    }
+
+    private static double continuousFlight(Fixture world, yw player, ItemArmorJetpackElectric item,
+                                           aan pack, boolean hover, boolean fault) {
+        position(player, 68, false);
+        player.s = 0.32;
+        double start = player.p;
+        int charge = item.getCharge(pack);
+        for (int tick = 0; tick < 40; ++tick) {
+            check((JetpackWeather.LOCAL.phase() == Phase.FAULT) == fault, "expected propulsion phase");
+            check(item.useJetpack(player, hover), "continuous native activation");
+            player.a_(0, 0);
+            JetpackWeather.LOCAL.tick(world, player, false);
+        }
+        check(item.getCharge(pack) == charge - (hover ? 4 : 7) * 40, "40 ticks use native EU");
+        check(!fault || (player.s < -0.05 && player.s > -0.42), "fault ends with bounded downward velocity");
+        double displacement = player.p - start;
+        System.out.printf("Pinned IC2, %s %s, 40 ticks: %+.2f blocks / %+.3f blocks per tick%n",
+                fault ? "fault" : "clear", hover ? "hover" : "normal", displacement, player.s);
+        return displacement;
     }
 
     private static int untilFault(Fixture world, yw player, ItemArmorJetpack item) {

@@ -68,9 +68,9 @@ final class GuiBiomeEcology extends GuiScreen {
         if (spawn != null) {
             line(spawn.ecologyEnabled ? spawn.status : "Natural Enderkin disabled in settings", 76);
             line("Pass activity " + (spawn.passActivity < 0 ? "-" : spawn.passActivity)
-                    + " | Hostile cap " + spawn.vanillaCap + " -> " + spawn.effectiveCap, 88);
-            line("Latest natural selection", 108);
-            line(spawn.lastEcologyDecision, 120);
+                    + " | Hostile cap " + (spawn.vanillaCap < 0 ? "-" : spawn.vanillaCap + " -> " + spawn.effectiveCap), 88);
+            line("Selected: " + spawn.lastEcologySelection, 108);
+            line("Rejected: " + spawn.lastEcologyRejection, 120);
         }
         ForestWildlife wildlife = local.forestWildlife();
         line("Magpies " + wildlife.loaded() + "/" + ForestWildlife.LOADED_CAP + " loaded at last check", 140);

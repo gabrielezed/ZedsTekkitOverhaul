@@ -18,8 +18,11 @@ public final class NaturalSpawnPressure {
     private final Thread owner = Thread.currentThread();
     private final int maxIncreasePercent;
     private final boolean enableEcology;
-    private final Consumer<String> ecologyObserver = new Consumer<String>() {
-        public void accept(String decision) { lastEcologyDecision = decision; }
+    private final BiConsumer<Boolean, String> ecologyObserver = new BiConsumer<Boolean, String>() {
+        public void accept(Boolean selected, String decision) {
+            if (selected) lastEcologySelection = decision;
+            else lastEcologyRejection = decision;
+        }
     };
     private final UnaryOperator<Object> ecologicalCandidate = new UnaryOperator<Object>() {
         public Object apply(Object candidate) {
@@ -43,7 +46,7 @@ public final class NaturalSpawnPressure {
         public void accept(Object context) { recordSpawn(context); }
     };
     private Method agentActive;
-    private String lastEcologyDecision = "No candidate sampled";
+    private String lastEcologySelection = "-", lastEcologyRejection = "-";
     private World world;
     private String status = "Waiting for hostile pass";
     private boolean hostileEnabled = true;
@@ -84,7 +87,7 @@ public final class NaturalSpawnPressure {
     public void bind(World next) {
         if (next == world) return;
         world = next;
-        lastEcologyDecision = "No candidate sampled";
+        lastEcologySelection = lastEcologyRejection = "-";
         successfulSpawns = limitedPasses = 0;
         begin(next, true);
     }
@@ -164,7 +167,7 @@ public final class NaturalSpawnPressure {
 
     public static final class Snapshot {
         public final boolean hookActive, hostileEnabled, ecologyEnabled;
-        public final String status, lastEcologyDecision;
+        public final String status, lastEcologySelection, lastEcologyRejection;
         public final int count, vanillaCap, effectiveCap, increasePercent, maxIncreasePercent, passActivity;
         public final long successfulSpawns, limitedPasses;
 
@@ -172,7 +175,8 @@ public final class NaturalSpawnPressure {
             hookActive = pressure.hookActive();
             hostileEnabled = pressure.hostileEnabled;
             ecologyEnabled = pressure.enableEcology;
-            lastEcologyDecision = pressure.lastEcologyDecision;
+            lastEcologySelection = pressure.lastEcologySelection;
+            lastEcologyRejection = pressure.lastEcologyRejection;
             status = hookActive ? pressure.status : "Tekkit spawning hook unavailable";
             count = pressure.count;
             vanillaCap = pressure.vanillaCap;

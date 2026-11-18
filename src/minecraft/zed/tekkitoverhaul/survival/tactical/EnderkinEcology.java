@@ -1,7 +1,7 @@
 package zed.tekkitoverhaul.survival.tactical;
 
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.Chunk;
 import net.minecraft.src.ChunkProvider;
@@ -28,7 +28,7 @@ public final class EnderkinEcology {
         return select(original, activity, null);
     }
 
-    public static EntityLiving select(EntityLiving original, int activity, Consumer<String> observer) {
+    public static EntityLiving select(EntityLiving original, int activity, BiConsumer<Boolean, String> observer) {
         Class<?> type = original.getClass();
         if (type != EntityZombie.class && type != EntitySkeleton.class && type != EntityCreeper.class
                 && type != EntityEnderman.class) return original;
@@ -73,12 +73,12 @@ public final class EnderkinEcology {
                 || !EnderkinBlink.floor(world, replacement.boundingBox) || !EnderkinBlink.clear(replacement, replacement.boundingBox)
                 || !world.checkIfAABBIsClear(replacement.boundingBox))
             return rejected(original, observer, location + ": replacement clearance");
-        if (observer != null) observer.accept(location + ": " + replacement.getClass().getSimpleName().substring(6));
+        if (observer != null) observer.accept(true, location + ": " + replacement.getClass().getSimpleName().substring(6));
         return replacement;
     }
 
-    private static EntityLiving rejected(EntityLiving original, Consumer<String> observer, String reason) {
-        if (observer != null) observer.accept(reason);
+    private static EntityLiving rejected(EntityLiving original, BiConsumer<Boolean, String> observer, String reason) {
+        if (observer != null) observer.accept(false, reason);
         return original;
     }
 

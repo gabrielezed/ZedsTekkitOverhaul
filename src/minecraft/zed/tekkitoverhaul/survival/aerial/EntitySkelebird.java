@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.survival.aerial;
 
 import net.minecraft.src.EnumCreatureAttribute;
+import net.minecraft.src.Item;
 import net.minecraft.src.World;
 
 /** A nocturnal hunter with a shallow, pre-aimed crossing pass. */
@@ -19,6 +20,9 @@ public final class EntitySkelebird extends EntityAerialPredator {
 
     @Override
     public EnumCreatureAttribute getCreatureAttribute() { return EnumCreatureAttribute.UNDEAD; }
+
+    @Override
+    protected int getDropItemId() { return Item.bone.shiftedIndex; }
 
     @Override
     public String speciesName() { return "Skelebird"; }

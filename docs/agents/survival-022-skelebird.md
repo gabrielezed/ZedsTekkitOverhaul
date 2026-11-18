@@ -8,6 +8,8 @@ Fugl aims through its warning and stops on contact. Skelebird lines up from fart
 
 A lateral change while the warning is playing can defeat the pass. Descent breaks an airborne hunt, and overhead cover, including glass, interrupts acquisition and pursuit. Cover and a blocked corridor can cancel a warning. Jetpack fault protection uses the existing aerial rules. Manual birds can spend two passes against an exposed pilot. A ground hunt or an encounter member spends one. Manual ground hunts require Hard, night and a rare detection roll. Range, sight, missed approaches and time all bound a hunt.
 
+Skelebird drops zero to two vanilla bones with the standard living-entity loot roll. The same path applies native Looting and Forge drop handling.
+
 ## Shared encounter rules
 
 The existing Overworld admission pulse first checks exposure, difficulty, Territorial Activity, cooldown and room under the hostile caps. On a successful ordinary admission between world times 12000 and 22999, species selection uses the following shares. Sampled activity is capped at 24 for these calculations.

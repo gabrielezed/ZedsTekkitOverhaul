@@ -98,6 +98,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         HopperRegistry.register(this, settings);
         TacticalHostiles.registerEggs(settings);
         AerialPredators.registerEgg(settings.aerialPredatorEgg);
+        AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }

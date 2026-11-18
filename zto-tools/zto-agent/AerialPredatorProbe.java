@@ -20,6 +20,7 @@ import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.Flight;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 
 /** Runs the reobfuscated predator in a disposable flat world with the installed Tekkit classes. */
@@ -116,6 +117,7 @@ public final class AerialPredatorProbe {
         world.q = 0;
         world.a(reloaded, true);
         check(reloaded.G, "Peaceful removes the predator");
+        skelebirdCombat(world, player, sounds);
         System.out.println("PASS Fugl naming, legacy egg and save IDs, dive pose, atlas, flight, ground and airborne acquisition, "
                 + "eight approach bearings, blocked warning retry, impact, dodge, climb, shelter, death fall, NBT and native WAV audio");
     }
@@ -125,6 +127,7 @@ public final class AerialPredatorProbe {
         FMLRegistry.registerRegistry(new ClientRegistry());
         AerialPredators.register();
         AerialPredators.registerEgg(22009);
+        AerialPredators.registerSkelebirdEgg(22010);
         yr egg = yr.e[22265];
         aan stack = new aan(egg);
         Properties names = new Properties();
@@ -140,15 +143,30 @@ public final class AerialPredatorProbe {
         for (int tick = 0; tick < 32; tick++) world.a(spawned, true);
         check(spawned.y.b > 7, "egg hatch climbs from ground level");
         spawned.A();
+        yr skeletalEgg = yr.e[22266];
+        aan skeletalStack = new aan(skeletalEgg);
+        check(names.containsValue("Skelebird Spawn Egg") && skeletalEgg.c()
+                && skeletalEgg.a(skeletalStack, player, world, 296, 3, 288, 1) && skeletalStack.a == 1,
+                "Skelebird has its own localized layered Creative egg");
+        EntitySkelebird skeleton = (EntitySkelebird) world.a(EntitySkelebird.class,
+                wu.b(295, 4, 287, 298, 8, 290)).get(0);
+        check("ZTO.Skelebird".equals(aao.b(skeleton)) && skeleton.bb() == 14,
+                "Skelebird has its own save name and lower health");
+        skeleton.A();
         player.aT.d = false;
 
         Map<Class<? extends nn>, um> renderers = new HashMap<Class<? extends nn>, um>();
         RenderAerialPredator.register(renderers);
         check(renderers.get(EntityAerialPredator.class) instanceof RenderAerialPredator, "native renderer mapping");
+        check(renderers.get(EntitySkelebird.class) instanceof RenderAerialPredator, "Skelebird renderer mapping");
         verifyDivePose();
+        verifySkelebirdPose();
         BufferedImage texture = ImageIO.read(EntityAerialPredator.class.getResource(EntityAerialPredator.TEXTURE));
         check(texture.getWidth() == 64 && texture.getHeight() == 64
                 && texture.getRGB(17, 5) != texture.getRGB(10, 40), "readable model atlas");
+        BufferedImage bones = ImageIO.read(EntitySkelebird.class.getResource(EntitySkelebird.TEXTURE));
+        check(bones.getWidth() == 64 && bones.getHeight() == 64 && bones.getRGB(5, 54) == 0xFF494949
+                && bones.getRGB(63, 63) == 0, "Skelebird has its own low-resolution skull and atlas");
     }
 
     private static void verifyDivePose() throws Exception {
@@ -179,9 +197,11 @@ public final class AerialPredatorProbe {
         AerialSoundRegistration sounds = new AerialSoundRegistration();
         sounds.onLoadSoundSettings(manager);
         sounds.onLoadSoundSettings(manager);
-        check(manager.getSoundsPool().a == 9, "sound registration is idempotent per pool");
+        check(manager.getSoundsPool().a == 15, "sound registration is idempotent per pool");
         for (String key : new String[] {AerialSounds.AMBIENT, AerialSounds.WARNING, AerialSounds.DIVE,
-                AerialSounds.HURT, AerialSounds.DEATH, "zto.jetpack.warning", "zto.jetpack.fault", "zto.jetpack.recovery"}) {
+                AerialSounds.HURT, AerialSounds.DEATH, "zto.jetpack.warning", "zto.jetpack.fault", "zto.jetpack.recovery",
+                "zto.skelebird.ambient", "zto.skelebird.warning", "zto.skelebird.slash",
+                "zto.skelebird.hurt", "zto.skelebird.death"}) {
             ub clip = manager.getSoundsPool().a(key);
             check(clip != null, "native sound pool resolves " + key);
             CodecWav codec = new CodecWav();
@@ -194,7 +214,108 @@ public final class AerialPredatorProbe {
         }
         sd recreated = new sd();
         sounds.onLoadSoundSettings(recreated);
-        check(recreated.getSoundsPool().a == 9, "a recreated sound manager gets the same sound set");
+        check(recreated.getSoundsPool().a == 15, "a recreated sound manager gets the same sound set");
+    }
+
+    private static void verifySkelebirdPose() throws Exception {
+        Class<?> modelClass = Class.forName("zed.tekkitoverhaul.survival.aerial.client.ModelSkelebird");
+        java.lang.reflect.Constructor<?> constructor = modelClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object model = constructor.newInstance();
+        Method pose = modelClass.getDeclaredMethod("pose", Flight.class, float.class, int.class);
+        pose.setAccessible(true);
+        Field shoulders = modelClass.getDeclaredField("shoulders");
+        shoulders.setAccessible(true);
+        qp[] wing = (qp[]) shoulders.get(model);
+        pose.invoke(model, Flight.PREPARE, 0F, 0);
+        check(wing[1].h < -0.8F && wing[0].h > 0.8F, "warning raises the wing bones");
+        pose.invoke(model, Flight.DIVE, 0F, 0);
+        float sweep = wing[1].g;
+        check(sweep < -0.6F && Math.abs(wing[1].h) < 0.1F, "crossing sweeps wings back in a flat pose");
+        pose.invoke(model, Flight.RECOVER, 0F, 8);
+        check(wing[1].g > sweep, "recovery reopens the wings");
+    }
+
+    private static void skelebirdCombat(xd world, yw player, List<String> sounds) throws Exception {
+        world.q = 2;
+        world.a(18000);
+        player.aT.a = false;
+        player.c(288.5, 26, 288.5, 0, 0);
+        player.z = false;
+        player.l(20);
+        player.Y = 0;
+        player.r = player.s = player.t = 0;
+        EntitySkelebird hunter = new EntitySkelebird(world);
+        place(world, hunter, 272, 32, 288.5, -90);
+        waitFor(world, hunter, Flight.PREPARE, 220);
+        int health = player.bb();
+        for (int i = 0; i < 23; i++) {
+            world.a(hunter, true);
+            check(hunter.flight() == Flight.PREPARE && player.bb() == health, "slashing warning allows reaction time");
+        }
+        waitFor(world, hunter, Flight.DIVE, 2);
+        check(sounds.indexOf("zto.skelebird.warning") >= 0
+                && sounds.indexOf("zto.skelebird.slash") > sounds.indexOf("zto.skelebird.warning"),
+                "own warning and rush play in order");
+        check(hunter.s < 0 && -hunter.s < 0.5 * Math.hypot(hunter.r, hunter.t), "shallow diagonal flight");
+        double vx = hunter.r, vz = hunter.t;
+        ady tag = new ady();
+        check(hunter.c(tag), "Skelebird saves through vanilla");
+        EntitySkelebird restored = (EntitySkelebird) aao.a(tag, world);
+        check(restored.flight() == Flight.CRUISE && "-".equals(restored.targetName())
+                && restored.bb() == hunter.bb(), "Skelebird reload clears the transient attack");
+        waitFor(world, hunter, Flight.RECOVER, 45);
+        double crossing = ((hunter.o - player.o) * vx + (hunter.q - player.q) * vz) / Math.hypot(vx, vz);
+        check(player.bb() == health - 5 && crossing > 2, "one swept contact and a continued crossing, health "
+                + health + " -> " + player.bb() + ", runout " + crossing + ", " + hunter.lastFailure());
+        double low = hunter.p;
+        for (int i = 0; i < 53; i++) {
+            world.a(hunter, true);
+            check(hunter.flight() == Flight.RECOVER, "Skelebird holds its recovery interval");
+        }
+        check(hunter.p > low + 3, "Skelebird climbs away");
+        hunter.A();
+
+        EntitySkelebird dodged = new EntitySkelebird(world);
+        player.r = player.s = player.t = 0;
+        player.Y = 0;
+        place(world, dodged, 272, 32, 288.5, -90);
+        waitFor(world, dodged, Flight.PREPARE, 220);
+        player.c(288.5, 26, 280.5, 0, 0);
+        health = player.bb();
+        waitFor(world, dodged, Flight.DIVE, 25);
+        check(Math.abs(dodged.destinationZ() - 288.5) < 0.01, "warning locks the pass before launch");
+        waitFor(world, dodged, Flight.RECOVER, 40);
+        check(player.bb() == health && "slashing pass missed".equals(dodged.lastFailure()), "a warning-time dodge works");
+        world.g(288, 30, 280, 20);
+        waitFor(world, dodged, Flight.DISENGAGE, 2);
+        check(dodged.lastExit().contains("cover"), "glass overhead protects the pilot");
+        check(dodged.a(md.a(new nm(world), player), 3) && sounds.contains("zto.skelebird.hurt"),
+                "Skelebird takes arrow damage and emits its hurt cue");
+        dodged.A();
+
+        player.c(288.5, 4, 288.5, 0, 0);
+        player.z = true;
+        EntitySkelebird ground = new EntitySkelebird(world);
+        place(world, ground, 272, 12, 288.5, -90);
+        seed(ground, new Random(27L) {
+            @Override public int nextInt(int bound) { return bound == 24 ? 0 : super.nextInt(bound); }
+        });
+        for (int i = 0; i < 100; i++) {
+            world.a(ground, true);
+            check("-".equals(ground.targetName()), "manual Normal birds ignore grounded players");
+        }
+        world.q = 3;
+        ground.c(272, 12, 288.5, -90, 0);
+        waitFor(world, ground, Flight.DIVE, 230);
+        waitFor(world, ground, Flight.DISENGAGE, 110);
+        check(ground.diveCommitments() == 1 && "attack budget".equals(ground.lastExit()), "Hard ground hunt spends one turn");
+        check(ground.a(md.a(player), 20) && ground.flight() == Flight.FALL
+                && sounds.contains("zto.skelebird.death"), "ordinary damage kills Skelebird and emits its death cue");
+        double deathY = ground.p;
+        for (int i = 0; i < 10; ++i) world.a(ground, true);
+        check(ground.p < deathY - 1, "Skelebird loses lift on death");
+        System.out.println("PASS Skelebird registry, egg, native WAV, shallow pass, warning-time evade, contact, ground limits, cover, recovery and NBT");
     }
 
     private static void approaches(xd world, yw player) throws Exception {
@@ -287,10 +408,14 @@ public final class AerialPredatorProbe {
 
     private static EntityAerialPredator place(xd world, double x, double y, double z, float yaw) throws Exception {
         EntityAerialPredator mob = new EntityAerialPredator(world);
+        place(world, mob, x, y, z, yaw);
+        return mob;
+    }
+
+    private static void place(xd world, EntityAerialPredator mob, double x, double y, double z, float yaw) throws Exception {
         seed(mob, new Random(3865L));
         mob.c(x, y, z, yaw, 0);
         check(world.a(mob), "loaded fixture spawn");
-        return mob;
     }
 
     private static void seed(EntityAerialPredator mob, Random seed) throws Exception {

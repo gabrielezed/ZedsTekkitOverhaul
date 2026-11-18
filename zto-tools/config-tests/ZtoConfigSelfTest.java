@@ -36,7 +36,7 @@ public final class ZtoConfigSelfTest {
                 && defaults.alchemicalConverter == 3024 && defaults.breacherEgg == 22005
                 && defaults.skirmisherEgg == 22004 && defaults.saboteurEgg == 22006
                 && defaults.tankEgg == 22007 && defaults.thiefEgg == 22008
-                && defaults.aerialPredatorEgg == 22009 && defaults.emcProfile.isEmpty(),
+                && defaults.aerialPredatorEgg == 22009 && defaults.skelebirdEgg == 22010 && defaults.emcProfile.isEmpty(),
                 "other defaults");
         byte[] generated = Files.readAllBytes(canonical);
         try (java.util.stream.Stream<Path> files = Files.list(fresh)) {

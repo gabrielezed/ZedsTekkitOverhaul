@@ -162,6 +162,16 @@ for %%S in (warning fault recovery) do (
         goto :fail
     )
 )
+for %%S in (ambient1 ambient2 warning slash hurt death) do (
+    if not exist "src\minecraft\zed\sounds\skelebird\%%S.wav" (
+        echo [ZTO] ERROR: Missing Skelebird sound %%S.
+        goto :fail
+    )
+)
+if not exist "src\minecraft\zed\textures\skelebird.png" (
+    echo [ZTO] ERROR: Missing Skelebird texture.
+    goto :fail
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" zed\sounds
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add predator sounds to the JAR.

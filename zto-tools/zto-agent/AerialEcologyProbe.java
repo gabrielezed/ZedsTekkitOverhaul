@@ -11,6 +11,7 @@ import zed.tekkitoverhaul.survival.aerial.AerialEcology.Snapshot;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.Flight;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
@@ -157,7 +158,8 @@ public final class AerialEcologyProbe {
                 "a failed placement waits for another timed pulse");
         blocked.world.limitPlacement = false;
         for (int i = 0; i < 5; i++) {
-            EntityAerialPredator existing = new EntityAerialPredator(blocked.world);
+            EntityAerialPredator existing = i % 2 == 0
+                    ? new EntitySkelebird(blocked.world) : new EntityAerialPredator(blocked.world);
             existing.c(272 + i, 60, 291, 0, 0);
             check(blocked.world.a(existing), "fixture fills the aerial cap");
         }
@@ -175,10 +177,58 @@ public final class AerialEcologyProbe {
         for (int i = 0; i < 1200; i++) disabled.tick(blocked.player, false);
         check(disabled.snapshot().status.contains("Disabled") && disabled.snapshot().admissions == 0,
                 "natural admission can be disabled independently of the registered species");
+        verifySkelebirdEcology(root);
         System.out.printf("Admission fixtures: Normal flock 3, Hard flock %d at activity %d, ground rolls %d/%d per 1000%n",
                 hardSize, hard.snapshot().activity, daytimeChance, night.snapshot().chance);
         System.out.println("PASS aerial altitude, exposure, ground day/night, ambient flight, safe spawn, "
                 + "Normal/Hard territory flocks, stagger, lost attacker, cooldown, reload, bounds and disabled admission");
+    }
+
+    private static void verifySkelebirdEcology(File root) throws Exception {
+        Fixture daylight = new Fixture(root, "skelebird-daylight", 3, 6000);
+        daylight.world.speciesRoll = 0;
+        admitHigh(daylight, 0);
+        check(!(daylight.mobs().get(0) instanceof EntitySkelebird), "day encounters remain Fugl");
+
+        Fixture easy = new Fixture(root, "skelebird-easy", 1, 18000);
+        easy.world.speciesRoll = 12;
+        admitHigh(easy, 0);
+        check(!(easy.mobs().get(0) instanceof EntitySkelebird), "a species roll misses on Easy");
+
+        Fixture normal = new Fixture(root, "skelebird-normal", 2, 18000);
+        normal.world.speciesRoll = 12;
+        admitHigh(normal, 0);
+        check(normal.mobs().size() == 1 && normal.mobs().get(0) instanceof EntitySkelebird,
+                "the same roll gives a solo Skelebird on Normal at night");
+
+        Fixture hard = new Fixture(root, "skelebird-hard", 3, 18000);
+        hard.position(288.5, 4, true);
+        for (int i = 0; i < 4800; ++i) hard.territory.tick(hard.player, false);
+        hard.world.speciesRoll = 31;
+        admitHigh(hard, 0);
+        verifyFormation(hard);
+        check(hard.snapshot().activity >= 12 && hard.mobs().size() == 3
+                && hard.mobs().stream().allMatch(mob -> mob instanceof EntitySkelebird),
+                "territorial pressure adds a bounded Hard group at a roll above the quiet share");
+        ady tag = new ady();
+        check(hard.mobs().get(0).c(tag) && tag.f("ZtoAerialWildTicks") > 0, "wild Skelebird origin is saved");
+        EntitySkelebird returned = (EntitySkelebird) aao.a(tag, hard.world);
+        check(returned.flight() == Flight.CRUISE && "-".equals(returned.targetName()), "wild reload retires from the hunt");
+        int released = -64;
+        for (int tick = 0; tick < 500 && hard.commitments < 2; ++tick) {
+            int before = hard.activeDives();
+            hard.ticks(1);
+            int after = hard.activeDives();
+            check(after <= 1, "a Skelebird flock has one active attack turn");
+            if (before != 0 && after == 0) released = tick;
+            if (before == 0 && after != 0) check(tick - released >= 63, "Skelebird turns have a recovery gap");
+        }
+        check(hard.commitments >= 2, "multiple Skelebirds actually commit passes");
+        hard.position(288.5, 4, true);
+        hard.seconds(2);
+        check(hard.snapshot().activeMembers == 0 && hard.snapshot().cooldownSeconds >= 89
+                && hard.snapshot().lastEnd.contains("descended"), "descent ends the Skelebird flock and preserves cooldown");
+        System.out.println("PASS Skelebird night share, Easy/Normal, Hard territory flock, staggered turns, wild reload and shared cooldown");
     }
 
     private static void admitHigh(Fixture fixture, double speedZ) {
@@ -227,6 +277,7 @@ public final class AerialEcologyProbe {
             }
             world.r = new Random(3865L) {
                 @Override public int nextInt(int bound) {
+                    if (bound == 100) return world.speciesRoll;
                     if (bound != 1000) return super.nextInt(bound);
                     if (world.passiveAfterAdmission) {
                         world.passiveAfterAdmission = false;
@@ -283,7 +334,7 @@ public final class AerialEcologyProbe {
     }
 
     private static final class ProbeWorld extends xd {
-        int forceRoll = 999;
+        int forceRoll = 999, speciesRoll = 99;
         boolean limitPlacement, passiveAfterAdmission;
         ProbeWorld(File root, String name) {
             super(new aia(root, name, false), name, NaturalSpawnProbe.SETTINGS);

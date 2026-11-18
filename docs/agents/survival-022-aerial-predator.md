@@ -30,7 +30,7 @@ Use **Fugl Spawn Egg** in Creative or NEI. Its configurable constructor ID is 22
 
 Predators still save as `ZTO.AerialPredator`. Manual creatures retain their existing reload behavior. Naturally admitted creatures record their origin and a short retirement lifetime. They resume as passive flight on reload, with a fresh target state. Flock membership and the dive turn are local to the running encounter. The additional `zto_aerial_ecology` map data stores the cooldown. Older saves need no migration.
 
-**Numpad 1 → Fugl** shows the sampled clearance, exposure band, cooldown, last admission odds and territorial contribution, last rejection, active group and members, current dive owner, and the nearest Fugl's behavior, launch eligibility, most recent rejection and dive counts. The screen is non-pausing.
+**Numpad 1 → Aerial Predators** shows the sampled clearance, exposure band, cooldown, last admission odds and territorial contribution, last rejection, active group and members, current attack turn, and the nearest predator's behavior, launch eligibility, most recent rejection and attack count. The screen is non-pausing.
 
 Survival & Assault remains accessible from the Debug Hub. With `survivalDebugHud=true`, the screen button and Shift with the configured shortcut toggle visibility. Fresh profiles start hidden. The client remembers the choice across worlds and restarts in `config/ZtoSurvivalOverlay.txt`.
 
@@ -72,7 +72,7 @@ The stabilization probe ran 40 consecutive IC2 powered ticks from Y=68 with vani
 
 ## Planned after PR #37
 
-- Develop Skelebird as a distinct skeletal species in the next PR. Use the Minecraft 1.2.5 Skeleton palette as its color reference and give it its own anatomy, animation, ecology and combat.
+- See the [Skelebird development guide](survival-022-skelebird.md) for the second species and shared nocturnal encounter rules.
 - Explore occasional Fugl hunts for passive animals and selected hostile mobs. Bound selection, pursuit and frequency, protect enclosed farms and avoid recurring combat chains.
 - Design biome-specific wildlife, including possible magpie-like opportunists that occasionally steal small possessions. Keep the theft local and distinct from the Enderkin Thief, without Ender Trails or compass tracking.
 - Review the Electric Jetpack recipe and possibly EE2 progression in a later pass. Check access to early mobility, recipe dependencies and save compatibility before proposing materials or creature drops.

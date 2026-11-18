@@ -51,8 +51,8 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         String group = ecology.activeMembers > 1 ? "1 flock" : ecology.activeMembers == 1 ? "1 predator" : "No active encounter";
         display.add(group + "   " + ecology.membership);
         if (ecology.activeMembers > 0) {
-            display.add(ecology.attackerId < 0 ? "Dive pause: " + ecology.gapTicks + "t"
-                    : "Dive reserved by #" + ecology.attackerId);
+            display.add(ecology.attackerId < 0 ? "Attack pause: " + ecology.gapTicks + "t"
+                    : "Attack turn reserved by #" + ecology.attackerId);
         }
 
         EntityAerialPredator nearest = null;
@@ -66,13 +66,14 @@ final class GuiAerialPredatorDebug extends GuiScreen {
             best = distance;
         }
         if (nearest != null) {
-            display.add("Nearest #" + nearest.entityId + "  " + nearest.flight() + "  Target " + nearest.targetName());
-            display.add(String.format(Locale.ROOT, "Destination %.1f / %.1f / %.1f",
+            display.add(nearest.speciesName() + " #" + nearest.entityId + "  " + nearest.flight()
+                    + "  Target " + nearest.targetName() + "  " + nearest.encounterStatus());
+            display.add(String.format(Locale.ROOT, "Y %.1f   Destination %.1f / %.1f / %.1f", nearest.posY,
                     nearest.destinationX(), nearest.destinationY(), nearest.destinationZ()));
             display.add("Phase " + nearest.phaseTicks() + "t   Remaining " + nearest.remainingPhaseTicks() + "t");
-            display.add(nearest.diveStatus() + " | Dives " + nearest.diveCommitments()
+            display.add(nearest.diveStatus() + " | Passes " + nearest.diveCommitments()
                     + " | Failed warnings " + nearest.rejectedWarnings());
-            display.add("Dive rejection: " + nearest.lastDiveRejection());
+            display.add("Launch rejection: " + nearest.lastDiveRejection());
             display.add("Last movement or attack failure: " + nearest.lastFailure());
             display.add("Last disengagement: " + nearest.lastExit());
         } else {
@@ -93,7 +94,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
-        drawCenteredString(fontRenderer, "Fugl", width / 2, 14, 0xFFFFFF);
+        drawCenteredString(fontRenderer, "Aerial Predators", width / 2, 14, 0xFFFFFF);
         for (int i = 0; i < lines.length; i++) {
             drawCenteredString(fontRenderer, lines[i], width / 2, 26 + i * 9, 0xDFEBE7);
         }

@@ -11,6 +11,7 @@ import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.lunar.LunarEvent;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
 import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
@@ -64,6 +65,10 @@ public final class SiegeDirector implements LunarService.Listener {
     private int removed;
     private int unloaded;
     private int starts;
+    private int aerialAllocation;
+    private AerialEcology aerialEcology;
+
+    public void attachAerialEcology(AerialEcology ecology) { aerialEcology = ecology; }
     private int difficulty;
     public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius,
                          boolean patrolEnabled, boolean outdoorPressure, boolean experimentalEnderkin) {
@@ -95,6 +100,7 @@ public final class SiegeDirector implements LunarService.Listener {
         pending = null;
         target = null;
         selectedBudget = budget;
+        aerialAllocation = 0;
         admissionThreat = null;
         admissionProfile = null;
         territorialAdaptation = false;
@@ -177,6 +183,8 @@ public final class SiegeDirector implements LunarService.Listener {
             admissionProfile = AssaultWave.Profile.select(territorialAdaptation, admissionThreat);
             selectedBudget = admissionProfile.budget(budget);
             storage.start(boundary.rawTime);
+            aerialAllocation = aerialEcology == null ? 0 : aerialEcology.admitLunar(world, player, selectedBudget,
+                    activeCap, boundary.logicalDay);
             state = State.ACTIVE;
             reason = "NATURAL_FULL_MOON";
             target = player;
@@ -184,8 +192,8 @@ public final class SiegeDirector implements LunarService.Listener {
             elapsed = observedDeaths = removed = unloaded = 0;
             waveIndex = -1;
             localHostiles = -1;
-            peakActive = tracked.size();
-            waves = AssaultWave.plan(selectedBudget, admissionProfile, difficulty);
+            peakActive = tracked.size() + aerialAllocation;
+            waves = AssaultWave.plan(selectedBudget - aerialAllocation, admissionProfile, difficulty);
             for (AssaultWave wave : waves) {
                 wave.special.reset(experimentalEnderkin && wave.planned > 0, world.getSeed(),
                         boundary.logicalDay, boundary.phase, wave.number);
@@ -197,6 +205,7 @@ public final class SiegeDirector implements LunarService.Listener {
             if (diagnostics != null) {
                 diagnostics.assault(boundary.rawTime, "Eligibility accepted: natural full moon");
                 diagnostics.assault(boundary.rawTime, "Player assault started");
+                if (aerialAllocation > 0) diagnostics.assault(boundary.rawTime, "Aerial slots " + aerialAllocation);
                 if (territorialAdaptation) diagnostics.assault(boundary.rawTime,
                         "Territorial threat " + (admissionThreat == null ? "unavailable" : admissionThreat.threat)
                                 + " | " + admissionProfile + " | Budget " + selectedBudget + "/" + budget);
@@ -263,8 +272,9 @@ public final class SiegeDirector implements LunarService.Listener {
     private void retry(AssaultWave wave, EntityPlayer player) {
         wave.localHostiles = localHostiles;
         wave.peakActive = Math.max(wave.peakActive, tracked.size());
-        if (tracked.size() >= activeCap || localHostiles >= SpawnController.LOCAL_CAP) {
-            spawns.rejection = tracked.size() >= activeCap ? "ASSAULT_CAP" : "LOCAL_MOB_CAP";
+        int assaultActive = tracked.size() + (aerialEcology == null ? 0 : aerialEcology.lunarMembers());
+        if (assaultActive >= activeCap || localHostiles >= SpawnController.LOCAL_CAP) {
+            spawns.rejection = assaultActive >= activeCap ? "ASSAULT_CAP" : "LOCAL_MOB_CAP";
             if (wave.special.pending() != null) wave.special.capDeferrals++;
             wave.reject(spawns.rejection);
             return;
@@ -296,7 +306,7 @@ public final class SiegeDirector implements LunarService.Listener {
                 wave.active++;
                 wave.localHostiles = ++localHostiles;
                 wave.peakActive = Math.max(wave.peakActive, tracked.size());
-                peakActive = Math.max(peakActive, tracked.size());
+                peakActive = Math.max(peakActive, tracked.size() + (aerialEcology == null ? 0 : aerialEcology.lunarMembers()));
                 if (diagnostics != null) diagnostics.spawned(world.getWorldTime(), spawn);
                 return;
             }
@@ -336,6 +346,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     private void end(State terminal, String cause) {
+        if (aerialEcology != null) aerialEcology.endLunar(cause);
         for (AssaultWave wave : waves) {
             if (wave.closedAt < 0) closeWave(wave, wave.unspent() == 0 ? "NO_ALLOCATION" : cause, false);
         }
@@ -484,6 +495,7 @@ public final class SiegeDirector implements LunarService.Listener {
         public final String reason, lastRejection;
         public final long boundary, lunarSession;
         public final int dimension, starts, currentWave, nextWaveTicks, attempts, elapsed, budget, deferred, skipped;
+        public final int aerialAllocation, activeAerial;
         public final int active, peakActive, localHostiles, observedDeaths, removed, unloaded;
         public final int activeCap, localCap, innerRadius, outerRadius;
         public final String trigger;
@@ -538,6 +550,8 @@ public final class SiegeDirector implements LunarService.Listener {
             outerRadius = director.outerRadius;
             elapsed = director.elapsed;
             budget = director.selectedBudget;
+            aerialAllocation = director.aerialAllocation;
+            activeAerial = director.aerialEcology == null ? 0 : director.aerialEcology.lunarMembers();
             configuredBudget = director.budget;
             territorialAdaptation = director.territorialAdaptation;
             admissionThreat = director.admissionThreat;

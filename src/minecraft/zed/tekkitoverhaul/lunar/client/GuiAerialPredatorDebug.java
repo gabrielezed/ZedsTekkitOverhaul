@@ -42,6 +42,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         String height = ecology.height < 0 ? "-" : String.format(Locale.ROOT, "%.1f blocks", ecology.height);
         display.add(String.format(Locale.ROOT, "%s   Clearance %s   Exposure %.0f/100", ecology.band, height, ecology.exposure));
         display.add(ecology.status);
+        display.add("Lunar: " + ecology.lunarStatus);
         display.add("Cooldown " + ecology.cooldownSeconds + "s   Check " + ecology.checkSeconds + "s");
         display.add("Last check activity " + ecology.activity + "   Chance " + ecology.chance + "/1000");
         display.add("Last check loaded predators " + ecology.loadedPredators + "   Local hostiles " + ecology.localHostiles);
@@ -94,7 +95,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         drawDefaultBackground();
         drawCenteredString(fontRenderer, "Aerial Predator", width / 2, 14, 0xFFFFFF);
         for (int i = 0; i < lines.length; i++) {
-            drawCenteredString(fontRenderer, lines[i], width / 2, 28 + i * 10, 0xDFEBE7);
+            drawCenteredString(fontRenderer, lines[i], width / 2, 26 + i * 9, 0xDFEBE7);
         }
         super.drawScreen(mouseX, mouseY, partialTick);
     }

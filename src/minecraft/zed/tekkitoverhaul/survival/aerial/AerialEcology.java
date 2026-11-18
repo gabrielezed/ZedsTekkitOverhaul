@@ -8,6 +8,7 @@ import net.minecraft.src.EnumCreatureType;
 import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.territory.ThreatAssessment;
@@ -21,7 +22,7 @@ public final class AerialEcology {
     // Preserve room for occasional aerial encounters when the vanilla pass overshoots its cap.
     private static final int HOSTILE_CAP_SLACK = 9;
     private static final int PLACEMENT_TRIES = 8;
-    private final boolean enabled;
+    private final boolean enabled, lunarEnabled;
     private final int cooldownSeconds;
     private final TerritorialActivityService territory;
     private final NaturalSpawnPressure naturalSpawning;
@@ -29,6 +30,9 @@ public final class AerialEcology {
     private EntityPlayer observer;
     private AerialEcologyState state;
     private AerialEncounter encounter;
+    private boolean lunar;
+    private double lunarX, lunarZ;
+    private String lunarStatus = "No lunar request";
     private AerialExposure exposure = new AerialExposure();
     private int ticks, nextCheck, activity, chance, loadedPredators, localHostiles, placementTries;
     private int admissions;
@@ -36,7 +40,13 @@ public final class AerialEcology {
 
     public AerialEcology(boolean enabled, int cooldownSeconds, TerritorialActivityService territory,
             NaturalSpawnPressure naturalSpawning) {
+        this(enabled, false, cooldownSeconds, territory, naturalSpawning);
+    }
+
+    public AerialEcology(boolean enabled, boolean lunarEnabled, int cooldownSeconds, TerritorialActivityService territory,
+            NaturalSpawnPressure naturalSpawning) {
         this.enabled = enabled;
+        this.lunarEnabled = lunarEnabled;
         this.cooldownSeconds = Math.max(90, Math.min(600, cooldownSeconds));
         this.territory = territory;
         this.naturalSpawning = naturalSpawning;
@@ -46,13 +56,14 @@ public final class AerialEcology {
         if (active == world) return;
         if (encounter != null) finish("World changed");
         world = active;
-        state = enabled && active != null && !active.isRemote && active.worldProvider.worldType == 0
+        state = (enabled || lunarEnabled) && active != null && !active.isRemote && active.worldProvider.worldType == 0
                 ? AerialEcologyState.load(active) : null;
         observer = null;
         exposure = new AerialExposure();
         ticks = nextCheck = activity = chance = loadedPredators = localHostiles = placementTries = admissions = 0;
         status = !enabled ? "Disabled in settings" : state == null ? "Outside local Overworld" : "Waiting for sample";
         lastAttempt = lastEnd = "None";
+        lunarStatus = "No lunar request";
     }
 
     public void tick(EntityPlayer player, boolean paused) {
@@ -72,14 +83,18 @@ public final class AerialEcology {
         }
         exposure.sample(player);
         if (encounter != null) {
-            String end = encounter.sample(world, player, exposure);
+            double dx = player.posX - lunarX, dz = player.posZ - lunarZ;
+            String end = lunar && dx * dx + dz * dz > 48 * 48 ? "Left lunar airspace"
+                    : encounter.sample(world, player, exposure);
             if (end.isEmpty()) status = encounter.hunting ? "Active hunt" : "Wildlife passing through";
             else finish(end);
             return;
         }
         state.elapseSecond();
         if (nextCheck > 0) --nextCheck;
-        if (state.cooldownSeconds > 0) status = "Encounter cooldown";
+        if (!enabled) status = "Natural admission disabled";
+        else if (JetpackWeather.LOCAL.protects(player)) status = "Jetpack fault or recovery";
+        else if (state.cooldownSeconds > 0) status = "Encounter cooldown";
         else if (!exposure.ready()) status = exposure.restriction;
         else if (nextCheck > 0) status = "Waiting for admission check";
         else {
@@ -92,6 +107,65 @@ public final class AerialEcology {
         return world.difficultySetting > 0 && player != null && player.worldObj == world && player.isEntityAlive()
                 && !player.capabilities.disableDamage && !player.capabilities.isCreativeMode && !player.isPlayerSleeping()
                 && world.playerEntities.size() == 1 && world.playerEntities.get(0) == player;
+    }
+
+    /** Called once at a consumed, natural full-moon assault admission. Returns spent assault slots. */
+    public int admitLunar(World context, EntityPlayer player, int budget, int activeCap,
+            long logicalDay) {
+        if (!lunarEnabled) return lunarRejected("Disabled in settings");
+        if (context != world || state == null || !eligible(player) || world.difficultySetting < 2)
+            return lunarRejected("Requires a Normal or Hard Overworld assault");
+        if (encounter != null || state.cooldownSeconds > 0 || JetpackWeather.LOCAL.protects(player))
+            return lunarRejected("Aerial encounter, cooldown or jetpack protection");
+        if (budget < 6 || activeCap < 3) return lunarRejected("Ground allocation too small");
+
+        ThreatAssessment threat = territory.assess(world, player);
+        int pressure = threat == null ? 0 : threat.activity;
+        // Stable selection avoids modifying the ground spawner's random sequence on ineligible moons.
+        int chance = world.difficultySetting == 3 ? 58 : 34;
+        long roll = new java.util.Random(world.getSeed() ^ (logicalDay * 341873128712L)).nextInt(100);
+        if (roll >= chance + Math.min(20, pressure)) return lunarRejected("Full moon not selected");
+
+        exposure.sample(player);
+        if (exposure.band == AerialExposure.Band.COVERED) return lunarRejected(exposure.restriction);
+        NaturalSpawnPressure.Snapshot nativePass = naturalSpawning.snapshot(world);
+        if (nativePass != null && nativePass.hookActive && !nativePass.hostileEnabled)
+            return lunarRejected("Hostile spawning disabled by world");
+        int capacity = populationRoom(player, ordinaryCap(nativePass));
+        int desired = world.difficultySetting == 3 && pressure >= 12 && budget >= 10 && activeCap >= 5 ? 2 : 1;
+        desired = Math.min(desired, capacity);
+        if (desired == 0) return lunarRejected("Aerial or ordinary hostile cap");
+        placementTries = 0;
+        boolean airborne = !player.onGround && exposure.height >= 8;
+        for (int size = desired; size >= 1; --size) {
+            if (!place(player, size, airborne, true)) continue;
+            lunar = true;
+            lunarX = player.posX;
+            lunarZ = player.posZ;
+            state.reserve(cooldownSeconds);
+            ++admissions;
+            lunarStatus = "Admitted " + encounter.size() + " lunar predators";
+            return encounter.size();
+        }
+        return lunarRejected("No clear lunar airspace");
+    }
+
+    private int lunarRejected(String reason) {
+        lunarStatus = reason;
+        return 0;
+    }
+
+    public int lunarMembers() { return lunar && encounter != null ? encounter.size() : 0; }
+
+    public void endLunar(String reason) {
+        if (lunar && encounter != null) finish(reason);
+    }
+
+    public String lunarStatus() { return lunarStatus; }
+
+    private int ordinaryCap(NaturalSpawnPressure.Snapshot nativePass) {
+        return nativePass != null && nativePass.hookActive && nativePass.effectiveCap > 0
+                ? nativePass.effectiveCap : EnumCreatureType.monster.getMaxNumberOfCreature() * 289 / 256;
     }
 
     private void admit(EntityPlayer player) {
@@ -116,9 +190,7 @@ public final class AerialEcology {
             reject("Admission roll missed");
             return;
         }
-        int hostileCap = nativePass != null && nativePass.hookActive && nativePass.effectiveCap > 0
-                ? nativePass.effectiveCap : EnumCreatureType.monster.getMaxNumberOfCreature() * 289 / 256;
-        int room = populationRoom(player, hostileCap);
+        int room = populationRoom(player, ordinaryCap(nativePass));
         if (room == 0) {
             reject("Aerial or ordinary hostile cap");
             return;
@@ -214,6 +286,8 @@ public final class AerialEcology {
     private void finish(String reason) {
         encounter.finish(reason);
         encounter = null;
+        if (lunar) lunarStatus = "Ended: " + reason;
+        lunar = false;
         status = "Encounter cooldown";
         lastEnd = reason;
     }
@@ -222,7 +296,7 @@ public final class AerialEcology {
 
     public static final class Snapshot {
         public final double height, exposure;
-        public final String band, status, lastAttempt, lastEnd, membership;
+        public final String band, status, lastAttempt, lastEnd, membership, lunarStatus;
         public final int cooldownSeconds, checkSeconds, admissions, activity, chance, loadedPredators, localHostiles;
         public final int placementTries, activeMembers, attackerId, gapTicks;
 
@@ -232,6 +306,7 @@ public final class AerialEcology {
             exposure = ecology.exposure.exposure;
             band = ecology.exposure.band.name();
             status = ecology.status;
+            lunarStatus = ecology.lunarStatus;
             lastAttempt = ecology.lastAttempt;
             lastEnd = ecology.lastEnd;
             cooldownSeconds = ecology.state == null ? 0 : ecology.state.cooldownSeconds;

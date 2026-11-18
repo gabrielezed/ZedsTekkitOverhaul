@@ -9,6 +9,7 @@ import net.minecraft.src.MathHelper;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 
 /** A single predator with server-owned steering, commitment and contact. */
 public final class EntityAerialPredator extends EntityFlying implements IMob {
@@ -279,11 +280,12 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         double altitude = limitAltitude(playerCenter(target) + 8 + ring * 1.5);
         double offset = Math.atan2(posZ - target.posZ, posX - target.posX);
         double range = horizontalRange(target.posX, target.posZ);
-        boolean turnAvailable = encounter == null || encounter.diveAvailable();
+        boolean turnAvailable = !JetpackWeather.LOCAL.protects(target) && (encounter == null || encounter.diveAvailable());
         if (stateTicks < 26 || !turnAvailable || stateTicks < restageUntil || range < 6) {
             double angle = offset + (range < 6 ? 0.22 : 0.82);
             double radius = encounter == null ? 10 : 10 + lane * 1.1;
-            diveStatus = turnAvailable ? "Repositioning" : "Waiting for flock turn";
+            diveStatus = turnAvailable ? "Repositioning"
+                    : JetpackWeather.LOCAL.protects(target) ? "Pilot recovering from jetpack fault" : "Waiting for flock turn";
             steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
             return;
         }
@@ -353,6 +355,11 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void prepare() {
+        if (JetpackWeather.LOCAL.protects(target)) {
+            lastDiveRejection = "Pilot recovering from jetpack fault";
+            recover();
+            return;
+        }
         double endX = leadX(), endY = leadY(), endZ = leadZ();
         if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), playerCenter(target) + 5)), endZ);
         else blend(0, 0, 0);

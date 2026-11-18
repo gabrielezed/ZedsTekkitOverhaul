@@ -59,7 +59,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                          boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
                          int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
                          boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds,
-                         boolean electricJetpackWeather) {
+                         boolean electricJetpackWeather, boolean lunarAerialEncounters) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
@@ -67,7 +67,9 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
-        aerialEcology = new AerialEcology(naturalAerialEncounters, aerialEncounterCooldownSeconds, territory, naturalSpawning);
+        aerialEcology = new AerialEcology(naturalAerialEncounters, lunarAerialEncounters, aerialEncounterCooldownSeconds,
+                territory, naturalSpawning);
+        assault.attachAerialEcology(aerialEcology);
         JetpackWeather.LOCAL.configure(electricJetpackWeather);
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);

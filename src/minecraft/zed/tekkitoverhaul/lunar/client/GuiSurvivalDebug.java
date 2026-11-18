@@ -174,9 +174,11 @@ final class GuiSurvivalDebug extends GuiScreen {
         int skeletons = 0;
         for (Spawn spawn : assault.spawns) if ("SKELETON".equals(spawn.mob)) skeletons++;
         int spawned = assault.spawns.size();
-        append(rows, "Assault spawns: " + spawned + "/" + assault.budget + " | Skeletons: " + skeletons
+        append(rows, "Ground spawns: " + spawned + "/" + (assault.budget - assault.aerialAllocation) + " | Skeletons: " + skeletons
                 + " | Zombies: " + (spawned - skeletons), width);
-        append(rows, "Active assault: " + assault.active + "/" + assault.activeCap + " | Peak: " + assault.peakActive
+        if (assault.aerialAllocation > 0) append(rows, "Lunar air slots: " + assault.aerialAllocation
+                + " | Active: " + assault.activeAerial, width);
+        append(rows, "Active assault: " + (assault.active + assault.activeAerial) + "/" + assault.activeCap + " | Peak: " + assault.peakActive
                 + " | Nearby hostiles: " + (assault.localHostiles < 0 ? "N/A" : assault.localHostiles + "/" + assault.localCap), width);
         append(rows, "Deferred: " + assault.deferred + " | Skipped: " + assault.skipped, width);
         append(rows, "Deaths observed: " + assault.observedDeaths + " | Removed: " + assault.removed

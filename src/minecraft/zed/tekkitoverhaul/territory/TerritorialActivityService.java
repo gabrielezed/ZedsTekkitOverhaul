@@ -103,6 +103,8 @@ public final class TerritorialActivityService {
         public final String status;
         public final int dimension, count, capacity, presence, returns, localActivity;
         public final long clock, observationAge;
+        public final int presenceDecayTicks = TerritorialActivity.PRESENCE_DECAY;
+        public final int returnDecayTicks = TerritorialActivity.RETURN_DECAY;
         public final String lastEviction;
         public final ThreatAssessment threat;
 

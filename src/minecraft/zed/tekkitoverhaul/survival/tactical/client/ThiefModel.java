@@ -34,7 +34,10 @@ final class ThiefModel extends EnderkinModel {
         float step = wave(phase) * walk;
         float lift = wave(phase - 1.25F) * walk;
         float scan = wave(age * 0.19F + wave(age * 0.082F)) * (1 - walk);
-        float reach = pulse(((EntityThief) mob).getSwingProgress(partialTick), 0.24F, 0.92F);
+        EntityThief thief = (EntityThief) mob;
+        float reach = Math.max(thief.theftPose(partialTick),
+                pulse(thief.getSwingProgress(partialTick), 0.24F, 0.92F));
+        float clutch = thief.carryingLoot() ? 1 : 0;
         body.rotationPointY = 10 + walk * 0.38F - Math.abs(step) * 0.57F;
         body.rotateAngleZ = 0.028F + step * 0.049F;
         chest.rotateAngleX = 0.34F + walk * 0.15F + reach * 0.14F;
@@ -46,8 +49,8 @@ final class ThiefModel extends EnderkinModel {
         rightShin.rotateAngleX = 0.09F + Math.max(0, -lift) * 0.67F;
         leftShin.rotateAngleX = 0.09F + Math.max(0, lift) * 0.67F;
         rightArm.rotateAngleX = -0.37F - step * 0.57F - reach * 1.22F;
-        leftArm.rotateAngleX = -0.10F + step * 0.63F + reach * 0.34F;
+        leftArm.rotateAngleX = -0.10F + step * (0.63F - clutch * 0.44F) + reach * 0.34F - clutch * 0.50F;
         rightHand.rotateAngleX = -0.38F + scan * 0.095F + reach * 0.29F;
-        leftHand.rotateAngleX = -0.49F - scan * 0.06F;
+        leftHand.rotateAngleX = -0.49F - scan * 0.06F - clutch * 0.62F;
     }
 }

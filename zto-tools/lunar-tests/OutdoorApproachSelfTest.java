@@ -23,6 +23,8 @@ final class OutdoorApproachSelfTest {
         check(surface, "unknown column", false, 12, 2);
         surface.mode = "blocked";
         check(surface, "closed boundary in the upper body space", false, 12, 2);
+        surface.mode = "tree";
+        check(surface, "walk around an isolated tree", true, 12, 2);
         System.out.println("Outdoor approach checks passed");
     }
 
@@ -31,7 +33,7 @@ final class OutdoorApproachSelfTest {
         if (OutdoorApproach.hasOpenApproaches(surface, x, 64, z, 0, 0) != expected) {
             throw new AssertionError(label);
         }
-        if (surface.samples > 3 * OutdoorApproach.RANGE) throw new AssertionError("column budget");
+        if (surface.samples > 3 * OutdoorApproach.COLUMN_BUDGET) throw new AssertionError("column budget");
     }
 
     private static final class Surface implements OutdoorApproach.Surface {
@@ -46,6 +48,7 @@ final class OutdoorApproachSelfTest {
             if (x >= 16 && ("slope".equals(mode) || "overhang".equals(mode))) return 65;
             if (x == 16 && "trench".equals(mode)) return 63;
             if (x == 16 && "missing".equals(mode)) return -1;
+            if (x == 16 && z == 2 && "tree".equals(mode)) return 69;
             return 64;
         }
 

@@ -21,6 +21,7 @@ final class GuiSurvivalDebug extends GuiScreen {
     private final LocalLunarCalendar local;
     private final World world;
     private final SurvivalDebugHud hud;
+    private final GuiScreen parent;
     private GuiButton overlayButton;
     private boolean historyPage;
     private int offset;
@@ -29,10 +30,11 @@ final class GuiSurvivalDebug extends GuiScreen {
     private List<String> historyRows = Collections.emptyList();
     private int historyWidth;
 
-    GuiSurvivalDebug(LocalLunarCalendar local, World world, SurvivalDebugHud hud) {
+    GuiSurvivalDebug(LocalLunarCalendar local, World world, SurvivalDebugHud hud, GuiScreen parent) {
         this.local = local;
         this.world = world;
         this.hud = hud;
+        this.parent = parent;
     }
 
     @Override
@@ -40,9 +42,11 @@ final class GuiSurvivalDebug extends GuiScreen {
         int x = left();
         controlList.add(new GuiButton(0, x, 24, 58, 20, "Overview"));
         controlList.add(new GuiButton(1, x + 62, 24, 58, 20, "History"));
-        overlayButton = new GuiButton(2, right() - 100, 24, 100, 20, overlayLabel());
-        controlList.add(overlayButton);
-        controlList.add(new GuiButton(3, right() - 56, height - 25, 56, 20, "Close"));
+        if (hud != null) {
+            overlayButton = new GuiButton(2, right() - 100, 24, 100, 20, overlayLabel());
+            controlList.add(overlayButton);
+        }
+        controlList.add(new GuiButton(3, right() - 68, height - 25, 68, 20, parent == null ? "Close" : "Debug Hub"));
     }
 
     @Override
@@ -56,7 +60,7 @@ final class GuiSurvivalDebug extends GuiScreen {
     @Override
     protected void actionPerformed(GuiButton button) {
         if (button.id == 3) {
-            mc.displayGuiScreen(null);
+            mc.displayGuiScreen(parent);
         } else if (button.id == 2) {
             hud.toggleOverlay();
             overlayButton.displayString = overlayLabel();
@@ -68,7 +72,9 @@ final class GuiSurvivalDebug extends GuiScreen {
 
     @Override
     protected void keyTyped(char character, int key) {
-        if (hud.isShortcut(key)) {
+        if (key == Keyboard.KEY_ESCAPE && parent != null) {
+            mc.displayGuiScreen(parent);
+        } else if (hud != null && hud.isShortcut(key)) {
             hud.consumeKeyEvent();
             mc.displayGuiScreen(null);
         } else if (key == Keyboard.KEY_PRIOR || key == Keyboard.KEY_NEXT) {

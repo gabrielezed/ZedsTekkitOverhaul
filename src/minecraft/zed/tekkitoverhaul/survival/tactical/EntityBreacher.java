@@ -16,6 +16,7 @@ public final class EntityBreacher extends TacticalHostile {
 
     private int nextRoute;
     private int nextMelee;
+    private int nextBlink;
     private int lastProgress;
     private double progressX;
     private double progressZ;
@@ -69,6 +70,18 @@ public final class EntityBreacher extends TacticalHostile {
         // A path may start inside a door's block cell while its panel still blocks collision.
         boolean route = reaches(path, target.posX, y, target.posZ);
         boolean stalled = ticksExisted - lastProgress >= 2 * ROUTE_INTERVAL;
+        if (visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
+            double[] landing = EnderkinBlink.elevatedLanding(this, target, 2.6D, 3);
+            boolean advanced = landing != null;
+            if (advanced) EnderkinBlink.move(this, landing[0], landing[1], landing[2], 6, 0.92F);
+            else if (Math.abs(y - boundingBox.minY) < 0.9D) advanced = EnderkinBlink.shift(this,
+                    Math.atan2(target.posZ - posZ, target.posX - posX), 2.25D, 6, 0.92F);
+            nextBlink = ticksExisted + (advanced ? 125 : ROUTE_INTERVAL);
+            if (advanced) {
+                lastProgress = ticksExisted;
+                return;
+            }
+        }
         if ((route && !stalled) || !pressure()) getNavigator().setPath(path, SPEED);
         else getNavigator().clearPathEntity();
     }

@@ -28,6 +28,9 @@ public final class AgentProbe {
                 rejectFingerprint("l", renderer, null, true);
                 byte[] gui = bytes(game.getInputStream(game.getEntry("vp.class")));
                 check(ZTOAgent.patchKnownClass("vp", gui, null, true, false) != null, "pinned mouse patch");
+                byte[] spawner = bytes(game.getInputStream(game.getEntry("vf.class")));
+                check(ZTOAgent.patchKnownClass("vf", spawner, null, false, false) != null, "pinned natural spawner");
+                rejectFingerprint("vf", spawner, null, false);
             }
             System.out.println("PASS standalone startup and pinned bytecode transformation on Java " + System.getProperty("java.version"));
             return;

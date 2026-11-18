@@ -48,6 +48,17 @@ final class SaboteurModel extends EnderkinModel {
             rightHand.rotateAngleX = -0.71F;
             leftHand.rotateAngleX = -0.48F;
             body.rotationPointY = 16.2F;
+        } else if (pose == EntitySaboteur.DISMANTLE) {
+            float turn = wave(age * 0.9F) * 0.24F;
+            body.rotateAngleX = 0.56F;
+            rightArm.rotateAngleX = -1.49F + turn;
+            leftArm.rotateAngleX = -1.49F - turn;
+            rightHand.rotateAngleX = -0.62F - turn;
+            leftHand.rotateAngleX = -0.62F + turn;
+        } else if (pose == EntitySaboteur.CARRY) {
+            body.rotateAngleX += 0.18F;
+            leftArm.rotateAngleX = -1.06F;
+            leftHand.rotateAngleX = -0.80F;
         } else if (pose == EntitySaboteur.DECOY) {
             rightArm.rotateAngleX = -1.85F + wave(age * 1.4F) * 0.17F;
             leftArm.rotateAngleX = 0.55F;

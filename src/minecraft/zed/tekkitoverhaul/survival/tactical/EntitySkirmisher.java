@@ -20,6 +20,7 @@ public final class EntitySkirmisher extends TacticalHostile {
     private int nextShot;
     private int nextMove;
     private int moveFailures;
+    private int nextBlink;
     private int side = 1;
     private float previousAimPose;
     private float aimPose;
@@ -69,6 +70,17 @@ public final class EntitySkirmisher extends TacticalHostile {
         }
         if (ticksExisted < nextMove) return;
         nextMove = ticksExisted + MOVE_INTERVAL;
+        if (visible && distanceSq < RANGE_SQ && ticksExisted >= nextBlink) {
+            double outward = Math.atan2(posZ - target.posZ, posX - target.posX);
+            double angle = outward + side * (distanceSq < RETREAT_SQ ? 0.65D : Math.PI / 2);
+            if (EnderkinBlink.shift(this, angle, 3.0D, 5, 1.25F)) {
+                nextBlink = ticksExisted + 105;
+                side = -side;
+                moveFailures = 0;
+                return;
+            }
+            nextBlink = ticksExisted + MOVE_INTERVAL;
+        }
         if (move(distanceSq, visible)) moveFailures = 0;
         else if (++moveFailures >= MAX_MOVE_FAILURES) disengage();
     }

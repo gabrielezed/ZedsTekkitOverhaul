@@ -9,6 +9,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.Predicate;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.function.ToIntBiFunction;
 
 /** Java startup entry point and bridge. Its signatures never link game classes. */
@@ -19,6 +23,11 @@ public final class ZTOAgent {
     private static volatile WeakReference<Predicate<Object>> mouse = new WeakReference<>(null);
     private static volatile WeakReference<ToIntBiFunction<Object, Integer>> moon = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> industry = new WeakReference<>(null);
+    private static volatile WeakReference<BiConsumer<Object, Boolean>> spawnStart = new WeakReference<>(null);
+    private static volatile WeakReference<BiFunction<Object, int[], Boolean>> spawnCap = new WeakReference<>(null);
+    private static volatile WeakReference<Predicate<Object>> spawnCandidate = new WeakReference<>(null);
+    private static volatile WeakReference<Consumer<Object>> spawnInserted = new WeakReference<>(null);
+    private static volatile WeakReference<UnaryOperator<Object>> spawnReplacement = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -45,7 +54,7 @@ public final class ZTOAgent {
         IndustrialHooks.Hook industrial = IndustrialHooks.find(name);
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
-        if (!inventory && !lunar && industrial == null) return null;
+        if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -57,6 +66,8 @@ public final class ZTOAgent {
         for (byte part : MessageDigest.getInstance("SHA-256").digest(bytes))
             hex.append(Integer.toHexString((part & 255) | 256).substring(1));
         String hash = hex.toString();
+        if (NaturalSpawnHook.TARGET.equals(name) && NaturalSpawnHook.SHA256.equals(hash))
+            return NaturalSpawnHook.patch(bytes);
         if (inventory && InventoryHook.SHA256.equals(hash)) return InventoryHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
@@ -75,6 +86,54 @@ public final class ZTOAgent {
     public static void registerMouse(Predicate<Object> callback) { mouse = new WeakReference<>(callback); }
     public static void registerMoon(ToIntBiFunction<Object, Integer> callback) { moon = new WeakReference<>(callback); }
     public static void registerIndustry(Predicate<Object> callback) { industry = new WeakReference<>(callback); }
+
+    public static void registerNaturalSpawning(BiConsumer<Object, Boolean> start,
+            BiFunction<Object, int[], Boolean> cap, Predicate<Object> candidate, Consumer<Object> inserted) {
+        spawnStart = new WeakReference<>(start);
+        spawnCap = new WeakReference<>(cap);
+        spawnCandidate = new WeakReference<>(candidate);
+        spawnInserted = new WeakReference<>(inserted);
+    }
+
+    public static boolean naturalSpawningActive(ClassLoader loader) {
+        return spawnCap.get() != null && installed(loader, NaturalSpawnHook.TARGET);
+    }
+
+    public static void registerNaturalSpawnReplacement(UnaryOperator<Object> callback) {
+        spawnReplacement = new WeakReference<>(callback);
+    }
+
+    public static Object naturalSpawnReplacement(Object entity, Object type) {
+        UnaryOperator<Object> callback = spawnReplacement.get();
+        return callback != null && hostile(type) ? callback.apply(entity) : entity;
+    }
+
+    public static void beginNaturalSpawning(Object world, boolean hostileEnabled) {
+        BiConsumer<Object, Boolean> callback = spawnStart.get();
+        if (callback != null) callback.accept(world, hostileEnabled);
+    }
+
+    public static boolean aboveNaturalCap(int count, int cap, Object world, Object type) {
+        BiFunction<Object, int[], Boolean> callback = spawnCap.get();
+        return callback != null && hostile(type) ? callback.apply(world, new int[] {count, cap}) : count > cap;
+    }
+
+    public static boolean allowNaturalCandidate(boolean vanilla, Object world, Object type) {
+        if (!vanilla || !hostile(type)) return vanilla;
+        Predicate<Object> callback = spawnCandidate.get();
+        return callback == null || callback.test(world);
+    }
+
+    public static void recordNaturalSpawn(boolean inserted, Object world, Object type) {
+        if (!inserted || !hostile(type)) return;
+        Consumer<Object> callback = spawnInserted.get();
+        if (callback != null) callback.accept(world);
+    }
+
+    private static boolean hostile(Object type) {
+        // Pinned acf declares monster as its first constant.
+        return ((Enum<?>) type).ordinal() == 0;
+    }
 
     public static boolean mouseActive(Class<?> type) {
         return mouse.get() != null && installed(type.getClassLoader(), InventoryHook.TARGET);

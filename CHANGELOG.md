@@ -1,5 +1,16 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.1 — Enderkin ecology and territorial survival
+
+- Sustained territorial activity increases ordinary hostile pressure. Activity persists across saves, decays during absence, and can shape lunar assault admission when enabled.
+- The Numpad 1 Debug Hub opens the Lunar Cycle, Survival & Assault, and Territorial Threat views. Read ordinary spawn counts separately from the threat recorded at lunar admission.
+- All five Enderkin have Creative spawn eggs and can appear in ordinary Overworld survival with the companion agent. Each role has distinct mobility, and exposed supported industry increases the chance of meeting a Saboteur.
+- The Tank uses telegraphed heavy strikes and can breach eligible walls on Hard when navigation stalls. Lunar placement can follow bounded routes around obstacles and beneath trees while retaining spawn clearance, cover, and population checks.
+- The Thief steals recoverable inventory items. Sneaking with a vanilla compass shows a temporary Ender Trail. The Saboteur can steal empty supported BuildCraft item pipes and retains its existing temporary disruption behavior.
+- The build stops before updating the published JARs if MCP reports a compile failure.
+
+[Gameplay and settings](docs/agents/survival-021-implementation.md) · [Integration evidence](docs/agents/survival-021-integration.md)
+
 ## 0.2.0-alpha.6 — Enderkin bestiary (visual prototype)
 
 - Add Tank and Thief Spawn Eggs for Creative inspection. The Tank has a broad, recessed silhouette and a weighted stride. The Thief has an asymmetric crouch, an alert idle pose and a quick reach.

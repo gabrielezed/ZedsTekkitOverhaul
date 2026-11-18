@@ -1,97 +1,55 @@
 # ZedsTekkitOverhaul
 
-A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2** that connects industry, alchemy and automation. Its singleplayer lunar calendar gives survival a rhythm of calm nights and occasional assaults.
+## Survival 0.2.1 · The Enderkin bestiary
 
-![Skirmisher and Breacher alongside a vanilla Enderman in Tekkit Dev](docs/agents/images/enderkin-polish-lineup-daylight.png)
+A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and five Enderkin turn familiar ground into a reason to prepare, fortify, and explore.
 
-## Current development build · 0.2.0-alpha.5
+![The five Enderkin in Survival 0.2.1: Skirmisher, Breacher, Tank, Thief and Saboteur](docs/agents/images/enderkin-021-lineup.png)
 
-The **Enderkin Saboteur** is available through a Creative spawn egg. It blinks to approach or evade and can briefly interrupt an exposed machine connection. A Survival player can interrupt its windup. [Changelog](CHANGELOG.md) · [Saboteur guide](docs/agents/survival-02-alpha5-saboteur.md)
+*The full bestiary, rendered from the same models and textures used in the game.*
 
-## Survival Foundations
-
-Full-moon assaults, lunar patrols and experimental Enderkin encounters give the Overworld a rhythm of preparation, danger and recovery. [Survival Foundations playtest and verification](docs/agents/survival-alpha8.md)
-
-| Under the full moon | At the door |
+| Enderkin | Encounter |
 | --- | --- |
-| ![Skirmisher charging an Ender Pulse beneath the full moon in a torch-lit arena](docs/agents/images/alpha8-mixed-pulse.png) | ![Breacher striking a closed wooden door](docs/agents/images/enderkin-breacher-pressure.png) |
-| A Skirmisher winds up its Ender Pulse during a mixed lunar assault. | A Breacher pressures the entrance and leaves the door intact. |
+| **Skirmisher** | Repositions with short blinks and telegraphs a ranged Ender Pulse. |
+| **Breacher** | Closes distance, pressures entrances, and can reach low platforms. |
+| **Tank** | Commits to heavy frontal strikes. On Hard it can open localized breaches in suitable walls when pursuit stalls. |
+| **Thief** | Steals an item from your inventory or hotbar and flees. Recover the loot by intercepting it or finding its cache. Sneak with a vanilla compass for a temporary **Ender Trail** toward the last recorded location. |
+| **Saboteur** | Briefly disrupts supported machinery. It can also dismantle an exposed, empty BuildCraft stone or cobblestone item pipe and flee with the recoverable component. |
 
-**0.2.0-alpha.4 · Hard assault pressure.** Full-moon assaults on Hard mix skeletons with zombies that can break wooden doors under vanilla rules. The independent Enderkin experiment leaves room in the active population for selected later-wave roles. [Balance and playtest](docs/agents/survival-02-alpha4.md)
+All five have Creative spawn eggs and can appear in ordinary Overworld Survival with ZTOAgent. Press **Numpad 1** in singleplayer to open the Debug Hub and inspect current territorial activity, ordinary hostile pressure, and lunar encounter decisions. [Survival guide](docs/agents/survival-021-implementation.md) · [Changelog](CHANGELOG.md) · [Integration results](docs/agents/survival-021-integration.md)
 
 ## Gameplay
 
-### World and automation
-
-- **Lunar Cycle** persists eight phases per single-player save. New worlds begin at new moon, and existing worlds retain their initial vanilla phase. ZTOAgent displays the calendar phase in the native sky. [Lunar Cycle guide](docs/agents/lunar-cycle-implementation.md)
-- **Lunar Player Assault** stages three waves of vanilla mobs when a full-moon night begins naturally in the local Overworld. The default budget is 15 and the active assault cap is 8. Listen for a cave sound at dusk, then fight in the open, prepare a shelter, or retreat. [Rules, tuning and acceptance](docs/agents/survival-assault-alpha2.md)
-- **Lunar Patrols** add up to two vanilla hostiles on the first quarter and three on the waxing gibbous. Patrols and assaults can spawn in lit fields with open approaches. Roofs and physical boundaries can keep special encounters outside. [Outdoor pressure and fortification](docs/agents/survival-alpha6.md)
-- **Mob equipment** gives selected lunar Zombies and Skeletons visible, persistent equipment. Zombie swords increase melee damage, armor provides protection, and Skeletons retain their native bow. Lunar loadouts carry no added loot. [Encounter loadout rules](docs/agents/survival-alpha5.md)
-- **Enderkin prototypes** include the Skirmisher, which casts a violet Ender Pulse, and the Breacher, which strikes closed barriers without breaking them. Both have Creative eggs. An off-by-default option lets them replace selected slots in lunar encounters. [Configuration and playtest](docs/agents/survival-alpha8.md)
-- **Hopper** adds five persistent slots, directional item transfer, loose-item pickup, redstone locking and a dedicated GUI. The backport includes support for selected IC2 and BuildCraft inventory interactions. [Asset setup and compatibility](docs/engineering/hopper-backport.md)
-- **Fractional distillation** uses an IC2 LV heater to process oil, with BuildCraft oil and water intake, four placeable petroleum fractions and live component panels. [Distillation guide](docs/agents/distillation.md)
-
-### Alchemy and energy
-
-- **Alchemical Converter** draws EMC from adjacent EE2 collectors and supplies the IC2 network on free faces. Right-click with an empty hand to see its buffer and connections. [Converter guide](docs/engineering/alchemical-power-v1.md)
-- **EE2 fuels** can power IC2 generators. **EMC profiles** let you audit and override values for supported items across the pack. [EMC profiles](docs/engineering/emc-profile.md) · [Coverage audit](docs/engineering/emc-coverage-audit.md)
-
-### Inventory
-
-- **Creative inventory backport** adds tabs, search and a player inventory view. The **1.2.5** tab opens the classic screen, and **F6** restores the backport by default. [Asset setup and controls](docs/engineering/creative-inventory-backport.md)
-- **Inventory tools** add recipe preparation and, with ZTOAgent, left and right drag distribution and Shift-click armor quick equip in supported inventories. [Inventory gestures and slot policy](docs/engineering/inventory-drag.md)
+- **Territorial threat** raises the ordinary hostile cap with sustained activity. Activity decays while you are away, and ordinary spawning still checks terrain and lighting.
+- **Lunar Cycle** persists eight phases per save. Full-moon assaults and smaller patrols occur on natural lunar boundaries. Terrain, cover, and available population space shape each encounter. [Lunar Cycle](docs/agents/lunar-cycle-implementation.md)
+- **Industry and alchemy** include directional Hoppers, IC2-powered fractional distillation with BuildCraft connections, and an Alchemical Converter that feeds IC2 from EE2 collectors. [Hopper](docs/engineering/hopper-backport.md) · [Distillation](docs/agents/distillation.md) · [Alchemical power](docs/engineering/alchemical-power-v1.md) · [EMC profiles](docs/engineering/emc-profile.md)
+- **Inventory and crafting** include a Creative inventory with tabs and search, recipe preparation, drag distribution, and Shift-click armor equip in supported screens. [Creative inventory](docs/engineering/creative-inventory-backport.md) · [Inventory gestures](docs/engineering/inventory-drag.md)
 
 ## Install on Tekkit Classic
 
-Use **Tekkit Classic 3.1.2** with **Java 8**. To install both matching build artifacts in the isolated **Tekkit Dev** profile, close Prism and run the installer from the workspace root. It installs `ZedsTekkitOverhaul.jar` and registers `ZTOAgent.jar` as a Prism-managed component. Prism 11.1.1 adds one JVM agent argument at launch. [Deployment guide](docs/deploy-prism.md)
+Use **Tekkit Classic 3.1.2** and **Java 8**. Close Prism and Minecraft, then install the two matching build artifacts into **Tekkit Dev** from the workspace root.
 
 ```powershell
 .\zto-tools\install-zto-prism.ps1 -Instance "$env:APPDATA\PrismLauncher\instances\Tekkit Dev"
 ```
 
-ZTOAgent enables inventory gestures, custom moon rendering and direct sabotage of supported BuildCraft, IC2, CompactSolars, RedPower and EE2 machines. Installing just `ZedsTekkitOverhaul.jar` in `mods` provides the Saboteur and its native interactions with the Hopper, Distillation Receiver, RedPower Transposer layouts and Alchemical Converter. [Supported layouts](docs/agents/saboteur-industrial.md)
+The installer adds `ZedsTekkitOverhaul.jar` to the instance and registers `ZTOAgent.jar` as a managed Prism component. The agent enables territorial ordinary spawning, natural Enderkin substitutions, custom moon rendering, inventory gestures, and supported direct industrial hooks. [Installation and staging](docs/deploy-prism.md)
 
-The alpha.5 build passed headless hook and pack linkage checks. Live verification of the inventory gestures, rendered moon and restored industrial throughput is pending in an input-isolated Tekkit client. [Compatibility acceptance](docs/agents/compatibility-acceptance.md)
+Edit `minecraft/config/ZedsTekkitOverhaul.cfg` with Minecraft closed to tune territorial pressure, ordinary Enderkin spawning, and lunar encounters. [Settings and migration](docs/agents/configuration.md)
 
 ## Build from source
 
-Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, **JDK 8** and the legacy ModLoader API. MCP compiles with Forge **3.4.9.171**, while Tekkit Dev runs pack Forge **3.3.8.164** and FML **2.2.106.176**. From the MDK root, with Prism and Minecraft closed, run the deployment script.
+Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, and **JDK 8**. The development environment uses Forge **3.4.9.171**. The supported Tekkit pack runs Forge **3.3.8.164** and FML **2.2.106.176**.
 
 ```powershell
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script writes both artifacts to `dist-zto` and installs them in **Tekkit Dev** by default. Set `ZTO_PRISM_MODS` to an existing staging mods directory to build without editing a Prism profile. [Build and staging details](docs/deploy-prism.md)
-
-### Create an assault playtest world
-
-With Tekkit Dev closed and the MCP client compiled, run the generator.
-
-```powershell
-.\zto-tools\new-assault-playtest.ps1
-```
-
-Open **Lunar Assault - Playtest** in Normal difficulty. It starts in Survival on open terrain with a stone sword, bow, arrows, leather armor, food and shelter supplies. The full-moon assault is due in about 1 minute 50 seconds at 20 TPS. Use `-Name 'Lunar Assault - Shelter'` to create a separate trial. [Setup and playtest checklist](docs/agents/survival-assault-alpha2.md#owner-playtest-world)
-
-### Try mob equipment
-
-The opt-in viewing pen in **Tekkit Dev** puts equipped Zombies and Skeletons beside ordinary ones in a marked disposable save. Use the fixture setup to inspect the gear, observe combat and try Save and Quit followed by reopening the world. [Disposable viewing pen setup](docs/agents/MOB_EQUIPMENT_BACKPORT_SPEC.md#disposable-viewing-pen)
-
-### Optional features
-
-- **Configuration:** Edit `minecraft/config/ZedsTekkitOverhaul.cfg` while the game is closed. Alpha.8 imports settings and registry IDs on first startup. [Settings and migration](docs/agents/configuration.md)
-- **Lunar Debug:** set `lunarDebugKey=67` in `config/ZedsTekkitOverhaul.cfg` for F9. The default `0` disables the shortcut. Optionally set `lunarVerboseLogging=true` for transition logs. Restart after changing these settings.
-- **Lunar encounter settings** are in the same config. Use `lunarPatrols=false` to disable patrols, `playerAssault=false` to disable full-moon assaults, or `lunarOutdoorLightPressure=false` to restore alpha.5 placement. Older configs with `assaultSpawnBudget=6` need an explicit change to 15 to use the current default. Set `survivalDebugHud=true` to see encounter timing, insertions and placement constraints with F10. Restart after editing the config. [Patrols](docs/agents/lunar-pressure.md) · [Assault settings](docs/agents/survival-assault-alpha2.md#tuning-and-compatibility) · [Outdoor placement](docs/agents/survival-alpha6.md)
-- **Dev Bridge diagnostics** run over authenticated loopback. Add `-Dzto.dev=true -Dzto.devBridge.enabled=true` to Tekkit Dev. Give `zto-tools/zed-dev.ps1` the discovery path from the log to query the clock, loaded blocks, inventory, supported machines and lunar transitions. Keep the discovery file private. [Diagnostics guide](docs/agents/dev-bridge.md)
-- **Opt-in acceptance automation** additionally requires `-Dzto.devBridge.testing=true` and a marked disposable save. Run `zto-tools/zed-test.ps1 list` to discover scenarios and the current `singleplayer-core` suite. Each run checks the candidate JAR hash and writes a JSON report. [Setup and commands](docs/agents/test-automation.md) · [Acceptance matrix](docs/agents/singleplayer-acceptance.md)
-
-**Important:** the original production Tekkit mod JARs are obfuscated. Placing IC2/EE2 release JARs directly into the deobfuscated MCP runtime can cause class-loading failures. Test full mod integration in the separate PrismLauncher instance; see [environment notes](docs/agents/environment.md).
+The script places both JARs in `dist-zto` and installs them to **Tekkit Dev** by default. Set `ZTO_PRISM_MODS` to an existing staging directory to build outside the Prism profile. Keep the original obfuscated Tekkit mod JARs in the separate pack runtime. [Environment guide](docs/agents/environment.md)
 
 ## Project resources
 
-Original source and assets live under `src/minecraft/zed/`. Build and test scripts live under `zto-tools/`. Minecraft, the MDK and third-party mod archives are distributed separately.
-
-- [Contribution and agent instructions](AGENTS.md)
-- [Architecture and testing handbook](docs/agents/README.md)
-- [Tekkit Classic 3.1.2 API reference](docs/reference/tekkit-classic-3.1.2/README.md)
-- [Asset credits](CREDITS.md)
+- [Project vision](PROJECT_VISION.md) and [contributor handbook](docs/agents/README.md)
+- [Survival playtest checklist](docs/agents/survival-021-integration.md#owner-verification) and [compatibility evidence](docs/agents/compatibility-acceptance.md)
+- [Developer diagnostics and disposable-world testing](docs/agents/test-automation.md)
+- [Tekkit Classic API reference](docs/reference/tekkit-classic-3.1.2/README.md) and [asset credits](CREDITS.md)

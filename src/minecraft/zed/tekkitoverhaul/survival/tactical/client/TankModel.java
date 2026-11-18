@@ -31,9 +31,10 @@ final class TankModel extends EnderkinModel {
         float step = wave(phase) * walk;
         float transfer = wave(phase - 1.2F) * walk;
         float breath = wave(age * 0.13F) * (1 - walk);
-        float swing = ((EntityTank) mob).getSwingProgress(partialTick);
-        float load = pulse(swing, 0.26F, 0.48F);
-        float strike = pulse(swing, 0.55F, 1.0F);
+        float pose = ((EntityTank) mob).heavyPose(partialTick);
+        float load = clamp(pose / 17F, 0, 1) * clamp((EntityTank.WINDUP - pose) / 4F, 0, 1);
+        float strike = clamp((pose - EntityTank.WINDUP + 4F) / 4F, 0, 1)
+                * clamp((EntityTank.WINDUP + 23F - pose) / 23F, 0, 1);
         body.rotationPointY = 8 + (0.22F - Math.abs(step) * 0.8F) * walk;
         body.rotateAngleZ = transfer * 0.044F;
         chest.rotateAngleX = 0.17F + breath * 0.022F - load * 0.16F + strike * 0.20F;

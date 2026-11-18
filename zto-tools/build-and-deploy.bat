@@ -85,18 +85,19 @@ call "zto-tools\prepare-buildcraft-dev-stubs.bat"
 if errorlevel 1 goto :fail
 call "zto-tools\prepare-ee2-dev-stubs.bat"
 if errorlevel 1 goto :fail
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-zto-agent.ps1"
-if errorlevel 1 goto :fail
-
 echo [ZTO] 1/4 - Compiling with MCP...
 if not exist "dist-zto\" mkdir "dist-zto"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%"
 if errorlevel 1 goto :fail
-call "recompile.bat"
-if errorlevel 1 (
-    echo [ZTO] ERROR: recompile.bat failed.
-    goto :fail
-)
+call "recompile.bat" > "dist-zto\mcp-compile.log" 2>&1
+set "MCP_EXIT=%ERRORLEVEL%"
+type "dist-zto\mcp-compile.log"
+if not "%MCP_EXIT%"=="0" goto :compile_failed
+rem MCP 6.2 catches javac errors internally. Its wrapper can return success with partial classes.
+findstr /L /C:"== ERRORS FOUND ==" /C:"FATAL ERROR" "dist-zto\mcp-compile.log" >nul
+if not errorlevel 1 goto :compile_failed
+findstr /B /L /C:"- Done in " "dist-zto\mcp-compile.log" >nul
+if errorlevel 1 goto :compile_failed
 
 rem Remove only previously reobfuscated ZTO classes, never vanilla/Forge code.
 if exist "reobf\minecraft\zed\" (
@@ -117,6 +118,9 @@ if not exist "reobf\minecraft\zed\tekkitoverhaul\mod_ZedsTekkitOverhaul.class" (
     echo [ZTO] ERROR: Mod entry point is missing from reobfuscated output.
     goto :fail
 )
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-zto-agent.ps1"
+if errorlevel 1 goto :fail
 
 if not exist "dist-zto\" mkdir "dist-zto"
 if not exist "dist-zto\" (
@@ -241,6 +245,8 @@ echo [ZTO] Close Minecraft before starting the updated build.
 popd
 exit /b 0
 
+:compile_failed
+echo [ZTO] ERROR: MCP did not complete compilation. See dist-zto\mcp-compile.log.
 :fail
 echo.
 echo [ZTO] OPERATION STOPPED. The new JAR was not deployed successfully.

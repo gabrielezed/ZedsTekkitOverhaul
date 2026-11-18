@@ -16,7 +16,18 @@ final class LoadedSurface implements OutdoorApproach.Surface {
         if (x < -29999999 || x >= 29999999 || z < -29999999 || z >= 29999999
                 || !world.checkChunksExist(x - 1, 0, z - 1, x + 1, 255, z + 1)) return -1;
         int y = world.getHeightValue(x, z);
-        return y >= 1 && y <= 253 && world.isBlockSolidOnSide(x, y - 1, z, 1) ? y : -1;
+        if (y < 1 || y > 253) return -1;
+        if (world.isBlockSolidOnSide(x, y - 1, z, 1)) return y;
+        // The heightmap puts the floor on top of a tree canopy. For approach routes only,
+        // look beneath leaves for actual walkable ground. Never search through a roof or water.
+        if (world.getBlockId(x, y - 1, z) != Block.leaves.blockID) return -1;
+        int bottom = Math.max(1, y - 9);
+        for (int floor = y - 2; floor >= bottom; floor--) {
+            if (world.getBlockMaterial(x, floor, z).isLiquid()) return -1;
+            if (world.isBlockSolidOnSide(x, floor, z, 1))
+                return clear(x, floor + 1, z) && clear(x, floor + 2, z) ? floor + 1 : -1;
+        }
+        return -1;
     }
 
     @Override

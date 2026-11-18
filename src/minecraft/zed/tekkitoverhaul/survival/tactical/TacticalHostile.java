@@ -56,10 +56,16 @@ public abstract class TacticalHostile extends EntityMob {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
+        if (independentTactics()) {
+            super.updateAITasks();
+            updateAttackPose();
+            return;
+        }
         if (target == null && ticksExisted >= nextTargetSearch) {
             nextTargetSearch = ticksExisted + 20;
             EntityPlayer player = worldObj.getClosestVulnerablePlayerToEntity(this, TARGET_RANGE);
-            if (valid(player) && loadedBetween(player) && canEntityBeSeen(player)) target = player;
+            if (valid(player) && loadedBetween(player) && (canEntityBeSeen(player) || canAcquireUnseen(player)))
+                target = player;
         }
 
         if (target != null) {
@@ -130,6 +136,10 @@ public abstract class TacticalHostile extends EntityMob {
     }
 
     protected void idle() {}
+
+    protected boolean canAcquireUnseen(EntityPlayer player) { return false; }
+
+    protected boolean independentTactics() { return false; }
 
     protected void updateAttackPose() {}
 

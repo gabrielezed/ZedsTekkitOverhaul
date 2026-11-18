@@ -52,25 +52,26 @@ $configText = [regex]::Replace($configText, '(?m)^JvmArgs=[^\r\n]*', {
     if ($clean -match $legacyName) { throw 'Remove the previous ZTO agent entry in this instance before installing.' }
     $clean
 })
-$pack.components = @($pack.components | Where-Object uid -ne $uid) + @([ordered]@{
-    uid = $uid; version = '0.2.0-alpha.5'; cachedName = 'ZTO Agent'
-})
-$patchSpec = [ordered]@{
-    formatVersion = 1; uid = $uid; name = 'ZTO Agent'; version = '0.2.0-alpha.5'
-    '+agents' = @([ordered]@{
-        name = 'org.zeds.tekkitoverhaul:agent:0.2.0-alpha.5'
-        'MMC-hint' = 'local'
-        'MMC-filename' = 'ZTOAgent.jar'
-    })
-}
-
 $agentSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZTOAgent.jar')).Path
 $modSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZedsTekkitOverhaul.jar')).Path
 $agentBuild = Get-Content -LiteralPath "$agentSource.build.json" -Raw | ConvertFrom-Json
 $modBuild = Get-Content -LiteralPath "$modSource.build.json" -Raw | ConvertFrom-Json
-if ($agentBuild.productVersion -ne $patchSpec.version -or $modBuild.productVersion -ne $patchSpec.version -or
+$version = $modBuild.productVersion
+if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' -or
+    $agentBuild.productVersion -cne $version -or
     $agentBuild.commit -ne $modBuild.commit -or $agentBuild.buildTimestampUtc -ne $modBuild.buildTimestampUtc) {
     throw 'Expected the mod and agent from the same verified build.'
+}
+$pack.components = @($pack.components | Where-Object uid -ne $uid) + @([ordered]@{
+    uid = $uid; version = $version; cachedName = 'ZTO Agent'
+})
+$patchSpec = [ordered]@{
+    formatVersion = 1; uid = $uid; name = 'ZTO Agent'; version = $version
+    '+agents' = @([ordered]@{
+        name = "org.zeds.tekkitoverhaul:agent:$version"
+        'MMC-hint' = 'local'
+        'MMC-filename' = 'ZTOAgent.jar'
+    })
 }
 function Assert-Archive([string]$Path, [string]$Expected) {
     $hash = [Security.Cryptography.SHA256]::Create()

@@ -36,6 +36,7 @@ import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
+import zed.tekkitoverhaul.survival.tactical.client.ThiefCompass;
 
 /** ModLoader 1.2.5 entry point: bootstrap and callbacks only. */
 public class mod_ZedsTekkitOverhaul extends BaseMod {
@@ -53,6 +54,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     private final EmcIntegration emc = new EmcIntegration();
     private final CreativeInventoryHook creativeInventory = new CreativeInventoryHook();
     private final CraftingUx craftingUx = new CraftingUx();
+    private final ThiefCompass thiefCompass = new ThiefCompass();
     private int petroleumModel;
 
     @Override
@@ -81,7 +83,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
-                settings.experimentalTerritorialThreat);
+                settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent,
+                settings.naturalEnderkinSpawning);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);
@@ -125,6 +128,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         emc.onGameTick(minecraft.mcDataDir, settings.emcProfile);
         zed.tekkitoverhaul.hopper.dev.HopperAcceptance.tick(minecraft);
         MobEquipmentFixture.tick(minecraft);
+        thiefCompass.tick(minecraft);
         return true;
     }
 

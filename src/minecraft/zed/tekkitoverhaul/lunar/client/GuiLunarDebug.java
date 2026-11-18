@@ -13,6 +13,7 @@ import zed.tekkitoverhaul.lunar.LunarSnapshot;
 final class GuiLunarDebug extends GuiScreen {
     private final LocalLunarCalendar local;
     private final World world;
+    private final GuiScreen parent;
     private GuiTextField delta;
     private GuiButton select;
     private GuiButton reset;
@@ -23,9 +24,10 @@ final class GuiLunarDebug extends GuiScreen {
     private String jumpTicks = "+24000";
     private int historyOffset;
 
-    GuiLunarDebug(LocalLunarCalendar local, World world) {
+    GuiLunarDebug(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
         this.world = world;
+        this.parent = parent;
     }
 
     @Override
@@ -44,6 +46,7 @@ final class GuiLunarDebug extends GuiScreen {
         delta.setMaxStringLength(20);
         delta.setText(jumpTicks);
         controlList.add(new GuiButton(5, left + 156, controls + 42, 124, 20, "Simulate time jump"));
+        if (parent != null) controlList.add(new GuiButton(6, width - 74, 4, 68, 20, "Debug Hub"));
     }
 
     @Override
@@ -63,7 +66,9 @@ final class GuiLunarDebug extends GuiScreen {
 
     @Override
     protected void keyTyped(char character, int key) {
-        if (key == Keyboard.KEY_PRIOR || key == Keyboard.KEY_NEXT) {
+        if (key == Keyboard.KEY_ESCAPE && parent != null) {
+            mc.displayGuiScreen(parent);
+        } else if (key == Keyboard.KEY_PRIOR || key == Keyboard.KEY_NEXT) {
             historyOffset = Math.max(0, Math.min(5, historyOffset + (key == Keyboard.KEY_PRIOR ? -1 : 1)));
         } else if (key == Keyboard.KEY_ESCAPE || !delta.textboxKeyTyped(character, key)) {
             super.keyTyped(character, key);
@@ -79,6 +84,10 @@ final class GuiLunarDebug extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) {
+        if (button.id == 6) {
+            mc.displayGuiScreen(parent);
+            return;
+        }
         LunarCalendar calendar = local.authority(world);
         if (calendar == null) {
             result = "Rejected: lunar authority unavailable";
@@ -140,7 +149,7 @@ final class GuiLunarDebug extends GuiScreen {
         drawDefaultBackground();
         int x = 7;
         int y = 5;
-        line("Lunar Debug | Local single-player authority", x, y);
+        line("Lunar Cycle Debug", x, y);
         line("Save: " + local.storageStatus(), x, y += 10);
         line("Renderer: " + LunarMoonRenderer.status(), x, y += 10);
         LunarSnapshot view = local.snapshot(world);

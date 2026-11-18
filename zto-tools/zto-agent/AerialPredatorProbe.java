@@ -145,6 +145,9 @@ public final class AerialPredatorProbe {
         spawned.A();
         yr skeletalEgg = yr.e[22266];
         aan skeletalStack = new aan(skeletalEgg);
+        ArrayList<aan> creative = new ArrayList<aan>();
+        skeletalEgg.addCreativeItems(creative);
+        check(creative.size() == 1 && creative.get(0).c == 22266, "native Creative enumeration includes the egg");
         check(names.containsValue("Skelebird Spawn Egg") && skeletalEgg.c()
                 && skeletalEgg.a(skeletalStack, player, world, 296, 3, 288, 1) && skeletalStack.a == 1,
                 "Skelebird has its own localized layered Creative egg");
@@ -310,10 +313,12 @@ public final class AerialPredatorProbe {
         waitFor(world, ground, Flight.DIVE, 230);
         waitFor(world, ground, Flight.DISENGAGE, 110);
         check(ground.diveCommitments() == 1 && "attack budget".equals(ground.lastExit()), "Hard ground hunt spends one turn");
+        ground.c(272, 24, 288.5, -90, 0);
+        ground.r = ground.s = ground.t = 0;
         check(ground.a(md.a(player), 20) && ground.flight() == Flight.FALL
                 && sounds.contains("zto.skelebird.death"), "ordinary damage kills Skelebird and emits its death cue");
         double deathY = ground.p;
-        for (int i = 0; i < 10; ++i) world.a(ground, true);
+        for (int i = 0; i < 15; ++i) world.a(ground, true);
         check(ground.p < deathY - 1, "Skelebird loses lift on death");
         System.out.println("PASS Skelebird registry, egg, native WAV, shallow pass, warning-time evade, contact, ground limits, cover, recovery and NBT");
     }

@@ -70,7 +70,7 @@ The stabilization probe ran 40 consecutive IC2 powered ticks from Y=68 with vani
 
 7. With the HUD controls enabled, open **Numpad 1 → Survival & Assault** in a disposable save. Turn the overlay ON, exit the client completely and reopen it. Repeat with OFF. Open another save and verify the preference follows the client profile.
 
-## Planned after PR #37
+## Follow-up
 
 - See the [Skelebird development guide](survival-022-skelebird.md) for the second species and shared nocturnal encounter rules.
 - Explore occasional Fugl hunts for passive animals and selected hostile mobs. Bound selection, pursuit and frequency, protect enclosed farms and avoid recurring combat chains.

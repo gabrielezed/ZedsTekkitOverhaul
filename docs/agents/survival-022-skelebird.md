@@ -33,6 +33,15 @@ The six original sound clips are two ambient rattles, a warning, the air and bon
 
 Run `zto-tools/test-config.ps1`, build with `zto-tools/build-and-deploy.bat`, then run `zto-tools/test-zto-agent.ps1 -Pack`. The pack probes use pinned Minecraft, Forge and IC2 classes and disposable worlds. They cover both registry names and egg placement, atlas and WAV loading, shallow movement, warning and impact, dodge and shelter, recovery, ground hunting, difficulty, Territorial Activity, flock turns, the shared cap, native NBT and full-moon allocation.
 
+### Development evidence
+
+- Configuration and lunar calendar, assault, patrol, outdoor approach and Enderkin selection checks passed.
+- MCP 6.2 compiled and reobfuscated feature source `e074b0015d5c45c301a66fc286c62241d2bc3bc0` with JDK 8u504. The streaming ZIP checker validated 402 entries. The provenance sidecar records the three pre-existing untracked design files. The mod SHA-256 was `00136770f664647cf696e1d6ef4779c49245d752eff89595e9ba43998847f3cb` and the agent SHA-256 was `f364d81f2c170289db700669ce9bb5033adb6dc443b679ca30ad0affd5a259fb`.
+- The full headless Tekkit Classic 3.1.2 run passed with Forge 3.3.8.164 and IC2 1.97. The Skelebird probe observed a five-health hit and forward runout, a warning-time miss, blocked pursuit under glass, arrow damage and a fall on death. Hard ordinary flocks had three members and at least two consecutive commitments with a single attack turn. An elevated Hard full moon allocated two Skelebirds from the original budget. Regression probes covered Fugl, the Electric Jetpack, ordinary spawning, Enderkin and ground waves. An initial run stopped at the existing ordinary-spawn density assertion. A fresh full run measured 80 quiet and 134 occupied hostiles and passed.
+- A focused follow-up on the same packaged candidate also checked default item enumeration through the legacy Creative API.
+
+### Owner playtest
+
 Balance, distant silhouette, NEI browsing, joint motion in the game camera and audible character still need owner play. In isolated Tekkit Dev with a disposable save:
 
 1. Search for both eggs in Creative and NEI. Place a Skelebird outdoors at night, switch to Survival and fly high enough to expose the pilot. Compare its silhouette from below and from the side with Fugl.

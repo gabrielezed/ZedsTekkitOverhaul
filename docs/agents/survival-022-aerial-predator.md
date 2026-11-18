@@ -1,6 +1,6 @@
 # Survival 0.2.2 aerial predator and ecology
 
-The working designation is **Aerial Predator**. The first prototype added the hooked bill, articulated teal wings, split tail and pixel-art atlas. The second iteration adds natural Overworld wildlife and coordinated hunts to that same creature. The design supports the project's intermittent danger: a pilot can take cover, descend, turn out of a dive or fight back while keeping the benefits of Tekkit flight.
+The working designation is **Aerial Predator**. Its revised silhouette has a narrow ribbed trunk, articulated teal wings, fangs, thin talons and a forked tail. The design supports the project's intermittent danger. A pilot can take cover, descend, turn out of a dive or fight back while keeping the benefits of Tekkit flight.
 
 ## Ecology
 
@@ -14,9 +14,15 @@ The local Overworld session samples the Survival player once per second. The ter
 
 ## Flight and combat
 
-The same legacy movement, local steering, animations and collision-based dive apply to manual and natural predators. A hunting group approaches on parallel headings and circles in lanes with different radii and heights. Members can reserve one dive turn when lined up. The turn spans preparation and commitment. The next predator waits 64 ticks from its release, which includes the previous member's 50-tick climb and recovery. Each flock member can attempt one dive. Lost members release the turn, and surviving members can continue the encounter.
+A hunting group approaches on parallel headings and circles in lanes with different radii and heights. Once a dive turn opens, a member first finds a launch position above the target, brakes, and aligns with a predicted intercept. It checks line of sight and short sections of the swept collision box before reserving the turn. A blocked lane prompts a short repositioning pass.
 
-The warning raises the wings and opens the bill for 18 ticks with a high-pitched call. At commitment the predator leads the target once and follows a fixed trajectory with folded wings and extended talons. Damage requires actual swept contact and a clear path, and on Normal deals six health points before armor. The impulse is small and horizontal. Shelter, changes in direction and ranged attacks are useful counterplay.
+The 18-tick warning raises the wings and opens the jaw. If the route remains clear, the predator commits to a fixed trajectory with folded wings and extended talons. Damage still requires swept contact and a clear path. Normal difficulty deals six health points before armor, with a small horizontal impulse. A route blocked during the warning cancels commitment and returns the predator to staging after recovery. Two rejected warnings end that member's hunt. The existing hunt deadline also bounds repositioning.
+
+The next member waits 64 ticks from the previous turn's release, including the 50-tick recovery. A ground hunter or flock member spends its attack opportunity when it commits. The group releases the turn for a cancelled warning or a missing member. Manual airborne hunters can commit twice.
+
+## Sounds
+
+Two irregular ambient calls play during cruise and glide. Warning, committed dive, hurt and death each have a separate synthetic clip. The packed sounds are mono PCM WAVs at 22,050 Hz. The client registers their JAR URLs with the Forge sound pool on initial load and on replacement of the sound manager. The included Node script `zto-tools/synthesize-aerial-sounds.cjs` regenerates all six clips.
 
 ## Placement, settings and saves
 
@@ -24,17 +30,17 @@ Use **Aerial Predator Spawn Egg** in Creative or NEI. Its configurable construct
 
 Predators still save as `ZTO.AerialPredator`. Manual creatures retain their existing reload behavior. Naturally admitted creatures record their origin and a short retirement lifetime. They resume as passive flight on reload, with a fresh target state. Flock membership and the dive turn are local to the running encounter. The additional `zto_aerial_ecology` map data stores the cooldown. Older saves need no migration.
 
-**Numpad 1 → Aerial Predator** shows the sampled clearance, exposure band, cooldown, last admission odds and territorial contribution, last rejection, active group and members, current dive owner, and the nearest predator's behavior. The screen is non-pausing.
+**Numpad 1 → Aerial Predator** shows the sampled clearance, exposure band, cooldown, last admission odds and territorial contribution, last rejection, active group and members, current dive owner, and the nearest predator's behavior, launch eligibility, most recent rejection and dive counts. The screen is non-pausing.
 
 Electric Jetpack weather faults, lunar aerial admission and additional species are later work.
 
 ## Verification
 
-Run `zto-tools/test-zto-agent.ps1 -Pack` after producing the reobfuscated JAR. The marked disposable Tekkit worlds exercise egg placement and the original solo combat, terrain-relative exposure, day and night admission, passive wildlife, Normal and Hard flocks, attack-turn recovery after a member leaves, cooldown persistence, safe placement, and population limits. Fixture rolls are controlled to exercise rare outcomes reproducibly. They do not measure encounter frequency in graphical play.
+Run `zto-tools/test-zto-agent.ps1 -Pack` after producing the reobfuscated JAR. The marked disposable Tekkit worlds exercise egg placement and the original solo combat, terrain-relative exposure, day and night admission, passive wildlife, Normal and Hard flocks, attack-turn recovery after a member leaves, cooldown persistence, safe placement, and population limits. The combat fixtures also exercise eight approach bearings, a cancelled launch and retry, and actual commitments in Normal and Hard flocks. The audio probe uses the pinned Forge pool and WAV decoder and observes the world events for all five cue types. Fixture rolls are controlled to exercise rare outcomes reproducibly. They do not measure encounter frequency in graphical play.
 
 ### Owner playtest
 
 1. In isolated Tekkit Dev on Normal, run a disposable Overworld save. Fly briefly over buildings and trees, then hold an exposed route for 30–90 seconds. Compare the Debug Hub readout over plains, along a mountainside and beneath a roof. Stop on a high ridge and confirm the score decays.
 2. Compare sustained high-air travel on Normal and Hard, including a territory with established activity. Watch a group approach and circle, then dodge a dive after the wings fold. Confirm a distinct warning precedes each attack and there is time to aim or evade between dives. Descend into cover and read the encounter cooldown.
 3. Spend several daylight and nighttime periods outdoors at ground level. Look for occasional silhouettes and verify a ground incident ends after one windup. For repeatable visual checks, use the Creative egg, switch to Survival, and watch the creature navigate a forest edge, a cliff and open sky.
-4. Observe texture, wing motion and the call in the running client. Check both Creative catalogs, combat with an actual IC2 Electric Jetpack, and save/reload during an active flock. Automated graphical clients require a separate input session. [Host input isolation](testing.md#background-client-launch)
+4. Watch the predator from directly beneath and at mid-distance in daylight and at night. Check the wing joints, gliding, the raised-wing warning, folded dive and recovery. With sound enabled, distinguish the occasional ambient call from the warning, the dive rush, and the hurt and death calls. Check actual IC2 Electric Jetpack evasion and save/reload during a flock hunt. Automated graphical clients require a separate input session. [Host input isolation](testing.md#background-client-launch)

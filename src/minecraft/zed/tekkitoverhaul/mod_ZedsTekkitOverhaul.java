@@ -35,6 +35,7 @@ import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
+import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
 import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
@@ -68,6 +69,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
         AerialPredators.register();
+        AerialSoundRegistration.register(ModLoader.getMinecraftInstance().sndManager);
         AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());

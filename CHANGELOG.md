@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.3 — Aerial predator polish
+
+- Narrow the predator's torso and limbs, elongate the spine and tail, and give it a hinged, fanged jaw and a revised pixel-art atlas.
+- Align over a checked descent corridor before sounding the warning. A newly blocked launch can be retried within the existing hunt limit.
+- Add original synthetic ambient, warning, dive, hurt and death sounds.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.2-alpha.2 — Aerial ecology and flock encounters
 
 - Add natural Overworld wildlife and hunting encounters. Sustained exposure above local terrain favors airborne encounters. Near-ground encounters are rare and favor darkness.

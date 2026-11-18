@@ -28,6 +28,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     private Flight flight = Flight.CRUISE;
     private AerialEncounter encounter;
     private int lane, wildTicks;
+    private int ambientDelay = 80 + rand.nextInt(61);
     private boolean natural, approaching;
     private double arrivalX, arrivalY, arrivalZ;
     private EntityPlayer target;
@@ -55,6 +56,15 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
 
     @Override
     public int getMaxHealth() { return 16; }
+
+    @Override
+    protected String getHurtSound() { return AerialSounds.HURT; }
+
+    @Override
+    protected String getDeathSound() { return AerialSounds.DEATH; }
+
+    @Override
+    protected float getSoundVolume() { return 0.55F; }
 
     @Override
     public boolean getCanSpawnHere() {
@@ -125,8 +135,13 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
                     scanDelay = 35 + rand.nextInt(21);
                     detect();
                 }
-                if (target == null) cruise();
-                else circle();
+                if (target == null) {
+                    cruise();
+                    if (--ambientDelay <= 0) {
+                        worldObj.playSoundAtEntity(this, AerialSounds.AMBIENT, 0.48F, 0.94F + rand.nextFloat() * 0.12F);
+                        ambientDelay = 280 + rand.nextInt(141);
+                    }
+                } else circle();
                 break;
             case CIRCLE:
                 circle();
@@ -296,7 +311,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         if (encounter != null && !encounter.reserveDive(this)) return;
         enter(Flight.PREPARE);
         diveStatus = "Telegraphing";
-        worldObj.playSoundAtEntity(this, "mob.ghast.moan", 0.65F, 1.7F);
+        worldObj.playSoundAtEntity(this, AerialSounds.WARNING, 0.76F, 1.0F);
     }
 
     private void aim(double x, double y, double z) {
@@ -364,6 +379,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         destinationY = endY;
         destinationZ = endZ;
         enter(Flight.DIVE);
+        worldObj.playSoundAtEntity(this, AerialSounds.DIVE, 0.63F, 1.0F);
         advanceDive();
     }
 

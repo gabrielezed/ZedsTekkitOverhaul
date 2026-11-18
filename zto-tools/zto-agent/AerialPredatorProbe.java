@@ -4,11 +4,18 @@ import cpw.mods.fml.common.registry.FMLRegistry;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import javax.imageio.ImageIO;
+import paulscode.sound.SoundBuffer;
+import paulscode.sound.codecs.CodecWav;
+import zed.tekkitoverhaul.survival.aerial.AerialSounds;
+import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.Flight;
@@ -18,8 +25,11 @@ import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 public final class AerialPredatorProbe {
     public static void main(String[] args) throws Exception {
         File root = new File(args[0]);
+        final List<String> sounds = new ArrayList<String>();
         xd world = new xd(new aia(root, "aerial-predator", false), "aerial-predator", NaturalSpawnProbe.SETTINGS) {
-            @Override public void a(nn entity, String sound, float volume, float pitch) {}
+            @Override public void a(nn entity, String sound, float volume, float pitch) {
+                if (entity instanceof EntityAerialPredator && sound != null) sounds.add(sound);
+            }
             @Override public void a(double x, double y, double z, String sound, float volume, float pitch) {}
         };
         java.nio.file.Files.createFile(new File(root, "aerial-predator/.zto-disposable").toPath());
@@ -33,10 +43,14 @@ public final class AerialPredatorProbe {
         yw player = NaturalSpawnProbe.join(world);
         player.aA = "Pilot";
         registryAndEgg(world, player);
+        verifySoundPool();
 
         player.c(288.5, 20, 288.5, 0, 0);
         EntityAerialPredator hunter = place(world, 299, 28, 288.5, 0);
         boundsAndWindup(world, hunter, player);
+        check(sounds.indexOf(AerialSounds.WARNING) >= 0
+                && sounds.indexOf(AerialSounds.DIVE) > sounds.indexOf(AerialSounds.WARNING),
+                "distinct warning and dive cues are emitted in order");
         ady saved = new ady();
         check(hunter.c(saved), "named entity saves through vanilla");
         EntityAerialPredator reloaded = (EntityAerialPredator) aao.a(saved, world);
@@ -76,9 +90,24 @@ public final class AerialPredatorProbe {
         check(evaded.lastExit().contains("cover") && player.bb() == health, "roof breaks the hunt during recovery");
         evaded.A();
 
+        approaches(world, player);
+        retryBlockedWindup(world, player);
         groundAndTerrain(world, player);
         EntityAerialPredator falling = place(world, 292, 24, 288.5, 0);
+        EntityAerialPredator wounded = place(world, 295, 25, 288.5, 0);
+        check(wounded.a(md.a(player), 4) && sounds.contains(AerialSounds.HURT), "hurt emits a species cue");
+        wounded.A();
         check(falling.a(md.a(player), 20) && falling.flight() == Flight.FALL, "ordinary player damage kills the predator");
+        check(sounds.contains(AerialSounds.DEATH), "death emits a species cue");
+        int priorAmbient = Collections.frequency(sounds, AerialSounds.AMBIENT);
+        EntityAerialPredator idle = place(world, 290, 17, 289, 0);
+        for (int tick = 0; tick < 1000; tick++) {
+            if (tick % 80 == 0) idle.c(290, 17, 289, 0, 0);
+            world.a(idle, true);
+        }
+        int ambient = Collections.frequency(sounds, AerialSounds.AMBIENT) - priorAmbient;
+        check(ambient >= 1 && ambient <= 4, "ambient calls have a multi-second cadence: " + ambient);
+        idle.A();
         double deathY = falling.p;
         for (int i = 0; i < 12; i++) world.a(falling, true);
         check(falling.p < deathY - 1, "a dead predator loses lift (vertical displacement " + (falling.p - deathY) + ")");
@@ -87,7 +116,7 @@ public final class AerialPredatorProbe {
         world.a(reloaded, true);
         check(reloaded.G, "Peaceful removes the predator");
         System.out.println("PASS aerial predator egg, renderer construction, atlas, flight, ground and airborne acquisition, "
-                + "windup, committed impact, dodge, climb, shelter, obstacle avoidance, death fall and named NBT reload");
+                + "eight approach bearings, blocked warning retry, impact, dodge, climb, shelter, death fall, NBT and native WAV audio");
     }
 
     private static void registryAndEgg(xd world, yw player) throws Exception {
@@ -116,7 +145,75 @@ public final class AerialPredatorProbe {
         check(renderers.get(EntityAerialPredator.class) instanceof RenderAerialPredator, "native renderer mapping");
         BufferedImage texture = ImageIO.read(EntityAerialPredator.class.getResource(EntityAerialPredator.TEXTURE));
         check(texture.getWidth() == 64 && texture.getHeight() == 64
-                && texture.getRGB(13, 5) != texture.getRGB(10, 40), "readable model atlas");
+                && texture.getRGB(17, 5) != texture.getRGB(10, 40), "readable model atlas");
+    }
+
+    private static void verifySoundPool() {
+        sd manager = new sd();
+        AerialSoundRegistration sounds = new AerialSoundRegistration();
+        sounds.onLoadSoundSettings(manager);
+        sounds.onLoadSoundSettings(manager);
+        check(manager.getSoundsPool().a == 6, "sound registration is idempotent per pool");
+        for (String key : new String[] {AerialSounds.AMBIENT, AerialSounds.WARNING, AerialSounds.DIVE,
+                AerialSounds.HURT, AerialSounds.DEATH}) {
+            ub clip = manager.getSoundsPool().a(key);
+            check(clip != null, "native sound pool resolves " + key);
+            CodecWav codec = new CodecWav();
+            check(codec.initialize(clip.b), "pinned WAV decoder opens " + key);
+            SoundBuffer buffer = codec.readAll();
+            check(buffer != null && buffer.audioFormat.getChannels() == 1
+                    && buffer.audioFormat.getSampleRate() == 22050 && buffer.audioData.length > 8000,
+                    "decodes a positional PCM clip for " + key);
+            codec.cleanup();
+        }
+        sd recreated = new sd();
+        sounds.onLoadSoundSettings(recreated);
+        check(recreated.getSoundsPool().a == 6, "a recreated sound manager gets the same sound set");
+    }
+
+    private static void approaches(xd world, yw player) throws Exception {
+        for (int index = 0; index < 8; index++) {
+            boolean ground = index < 4;
+            world.a(index % 2 == 0 ? 6000 : 18000);
+            world.q();
+            double y = ground ? 4 : 22;
+            player.c(288.5, y, 288.5, 0, 0);
+            player.z = ground;
+            double angle = index * Math.PI / 4;
+            EntityAerialPredator mob = place(world, 288.5 + Math.cos(angle) * 13,
+                    y + 6 + index % 3 * 4, 288.5 + Math.sin(angle) * 13, 47 * index);
+            seed(mob, new Random(index + 123L) {
+                @Override public int nextInt(int bound) { return bound == 9 || bound == 42 ? 0 : super.nextInt(bound); }
+            });
+            waitFor(world, mob, Flight.DIVE, 220);
+            check(mob.diveCommitments() == 1 && mob.rejectedWarnings() == 0,
+                    "open approach commits from bearing " + index);
+            mob.A();
+        }
+        world.a(18000);
+        world.q();
+    }
+
+    private static void retryBlockedWindup(xd world, yw player) throws Exception {
+        player.c(288.5, 20, 288.5, 0, 0);
+        player.z = false;
+        EntityAerialPredator mob = place(world, 302, 29, 288.5, 0);
+        waitFor(world, mob, Flight.PREPARE, 210);
+        int bx = (int) Math.floor((mob.o + player.o) * 0.5);
+        int by = (int) Math.floor((mob.p + player.y.b + 1) * 0.5);
+        int bz = (int) Math.floor((mob.q + player.q) * 0.5);
+        for (int x = bx - 1; x <= bx + 1; x++)
+            for (int y = by - 2; y <= by + 2; y++)
+                for (int z = bz - 1; z <= bz + 1; z++) world.g(x, y, z, 1);
+        waitFor(world, mob, Flight.RECOVER, 23);
+        check(mob.diveCommitments() == 0 && mob.rejectedWarnings() == 1
+                && mob.lastDiveRejection().contains("corridor"), "new obstacle cancels the launch without spending a dive");
+        for (int x = bx - 1; x <= bx + 1; x++)
+            for (int y = by - 2; y <= by + 2; y++)
+                for (int z = bz - 1; z <= bz + 1; z++) world.g(x, y, z, 0);
+        waitFor(world, mob, Flight.DIVE, 235);
+        check(mob.diveCommitments() == 1, "the hunt restages after a rejected warning");
+        mob.A();
     }
 
     private static void groundAndTerrain(xd world, yw player) throws Exception {

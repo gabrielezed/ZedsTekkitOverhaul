@@ -27,7 +27,8 @@ try {
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
         $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
-            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java','JetpackWeatherProbe.java','LunarAerialProbe.java') |
+            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft + $industrialCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -61,6 +62,13 @@ try {
             if ($LASTEXITCODE) { throw 'Jetpack weather probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') LunarAerialProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Lunar aerial probe failed.' }
+            $profile = Join-Path $out.FullName 'overlay-profile'
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'false' 'toggle'
+            if ($LASTEXITCODE) { throw 'Overlay default or ON toggle failed.' }
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'true' 'toggle'
+            if ($LASTEXITCODE) { throw 'Overlay ON persistence or OFF toggle failed.' }
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'false'
+            if ($LASTEXITCODE) { throw 'Overlay OFF persistence failed.' }
         } finally { Pop-Location }
     }
 } finally {

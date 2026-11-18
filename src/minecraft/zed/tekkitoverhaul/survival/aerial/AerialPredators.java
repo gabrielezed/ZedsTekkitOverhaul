@@ -17,6 +17,8 @@ public final class AerialPredators {
         ModLoader.addLocalization("entity." + ENTITY_NAME + ".name", "Fugl");
         ModLoader.registerEntityID(EntitySkelebird.class, SKELEBIRD_NAME, ModLoader.getUniqueEntityId());
         ModLoader.addLocalization("entity." + SKELEBIRD_NAME + ".name", "Skelebird");
+        ModLoader.registerEntityID(EntityMagpie.class, "ZTO.Magpie", ModLoader.getUniqueEntityId());
+        ModLoader.addLocalization("entity.ZTO.Magpie.name", "Magpie");
     }
 
     public static void registerEgg(int id) {

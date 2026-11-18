@@ -78,6 +78,13 @@ final class AerialEncounter {
     int attackerId() { return attacker == null ? -1 : attacker.entityId; }
     int gapTicks() { return gap; }
 
+    String preyStatus() {
+        for (EntityAerialPredator bird : members) {
+            if (bird.huntingChicken()) return "Fugl " + bird.flight().name() + " | " + bird.targetName();
+        }
+        return "No active Fugl prey target";
+    }
+
     String membership() {
         StringBuilder result = new StringBuilder();
         for (EntityAerialPredator mob : members) {

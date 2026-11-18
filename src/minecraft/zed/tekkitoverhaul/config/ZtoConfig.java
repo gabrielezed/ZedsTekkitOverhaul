@@ -13,6 +13,7 @@ public final class ZtoConfig {
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
     public final int territorialHostileCapBonusPercent;
     public final boolean naturalEnderkinSpawning, naturalAerialEncounters;
+    public final boolean forestMagpies, fuglChickenHunting;
     public final int aerialEncounterCooldownSeconds;
     public final boolean electricJetpackWeather, lunarAerialEncounters;
     public final boolean creativeInventoryBackport, partialRecipeFill;
@@ -38,6 +39,8 @@ public final class ZtoConfig {
         experimentalEnderkinEncounters = values.flag("experimentalEnderkinEncounters", false);
         experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
         territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
+        forestMagpies = values.flag("forestMagpies", true);
+        fuglChickenHunting = values.flag("fuglChickenHunting", true);
         naturalEnderkinSpawning = values.flag("naturalEnderkinSpawning", true);
         naturalAerialEncounters = values.flag("naturalAerialEncounters", true);
         electricJetpackWeather = values.flag("electricJetpackWeather", true);

@@ -311,7 +311,7 @@ public final class AerialEcology {
 
     public static final class Snapshot {
         public final double height, exposure;
-        public final String band, status, lastAttempt, lastEnd, membership, lunarStatus;
+        public final String band, status, lastAttempt, lastEnd, membership, lunarStatus, preyStatus;
         public final int cooldownSeconds, checkSeconds, admissions, activity, chance, loadedPredators, localHostiles;
         public final int placementTries, activeMembers, attackerId, gapTicks;
 
@@ -334,6 +334,7 @@ public final class AerialEcology {
             placementTries = ecology.placementTries;
             activeMembers = active == null ? 0 : active.size();
             membership = active == null ? "" : active.membership();
+            preyStatus = active == null ? "No active Fugl prey target" : active.preyStatus();
             attackerId = active == null ? -1 : active.attackerId();
             gapTicks = active == null ? 0 : active.gapTicks();
         }

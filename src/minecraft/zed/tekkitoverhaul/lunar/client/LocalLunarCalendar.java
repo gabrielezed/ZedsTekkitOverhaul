@@ -27,6 +27,7 @@ import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
@@ -44,6 +45,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private final TerritorialActivityService territory = new TerritorialActivityService();
     private NaturalSpawnPressure naturalSpawning;
     private AerialEcology aerialEcology;
+    private ForestWildlife forestWildlife;
     private boolean experimentalTerritorialThreat;
     private SurvivalDebugHud survivalHud;
     private AssaultDiagnostics survivalDiagnostics;
@@ -59,7 +61,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                          boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
                          int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
                          boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds,
-                         boolean electricJetpackWeather, boolean lunarAerialEncounters) {
+                         boolean electricJetpackWeather, boolean lunarAerialEncounters, boolean forestMagpies) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
@@ -70,6 +72,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         aerialEcology = new AerialEcology(naturalAerialEncounters, lunarAerialEncounters, aerialEncounterCooldownSeconds,
                 territory, naturalSpawning);
         assault.attachAerialEcology(aerialEcology);
+        forestWildlife = new ForestWildlife(forestMagpies);
         JetpackWeather.LOCAL.configure(electricJetpackWeather);
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);
@@ -97,6 +100,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     }
 
     AerialEcology.Snapshot aerialSnapshot() { return aerialEcology.snapshot(); }
+
+    ForestWildlife forestWildlife() { return forestWildlife; }
 
     SurvivalDebugHud survivalHud() { return survivalHud; }
 
@@ -174,6 +179,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         territory.bind(active);
         naturalSpawning.bind(active);
         aerialEcology.bind(active);
+        forestWildlife.bind(active);
         if (sameSave) {
             if (calendar != null) {
                 assault.bind(null, null);
@@ -228,6 +234,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         territory.bind(null);
         naturalSpawning.bind(null);
         aerialEcology.bind(null);
+        forestWildlife.bind(null);
         JetpackWeather.LOCAL.tick(null, null, true);
         assault.bind(null, null);
         assault.setDiagnostics(null);
@@ -265,6 +272,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         JetpackWeather.LOCAL.tick(world, world == null ? null : game.thePlayer, game.isGamePaused);
         territory.tick(game.thePlayer, game.isGamePaused);
         aerialEcology.tick(game.thePlayer, game.isGamePaused);
+        forestWildlife.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {
             calendar.observe(world.getWorldTime());
             assault.tick(game.thePlayer, game.isGamePaused, experimentalTerritorialThreat ? territory : null);

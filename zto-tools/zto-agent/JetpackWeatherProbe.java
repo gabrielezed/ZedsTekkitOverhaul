@@ -5,6 +5,7 @@ import ic2.common.ElectricItem;
 import ic2.common.Ic2Items;
 import ic2.common.ItemArmorJetpack;
 import ic2.common.ItemArmorJetpackElectric;
+import ic2.platform.Keyboard;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
@@ -19,6 +20,7 @@ import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather.Phase;
+import zed.tekkitoverhaul.survival.weather.client.JetpackWeatherStatus;
 
 /** Executes the real IC2 useJetpack method with charged equipment and a windowless client fixture. */
 public final class JetpackWeatherProbe {
@@ -40,6 +42,9 @@ public final class JetpackWeatherProbe {
         Field client = FMLClientHandler.class.getDeclaredField("client");
         client.setAccessible(true);
         client.set(FMLClientHandler.instance(), game);
+        Field modeSwitch = Keyboard.class.getDeclaredField("modeSwitchKey");
+        modeSwitch.setAccessible(true);
+        modeSwitch.set(null, new afu("Mode switch", 50));
 
         ItemArmorJetpack fuel = new ItemArmorJetpack(22100, 0, 0);
         Ic2Items.jetpack = new aan(fuel, 1, 1);
@@ -57,15 +62,18 @@ public final class JetpackWeatherProbe {
         powered(world, player, electric, 20);
         check(weather.phase() == Phase.DRY && player.s > 0.13 && electric.getCharge(pack) == charge - 140,
                 "clear air preserves native thrust and EU use");
-        double normalFlight = continuousFlight(world, player, electric, pack, false, false);
-        double normalHover = continuousFlight(world, player, electric, pack, true, false);
+        double normalFlight = continuousFlight("clear", world, player, electric, pack, false, false);
+        double normalHover = continuousFlight("clear", world, player, electric, pack, true, false);
         world.rain = true;
         position(player, 4, true);
         powered(world, player, electric, 240);
         check(weather.wetness() == 0, "equipped and grounded is dry even during native use");
 
         position(player, 24, false);
-        powered(world, player, electric, 65);
+        double wetFlight = continuousFlight("short rain", world, player, electric, pack, false, false);
+        check(Math.abs(wetFlight - normalFlight) < 0.001, "short exposure retains the clear-air flight envelope");
+        position(player, 24, false);
+        powered(world, player, electric, 25);
         check(weather.phase() != Phase.FAULT && weather.wetness() > 0, "a short powered flight does not fault");
         int rainTime = 65;
         while (weather.wetness() < 70 && rainTime < 400) {
@@ -87,6 +95,8 @@ public final class JetpackWeatherProbe {
         check(rainTime >= 320 && world.cues.contains("zto.jetpack.warning")
                 && world.cues.indexOf("zto.jetpack.warning") < world.cues.indexOf("zto.jetpack.fault"),
                 "ordinary rain is progressive and warns before fault: " + rainTime);
+        check(weather.remaining() == 88, "ordinary rain fault lasts 88 ticks");
+        verifyInventoryStatus(game, player, "fault");
 
         for (int altitude : new int[] {12, 60, 105}) {
             position(player, altitude, false);
@@ -96,11 +106,11 @@ public final class JetpackWeatherProbe {
             check(player.o > x, "moving pilot retains lateral travel");
             charge = electric.getCharge(pack);
             player.s = 0.14;
-            check(electric.useJetpack(player, false) && player.s < 0.08 && electric.getCharge(pack) == charge - 7,
+            check(electric.useJetpack(player, false) && player.s <= 0 && electric.getCharge(pack) == charge - 7,
                     "fault changes actual powered ascent and spends native EU at Y=" + altitude);
             player.M = 12;
-            player.s = -0.42;
-            check(electric.useJetpack(player, false) && player.s > -0.42 && player.s <= 0.02 && player.M == 0,
+            player.s = -0.82;
+            check(electric.useJetpack(player, false) && player.s > -0.82 && player.s <= 0 && player.M == 0,
                     "native powered descent braking and fall bookkeeping remain available at Y=" + altitude);
             check(weather.protects(player), "active fault gates new dives");
             weather.tick(world, player, false);
@@ -112,26 +122,56 @@ public final class JetpackWeatherProbe {
         air.bind(world);
         check(air.admitLunar(world, player, 15, 8, 4) == 0 && air.lunarStatus().contains("jetpack"),
                 "a moving pilot with an active fault blocks new lunar air pressure");
-        double faultFlight = continuousFlight(world, player, electric, pack, false, true);
-        check(normalFlight > 10 && faultFlight < -5 && faultFlight > -15,
-                "continuous activation changes ascent into controlled descent: " + normalFlight + " / " + faultFlight);
+        double faultFlight = continuousFlight("rain fault", world, player, electric, pack, false, true);
+        check(normalFlight > 10 && faultFlight < -16 && faultFlight > -21,
+                "rain fault more than doubles the historical 40-tick altitude loss: " + normalFlight + " / " + faultFlight);
+        finishFault(world, player, electric, pack, false);
+        double recoveryFlight = continuousFlight("rain recovery", world, player, electric, pack, false, false);
+        check(weather.phase() == Phase.RECOVERING && Math.abs(recoveryFlight - normalFlight) < 0.001,
+                "native climb returns during a guaranteed recovery interval");
+        verifyInventoryStatus(game, player, "recovering");
+        int rainFaults = count(world.cues, "zto.jetpack.fault");
+        powered(world, player, electric, 79);
+        check(count(world.cues, "zto.jetpack.fault") == rainFaults && weather.phase() == Phase.RECOVERING,
+                "persistent rain respects the recovery window");
+        int repeatRain = untilFault(world, player, electric);
+        check(repeatRain >= 56 && repeatRain < rainTime - 140,
+                "persistent rain builds to another warned fault: " + repeatRain);
 
         position(player, 24, false);
         world.g((int) player.o, 32, (int) player.q, 20);
-        powered(world, player, electric, 160);
+        powered(world, player, electric, 220);
         check(!weather.exposed() && weather.phase() == Phase.DRY && player.s > 0.13
                 && world.cues.contains("zto.jetpack.recovery"), "glass shelter dries equipment and native lift returns");
         world.g((int) player.o, 32, (int) player.q, 0);
         world.storm = true;
         int stormTime = untilFault(world, player, electric);
         check(stormTime < rainTime - 100, "thunder accelerates the warning and fault: " + stormTime + " / " + rainTime);
-        double faultHover = continuousFlight(world, player, electric, pack, true, true);
-        check(faultHover < -5 && faultHover > -15 && normalHover > faultHover + 5,
-                "continuous hover activation also loses altitude: " + normalHover + " / " + faultHover);
+        check(weather.remaining() == 116, "a thunder fault has a larger interruption window");
+        double stormFlight = continuousFlight("thunder fault", world, player, electric, pack, false, true);
+        check(stormFlight < faultFlight - 5 && stormFlight > -28, "thunder loses more altitude under the same input");
+        finishFault(world, player, electric, pack, false);
+
         int faults = count(world.cues, "zto.jetpack.fault");
-        powered(world, player, electric, 120);
+        powered(world, player, electric, 119);
         check(count(world.cues, "zto.jetpack.fault") == faults && weather.phase() == Phase.RECOVERING,
                 "fault cannot chain through recovery");
+        int repeatTicks = untilFault(world, player, electric);
+        check(repeatTicks >= 56 && repeatTicks < stormTime - 75,
+                "retained moisture makes a second fault arrive sooner after recovery: " + repeatTicks);
+        double faultHover = continuousFlight("thunder fault", world, player, electric, pack, true, true);
+        check(faultHover < -22 && faultHover > -28 && normalHover > faultHover + 15,
+                "jump held in hover cannot sustain altitude");
+        position(player, 68, false);
+        player.s = -0.72;
+        input(player, pack, false);
+        mod_IC2.setIsJumpingOfEntityLiving(player, false);
+        charge = electric.getCharge(pack);
+        check(!electric.onTick(player, pack), "releasing jump in normal mode releases the brake");
+        player.a_(0, 0);
+        check(player.s < -0.72 && electric.getCharge(pack) == charge, "release permits unpowered fall with no EU use");
+
+        for (int platform : new int[] {3, 40, 80}) verifyLanding(world, player, electric, pack, platform);
 
         player.ap.b[2] = Ic2Items.jetpack;
         weather.tick(world, player, false);
@@ -168,9 +208,11 @@ public final class JetpackWeatherProbe {
         player.l(20);
         weather.configure(false);
         player.ap.b[2] = pack;
-        powered(world, player, electric, 35);
-        check(player.s > 0.13 && weather.phase() == Phase.DRY, "disabled settings preserve native operation in storms");
-        System.out.println("Native powered ticks to fault: rain " + rainTime + ", thunder " + stormTime);
+        double disabledFlight = continuousFlight("thunder disabled", world, player, electric, pack, false, false);
+        check(weather.phase() == Phase.DRY && Math.abs(disabledFlight - normalFlight) < 0.001,
+                "disabled settings preserve native movement in storms");
+        System.out.println("Native powered ticks to fault: rain " + rainTime + ", thunder " + stormTime
+                + ", repeats after 119 recovery ticks: rain " + repeatRain + ", thunder " + repeatTicks);
         System.out.println("PASS native IC2 thrust, EU, weather, shelter, descent braking at 3 heights, equipment and save lifecycle");
     }
 
@@ -178,24 +220,80 @@ public final class JetpackWeatherProbe {
         return java.util.Collections.frequency(values, value);
     }
 
-    private static double continuousFlight(Fixture world, yw player, ItemArmorJetpackElectric item,
+    private static double continuousFlight(String label, Fixture world, yw player, ItemArmorJetpackElectric item,
                                            aan pack, boolean hover, boolean fault) {
         position(player, 68, false);
         player.s = 0.32;
+        input(player, pack, hover);
         double start = player.p;
         int charge = item.getCharge(pack);
         for (int tick = 0; tick < 40; ++tick) {
             check((JetpackWeather.LOCAL.phase() == Phase.FAULT) == fault, "expected propulsion phase");
-            check(item.useJetpack(player, hover), "continuous native activation");
+            check(item.onTick(player, pack), "held jump activates native IC2 armor tick");
+            if (fault) check(player.s <= 0, "fault cannot add powered ascent");
             player.a_(0, 0);
             JetpackWeather.LOCAL.tick(world, player, false);
         }
         check(item.getCharge(pack) == charge - (hover ? 4 : 7) * 40, "40 ticks use native EU");
-        check(!fault || (player.s < -0.05 && player.s > -0.42), "fault ends with bounded downward velocity");
+        check(!fault || (player.s < -0.50 && player.s > -0.73), "fault enforces a bounded downward velocity");
         double displacement = player.p - start;
         System.out.printf("Pinned IC2, %s %s, 40 ticks: %+.2f blocks / %+.3f blocks per tick%n",
-                fault ? "fault" : "clear", hover ? "hover" : "normal", displacement, player.s);
+                label, hover ? "hover" : "normal", displacement, player.s);
         return displacement;
+    }
+
+    private static void input(yw player, aan pack, boolean hover) {
+        mod_IC2.setIsJumpingOfEntityLiving(player, true);
+        ic2.common.StackUtil.getOrCreateNbtData(pack).a("hoverMode", hover);
+    }
+
+    private static void verifyInventoryStatus(Minecraft game, yw player, String state) {
+        List<String> labels = new ArrayList<String>();
+        ain inventory = new ain(player) {
+            @Override public void a(nl font, String text, int x, int y, int color) {
+                check(x == 160 && y == 208, "status stays centered below the 176 x 166 Survival panel");
+                labels.add(text);
+            }
+        };
+        inventory.q = 320;
+        inventory.r = 240;
+        JetpackWeatherStatus.drawInventory(game, inventory);
+        check(labels.size() == 1 && labels.get(0).endsWith(state), "Survival inventory reports " + state);
+    }
+
+    private static void finishFault(Fixture world, yw player, ItemArmorJetpackElectric item, aan pack, boolean hover) {
+        int ticks = JetpackWeather.LOCAL.remaining();
+        input(player, pack, hover);
+        for (int i = 0; i < ticks && JetpackWeather.LOCAL.phase() == Phase.FAULT; ++i) {
+            check(item.onTick(player, pack) && player.s <= 0, "continued activation through fault");
+            player.a_(0, 0);
+            JetpackWeather.LOCAL.tick(world, player, false);
+        }
+        check(JetpackWeather.LOCAL.phase() == Phase.RECOVERING, "fault ends within its interruption window");
+    }
+
+    private static void verifyLanding(Fixture world, yw player, ItemArmorJetpackElectric item, aan pack, int platform) {
+        JetpackWeather weather = JetpackWeather.LOCAL;
+        weather.configure(true);
+        world.g(288, platform, 288, 1);
+        position(player, platform + 13, false);
+        untilFault(world, player, item);
+        input(player, pack, false);
+        player.l(20);
+        boolean fast = false, braking = false;
+        int ticks = 0;
+        while (weather.phase() == Phase.FAULT && ticks++ < 116) {
+            check(item.onTick(player, pack) && player.s <= 0, "landing retains native descent control");
+            fast |= player.s < -0.45;
+            if (fast && player.s >= -0.18) braking = true;
+            player.a_(0, 0);
+            weather.tick(world, player, false);
+        }
+        check(fast && braking && player.z && player.bb() == 20 && weather.phase() == Phase.RECOVERING,
+                "a charged pilot can brake and land safely on a platform at Y=" + platform);
+        System.out.printf("Controlled thunder landing on Y=%d in %d ticks%n", platform, ticks);
+        if (platform > 3) world.g(288, platform, 288, 0);
+        position(player, 24, false);
     }
 
     private static int untilFault(Fixture world, yw player, ItemArmorJetpack item) {

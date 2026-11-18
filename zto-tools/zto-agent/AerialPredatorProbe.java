@@ -315,12 +315,29 @@ public final class AerialPredatorProbe {
         check(ground.diveCommitments() == 1 && "attack budget".equals(ground.lastExit()), "Hard ground hunt spends one turn");
         ground.c(272, 24, 288.5, -90, 0);
         ground.r = ground.s = ground.t = 0;
+        seed(ground, new Random(37L) {
+            @Override public int nextInt(int bound) { return bound == 3 ? 2 : super.nextInt(bound); }
+        });
+        int bones = countBones(world);
         check(ground.a(md.a(player), 20) && ground.flight() == Flight.FALL
                 && sounds.contains("zto.skelebird.death"), "ordinary damage kills Skelebird and emits its death cue");
+        check(countBones(world) == bones + 2, "native player kill drops the vanilla bone roll");
         double deathY = ground.p;
         for (int i = 0; i < 15; ++i) world.a(ground, true);
         check(ground.p < deathY - 1, "Skelebird loses lift on death");
-        System.out.println("PASS Skelebird registry, egg, native WAV, shallow pass, warning-time evade, contact, ground limits, cover, recovery and NBT");
+        check(!ground.a(md.a(player), 20) && countBones(world) == bones + 2, "death cannot emit bones twice");
+        System.out.println("PASS Skelebird registry, egg, native WAV, shallow pass, warning-time evade, contact, ground limits, cover, recovery, bone drops and NBT");
+    }
+
+    private static int countBones(xd world) {
+        int count = 0;
+        for (Object entity : world.b) {
+            if (entity instanceof fq) {
+                aan stack = ((fq) entity).a;
+                if (stack.c == yr.aX.bQ) count += stack.a;
+            }
+        }
+        return count;
     }
 
     private static void approaches(xd world, yw player) throws Exception {

@@ -44,7 +44,8 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 ## Survival gameplay
 
 - **Survival 0.2.1.** Regional activity raises ordinary hostile pressure. Natural lunar encounters, five tactical Enderkin, recoverable theft and the Debug Hub give players ways to observe and respond to the added pressure. See the [implementation guide](survival-021-implementation.md) and [integration results](survival-021-integration.md).
-- **Follow-up work.** Equipped armor theft, cooperative theft, broader industrial sabotage and aerial ecology each need their own design and verification.
+- **Survival 0.2.2 complete.** Fugl and Skelebird hunt in bounded Overworld aerial encounters. Selected full-moon assaults share their existing budgets with aerial flocks. Rain and thunder interrupt sustained Electric Jetpack flight. [Implementation and verification](survival-022-aerial-predator.md) · [Skelebird](survival-022-skelebird.md)
+- **Follow-up work.** Equipped armor theft, cooperative theft and broader industrial sabotage each need their own design and verification.
 - **Later development.** Settlement recognition and strategic site sieges depend on separately established site ownership and provenance. Keep ordinary territorial threat and player assaults independent of site ownership.
 - **Optional developer feature.** An opt-in in-game Dev Bridge panel could show a scenario, step, simulation tick and result. It stays independent of gameplay.
 

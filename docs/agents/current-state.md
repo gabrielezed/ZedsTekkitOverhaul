@@ -1,6 +1,8 @@
 # Current implementation
 
-**Survival 0.2.1** brings territorial hostile pressure and the five Enderkin into ordinary Overworld survival. The Prism-managed ZTOAgent connects the pinned ordinary hostile spawner alongside inventory, moon rendering and direct industrial hooks. The supported target is Tekkit Classic 3.1.2 singleplayer. [Gameplay guide](survival-021-implementation.md) · [Integration evidence](survival-021-integration.md)
+**Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** is complete on `main`. Its final stabilization adds Skelebird bone drops and strengthens Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
+
+The verified build identifies itself as `0.2.2-alpha.5`.
 
 | Owner | Current responsibility |
 | --- | --- |
@@ -9,7 +11,7 @@
 | `assault` | Full-moon PLAYER_ASSAULT with frozen regional wave and vanilla slot plans, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Lunar placement](survival-021-implementation.md#lunar-placement-on-irregular-terrain) |
 | `territory` | Qualified activity sampling, bounded Overworld save data, lazy decay and biome-aware local threat. Ordinary hostile caps can rise with blended activity. `assault` can use one frozen assessment at natural admission. [0.2.1 implementation](survival-021-implementation.md) |
 | `survival`, `equipment` | Local bed anchors, equipped mobs and five Enderkin roles. Ordinary Enderkin substitutions default to on with the matching agent. Lunar substitutions are opt-in. All five Creative eggs remain available. [Enderkin ecology](survival-021-implementation.md#ordinary-enderkin-ecology) |
-| `survival.aerial` | **Survival 0.2.2-alpha.5** Fugl wildlife and staggered dives, Skelebird nocturnal crossing passes, bounded full-moon air slots and Electric Jetpack weather faults. [Fugl and jetpack](survival-022-aerial-predator.md) · [Skelebird](survival-022-skelebird.md) |
+| `survival.aerial` | Fugl wildlife and staggered dives, Skelebird nocturnal crossing passes, bounded full-moon air slots and Electric Jetpack weather faults. [Fugl and jetpack](survival-022-aerial-predator.md) · [Skelebird](survival-022-skelebird.md) |
 | `creative`, `crafting`, `integration.inventory` | Asset-backed Creative UI, crafting assistance and legacy mouse dispatch. [Creative guide](../engineering/creative-inventory-backport.md) |
 | `hopper`, `render`, `power`, `distillation`, `fluids`, `emc` | Experimental machines, Foundry visuals and pack adapters. Preserve IDs, NBT and economic behavior. [Integration boundaries](integrations.md) |
 | `devbridge`, lunar debug views | Numpad 1 opens the local Debug Hub. Dev Bridge provides optional observations and gated disposable-world tools. [Diagnostics protocol](dev-bridge.md) |

@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.1 — Aerial predator prototype
+
+- Add the Aerial Predator Spawn Egg for Creative testing. The predator flies in three dimensions, favors exposed airborne players, and uses a telegraphed dive with a fixed trajectory.
+- Add its articulated wings, hooked bill, split tail, and original pixel-art atlas. Flight poses follow its hunt and movement.
+- Add an Aerial Predator view to the Debug Hub for the nearest creature's target, destination, phase and recent failures.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.1 — Enderkin ecology and territorial survival
 
 - Sustained territorial activity increases ordinary hostile pressure. Activity persists across saves, decays during absence, and can shape lunar assault admission when enabled.

@@ -27,7 +27,7 @@ try {
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
         $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
-            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java') |
+            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -53,6 +53,8 @@ try {
             if ($LASTEXITCODE) { throw 'Industrial theft and Ender Trail probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') SurvivalIntegrationProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Survival integration probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') AerialPredatorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Aerial predator probe failed.' }
         } finally { Pop-Location }
     }
 } finally {

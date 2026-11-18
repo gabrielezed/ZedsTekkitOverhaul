@@ -1,18 +1,20 @@
-package zed.tekkitoverhaul.survival.tactical;
+package zed.tekkitoverhaul.survival;
 
 import net.minecraft.src.Block;
+import net.minecraft.src.Entity;
 import net.minecraft.src.EntityList;
+import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Facing;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.World;
 
-final class ItemTacticalSpawnEgg extends Item {
+public class ItemSurvivalSpawnEgg extends Item {
     private final String entityName;
     private final int shell, spots;
 
-    ItemTacticalSpawnEgg(int id, String entityName, String key, int shell, int spots) {
+    public ItemSurvivalSpawnEgg(int id, String entityName, String key, int shell, int spots) {
         super(id);
         this.entityName = entityName;
         this.shell = shell;
@@ -44,14 +46,19 @@ final class ItemTacticalSpawnEgg extends Item {
                 || !player.canPlayerEdit(x, y, z)) return false;
         double offset = side == 1 && (clicked == Block.fence.blockID || clicked == Block.netherFence.blockID)
                 ? 0.5D : 0.0D;
-        TacticalHostile mob = (TacticalHostile) EntityList.createEntityByName(entityName, world);
-        if (mob == null) return false;
+        Entity entity = EntityList.createEntityByName(entityName, world);
+        if (!(entity instanceof EntityLiving)) return false;
+        EntityLiving mob = (EntityLiving) entity;
         mob.setLocationAndAngles(x + 0.5D, y + offset, z + 0.5D, world.rand.nextFloat() * 360.0F, 0);
-        if (mob.boundingBox.maxY > world.getHeight() || !world.checkIfAABBIsClear(mob.boundingBox)
-                || !world.getCollidingBoundingBoxes(mob, mob.boundingBox).isEmpty()) return false;
+        if (!isSpawnClear(mob, world)) return false;
         if (!world.spawnEntityInWorld(mob)) return false;
         mob.playLivingSound();
         if (!player.capabilities.isCreativeMode) stack.stackSize--;
         return true;
+    }
+
+    protected boolean isSpawnClear(EntityLiving mob, World world) {
+        return mob.boundingBox.maxY <= world.getHeight() && world.checkIfAABBIsClear(mob.boundingBox)
+                && world.getCollidingBoundingBoxes(mob, mob.boundingBox).isEmpty();
     }
 }

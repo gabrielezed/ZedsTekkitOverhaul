@@ -34,6 +34,8 @@ import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
+import zed.tekkitoverhaul.survival.aerial.AerialPredators;
+import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
 import zed.tekkitoverhaul.survival.tactical.client.ThiefCompass;
@@ -65,6 +67,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         settings = ZtoConfigLoader.load(ModLoader.getMinecraftInstance().mcDataDir.toPath().resolve("config"),
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
+        AerialPredators.register();
         AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
@@ -90,6 +93,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AlchemicalPowerRegistry.register(settings);
         HopperRegistry.register(this, settings);
         TacticalHostiles.registerEggs(settings);
+        AerialPredators.registerEgg(settings.aerialPredatorEgg);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
@@ -110,6 +114,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void addRenderer(Map<Class<? extends Entity>, Render> renderers) {
         RenderMobEquipment.register(renderers);
         TacticalHostileRenderers.register(renderers);
+        RenderAerialPredator.register(renderers);
     }
 
     @Override

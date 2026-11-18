@@ -13,6 +13,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. |
 | `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
 | `naturalEnderkinSpawning` | true | Enable ordinary Enderkin substitutions in the local Overworld with the matching ZTOAgent. Set false to keep ordinary species selection native. Lunar encounter settings are independent. |
+| `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |
+| `aerialEncounterCooldownSeconds` | 180 | Quiet period after an admitted encounter, in active Overworld seconds. Bounds 90–600. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |
 | `assaultWaveInterval` | 900 | 400–1200 simulation ticks between waves while enemies remain |

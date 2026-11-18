@@ -42,6 +42,7 @@ public final class NaturalSpawnPressure {
     private Method agentActive;
     private World world;
     private String status = "Waiting for hostile pass";
+    private boolean hostileEnabled = true;
     private int count, vanillaCap, effectiveCap, increasePercent, passActivity;
     private int spawnedThisPass;
     private long successfulSpawns, limitedPasses;
@@ -89,6 +90,7 @@ public final class NaturalSpawnPressure {
 
     private void begin(Object context, boolean hostileEnabled) {
         if (context != world || Thread.currentThread() != owner) return;
+        this.hostileEnabled = hostileEnabled;
         if (hostileEnabled) status = "Waiting for hostile pass";
         else if (world != null && world.difficultySetting == 0) status = "Peaceful difficulty";
         else status = "Hostile spawning disabled by world";
@@ -156,13 +158,14 @@ public final class NaturalSpawnPressure {
     }
 
     public static final class Snapshot {
-        public final boolean hookActive;
+        public final boolean hookActive, hostileEnabled;
         public final String status;
         public final int count, vanillaCap, effectiveCap, increasePercent, maxIncreasePercent, passActivity;
         public final long successfulSpawns, limitedPasses;
 
         private Snapshot(NaturalSpawnPressure pressure) {
             hookActive = pressure.hookActive();
+            hostileEnabled = pressure.hostileEnabled;
             status = hookActive ? pressure.status : "Tekkit spawning hook unavailable";
             count = pressure.count;
             vanillaCap = pressure.vanillaCap;

@@ -26,6 +26,7 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 
@@ -41,6 +42,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private SiegeDirector assault;
     private final TerritorialActivityService territory = new TerritorialActivityService();
     private NaturalSpawnPressure naturalSpawning;
+    private AerialEcology aerialEcology;
     private boolean experimentalTerritorialThreat;
     private SurvivalDebugHud survivalHud;
     private AssaultDiagnostics survivalDiagnostics;
@@ -54,7 +56,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
                          boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
-                         int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning) {
+                         int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
+                         boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
@@ -62,6 +65,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
+        aerialEcology = new AerialEcology(naturalAerialEncounters, aerialEncounterCooldownSeconds, territory, naturalSpawning);
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);
         if (keyCode > 0 && keyCode < 256 && keyCode != hubKey.keyCode) {
@@ -86,6 +90,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                     : new GuiLunarDebug(this, game.theWorld, null));
         }
     }
+
+    AerialEcology.Snapshot aerialSnapshot() { return aerialEcology.snapshot(); }
 
     SurvivalDebugHud survivalHud() { return survivalHud; }
 
@@ -162,6 +168,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         save = handler;
         territory.bind(active);
         naturalSpawning.bind(active);
+        aerialEcology.bind(active);
         if (sameSave) {
             if (calendar != null) {
                 assault.bind(null, null);
@@ -215,6 +222,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private void detach() {
         territory.bind(null);
         naturalSpawning.bind(null);
+        aerialEcology.bind(null);
         assault.bind(null, null);
         assault.setDiagnostics(null);
         survivalDiagnostics = null;
@@ -249,6 +257,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (!ticks.contains(TickType.WORLD)) return;
         bind(game.theWorld);
         territory.tick(game.thePlayer, game.isGamePaused);
+        aerialEcology.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {
             calendar.observe(world.getWorldTime());
             assault.tick(game.thePlayer, game.isGamePaused, experimentalTerritorialThreat ? territory : null);

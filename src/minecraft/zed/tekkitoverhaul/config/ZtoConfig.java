@@ -12,7 +12,8 @@ public final class ZtoConfig {
     public final boolean experimentalEnderkinEncounters, experimentalTerritorialThreat, disableNightSkipping;
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
     public final int territorialHostileCapBonusPercent;
-    public final boolean naturalEnderkinSpawning;
+    public final boolean naturalEnderkinSpawning, naturalAerialEncounters;
+    public final int aerialEncounterCooldownSeconds;
     public final boolean creativeInventoryBackport, partialRecipeFill;
     public final int craftingUxShortcut;
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
@@ -37,6 +38,8 @@ public final class ZtoConfig {
         experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
         territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
         naturalEnderkinSpawning = values.flag("naturalEnderkinSpawning", true);
+        naturalAerialEncounters = values.flag("naturalAerialEncounters", true);
+        aerialEncounterCooldownSeconds = values.bounded("aerialEncounterCooldownSeconds", 180, 90, 600);
         disableNightSkipping = values.flag("disableNightSkipping", true);
         assaultSpawnBudget = values.bounded("assaultSpawnBudget", 15, 1, 24);
         assaultWaveInterval = values.bounded("assaultWaveInterval", 900, 400, 1200);

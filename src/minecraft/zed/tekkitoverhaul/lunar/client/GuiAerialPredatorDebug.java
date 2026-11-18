@@ -1,18 +1,23 @@
 package zed.tekkitoverhaul.lunar.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import net.minecraft.src.GuiButton;
 import net.minecraft.src.GuiScreen;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
 
 final class GuiAerialPredatorDebug extends GuiScreen {
+    private final LocalLunarCalendar local;
     private final World world;
     private final GuiScreen parent;
     private String[] lines = {};
     private int refresh;
 
-    GuiAerialPredatorDebug(World world, GuiScreen parent) {
+    GuiAerialPredatorDebug(LocalLunarCalendar local, World world, GuiScreen parent) {
+        this.local = local;
         this.world = world;
         this.parent = parent;
     }
@@ -31,36 +36,45 @@ final class GuiAerialPredatorDebug extends GuiScreen {
             return;
         }
         if (refresh-- > 0) return;
-        refresh = 9;
+        refresh = 19;
+        AerialEcology.Snapshot ecology = local.aerialSnapshot();
+        List<String> display = new ArrayList<String>();
+        String height = ecology.height < 0 ? "-" : String.format(Locale.ROOT, "%.1f blocks", ecology.height);
+        display.add(String.format(Locale.ROOT, "%s   Clearance %s   Exposure %.0f/100", ecology.band, height, ecology.exposure));
+        display.add(ecology.status);
+        display.add("Cooldown " + ecology.cooldownSeconds + "s   Check " + ecology.checkSeconds + "s");
+        display.add("Last check activity " + ecology.activity + "   Chance " + ecology.chance + "/1000");
+        display.add("Last check loaded predators " + ecology.loadedPredators + "   Local hostiles " + ecology.localHostiles);
+        display.add("Last attempt: " + ecology.lastAttempt + "  (" + ecology.placementTries + " sites)");
+        display.add("Last end: " + ecology.lastEnd);
+        String group = ecology.activeMembers > 1 ? "1 flock" : ecology.activeMembers == 1 ? "1 predator" : "No active encounter";
+        display.add(group + "   " + ecology.membership);
+        if (ecology.activeMembers > 0) {
+            display.add(ecology.attackerId < 0 ? "Dive pause: " + ecology.gapTicks + "t"
+                    : "Dive reserved by #" + ecology.attackerId);
+        }
+
         EntityAerialPredator nearest = null;
         double best = 48 * 48;
-        int population = 0;
         for (Object entry : world.getEntitiesWithinAABB(EntityAerialPredator.class,
                 mc.thePlayer.boundingBox.expand(48, 48, 48))) {
             EntityAerialPredator mob = (EntityAerialPredator) entry;
             double distance = mc.thePlayer.getDistanceSqToEntity(mob);
-            if (mob.isDead || distance > 48 * 48) continue;
-            ++population;
-            if (distance > best) continue;
+            if (mob.isDead || distance > best) continue;
             nearest = mob;
             best = distance;
         }
-        if (nearest == null) {
-            lines = new String[] {"No aerial predator within 48 blocks", "Placement via Creative spawn egg"};
-            return;
+        if (nearest != null) {
+            display.add("Nearest #" + nearest.entityId + "  " + nearest.flight() + "  Target " + nearest.targetName());
+            display.add(String.format(Locale.ROOT, "Destination %.1f / %.1f / %.1f",
+                    nearest.destinationX(), nearest.destinationY(), nearest.destinationZ()));
+            display.add("Phase " + nearest.phaseTicks() + "t   Remaining " + nearest.remainingPhaseTicks() + "t");
+            display.add("Last movement or attack failure: " + nearest.lastFailure());
+            display.add("Last disengagement: " + nearest.lastExit());
+        } else {
+            display.add("No predator within 48 blocks");
         }
-        double clearance = nearest.terrainClearance();
-        lines = new String[] {
-            "Predators within 48 blocks: " + population,
-            "Nearest #" + nearest.entityId + "  " + nearest.flight() + "  Target: " + nearest.targetName(),
-            String.format(Locale.ROOT, "Y %.1f  Terrain clearance: %s", nearest.posY,
-                    clearance < 0 ? "covered or unavailable" : String.format(Locale.ROOT, "%.1f blocks", clearance)),
-            String.format(Locale.ROOT, "Destination: %.1f / %.1f / %.1f",
-                    nearest.destinationX(), nearest.destinationY(), nearest.destinationZ()),
-            "Phase: " + nearest.phaseTicks() + " ticks  Remaining: " + nearest.remainingPhaseTicks(),
-            "Last movement or attack failure: " + nearest.lastFailure(),
-            "Last disengagement: " + nearest.lastExit()
-        };
+        lines = display.toArray(new String[display.size()]);
     }
 
     @Override
@@ -77,7 +91,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         drawDefaultBackground();
         drawCenteredString(fontRenderer, "Aerial Predator", width / 2, 14, 0xFFFFFF);
         for (int i = 0; i < lines.length; i++) {
-            drawCenteredString(fontRenderer, lines[i], width / 2, 34 + i * 12, 0xDFEBE7);
+            drawCenteredString(fontRenderer, lines[i], width / 2, 30 + i * 11, 0xDFEBE7);
         }
         super.drawScreen(mouseX, mouseY, partialTick);
     }

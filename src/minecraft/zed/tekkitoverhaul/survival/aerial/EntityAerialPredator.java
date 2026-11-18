@@ -26,6 +26,10 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     private static final int[] AVOID_ANGLES = {0, -10, 10, -20, 20};
 
     private Flight flight = Flight.CRUISE;
+    private AerialEncounter encounter;
+    private int lane, wildTicks;
+    private boolean natural, approaching;
+    private double arrivalX, arrivalY, arrivalZ;
     private EntityPlayer target;
     private int stateTicks, huntTicks, attempts, attemptLimit, scanDelay = 30, blockedTicks, hiddenTicks;
     private int cruiseTicks;
@@ -62,9 +66,43 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         return getHealth() <= 0 ? Flight.FALL : FLIGHTS[dataWatcher.getWatchableObjectByte(FLIGHT_WATCHER)];
     }
 
+    void joinEncounter(AerialEncounter group, int slot) {
+        encounter = group;
+        lane = slot;
+        natural = approaching = true;
+        wildTicks = 1000;
+        scanDelay = 65 + slot * 8;
+        // Set a single arrival waypoint ahead of a traveling pilot before the first target scan.
+        double leadX = group.airborne ? clamp(group.player.motionX * 48, -10, 10) : 0;
+        double leadZ = group.airborne ? clamp(group.player.motionZ * 48, -10, 10) : 0;
+        arrivalX = group.approachX + (posX - group.approachX) * 0.24 + leadX;
+        arrivalY = centerY() + 1;
+        arrivalZ = group.approachZ + (posZ - group.approachZ) * 0.24 + leadZ;
+    }
+
+    boolean belongsTo(AerialEncounter group) { return encounter == group; }
+
+    void leaveEncounter(String reason) {
+        if (encounter == null) return;
+        if (isEntityAlive()) {
+            // Passive members also move away from the player when the encounter ends.
+            if (target == null && flight != Flight.DISENGAGE) target = encounter.player;
+            if (flight != Flight.DISENGAGE) disengage(reason);
+        }
+        clearEncounter();
+    }
+
+    private void clearEncounter() {
+        if (encounter == null) return;
+        encounter.releaseDive(this);
+        encounter = null;
+        approaching = false;
+        wildTicks = Math.min(wildTicks, 240);
+    }
+
     @Override
     protected void updateEntityActionState() {
-        if (worldObj.difficultySetting == 0) {
+        if (worldObj.difficultySetting == 0 || (natural && --wildTicks <= 0)) {
             setDead();
             return;
         }
@@ -119,6 +157,15 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void detect() {
+        if (natural) {
+            if (encounter == null || !encounter.hunting) return;
+            EntityPlayer player = encounter.player;
+            if (eligible(player) && getDistanceSqToEntity(player) <= 36 * 36
+                    && AerialTerrain.skyHeight(player) >= 0 && visible(player)) {
+                startHunt(player, encounter.airborne, 1);
+            }
+            return;
+        }
         if (worldObj.worldProvider.worldType != 0) return;
         EntityPlayer best = null;
         boolean bestAirborne = false;
@@ -138,10 +185,15 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             bestDistance = distance;
         }
         if (best == null || (!bestAirborne && rand.nextInt(worldObj.isDaytime() ? 42 : 9) != 0)) return;
-        target = best;
-        aerialHunt = bestAirborne;
+        startHunt(best, bestAirborne, bestAirborne ? 2 : 1);
+    }
+
+    private void startHunt(EntityPlayer player, boolean airborne, int allowedAttempts) {
+        target = player;
+        aerialHunt = airborne;
+        approaching = false;
         attempts = huntTicks = hiddenTicks = 0;
-        attemptLimit = aerialHunt ? 2 : 1;
+        attemptLimit = allowedAttempts;
         enter(Flight.CIRCLE);
     }
 
@@ -152,7 +204,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
 
     private String invalidTarget() {
         if (!eligible(target)) return "target unavailable";
-        if (huntTicks > 400 || getDistanceSqToEntity(target) > 48 * 48) return "pursuit limit";
+        if (huntTicks > (encounter == null ? 400 : AerialEncounter.HUNT_LIMIT)
+                || getDistanceSqToEntity(target) > 48 * 48) return "pursuit limit";
         // Native block collision protects all intervening terrain. A roof also ends pursuit.
         double altitude = AerialTerrain.skyHeight(target);
         if (altitude < 0) return "target under cover or unloaded";
@@ -167,6 +220,13 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void cruise() {
+        if (approaching) {
+            approaching = horizontalRange(arrivalX, arrivalZ) >= 3;
+            if (approaching) {
+                steer(arrivalX, arrivalY, arrivalZ, 0.31);
+                return;
+            }
+        }
         if (--cruiseTicks <= 0 || horizontalRange(destinationX, destinationZ) < 3) {
             cruiseTicks = 55 + rand.nextInt(41);
             cruiseYaw = rotationYaw + 20 + rand.nextInt(56);
@@ -179,6 +239,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
                         MathHelper.floor_double(destinationZ));
                 desiredY = surface + 12 + rand.nextInt(7);
             }
+            if (encounter != null && encounter.airborne) desiredY = Math.max(desiredY, arrivalY - 2);
             destinationY = limitAltitude(desiredY);
         }
         Flight pose = cruiseTicks < 29 && Math.abs(destinationY - centerY()) < 3 ? Flight.GLIDE : Flight.CRUISE;
@@ -192,14 +253,17 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             return;
         }
         double angle = Math.atan2(posZ - target.posZ, posX - target.posX) + 0.82;
-        double altitude = limitAltitude(playerCenter(target) + 8.5);
-        steer(target.posX + Math.cos(angle) * 10, altitude, target.posZ + Math.sin(angle) * 10, 0.37);
+        int ring = encounter == null ? 0 : lane % 3;
+        double altitude = limitAltitude(playerCenter(target) + 8.5 + ring * 2);
+        double radius = encounter == null ? 10 : 10 + lane * 1.1;
+        steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
         double height = centerY() - playerCenter(target);
         double range = horizontalRange(target.posX, target.posZ);
-        if (stateTicks >= 42 && height >= 4 && height <= 15 && range >= 5 && range <= 16 && visible(target)) {
+        if (stateTicks >= 42 && height >= 4 && height <= 15 && range >= 5 && range <= 16 && visible(target)
+                && (encounter == null || encounter.reserveDive(this))) {
             enter(Flight.PREPARE);
             worldObj.playSoundAtEntity(this, "mob.ghast.moan", 0.65F, 1.7F);
-        } else if (stateTicks >= 185) {
+        } else if (stateTicks >= (encounter == null ? 185 : 490)) {
             disengage("no dive approach");
         }
     }
@@ -246,6 +310,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void recover() {
+        if (encounter != null) encounter.releaseDive(this);
         enter(Flight.RECOVER);
         destinationX = posX;
         destinationY = limitAltitude(centerY() + 8);
@@ -268,6 +333,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         destinationY = limitAltitude(centerY() + 7);
         target = null;
         enter(Flight.DISENGAGE);
+        clearEncounter();
     }
 
     private void steer(double x, double y, double z, double speed) {
@@ -388,12 +454,17 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         int delay = target != null ? DISENGAGE_TICKS : scanDelay;
         if (flight == Flight.DISENGAGE) delay = Math.max(delay, DISENGAGE_TICKS - stateTicks + 60);
         tag.setInteger("ZtoAerialScanDelay", delay);
+        if (natural) tag.setInteger("ZtoAerialWildTicks", Math.max(1, Math.min(240, wildTicks)));
     }
 
     @Override
     public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
         target = null;
+        encounter = null;
+        approaching = false;
+        wildTicks = Math.max(0, Math.min(240, tag.getInteger("ZtoAerialWildTicks")));
+        natural = wildTicks > 0;
         enter(Flight.CRUISE);
         cruiseTicks = 0;
         scanDelay = (int) clamp(tag.getInteger("ZtoAerialScanDelay"), 30, 180);

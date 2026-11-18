@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.2 — Aerial ecology and flock encounters
+
+- Add natural Overworld wildlife and hunting encounters. Sustained exposure above local terrain favors airborne encounters. Near-ground encounters are rare and favor darkness.
+- Admit one bounded encounter at a time. Territorial activity and difficulty can favor larger flocks, which stagger dives and disengage when the player escapes or takes cover.
+- Add natural-admission and cooldown settings. The Aerial Predator debug view shows exposure, admission decisions, cooldown and the flock's attack turn.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.2-alpha.1 — Aerial predator prototype
 
 - Add the Aerial Predator Spawn Egg for Creative testing. The predator flies in three dimensions, favors exposed airborne players, and uses a telegraphed dive with a fixed trajectory.

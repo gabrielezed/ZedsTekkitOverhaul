@@ -34,7 +34,7 @@ final class GuiZtoDebugHub extends GuiScreen {
             case 0: mc.displayGuiScreen(new GuiLunarDebug(local, world, this)); break;
             case 1: mc.displayGuiScreen(new GuiSurvivalDebug(local, world, local.survivalHud(), this)); break;
             case 2: mc.displayGuiScreen(new GuiTerritorialThreat(local, world, this)); break;
-            case 4: mc.displayGuiScreen(new GuiAerialPredatorDebug(world, this)); break;
+            case 4: mc.displayGuiScreen(new GuiAerialPredatorDebug(local, world, this)); break;
             case 3: mc.displayGuiScreen(null); break;
             default: break;
         }

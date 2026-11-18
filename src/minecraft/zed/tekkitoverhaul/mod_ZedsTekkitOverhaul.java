@@ -5,6 +5,7 @@ import net.minecraft.src.BaseMod;
 import net.minecraft.src.Block;
 import net.minecraft.src.Entity;
 import net.minecraft.src.GuiScreen;
+import zed.tekkitoverhaul.survival.weather.client.JetpackWeatherStatus;
 import net.minecraft.src.IBlockAccess;
 import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
@@ -144,6 +145,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public boolean onTickInGUI(float partialTick, Minecraft minecraft, GuiScreen screen) {
         craftingUx.tick(minecraft, screen, settings.partialRecipeFill, settings.craftingUxShortcut);
         DragDistributionIntegration.renderPreview(minecraft, minecraft.currentScreen);
+        JetpackWeatherStatus.drawInventory(minecraft, screen);
         return true;
     }
 }

@@ -156,6 +156,12 @@ for %%S in (ambient1 ambient2 warning dive hurt death) do (
         goto :fail
     )
 )
+for %%S in (warning fault recovery) do (
+    if not exist "src\minecraft\zed\sounds\jetpack\%%S.wav" (
+        echo [ZTO] ERROR: Missing jetpack weather sound %%S.
+        goto :fail
+    )
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" zed\sounds
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add predator sounds to the JAR.

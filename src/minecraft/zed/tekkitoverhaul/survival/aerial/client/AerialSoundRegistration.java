@@ -10,6 +10,7 @@ import net.minecraft.src.forge.adaptors.SoundHandlerAdaptor;
 /** Registers packaged WAV URLs in the local Forge sound pool, including after a sound reload. */
 public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     private static final String[] CLIPS = {"ambient1", "ambient2", "warning", "dive", "hurt", "death"};
+    private static final String[] JETPACK = {"warning", "fault", "recovery"};
     private SoundPool installed;
 
     public static void register(SoundManager manager) {
@@ -22,14 +23,19 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     public void onLoadSoundSettings(SoundManager manager) {
         SoundPool pool = manager.getSoundsPool();
         if (installed == pool) return;
-        for (String clip : CLIPS) {
-            URL resource = AerialSoundRegistration.class.getResource("/zed/sounds/aerial/" + clip + ".wav");
+        addClips(pool, "aerial", CLIPS);
+        addClips(pool, "jetpack", JETPACK);
+        installed = pool;
+    }
+
+    private static void addClips(SoundPool pool, String family, String[] clips) {
+        for (String clip : clips) {
+            URL resource = AerialSoundRegistration.class.getResource("/zed/sounds/" + family + "/" + clip + ".wav");
             if (resource == null) {
-                ModLoader.getLogger().warning("[ZTO] Missing aerial predator sound: " + clip);
+                ModLoader.getLogger().warning("[ZTO] Missing sound " + family + "/" + clip);
                 continue;
             }
-            pool.addSound("zto/aerial/" + clip + ".wav", resource);
+            pool.addSound("zto/" + family + "/" + clip + ".wav", resource);
         }
-        installed = pool;
     }
 }

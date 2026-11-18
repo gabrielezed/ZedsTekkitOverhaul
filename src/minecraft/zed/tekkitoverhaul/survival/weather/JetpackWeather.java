@@ -148,6 +148,13 @@ public final class JetpackWeather {
     private void transition(Phase next, int ticks) {
         phase = next;
         remaining = ticks;
+        String cue = next == Phase.FAULT ? "fault" : next == Phase.UNSTABLE ? "warning" : "recovery";
+        world.playSoundAtEntity(pilot, "zto.jetpack." + cue, 0.62F, 1.0F);
+        if (next != Phase.RECOVERING) {
+            double angle = Math.toRadians(pilot.rotationYaw);
+            world.spawnParticle("crit", pilot.posX + Math.sin(angle) * 0.35,
+                    pilot.boundingBox.minY + 1.25, pilot.posZ - Math.cos(angle) * 0.35, 0, 0.04, 0);
+        }
     }
 
     private static boolean eligible(EntityPlayer player) {

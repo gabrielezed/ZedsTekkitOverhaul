@@ -1,10 +1,15 @@
 /* Original procedural calls. Run from any directory with Node.js. */
 const fs = require('node:fs');
 const path = require('node:path');
-const output = path.resolve(__dirname, '../src/minecraft/zed/sounds/aerial');
+const output = path.resolve(__dirname, '../src/minecraft/zed/sounds');
+const electrical = process.argv.includes('--jetpack');
 const rate = 22050;
 const tau = 2 * Math.PI;
-const clips = [
+const clips = electrical ? [
+    ['warning', 0.53, 83, 69, 52, 0.28, 1.1, 0.85, 0.54, 0x0f7],
+    ['fault', 0.38, 740, -550, 121, 0.81, 1.5, 0.36, 0.69, 0x197],
+    ['recovery', 0.31, 184, 210, 29, 0.08, 0.15, 0.65, 0.43, 0x2cc],
+] : [
     ['ambient1', 0.94, 210, -112, 12, 0.26, 0.24, 0.48, 0.43, 0x21d],
     ['ambient2', 1.13, 178, -74, 9, 0.30, 0.29, 0.45, 0.48, 0x827],
     ['warning',  0.56, 322, 354, 34, 0.14, 0.78, 0.65, 0.74, 0x74a],
@@ -12,7 +17,8 @@ const clips = [
     ['hurt',     0.24, 344,-185, 45, 0.44, 0.95, 0.40, 0.63, 0x69c],
     ['death',    0.83, 256,-191, 22, 0.35, 0.58, 0.74, 0.61, 0x381],
 ];
-fs.mkdirSync(output, { recursive: true });
+const directory = path.join(output, electrical ? "jetpack" : "aerial");
+fs.mkdirSync(directory, { recursive: true });
 for (const [name, seconds, base, slide, flutter, hiss, rasp, resonance, level, seed] of clips) {
     const count = Math.round(seconds * rate);
     const wav = Buffer.alloc(44 + count * 2);
@@ -49,5 +55,5 @@ for (const [name, seconds, base, slide, flutter, hiss, rasp, resonance, level, s
         const sample = level * envelope * Math.tanh(signal * (1.55 + rasp)) * (0.83 + tremor * rasp * 0.17);
         wav.writeInt16LE(Math.round(sample * 32767), 44 + i * 2);
     }
-    fs.writeFileSync(path.join(output, name + '.wav'), wav);
+    fs.writeFileSync(path.join(directory, name + '.wav'), wav);
 }

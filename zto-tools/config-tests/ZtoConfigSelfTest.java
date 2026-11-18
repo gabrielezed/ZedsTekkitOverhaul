@@ -18,7 +18,8 @@ public final class ZtoConfigSelfTest {
         Path fresh = root.resolve("fresh");
         Path canonical = fresh.resolve(ZtoConfigLoader.FILE_NAME);
         ZtoConfig defaults = ZtoConfigLoader.load(fresh, false, LOG);
-        check(defaults.naturalAerialEncounters && defaults.aerialEncounterCooldownSeconds == 180,
+        check(defaults.naturalAerialEncounters && defaults.electricJetpackWeather && defaults.lunarAerialEncounters
+                && defaults.aerialEncounterCooldownSeconds == 180,
                 "natural aerial ecology defaults and cooldown");
         check(defaults.playerAssault && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
                 && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters

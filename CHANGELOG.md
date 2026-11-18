@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.4 — Jetpack weather and lunar aerial encounters
+
+- Add rain and thunder exposure to the IC2 1.97 Electric Jetpack. Sustained powered flight can trigger a warning and a short lift fault with native descent braking.
+- Add three original electrical cues, sparks, equipment status in the Survival inventory and an Electric Jetpack Weather panel in the Debug Hub.
+- Let selected natural full-moon assaults spend one or two of their existing slots on aerial predators. The shared cooldown and fault recovery period limit overlapping pressure.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.2-alpha.3 — Aerial predator polish
 
 - Narrow the predator's torso and limbs, elongate the spine and tail, and give it a hinged, fanged jaw and a revised pixel-art atlas.

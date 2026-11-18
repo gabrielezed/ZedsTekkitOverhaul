@@ -153,9 +153,9 @@ public final class AerialPredatorProbe {
         AerialSoundRegistration sounds = new AerialSoundRegistration();
         sounds.onLoadSoundSettings(manager);
         sounds.onLoadSoundSettings(manager);
-        check(manager.getSoundsPool().a == 6, "sound registration is idempotent per pool");
+        check(manager.getSoundsPool().a == 9, "sound registration is idempotent per pool");
         for (String key : new String[] {AerialSounds.AMBIENT, AerialSounds.WARNING, AerialSounds.DIVE,
-                AerialSounds.HURT, AerialSounds.DEATH}) {
+                AerialSounds.HURT, AerialSounds.DEATH, "zto.jetpack.warning", "zto.jetpack.fault", "zto.jetpack.recovery"}) {
             ub clip = manager.getSoundsPool().a(key);
             check(clip != null, "native sound pool resolves " + key);
             CodecWav codec = new CodecWav();
@@ -168,7 +168,7 @@ public final class AerialPredatorProbe {
         }
         sd recreated = new sd();
         sounds.onLoadSoundSettings(recreated);
-        check(recreated.getSoundsPool().a == 6, "a recreated sound manager gets the same sound set");
+        check(recreated.getSoundsPool().a == 9, "a recreated sound manager gets the same sound set");
     }
 
     private static void approaches(xd world, yw player) throws Exception {

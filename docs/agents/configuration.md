@@ -14,6 +14,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
 | `naturalEnderkinSpawning` | true | Enable ordinary Enderkin substitutions in the local Overworld with the matching ZTOAgent. Set false to keep ordinary species selection native. Lunar encounter settings are independent. |
 | `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |
+| `electricJetpackWeather` | true | Progressive exposure and temporary lift restriction for the installed IC2 1.97 Electric Jetpack in local play. Requires the matching ZTOAgent. |
+| `lunarAerialEncounters` | true | Allow selected natural full-moon assaults to spend up to two of their slots on aerial predators. |
 | `aerialEncounterCooldownSeconds` | 180 | Quiet period after an admitted encounter, in active Overworld seconds. Bounds 90–600. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |

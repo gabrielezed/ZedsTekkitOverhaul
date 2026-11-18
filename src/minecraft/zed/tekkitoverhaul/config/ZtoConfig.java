@@ -14,6 +14,7 @@ public final class ZtoConfig {
     public final int territorialHostileCapBonusPercent;
     public final boolean naturalEnderkinSpawning, naturalAerialEncounters;
     public final int aerialEncounterCooldownSeconds;
+    public final boolean electricJetpackWeather;
     public final boolean creativeInventoryBackport, partialRecipeFill;
     public final int craftingUxShortcut;
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
@@ -39,6 +40,7 @@ public final class ZtoConfig {
         territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
         naturalEnderkinSpawning = values.flag("naturalEnderkinSpawning", true);
         naturalAerialEncounters = values.flag("naturalAerialEncounters", true);
+        electricJetpackWeather = values.flag("electricJetpackWeather", true);
         aerialEncounterCooldownSeconds = values.bounded("aerialEncounterCooldownSeconds", 180, 90, 600);
         disableNightSkipping = values.flag("disableNightSkipping", true);
         assaultSpawnBudget = values.bounded("assaultSpawnBudget", 15, 1, 24);

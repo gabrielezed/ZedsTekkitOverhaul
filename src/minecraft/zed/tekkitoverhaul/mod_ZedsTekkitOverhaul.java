@@ -89,7 +89,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
                 settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent,
-                settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds);
+                settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds,
+                settings.electricJetpackWeather);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);

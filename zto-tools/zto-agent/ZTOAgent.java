@@ -29,6 +29,8 @@ public final class ZTOAgent {
     private static volatile WeakReference<Consumer<Object>> spawnInserted = new WeakReference<>(null);
     private static volatile WeakReference<UnaryOperator<Object>> spawnReplacement = new WeakReference<>(null);
 
+    private static volatile WeakReference<BiConsumer<Object, Object>> jetpack = new WeakReference<>(null);
+
     private ZTOAgent() {}
 
     public static synchronized void premain(String args, Instrumentation instrumentation) {
@@ -54,7 +56,7 @@ public final class ZTOAgent {
         IndustrialHooks.Hook industrial = IndustrialHooks.find(name);
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
-        if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)) return null;
+        if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name) && !JetpackHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -66,6 +68,7 @@ public final class ZTOAgent {
         for (byte part : MessageDigest.getInstance("SHA-256").digest(bytes))
             hex.append(Integer.toHexString((part & 255) | 256).substring(1));
         String hash = hex.toString();
+        if (JetpackHook.TARGET.equals(name) && JetpackHook.SHA256.equals(hash)) return JetpackHook.patch(bytes);
         if (NaturalSpawnHook.TARGET.equals(name) && NaturalSpawnHook.SHA256.equals(hash))
             return NaturalSpawnHook.patch(bytes);
         if (inventory && InventoryHook.SHA256.equals(hash)) return InventoryHook.patch(bytes);
@@ -81,6 +84,17 @@ public final class ZTOAgent {
     private static synchronized boolean installed(ClassLoader loader, String name) {
         Map<String, Boolean> hooks = STATUS.get(loader);
         return hooks != null && Boolean.TRUE.equals(hooks.get(name));
+    }
+
+    public static void registerJetpack(BiConsumer<Object, Object> callback) { jetpack = new WeakReference<>(callback); }
+
+    public static boolean jetpackActive(ClassLoader loader) {
+        return jetpack.get() != null && installed(loader, JetpackHook.TARGET);
+    }
+
+    public static void jetpackThrust(boolean used, Object item, Object player) {
+        BiConsumer<Object, Object> callback = jetpack.get();
+        if (used && callback != null) callback.accept(item, player);
     }
 
     public static void registerMouse(Predicate<Object> callback) { mouse = new WeakReference<>(callback); }

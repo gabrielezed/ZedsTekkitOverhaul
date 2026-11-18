@@ -27,6 +27,7 @@ import zed.tekkitoverhaul.lunar.LunarPhase;
 import zed.tekkitoverhaul.lunar.LunarService;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 
@@ -57,7 +58,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
                          boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
                          int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
-                         boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds) {
+                         boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds,
+                         boolean electricJetpackWeather) {
         game = ModLoader.getMinecraftInstance();
         owner = Thread.currentThread();
         this.verbose = verbose;
@@ -66,6 +68,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
         aerialEcology = new AerialEcology(naturalAerialEncounters, aerialEncounterCooldownSeconds, territory, naturalSpawning);
+        JetpackWeather.LOCAL.configure(electricJetpackWeather);
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);
         if (keyCode > 0 && keyCode < 256 && keyCode != hubKey.keyCode) {
@@ -223,6 +226,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         territory.bind(null);
         naturalSpawning.bind(null);
         aerialEcology.bind(null);
+        JetpackWeather.LOCAL.tick(null, null, true);
         assault.bind(null, null);
         assault.setDiagnostics(null);
         survivalDiagnostics = null;
@@ -256,6 +260,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         if (survivalHud != null && ticks.contains(TickType.RENDER)) survivalHud.render();
         if (!ticks.contains(TickType.WORLD)) return;
         bind(game.theWorld);
+        JetpackWeather.LOCAL.tick(world, world == null ? null : game.thePlayer, game.isGamePaused);
         territory.tick(game.thePlayer, game.isGamePaused);
         aerialEcology.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {

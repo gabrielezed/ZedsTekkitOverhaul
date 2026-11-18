@@ -69,6 +69,9 @@ final class GuiAerialPredatorDebug extends GuiScreen {
             display.add(String.format(Locale.ROOT, "Destination %.1f / %.1f / %.1f",
                     nearest.destinationX(), nearest.destinationY(), nearest.destinationZ()));
             display.add("Phase " + nearest.phaseTicks() + "t   Remaining " + nearest.remainingPhaseTicks() + "t");
+            display.add(nearest.diveStatus() + " | Dives " + nearest.diveCommitments()
+                    + " | Failed warnings " + nearest.rejectedWarnings());
+            display.add("Dive rejection: " + nearest.lastDiveRejection());
             display.add("Last movement or attack failure: " + nearest.lastFailure());
             display.add("Last disengagement: " + nearest.lastExit());
         } else {
@@ -91,7 +94,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         drawDefaultBackground();
         drawCenteredString(fontRenderer, "Aerial Predator", width / 2, 14, 0xFFFFFF);
         for (int i = 0; i < lines.length; i++) {
-            drawCenteredString(fontRenderer, lines[i], width / 2, 30 + i * 11, 0xDFEBE7);
+            drawCenteredString(fontRenderer, lines[i], width / 2, 28 + i * 10, 0xDFEBE7);
         }
         super.drawScreen(mouseX, mouseY, partialTick);
     }

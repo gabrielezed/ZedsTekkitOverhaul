@@ -64,7 +64,8 @@ public final class AerialEcologyProbe {
         check(night.snapshot().chance > daytimeChance && night.snapshot().activeMembers == 1,
                 "night is more favorable and still permits only a single ground predator");
         night.ticks(420);
-        check(night.warnings == 1 && night.snapshot().admissions == 1, "natural ground hunt spends one windup");
+        check(night.warnings == 1 && night.commitments == 1 && night.snapshot().admissions == 1,
+                "natural ground hunt commits one actual dive");
 
         Fixture normal = new Fixture(root, "aerial-normal", 2, 6000);
         admitHigh(normal, 0);
@@ -94,7 +95,7 @@ public final class AerialEcologyProbe {
                 }
             }
         }
-        check(removed && dives >= 2, "a second predator attacks after losing the first attacker");
+        check(removed && dives >= 2 && normal.commitments >= 1, "a second predator dives after losing the first attacker");
         check(normal.snapshot().activeMembers == 0 && normal.snapshot().cooldownSeconds > 0,
                 "the flock ends on the actual encounter lifecycle");
         normal.position(323.5, 52, false);
@@ -104,12 +105,12 @@ public final class AerialEcologyProbe {
 
         Fixture transit = new Fixture(root, "aerial-transit", 2, 6000);
         admitHigh(transit, 0.18);
-        for (int tick = 0; tick < 300 && transit.warnings == 0; tick++) {
+        for (int tick = 0; tick < 300 && transit.commitments == 0; tick++) {
             transit.player.c(288.5, 52, 288.5 + tick * 0.18, 0, 0);
             transit.player.t = 0.18;
             transit.ticks(1);
         }
-        check(transit.warnings > 0, "natural hunters can approach a moving pilot");
+        check(transit.commitments > 0, "natural hunters can commit a dive against a moving pilot");
 
         Fixture hard = new Fixture(root, "aerial-hard", 3, 6000);
         hard.position(288.5, 4, true);
@@ -129,6 +130,11 @@ public final class AerialEcologyProbe {
         EntityAerialPredator returned = (EntityAerialPredator) aao.a(tag, hard.world);
         check(returned != null && returned.flight() == Flight.CRUISE && "-".equals(returned.targetName()),
                 "wild reload has no transient flock or target");
+        for (int tick = 0; tick < 390 && hard.commitments < 2; tick++) {
+            hard.ticks(1);
+            check(hard.activeDives() <= 1, "Hard flock keeps a single attack turn");
+        }
+        check(hard.commitments >= 2, "Hard flock commits multiple spaced dives");
         hard.position(288.5, 4, true);
         hard.seconds(1);
         check(hard.snapshot().activeMembers == 0 && hard.snapshot().lastEnd.contains("descended"),
@@ -207,7 +213,7 @@ public final class AerialEcologyProbe {
         final TerritorialActivityService territory = new TerritorialActivityService();
         final NaturalSpawnPressure nativeSpawns = new NaturalSpawnPressure(territory, 70, true);
         final AerialEcology ecology = new AerialEcology(true, 90, territory, nativeSpawns);
-        int warnings;
+        int warnings, commitments;
 
         Fixture(File root, String name, int difficulty, long time) throws Exception {
             world = new ProbeWorld(root, name);
@@ -251,6 +257,7 @@ public final class AerialEcologyProbe {
                     Flight before = mob.flight();
                     world.a(mob, true);
                     if (before != Flight.PREPARE && mob.flight() == Flight.PREPARE) ++warnings;
+                    if (before != Flight.DIVE && mob.flight() == Flight.DIVE) ++commitments;
                 }
                 player.l(20);
                 player.r = player.s = player.t = 0;

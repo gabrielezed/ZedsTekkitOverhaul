@@ -31,8 +31,10 @@ final class AerialEncounter {
         mob.joinEncounter(this, lane);
     }
 
+    boolean diveAvailable() { return attacker == null && gap == 0 && !ended; }
+
     boolean reserveDive(EntityAerialPredator mob) {
-        if (attacker != null || gap > 0 || ended) return false;
+        if (!diveAvailable()) return false;
         attacker = mob;
         return true;
     }

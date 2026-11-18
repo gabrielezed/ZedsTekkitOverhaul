@@ -32,7 +32,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     private double arrivalX, arrivalY, arrivalZ;
     private EntityPlayer target;
     private int stateTicks, huntTicks, attempts, attemptLimit, scanDelay = 30, blockedTicks, hiddenTicks;
-    private int cruiseTicks;
+    private int cruiseTicks, rejectedWarnings, commitments, restageUntil;
+    private String diveStatus = "No target", lastDiveRejection = "none";
     private boolean aerialHunt;
     private float cruiseYaw;
     private double destinationX, destinationY, destinationZ;
@@ -139,7 +140,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             case RECOVER:
                 climb();
                 if (stateTicks >= RECOVER_TICKS) {
-                    if (attempts >= attemptLimit) disengage("attack budget");
+                    if (attempts >= attemptLimit || rejectedWarnings >= 2)
+                        disengage(attempts >= attemptLimit ? "attack budget" : "repeated blocked launch");
                     else enter(Flight.CIRCLE);
                 }
                 break;
@@ -192,7 +194,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         target = player;
         aerialHunt = airborne;
         approaching = false;
-        attempts = huntTicks = hiddenTicks = 0;
+        attempts = huntTicks = hiddenTicks = rejectedWarnings = restageUntil = 0;
+        lastDiveRejection = "none";
         attemptLimit = allowedAttempts;
         enter(Flight.CIRCLE);
     }
@@ -248,47 +251,110 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void circle() {
+        if (stateTicks >= (encounter == null ? 200 : 490)) {
+            disengage("no dive approach");
+            return;
+        }
         if (hiddenTicks > 0) {
+            diveStatus = "Target obscured";
             steer(destinationX, destinationY, destinationZ, 0.26);
             return;
         }
-        double angle = Math.atan2(posZ - target.posZ, posX - target.posX) + 0.82;
         int ring = encounter == null ? 0 : lane % 3;
-        double altitude = limitAltitude(playerCenter(target) + 8.5 + ring * 2);
-        double radius = encounter == null ? 10 : 10 + lane * 1.1;
-        steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
-        double height = centerY() - playerCenter(target);
+        double altitude = limitAltitude(playerCenter(target) + 8 + ring * 1.5);
+        double offset = Math.atan2(posZ - target.posZ, posX - target.posX);
         double range = horizontalRange(target.posX, target.posZ);
-        if (stateTicks >= 42 && height >= 4 && height <= 15 && range >= 5 && range <= 16 && visible(target)
-                && (encounter == null || encounter.reserveDive(this))) {
-            enter(Flight.PREPARE);
-            worldObj.playSoundAtEntity(this, "mob.ghast.moan", 0.65F, 1.7F);
-        } else if (stateTicks >= (encounter == null ? 185 : 490)) {
-            disengage("no dive approach");
+        boolean turnAvailable = encounter == null || encounter.diveAvailable();
+        if (stateTicks < 26 || !turnAvailable || stateTicks < restageUntil || range < 6) {
+            double angle = offset + (range < 6 ? 0.22 : 0.82);
+            double radius = encounter == null ? 10 : 10 + lane * 1.1;
+            diveStatus = turnAvailable ? "Repositioning" : "Waiting for flock turn";
+            steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
+            return;
         }
+
+        double endX = leadX(), endZ = leadZ();
+        double height = centerY() - playerCenter(target);
+        if (range > 15 || height < 4 || height > 14) {
+            // Close the range from above without running straight into the pilot.
+            double radius = range > 15 ? 8 : Math.max(7, Math.min(13, range));
+            diveStatus = "Seeking launch distance and height";
+            steer(endX + Math.cos(offset) * radius, altitude, endZ + Math.sin(offset) * radius, 0.39);
+            return;
+        }
+
+        aim(endX, altitude, endZ);
+        if (stateTicks < 42 || stateTicks % 4 != 0) return;
+        String rejection = diveRejection(endX, leadY(), endZ);
+        diveStatus = rejection == null ? "Ready" : rejection;
+        if (rejection != null) {
+            lastDiveRejection = rejection;
+            if ("Blocked dive corridor".equals(rejection) || "Unloaded dive corridor".equals(rejection))
+                restageUntil = stateTicks + 20;
+            return;
+        }
+        if (encounter != null && !encounter.reserveDive(this)) return;
+        enter(Flight.PREPARE);
+        diveStatus = "Telegraphing";
+        worldObj.playSoundAtEntity(this, "mob.ghast.moan", 0.65F, 1.7F);
+    }
+
+    private void aim(double x, double y, double z) {
+        destinationX = x;
+        destinationY = y;
+        destinationZ = z;
+        float bearing = yaw(x - posX, z - posZ);
+        rotationYaw += (float) clamp(wrap(bearing - rotationYaw), -10, 10);
+        double dy = clamp((y - centerY()) * 0.10, -0.14, 0.19);
+        double radians = Math.toRadians(rotationYaw);
+        double vx = -Math.sin(radians) * 0.085, vz = Math.cos(radians) * 0.085;
+        if (clearance(vx, dy, vz, 5)) blend(vx, dy, vz);
+        else blend(0, 0, 0);
+    }
+
+    private double leadX() { return target.posX + clamp(target.motionX * 10, -3, 3); }
+    private double leadZ() { return target.posZ + clamp(target.motionZ * 10, -3, 3); }
+    private double leadY() {
+        return playerCenter(target) + (aerialHunt ? clamp(target.motionY * 8, -2, 2) : 0);
+    }
+
+    private String diveRejection(double x, double y, double z) {
+        double dx = x - posX, dy = y - centerY(), dz = z - posZ;
+        double range = horizontalRange(x, z);
+        if (dy > -2.5 || range < 3 || dx * dx + dy * dy + dz * dz > 23 * 23) return "Outside launch geometry";
+        if (Math.abs(wrap(yaw(dx, dz) - rotationYaw)) > 25) return "Aligning heading";
+        if (!AerialTerrain.loaded(worldObj, posX, posZ, x, z)) return "Unloaded dive corridor";
+        if (!visible(target) || !unobstructed(posX, centerY(), posZ, x, y, z)) return "Blocked dive corridor";
+
+        // Check short swept boxes along the launch line instead of testing a single diagonal-sized box.
+        int segments = (int) Math.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz) / 2.5);
+        for (int i = 0; i < segments; ++i) {
+            double fraction = (double) i / segments;
+            AxisAlignedBB section = boundingBox.getOffsetBoundingBox(dx * fraction, dy * fraction, dz * fraction);
+            if (!AerialTerrain.clear(this, section.addCoord(dx / segments, dy / segments, dz / segments)))
+                return "Blocked dive corridor";
+        }
+        return null;
     }
 
     private void prepare() {
-        if (hiddenTicks == 0) {
-            steer(target.posX, Math.max(centerY(), playerCenter(target) + 5), target.posZ, 0.15);
-        } else {
-            steer(destinationX, destinationY, destinationZ, 0.15);
-        }
+        double endX = leadX(), endY = leadY(), endZ = leadZ();
+        if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), playerCenter(target) + 5)), endZ);
+        else blend(0, 0, 0);
         if (stateTicks < PREPARE_TICKS) return;
-        ++attempts;
-        double endX = target.posX + clamp(target.motionX * 10, -3, 3);
-        double endY = playerCenter(target) + (aerialHunt ? clamp(target.motionY * 8, -2, 2) : 0);
-        double endZ = target.posZ + clamp(target.motionZ * 10, -3, 3);
-        double dx = endX - posX, dy = endY - centerY(), dz = endZ - posZ;
-        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        double headingError = Math.abs(wrap(yaw(dx, dz) - rotationYaw));
-        if (dy > -2.5 || length > 23 || headingError > 42 || !visible(target)
-                || !AerialTerrain.loaded(worldObj, posX, posZ, endX, endZ)
-                || !unobstructed(posX, centerY(), posZ, endX, endY, endZ)) {
-            lastFailure = "commit path rejected";
+
+        String rejection = diveRejection(endX, endY, endZ);
+        if (rejection != null) {
+            ++rejectedWarnings;
+            lastDiveRejection = lastFailure = rejection;
             recover();
             return;
         }
+        ++attempts;
+        ++commitments;
+        diveStatus = "Committed";
+        double dx = endX - posX, dy = endY - centerY(), dz = endZ - posZ;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         diveX = dx / length;
         diveY = dy / length;
         diveZ = dz / length;
@@ -311,6 +377,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
 
     private void recover() {
         if (encounter != null) encounter.releaseDive(this);
+        diveStatus = "Recovering";
         enter(Flight.RECOVER);
         destinationX = posX;
         destinationY = limitAltitude(centerY() + 8);
@@ -324,6 +391,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
 
     private void disengage(String reason) {
         lastExit = reason;
+        diveStatus = "No target";
         double dx = target == null ? 0 : posX - target.posX;
         double dz = target == null ? 0 : posZ - target.posZ;
         double range = Math.sqrt(dx * dx + dz * dz);
@@ -487,6 +555,10 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             default: return 0;
         }
     }
+    public String diveStatus() { return diveStatus; }
+    public String lastDiveRejection() { return lastDiveRejection; }
+    public int rejectedWarnings() { return rejectedWarnings; }
+    public int diveCommitments() { return commitments; }
     public String lastFailure() { return lastFailure; }
     public String lastExit() { return lastExit; }
 

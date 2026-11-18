@@ -1,5 +1,15 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.5 — Fugl stabilization
+
+- Name the aerial predator Fugl in game and preserve its save identifier and spawn egg ID.
+- Align the dive pose with the flight path, tuck the talons, and unfold the wings during recovery.
+- Replace the creature calls with original raspy vocalizations and a distinct warning bark.
+- Make an Electric Jetpack fault interrupt powered ascent for up to 46 ticks, with native steering, charge use and descent braking.
+- Start the Survival Debug overlay hidden on fresh profiles and save the ON/OFF choice per client.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.2-alpha.4 — Jetpack weather and lunar aerial encounters
 
 - Add rain and thunder exposure to the IC2 1.97 Electric Jetpack. Sustained powered flight can trigger a warning and a short lift fault with native descent braking.

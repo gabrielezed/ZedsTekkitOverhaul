@@ -1,5 +1,47 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.2-alpha.5 — Fugl stabilization
+
+- Name the aerial predator Fugl in game and preserve its save identifier and spawn egg ID.
+- Align the dive pose with the flight path, tuck the talons, and unfold the wings during recovery.
+- Replace the creature calls with original raspy vocalizations and a distinct warning bark.
+- Make an Electric Jetpack fault interrupt powered ascent for up to 46 ticks, with native steering, charge use and descent braking.
+- Start the Survival Debug overlay hidden on fresh profiles and save the ON/OFF choice per client.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
+## 0.2.2-alpha.4 — Jetpack weather and lunar aerial encounters
+
+- Add rain and thunder exposure to the IC2 1.97 Electric Jetpack. Sustained powered flight can trigger a warning and a short lift fault with native descent braking.
+- Add three original electrical cues, sparks, equipment status in the Survival inventory and an Electric Jetpack Weather panel in the Debug Hub.
+- Let selected natural full-moon assaults spend one or two of their existing slots on aerial predators. The shared cooldown and fault recovery period limit overlapping pressure.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
+## 0.2.2-alpha.3 — Aerial predator polish
+
+- Narrow the predator's torso and limbs, elongate the spine and tail, and give it a hinged, fanged jaw and a revised pixel-art atlas.
+- Align over a checked descent corridor before sounding the warning. A newly blocked launch can be retried within the existing hunt limit.
+- Add original synthetic ambient, warning, dive, hurt and death sounds.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
+## 0.2.2-alpha.2 — Aerial ecology and flock encounters
+
+- Add natural Overworld wildlife and hunting encounters. Sustained exposure above local terrain favors airborne encounters. Near-ground encounters are rare and favor darkness.
+- Admit one bounded encounter at a time. Territorial activity and difficulty can favor larger flocks, which stagger dives and disengage when the player escapes or takes cover.
+- Add natural-admission and cooldown settings. The Aerial Predator debug view shows exposure, admission decisions, cooldown and the flock's attack turn.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
+## 0.2.2-alpha.1 — Aerial predator prototype
+
+- Add the Aerial Predator Spawn Egg for Creative testing. The predator flies in three dimensions, favors exposed airborne players, and uses a telegraphed dive with a fixed trajectory.
+- Add its articulated wings, hooked bill, split tail, and original pixel-art atlas. Flight poses follow its hunt and movement.
+- Add an Aerial Predator view to the Debug Hub for the nearest creature's target, destination, phase and recent failures.
+
+[Implementation and playtest](docs/agents/survival-022-aerial-predator.md)
+
 ## 0.2.1 — Enderkin ecology and territorial survival
 
 - Sustained territorial activity increases ordinary hostile pressure. Activity persists across saves, decays during absence, and can shape lunar assault admission when enabled.

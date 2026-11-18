@@ -21,13 +21,14 @@ final class SurvivalDebugHud extends Gui {
     private final LocalLunarCalendar local;
     private final Minecraft game;
     private final KeyBinding key;
-    private boolean visible = true;
+    private final SurvivalOverlayPreference overlay;
     private long handledEvent = Long.MIN_VALUE;
     private long polledEvent = Long.MIN_VALUE;
 
     SurvivalDebugHud(LocalLunarCalendar local, Minecraft game, BaseMod mod, int keyCode, int lunarKey) {
         this.local = local;
         this.game = game;
+        overlay = new SurvivalOverlayPreference(game.mcDataDir.toPath().resolve("config"), ModLoader.getLogger());
         if (keyCode > 0 && keyCode < 256) {
             if (keyCode == lunarKey || keyCode == Keyboard.KEY_NUMPAD1) {
                 keyCode = lunarKey == Keyboard.KEY_F10 ? Keyboard.KEY_F9 : Keyboard.KEY_F10;
@@ -60,11 +61,12 @@ final class SurvivalDebugHud extends Gui {
     boolean isShortcut(int code) { return key != null && key.keyCode > 0 && key.keyCode == code; }
 
     void consumeKeyEvent() { handledEvent = Keyboard.getEventNanoseconds(); }
-    void toggleOverlay() { visible = !visible; }
-    boolean overlayVisible() { return visible; }
+    void toggleOverlay() { overlay.toggle(); }
+    boolean overlayVisible() { return overlay.visible(); }
 
     void render() {
-        if (!visible || game.currentScreen != null || game.gameSettings.hideGUI || game.gameSettings.showDebugInfo) return;
+        if (!overlayVisible() || game.currentScreen != null || game.gameSettings.hideGUI
+                || game.gameSettings.showDebugInfo) return;
         World world = game.theWorld;
         AssaultDiagnostics diagnostics = local.survivalDiagnostics(world);
         if (diagnostics == null) return;

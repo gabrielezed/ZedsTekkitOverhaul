@@ -27,9 +27,10 @@ try {
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
         $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
-            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java') |
+            'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
-        & javac -source 8 -target 8 -cp (($headless + $buildCraft) -join ';') -d $out.FullName @headlessSources
+        & javac -source 8 -target 8 -cp (($headless + $buildCraft + $industrialCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
@@ -53,6 +54,21 @@ try {
             if ($LASTEXITCODE) { throw 'Industrial theft and Ender Trail probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') SurvivalIntegrationProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Survival integration probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') AerialPredatorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Aerial predator probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') AerialEcologyProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Aerial ecology probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $industrialCraft) -join ';') JetpackWeatherProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Jetpack weather probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') LunarAerialProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Lunar aerial probe failed.' }
+            $profile = Join-Path $out.FullName 'overlay-profile'
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'false' 'toggle'
+            if ($LASTEXITCODE) { throw 'Overlay default or ON toggle failed.' }
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'true' 'toggle'
+            if ($LASTEXITCODE) { throw 'Overlay ON persistence or OFF toggle failed.' }
+            & $PackJava '-Xverify:all' -cp ($headless -join ';') SurvivalOverlayProbe $profile 'false'
+            if ($LASTEXITCODE) { throw 'Overlay OFF persistence failed.' }
         } finally { Pop-Location }
     }
 } finally {

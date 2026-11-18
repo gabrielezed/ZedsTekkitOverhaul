@@ -8,6 +8,7 @@ import net.minecraft.src.Item;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.config.ZtoConfig;
+import zed.tekkitoverhaul.survival.ItemSurvivalSpawnEgg;
 import net.minecraft.src.forge.IChunkLoadHandler;
 import net.minecraft.src.forge.MinecraftForge;
 
@@ -54,15 +55,15 @@ public final class TacticalHostiles {
                 if (ids[i] == ids[j]) throw new IllegalStateException("ZTO: Duplicate tactical spawn egg item ID " + ids[i]);
             }
         }
-        ModLoader.addName(new ItemTacticalSpawnEgg(skirmisher, SKIRMISHER, "ztoSkirmisherEgg", 0x17171C, 0x535170),
+        ModLoader.addName(new ItemSurvivalSpawnEgg(skirmisher, SKIRMISHER, "ztoSkirmisherEgg", 0x17171C, 0x535170),
                 "Skirmisher Spawn Egg");
-        ModLoader.addName(new ItemTacticalSpawnEgg(breacher, BREACHER, "ztoBreacherEgg", 0x1C171B, 0x785469),
+        ModLoader.addName(new ItemSurvivalSpawnEgg(breacher, BREACHER, "ztoBreacherEgg", 0x1C171B, 0x785469),
                 "Breacher Spawn Egg");
-        ModLoader.addName(new ItemTacticalSpawnEgg(saboteur, SABOTEUR, "ztoSaboteurEgg", 0x211A32, 0x65D9C0),
+        ModLoader.addName(new ItemSurvivalSpawnEgg(saboteur, SABOTEUR, "ztoSaboteurEgg", 0x211A32, 0x65D9C0),
                 "Saboteur Spawn Egg");
-        ModLoader.addName(new ItemTacticalSpawnEgg(config.tankEgg, TANK, "ztoTankEgg", 0x161616, 0xCC00FA),
+        ModLoader.addName(new ItemSurvivalSpawnEgg(config.tankEgg, TANK, "ztoTankEgg", 0x161616, 0xCC00FA),
                 "Tank Spawn Egg");
-        ModLoader.addName(new ItemTacticalSpawnEgg(config.thiefEgg, THIEF, "ztoThiefEgg", 0x101015, 0xE079FA),
+        ModLoader.addName(new ItemSurvivalSpawnEgg(config.thiefEgg, THIEF, "ztoThiefEgg", 0x101015, 0xE079FA),
                 "Thief Spawn Egg");
     }
 

@@ -13,6 +13,10 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. |
 | `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
 | `naturalEnderkinSpawning` | true | Enable ordinary Enderkin substitutions in the local Overworld with the matching ZTOAgent. Set false to keep ordinary species selection native. Lunar encounter settings are independent. |
+| `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |
+| `electricJetpackWeather` | true | Progressive exposure and temporary lift restriction for the installed IC2 1.97 Electric Jetpack in local play. Requires the matching ZTOAgent. |
+| `lunarAerialEncounters` | true | Allow selected natural full-moon assaults to spend up to two of their slots on aerial predators. |
+| `aerialEncounterCooldownSeconds` | 180 | Quiet period after an admitted encounter, in active Overworld seconds. Bounds 90–600. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |
 | `assaultWaveInterval` | 900 | 400–1200 simulation ticks between waves while enemies remain |
@@ -28,7 +32,7 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `craftingUxShortcut` | 0 | Shortcut for the hovered crafting UX button. |
 | `lunarDebugKey` | 0 | Optional direct shortcut for Lunar Debug. F9 is 67. Numpad 1 opens the Debug Hub. |
 | `lunarVerboseLogging` | false | Log lunar transitions, initialization and listener failures. |
-| `survivalDebugHud` | false | Enable the local overlay and its direct shortcut. The Hub can open Survival & Assault with the overlay disabled. |
+| `survivalDebugHud` | false | Enable Survival Debug overlay controls and the direct shortcut. Overlay visibility defaults to OFF and is stored per client in `config/ZtoSurvivalOverlay.txt`. Survival & Assault remains available from the Hub. |
 | `survivalDebugHudKey` | 68 | Optional direct shortcut for Survival Debug when the HUD is enabled. 68 is F10. Shift with the shortcut toggles the overlay. |
 | `survivalDebugLogCapacity` | 250 | 20–300 entries per save session for Survival & Assault diagnostics. |
 
@@ -47,6 +51,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `item.skirmisherEgg`, `item.breacherEgg` | 22004, 22005 |
 | `item.saboteurEgg` | 22006 (stack ID 22262). Added to the unified config with the existing ID rules. |
 | `item.tankEgg`, `item.thiefEgg` | 22007, 22008 (stack IDs 22263, 22264). Creative Tank and Thief spawn eggs. |
+| `item.aerialPredatorEgg` | 22009 (stack ID 22265). Creative Fugl Spawn Egg in the Overworld. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 

@@ -12,13 +12,15 @@ public final class ZtoConfig {
     public final boolean experimentalEnderkinEncounters, experimentalTerritorialThreat, disableNightSkipping;
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
     public final int territorialHostileCapBonusPercent;
-    public final boolean naturalEnderkinSpawning;
+    public final boolean naturalEnderkinSpawning, naturalAerialEncounters;
+    public final int aerialEncounterCooldownSeconds;
+    public final boolean electricJetpackWeather, lunarAerialEncounters;
     public final boolean creativeInventoryBackport, partialRecipeFill;
     public final int craftingUxShortcut;
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
     public final boolean lunarVerboseLogging, survivalDebugHud;
     public final int advancedCraftingTable, foundry, alchemicalConverter, skirmisherEgg, breacherEgg, saboteurEgg;
-    public final int tankEgg, thiefEgg;
+    public final int tankEgg, thiefEgg, aerialPredatorEgg;
     public final Integer hopper;
     public final int buildcraftOilBucketItemId;
     public final String emcProfile;
@@ -37,6 +39,10 @@ public final class ZtoConfig {
         experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
         territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
         naturalEnderkinSpawning = values.flag("naturalEnderkinSpawning", true);
+        naturalAerialEncounters = values.flag("naturalAerialEncounters", true);
+        electricJetpackWeather = values.flag("electricJetpackWeather", true);
+        lunarAerialEncounters = values.flag("lunarAerialEncounters", true);
+        aerialEncounterCooldownSeconds = values.bounded("aerialEncounterCooldownSeconds", 180, 90, 600);
         disableNightSkipping = values.flag("disableNightSkipping", true);
         assaultSpawnBudget = values.bounded("assaultSpawnBudget", 15, 1, 24);
         assaultWaveInterval = values.bounded("assaultWaveInterval", 900, 400, 1200);
@@ -69,6 +75,7 @@ public final class ZtoConfig {
         saboteurEgg = values.item("saboteurEgg", 22006);
         tankEgg = values.item("tankEgg", 22007);
         thiefEgg = values.item("thiefEgg", 22008);
+        aerialPredatorEgg = values.item("aerialPredatorEgg", 22009);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);
         }

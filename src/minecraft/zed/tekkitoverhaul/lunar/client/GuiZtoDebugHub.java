@@ -16,7 +16,7 @@ final class GuiZtoDebugHub extends GuiScreen {
     @Override
     public void initGui() {
         int left = width / 2 - 100;
-        int top = height / 2 - 44;
+        int top = height / 2 - 67;
         GuiButton lunar = new GuiButton(0, left, top, "Lunar Cycle");
         lunar.enabled = local.service(world) != null;
         controlList.add(lunar);
@@ -24,7 +24,9 @@ final class GuiZtoDebugHub extends GuiScreen {
         survival.enabled = local.survivalDiagnostics(world) != null;
         controlList.add(survival);
         controlList.add(new GuiButton(2, left, top + 48, "Territorial Threat Monitor"));
-        controlList.add(new GuiButton(3, left, top + 80, "Back to Game"));
+        controlList.add(new GuiButton(4, left, top + 72, "Fugl"));
+        controlList.add(new GuiButton(5, left, top + 96, "Electric Jetpack Weather"));
+        controlList.add(new GuiButton(3, left, top + 126, "Back to Game"));
     }
 
     @Override
@@ -33,6 +35,8 @@ final class GuiZtoDebugHub extends GuiScreen {
             case 0: mc.displayGuiScreen(new GuiLunarDebug(local, world, this)); break;
             case 1: mc.displayGuiScreen(new GuiSurvivalDebug(local, world, local.survivalHud(), this)); break;
             case 2: mc.displayGuiScreen(new GuiTerritorialThreat(local, world, this)); break;
+            case 4: mc.displayGuiScreen(new GuiAerialPredatorDebug(local, world, this)); break;
+            case 5: mc.displayGuiScreen(new GuiJetpackWeather(this)); break;
             case 3: mc.displayGuiScreen(null); break;
             default: break;
         }
@@ -46,7 +50,7 @@ final class GuiZtoDebugHub extends GuiScreen {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
-        drawCenteredString(fontRenderer, "ZTO Debug Hub", width / 2, height / 2 - 66, 0xFFFFFF);
+        drawCenteredString(fontRenderer, "ZTO Debug Hub", width / 2, height / 2 - 89, 0xFFFFFF);
         super.drawScreen(mouseX, mouseY, partialTick);
     }
 

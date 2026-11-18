@@ -5,6 +5,7 @@ import net.minecraft.src.BaseMod;
 import net.minecraft.src.Block;
 import net.minecraft.src.Entity;
 import net.minecraft.src.GuiScreen;
+import zed.tekkitoverhaul.survival.weather.client.JetpackWeatherStatus;
 import net.minecraft.src.IBlockAccess;
 import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
@@ -34,6 +35,9 @@ import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
+import zed.tekkitoverhaul.survival.aerial.AerialPredators;
+import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
+import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
 import zed.tekkitoverhaul.survival.tactical.client.TacticalHostileRenderers;
 import zed.tekkitoverhaul.survival.tactical.client.ThiefCompass;
@@ -65,6 +69,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         settings = ZtoConfigLoader.load(ModLoader.getMinecraftInstance().mcDataDir.toPath().resolve("config"),
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
+        AerialPredators.register();
+        AerialSoundRegistration.register(ModLoader.getMinecraftInstance().sndManager);
         AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
@@ -84,12 +90,14 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
                 settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent,
-                settings.naturalEnderkinSpawning);
+                settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds,
+                settings.electricJetpackWeather, settings.lunarAerialEncounters);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);
         HopperRegistry.register(this, settings);
         TacticalHostiles.registerEggs(settings);
+        AerialPredators.registerEgg(settings.aerialPredatorEgg);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
@@ -110,6 +118,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public void addRenderer(Map<Class<? extends Entity>, Render> renderers) {
         RenderMobEquipment.register(renderers);
         TacticalHostileRenderers.register(renderers);
+        RenderAerialPredator.register(renderers);
     }
 
     @Override
@@ -136,6 +145,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public boolean onTickInGUI(float partialTick, Minecraft minecraft, GuiScreen screen) {
         craftingUx.tick(minecraft, screen, settings.partialRecipeFill, settings.craftingUxShortcut);
         DragDistributionIntegration.renderPreview(minecraft, minecraft.currentScreen);
+        JetpackWeatherStatus.drawInventory(minecraft, screen);
         return true;
     }
 }

@@ -2,6 +2,7 @@ package zed.tekkitoverhaul.survival.weather;
 
 import java.lang.reflect.Method;
 import java.util.function.ObjDoubleConsumer;
+import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.MathHelper;
@@ -11,6 +12,8 @@ import net.minecraft.src.World;
 public final class JetpackWeather {
     public enum Phase { DRY, WET, UNSTABLE, FAULT, RECOVERING }
     private static final String ELECTRIC = "ic2.common.ItemArmorJetpackElectric";
+    private static final int RECOVERY_TICKS = 120;
+    private static final int LANDING_CLEARANCE = 8;
     public static final JetpackWeather LOCAL = new JetpackWeather();
     private final ObjDoubleConsumer<Object> thrust = new ObjDoubleConsumer<Object>() {
         @Override public void accept(Object player, double previousY) {
@@ -24,7 +27,7 @@ public final class JetpackWeather {
     private ItemStack pack;
     private Phase phase = Phase.DRY;
     private int wetness, remaining, untilSample, flightTicks;
-    private boolean enabled, available, used, raining, storm, exposed, poweredRain;
+    private boolean enabled, available, used, raining, storm, exposed, poweredRain, stormFault;
     private String condition = "No local player";
 
     private JetpackWeather() {}
@@ -48,14 +51,14 @@ public final class JetpackWeather {
         pack = null;
         phase = Phase.DRY;
         wetness = remaining = untilSample = flightTicks = 0;
-        available = used = raining = storm = exposed = poweredRain = false;
+        available = used = raining = storm = exposed = poweredRain = stormFault = false;
     }
 
     private void identify(ItemStack current) {
         pack = current;
         phase = Phase.DRY;
         wetness = remaining = untilSample = flightTicks = 0;
-        used = raining = storm = exposed = poweredRain = false;
+        used = raining = storm = exposed = poweredRain = stormFault = false;
         available = false;
         if (current != null && activeHook != null) {
             try {
@@ -76,10 +79,18 @@ public final class JetpackWeather {
             return;
         used = true;
         if (phase == Phase.FAULT && !player.onGround) {
-            // Brake a fast fall with available native thrust, then hold a descending speed.
-            double descent = Math.max(-0.24, previousY - 0.24);
-            player.motionY = Math.min(player.motionY, descent);
+            double sink = landingWithinReach(player) ? 0.16 : stormFault ? 0.64 : 0.48;
+            // Suppress ascent and bleed off speed. Only native thrust can slow an existing fall.
+            double limit = Math.min(0, Math.max(-sink, previousY - 0.38));
+            player.motionY = Math.min(player.motionY, limit);
         }
+    }
+
+    private boolean landingWithinReach(EntityPlayer player) {
+        AxisAlignedBB area = player.boundingBox.addCoord(0, -LANDING_CLEARANCE, 0);
+        return world.checkChunksExist(MathHelper.floor_double(area.minX - 1), 0,
+                MathHelper.floor_double(area.minZ - 1), MathHelper.floor_double(area.maxX + 1), 0,
+                MathHelper.floor_double(area.maxZ + 1)) && !world.getCollidingBoundingBoxes(player, area).isEmpty();
     }
 
     public void tick(World context, EntityPlayer player, boolean paused) {
@@ -110,8 +121,9 @@ public final class JetpackWeather {
             boolean powered = flightTicks >= 3 && !player.onGround;
             poweredRain = powered && exposed;
             flightTicks = 0;
-            if (powered && exposed && phase != Phase.FAULT && phase != Phase.RECOVERING) {
-                wetness = Math.min(100, wetness + (storm ? 4 : 2));
+            if (poweredRain) {
+                if (phase != Phase.FAULT && phase != Phase.RECOVERING)
+                    wetness = Math.min(100, wetness + (storm ? 4 : 2));
             } else if (phase != Phase.FAULT) {
                 wetness = Math.max(0, wetness - (exposed ? 2 : 6));
             }
@@ -130,12 +142,15 @@ public final class JetpackWeather {
             case UNSTABLE:
                 if (wetness <= 36) transition(Phase.RECOVERING, 70);
                 else if (remaining == 0 && wetness >= 78 && exposed && !player.onGround
-                        && poweredRain && justPowered) transition(Phase.FAULT, 46);
+                        && poweredRain && justPowered) {
+                    stormFault = storm;
+                    transition(Phase.FAULT, stormFault ? 116 : 88);
+                }
                 break;
             case FAULT:
                 if (remaining == 0 || player.onGround) {
-                    wetness = Math.min(42, wetness);
-                    transition(Phase.RECOVERING, 120);
+                    wetness = Math.min(stormFault ? 58 : 48, wetness);
+                    transition(Phase.RECOVERING, RECOVERY_TICKS);
                 }
                 break;
             case RECOVERING:
@@ -164,7 +179,7 @@ public final class JetpackWeather {
 
     public boolean protects(EntityPlayer player) {
         return player == pilot && pack != null && player.inventory.armorInventory[2] == pack
-                && (phase == Phase.FAULT || phase == Phase.RECOVERING && remaining > 80);
+                && (phase == Phase.FAULT || phase == Phase.RECOVERING && remaining > RECOVERY_TICKS - 40);
     }
 
     public String status() { return condition; }

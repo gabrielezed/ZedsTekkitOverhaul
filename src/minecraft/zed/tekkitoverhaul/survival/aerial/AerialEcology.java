@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.survival.aerial;
 
+import java.util.Random;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.Entity;
 import net.minecraft.src.EntityLiving;
@@ -123,7 +124,8 @@ public final class AerialEcology {
         int pressure = threat == null ? 0 : threat.activity;
         // Stable selection avoids modifying the ground spawner's random sequence on ineligible moons.
         int chance = world.difficultySetting == 3 ? 58 : 34;
-        long roll = new java.util.Random(world.getSeed() ^ (logicalDay * 341873128712L)).nextInt(100);
+        Random moon = new Random(world.getSeed() ^ (logicalDay * 341873128712L));
+        int roll = moon.nextInt(100);
         if (roll >= chance + Math.min(20, pressure)) return lunarRejected("Full moon not selected");
 
         exposure.sample(player);
@@ -137,14 +139,15 @@ public final class AerialEcology {
         if (desired == 0) return lunarRejected("Aerial or ordinary hostile cap");
         placementTries = 0;
         boolean airborne = !player.onGround && exposure.height >= 8;
+        boolean skeletal = moon.nextInt(100) < (world.difficultySetting == 3 ? 72 : 50);
         for (int size = desired; size >= 1; --size) {
-            if (!place(player, size, airborne, true)) continue;
+            if (!place(player, size, airborne, true, skeletal)) continue;
             lunar = true;
             lunarX = player.posX;
             lunarZ = player.posZ;
             state.reserve(cooldownSeconds);
             ++admissions;
-            lunarStatus = "Admitted " + encounter.size() + " lunar predators";
+            lunarStatus = "Admitted " + encounter.size() + (skeletal ? " lunar Skelebirds" : " lunar Fugls");
             return encounter.size();
         }
         return lunarRejected("No clear lunar airspace");
@@ -196,13 +199,17 @@ public final class AerialEcology {
             return;
         }
 
-        int desired = Math.min(room, ground ? 1 : flockSize(difficulty));
+        boolean skeletal = selectSkelebird(ground, difficulty);
+        int groupSize = ground ? 1 : flockSize(difficulty);
+        if (skeletal) groupSize = Math.min(groupSize, difficulty == 3 && activity >= 12 ? 3 : 1);
+        int desired = Math.min(room, groupSize);
         boolean hunting = desired > 1 || world.rand.nextInt(1000) < (ground ? (day ? 460 : 670) : 730);
         for (int size = desired; size >= (desired > 1 ? desired - 1 : 1); --size) {
-            if (place(player, size, !ground, hunting)) {
+            if (place(player, size, !ground, hunting, skeletal)) {
                 state.reserve(cooldownSeconds);
                 ++admissions;
-                lastAttempt = "Admitted " + encounter.size() + (hunting ? " hunting" : " cruising");
+                lastAttempt = "Admitted " + encounter.size() + (skeletal ? " Skelebird" : " Fugl")
+                        + (hunting ? " (hunting)" : " (cruising)");
                 status = hunting ? "Active hunt" : "Wildlife passing through";
                 return;
             }
@@ -211,6 +218,13 @@ public final class AerialEcology {
     }
 
     private void reject(String reason) { lastAttempt = status = reason; }
+
+    private boolean selectSkelebird(boolean ground, int difficulty) {
+        if (!EntitySkelebird.isNight(world)) return false;
+        if (ground && (difficulty < 3 || activity < 12)) return false;
+        int share = ground ? 8 : difficulty == 1 ? 6 + activity / 4 : 10 * difficulty + activity / 2;
+        return world.rand.nextInt(100) < share;
+    }
 
     private int flockSize(int difficulty) {
         boolean high = exposure.band == AerialExposure.Band.HIGH_SKY;
@@ -238,9 +252,10 @@ public final class AerialEcology {
                 Math.min(hostileCap + HOSTILE_CAP_SLACK - hostiles, LOCAL_HOSTILE_CAP - localHostiles)));
     }
 
-    private boolean place(EntityPlayer player, int size, boolean airborne, boolean hunting) {
+    private boolean place(EntityPlayer player, int size, boolean airborne, boolean hunting, boolean skeletal) {
         EntityAerialPredator[] candidates = new EntityAerialPredator[size];
-        for (int lane = 0; lane < size; ++lane) candidates[lane] = new EntityAerialPredator(world);
+        for (int lane = 0; lane < size; ++lane)
+            candidates[lane] = skeletal ? new EntitySkelebird(world) : new EntityAerialPredator(world);
         for (int attempt = 0; attempt < PLACEMENT_TRIES; ++attempt) {
             ++placementTries;
             double angle = Math.toRadians(player.rotationYaw + 180 + world.rand.nextInt(121) - 60);

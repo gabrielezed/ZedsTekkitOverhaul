@@ -10,6 +10,7 @@ import net.minecraft.src.forge.adaptors.SoundHandlerAdaptor;
 /** Registers packaged WAV URLs in the local Forge sound pool, including after a sound reload. */
 public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     private static final String[] CLIPS = {"ambient1", "ambient2", "warning", "dive", "hurt", "death"};
+    private static final String[] SKELEBIRD = {"ambient1", "ambient2", "warning", "slash", "hurt", "death"};
     private static final String[] JETPACK = {"warning", "fault", "recovery"};
     private SoundPool installed;
 
@@ -24,6 +25,7 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
         SoundPool pool = manager.getSoundsPool();
         if (installed == pool) return;
         addClips(pool, "aerial", CLIPS);
+        addClips(pool, "skelebird", SKELEBIRD);
         addClips(pool, "jetpack", JETPACK);
         installed = pool;
     }

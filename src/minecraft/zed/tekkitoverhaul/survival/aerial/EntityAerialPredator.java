@@ -12,7 +12,7 @@ import net.minecraft.src.World;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 
 /** A single predator with server-owned steering, commitment and contact. */
-public final class EntityAerialPredator extends EntityFlying implements IMob {
+public class EntityAerialPredator extends EntityFlying implements IMob {
     public enum Flight {
         CRUISE, GLIDE, CIRCLE, PREPARE, DIVE, RECOVER, DISENGAGE, FALL
     }
@@ -40,6 +40,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     private float cruiseYaw;
     private double destinationX, destinationY, destinationZ;
     private double diveX, diveY, diveZ, diveRemaining, diveSpeed;
+    private boolean contacted;
     private String lastFailure = "none", lastExit = "none";
 
     public EntityAerialPredator(World world) {
@@ -58,11 +59,17 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     @Override
     public int getMaxHealth() { return 16; }
 
-    @Override
-    protected String getHurtSound() { return AerialSounds.HURT; }
+    public String speciesName() { return "Fugl"; }
+    boolean slashingPass() { return false; }
+    private int prepareTicks() { return slashingPass() ? 24 : PREPARE_TICKS; }
+    private int recoverTicks() { return slashingPass() ? 62 : RECOVER_TICKS; }
+    private String sound(String cue) { return slashingPass() ? "zto.skelebird." + cue : "zto.aerial." + cue; }
 
     @Override
-    protected String getDeathSound() { return AerialSounds.DEATH; }
+    protected String getHurtSound() { return sound("hurt"); }
+
+    @Override
+    protected String getDeathSound() { return sound("death"); }
 
     @Override
     protected float getSoundVolume() { return 0.55F; }
@@ -139,7 +146,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
                 if (target == null) {
                     cruise();
                     if (--ambientDelay <= 0) {
-                        worldObj.playSoundAtEntity(this, AerialSounds.AMBIENT, 0.48F, 0.94F + rand.nextFloat() * 0.12F);
+                        worldObj.playSoundAtEntity(this, sound("ambient"), 0.48F, 0.94F + rand.nextFloat() * 0.12F);
                         ambientDelay = 280 + rand.nextInt(141);
                     }
                 } else circle();
@@ -155,7 +162,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
                 break;
             case RECOVER:
                 climb();
-                if (stateTicks >= RECOVER_TICKS) {
+                if (stateTicks >= recoverTicks()) {
                     if (attempts >= attemptLimit || rejectedWarnings >= 2)
                         disengage(attempts >= attemptLimit ? "attack budget" : "repeated blocked launch");
                     else enter(Flight.CIRCLE);
@@ -175,11 +182,12 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private void detect() {
+        if (slashingPass() && !EntitySkelebird.isNight(worldObj)) return;
         if (natural) {
             if (encounter == null || !encounter.hunting) return;
             EntityPlayer player = encounter.player;
             if (eligible(player) && getDistanceSqToEntity(player) <= 36 * 36
-                    && AerialTerrain.skyHeight(player) >= 0 && visible(player)) {
+                    && targetClearance(player) >= 0 && visible(player)) {
                 startHunt(player, encounter.airborne, 1);
             }
             return;
@@ -192,9 +200,10 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             EntityPlayer player = (EntityPlayer) entry;
             double distance = getDistanceSqToEntity(player);
             if (distance > 36 * 36 || !eligible(player)) continue;
-            double altitude = AerialTerrain.skyHeight(player);
+            double altitude = targetClearance(player);
             if (altitude < 0 || Math.abs(centerY() - playerCenter(player)) > 30) continue;
             boolean airborne = !player.onGround && altitude >= AIRBORNE_HEIGHT;
+            if (slashingPass() && !airborne && worldObj.difficultySetting < 3) continue;
             if (!airborne && (distance > 24 * 24 || bestAirborne)) continue;
             if (airborne == bestAirborne && distance >= bestDistance) continue;
             if (!visible(player)) continue;
@@ -202,7 +211,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             bestAirborne = airborne;
             bestDistance = distance;
         }
-        if (best == null || (!bestAirborne && rand.nextInt(worldObj.isDaytime() ? 42 : 9) != 0)) return;
+        int groundRarity = slashingPass() ? 24 : worldObj.isDaytime() ? 42 : 9;
+        if (best == null || (!bestAirborne && rand.nextInt(groundRarity) != 0)) return;
         startHunt(best, bestAirborne, bestAirborne ? 2 : 1);
     }
 
@@ -226,12 +236,20 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         if (huntTicks > (encounter == null ? 400 : AerialEncounter.HUNT_LIMIT)
                 || getDistanceSqToEntity(target) > 48 * 48) return "pursuit limit";
         // Native block collision protects all intervening terrain. A roof also ends pursuit.
-        double altitude = AerialTerrain.skyHeight(target);
+        double altitude = targetClearance(target);
         if (altitude < 0) return "target under cover or unloaded";
         if (aerialHunt && altitude < 3 && flight != Flight.DIVE) return "target descended";
         if (huntTicks % 5 == 0) hiddenTicks = visible(target) ? 0 : hiddenTicks + 5;
         if (hiddenTicks >= 30 && flight != Flight.DIVE) return "target out of sight";
         return null;
+    }
+
+    private double targetClearance(EntityPlayer player) {
+        double height = AerialTerrain.skyHeight(player);
+        if (slashingPass() && height >= 0 && worldObj.getPrecipitationHeight(
+                MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ))
+                > player.boundingBox.minY + player.height * 0.5) return -1;
+        return height;
     }
 
     private boolean visible(EntityPlayer player) {
@@ -277,13 +295,16 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             return;
         }
         int ring = encounter == null ? 0 : lane % 3;
-        double altitude = limitAltitude(playerCenter(target) + 8 + ring * 1.5);
+        boolean pass = slashingPass();
+        double altitude = limitAltitude(playerCenter(target) + (pass ? 5.5 + ring : 8 + ring * 1.5));
         double offset = Math.atan2(posZ - target.posZ, posX - target.posX);
         double range = horizontalRange(target.posX, target.posZ);
         boolean turnAvailable = !JetpackWeather.LOCAL.protects(target) && (encounter == null || encounter.diveAvailable());
-        if (stateTicks < 26 || !turnAvailable || stateTicks < restageUntil || range < 6) {
-            double angle = offset + (range < 6 ? 0.22 : 0.82);
-            double radius = encounter == null ? 10 : 10 + lane * 1.1;
+        double minimumRange = pass ? 11 : 6;
+        if (stateTicks < (pass ? 36 : 26) || !turnAvailable || stateTicks < restageUntil || range < minimumRange) {
+            double direction = pass && lane % 2 != 0 ? -1 : 1;
+            double angle = offset + direction * (range < minimumRange ? 0.22 : 0.82);
+            double radius = (pass ? 17 : 10) + (encounter == null ? 0 : lane * 1.1);
             diveStatus = turnAvailable ? "Repositioning"
                     : JetpackWeather.LOCAL.protects(target) ? "Pilot recovering from jetpack fault" : "Waiting for flock turn";
             steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
@@ -292,17 +313,19 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
 
         double endX = leadX(), endZ = leadZ();
         double height = centerY() - playerCenter(target);
-        if (range > 15 || height < 4 || height > 14) {
+        double maximumRange = pass ? 21 : 15;
+        if (range > maximumRange || height < (pass ? 3.5 : 4) || height > (pass ? 8.5 : 14)) {
             // Close the range from above without running straight into the pilot.
-            double radius = range > 15 ? 8 : Math.max(7, Math.min(13, range));
+            double radius = pass ? 16 : range > 15 ? 8 : Math.max(7, Math.min(13, range));
             diveStatus = "Seeking launch distance and height";
             steer(endX + Math.cos(offset) * radius, altitude, endZ + Math.sin(offset) * radius, 0.39);
             return;
         }
 
         aim(endX, altitude, endZ);
-        if (stateTicks < 42 || stateTicks % 4 != 0) return;
-        String rejection = diveRejection(endX, leadY(), endZ);
+        if (stateTicks < (pass ? 52 : 42) || stateTicks % 4 != 0) return;
+        double endY = leadY();
+        String rejection = diveRejection(endX, endY, endZ);
         diveStatus = rejection == null ? "Ready" : rejection;
         if (rejection != null) {
             lastDiveRejection = rejection;
@@ -311,9 +334,14 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             return;
         }
         if (encounter != null && !encounter.reserveDive(this)) return;
+        if (pass) {
+            destinationX = endX;
+            destinationY = endY;
+            destinationZ = endZ;
+        }
         enter(Flight.PREPARE);
         diveStatus = "Telegraphing";
-        worldObj.playSoundAtEntity(this, AerialSounds.WARNING, 0.76F, 1.0F);
+        worldObj.playSoundAtEntity(this, sound("warning"), 0.76F, 1.0F);
     }
 
     private void aim(double x, double y, double z) {
@@ -338,13 +366,22 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     private String diveRejection(double x, double y, double z) {
         double dx = x - posX, dy = y - centerY(), dz = z - posZ;
         double range = horizontalRange(x, z);
-        if (dy > -2.5 || range < 3 || dx * dx + dy * dy + dz * dz > 23 * 23) return "Outside launch geometry";
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dy > -2.5 || range < 3 || length > 23) return "Outside launch geometry";
+        if (slashingPass() && (range < 9 || -dy > 0.50 * range)) return "Outside slashing angle";
         if (Math.abs(wrap(yaw(dx, dz) - rotationYaw)) > 25) return "Aligning heading";
         if (!AerialTerrain.loaded(worldObj, posX, posZ, x, z)) return "Unloaded dive corridor";
         if (!visible(target) || !unobstructed(posX, centerY(), posZ, x, y, z)) return "Blocked dive corridor";
 
+        if (slashingPass()) {
+            double scale = 1 + passRunout() / length;
+            dx *= scale;
+            dy *= scale;
+            dz *= scale;
+            length *= scale;
+        }
         // Check short swept boxes along the launch line instead of testing a single diagonal-sized box.
-        int segments = (int) Math.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz) / 2.5);
+        int segments = (int) Math.ceil(length / 2.5);
         for (int i = 0; i < segments; ++i) {
             double fraction = (double) i / segments;
             AxisAlignedBB section = boundingBox.getOffsetBoundingBox(dx * fraction, dy * fraction, dz * fraction);
@@ -360,10 +397,14 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             recover();
             return;
         }
-        double endX = leadX(), endY = leadY(), endZ = leadZ();
-        if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), playerCenter(target) + 5)), endZ);
+        boolean pass = slashingPass();
+        double endX = pass ? destinationX : leadX();
+        double endY = pass ? destinationY : leadY();
+        double endZ = pass ? destinationZ : leadZ();
+        if (pass) blend(0, 0, 0);
+        else if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), playerCenter(target) + 5)), endZ);
         else blend(0, 0, 0);
-        if (stateTicks < PREPARE_TICKS) return;
+        if (stateTicks < prepareTicks()) return;
 
         String rejection = diveRejection(endX, endY, endZ);
         if (rejection != null) {
@@ -374,27 +415,32 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
         }
         ++attempts;
         ++commitments;
+        contacted = false;
         diveStatus = "Committed";
         double dx = endX - posX, dy = endY - centerY(), dz = endZ - posZ;
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         diveX = dx / length;
         diveY = dy / length;
         diveZ = dz / length;
-        diveRemaining = length + 1.4;
-        diveSpeed = 0.40;
+        diveRemaining = length + (pass ? passRunout() : 1.4);
+        diveSpeed = pass ? 0.82 : 0.40;
         destinationX = endX;
         destinationY = endY;
         destinationZ = endZ;
         enter(Flight.DIVE);
-        worldObj.playSoundAtEntity(this, AerialSounds.DIVE, 0.63F, 1.0F);
+        worldObj.playSoundAtEntity(this, sound(pass ? "slash" : "dive"), 0.63F, 1.0F);
         advanceDive();
     }
 
+    private double passRunout() { return aerialHunt ? 3.2 : 0.9; }
+
     private void advanceDive() {
-        diveSpeed = Math.min(1.05, diveSpeed + 0.085);
-        motionX = diveX * diveSpeed;
-        motionY = diveY * diveSpeed;
-        motionZ = diveZ * diveSpeed;
+        boolean pass = slashingPass();
+        diveSpeed = Math.min(pass ? 1.22 : 1.05, diveSpeed + 0.085);
+        double step = pass ? Math.min(diveSpeed, diveRemaining) : diveSpeed;
+        motionX = diveX * step;
+        motionY = diveY * step;
+        motionZ = diveZ * step;
         faceMotion();
     }
 
@@ -500,10 +546,12 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
             blockedTicks = 0;
         }
         if (!diving) return;
-        if (hitAlongMovement(fromX, fromY, fromZ)) {
+        if (!contacted) contacted = hitAlongMovement(fromX, fromY, fromZ);
+        if (contacted && !slashingPass()) {
             recover();
         } else if (isCollided || (diveRemaining -= diveSpeed) <= 0) {
-            lastFailure = isCollided ? "dive blocked by terrain" : "dive missed";
+            if (isCollided) lastFailure = slashingPass() ? "pass blocked by terrain" : "dive blocked by terrain";
+            else if (!contacted) lastFailure = slashingPass() ? "slashing pass missed" : "dive missed";
             recover();
         }
     }
@@ -517,7 +565,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
                 && contact.calculateIntercept(start, end) == null) return false;
         if (!visible(target) || !unobstructed(posX, centerY(), posZ, target.posX, playerCenter(target), target.posZ)) return false;
         double vx = target.motionX, vy = target.motionY, vz = target.motionZ;
-        boolean hit = target.attackEntityFrom(DamageSource.causeMobDamage(this), 4 + worldObj.difficultySetting);
+        int damage = slashingPass() ? 5 : 4 + worldObj.difficultySetting;
+        boolean hit = target.attackEntityFrom(DamageSource.causeMobDamage(this), damage);
         if (hit) {
             target.motionX = vx + clamp(target.motionX - vx, -0.30, 0.30) * 0.35;
             target.motionY = vy;
@@ -565,6 +614,7 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     public String targetName() { return target == null ? "-" : target.username; }
+    public String encounterStatus() { return encounter != null ? "Encounter member" : natural ? "Retiring wildlife" : "Manual"; }
     public double terrainClearance() { return AerialTerrain.skyHeight(this); }
     public double destinationX() { return destinationX; }
     public double destinationY() { return destinationY; }
@@ -572,8 +622,8 @@ public final class EntityAerialPredator extends EntityFlying implements IMob {
     public int phaseTicks() { return stateTicks; }
     public int remainingPhaseTicks() {
         switch (flight) {
-            case PREPARE: return Math.max(0, PREPARE_TICKS - stateTicks);
-            case RECOVER: return Math.max(0, RECOVER_TICKS - stateTicks);
+            case PREPARE: return Math.max(0, prepareTicks() - stateTicks);
+            case RECOVER: return Math.max(0, recoverTicks() - stateTicks);
             case DISENGAGE: return Math.max(0, DISENGAGE_TICKS - stateTicks);
             default: return 0;
         }

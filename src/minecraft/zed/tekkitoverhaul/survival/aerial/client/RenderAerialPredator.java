@@ -3,16 +3,19 @@ package zed.tekkitoverhaul.survival.aerial.client;
 import java.util.Map;
 import net.minecraft.src.Entity;
 import net.minecraft.src.EntityLiving;
+import net.minecraft.src.ModelBase;
 import net.minecraft.src.Render;
 import net.minecraft.src.RenderLiving;
 import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 
 public final class RenderAerialPredator extends RenderLiving {
-    private RenderAerialPredator() { super(new ModelAerialPredator(), 0.42F); }
+    private RenderAerialPredator(ModelBase model) { super(model, 0.42F); }
 
     public static void register(Map<Class<? extends Entity>, Render> renderers) {
-        renderers.put(EntityAerialPredator.class, new RenderAerialPredator());
+        renderers.put(EntityAerialPredator.class, new RenderAerialPredator(new ModelAerialPredator()));
+        renderers.put(EntitySkelebird.class, new RenderAerialPredator(new ModelSkelebird()));
     }
 
     @Override

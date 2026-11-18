@@ -24,7 +24,7 @@ final class GuiZtoDebugHub extends GuiScreen {
         survival.enabled = local.survivalDiagnostics(world) != null;
         controlList.add(survival);
         controlList.add(new GuiButton(2, left, top + 48, "Territorial Threat Monitor"));
-        controlList.add(new GuiButton(4, left, top + 72, "Fugl"));
+        controlList.add(new GuiButton(4, left, top + 72, "Aerial Predators"));
         controlList.add(new GuiButton(5, left, top + 96, "Electric Jetpack Weather"));
         controlList.add(new GuiButton(3, left, top + 126, "Back to Game"));
     }

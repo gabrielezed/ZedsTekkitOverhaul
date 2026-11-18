@@ -6,6 +6,7 @@ import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.survival.aerial.AerialEcology;
 import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
@@ -39,6 +40,10 @@ public final class LunarAerialProbe {
         Fixture hard = new Fixture(root, "moon-hard", 3, true);
         hard.start();
         check(hard.director.snapshot(hard.world).aerialAllocation == 2, "elevated Hard assault spends two slots");
+        int skeletalMembers = 0;
+        for (Object mob : hard.world.b) if (mob instanceof EntitySkelebird) ++skeletalMembers;
+        check(skeletalMembers == 2,
+                "a selected Hard moon can spend both existing slots on Skelebirds");
         hard.assertBudget();
         hard.player.c(347.5, 4, 288.5, 0, 0);
         for (int i = 1; i <= 20; ++i) hard.advance(DUSK + i);
@@ -92,8 +97,10 @@ public final class LunarAerialProbe {
     }
 
     private static long selectedSeed() {
-        for (long seed = 32021; seed < 34000; ++seed)
-            if (new Random(seed ^ (4 * 341873128712L)).nextInt(100) < 34) return seed;
+        for (long seed = 32021; seed < 34000; ++seed) {
+            Random moon = new Random(seed ^ (4 * 341873128712L));
+            if (moon.nextInt(100) < 34 && moon.nextInt(100) < 50) return seed;
+        }
         throw new AssertionError("No selected fixture seed");
     }
 

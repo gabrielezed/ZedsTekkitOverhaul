@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const output = path.resolve(__dirname, '../src/minecraft/zed/sounds');
 const electrical = process.argv.includes('--jetpack');
+const skeletal = process.argv.includes('--skelebird');
 const rate = 22050;
 const tau = 2 * Math.PI;
 const electricalClips = [
@@ -19,6 +20,47 @@ const fuglClips = [
     ['hurt',     0.24, 119, 0.70, 0.6,  0x69c, [[610, 230, 1], [2080, 390, 0.83], [3280, 560, 0.29]]],
     ['death',    0.83,  60, 0.80, 0.57, 0x381, [[350, 180, 1], [930, 330, 0.85], [1930, 650, 0.46]]],
 ];
+// Seconds, seed, impact times, hollow resonances and the amount of brushed air.
+const boneClips = [
+    ['ambient1', 0.76, 0x914, [0.04, 0.12, 0.28, 0.51], [380, 1080, 2450], 0.21],
+    ['ambient2', 0.94, 0x89b, [0.06, 0.10, 0.17, 0.39, 0.71], [305, 790, 1940], 0.27],
+    ['warning',  0.74, 0x7ad, [0.03, 0.23, 0.31, 0.36, 0.41, 0.46, 0.51], [475, 1420, 3050], 0.37],
+    ['slash',    0.55, 0x61f, [0.16, 0.22, 0.26], [290, 935, 2180], 0.92],
+    ['hurt',     0.29, 0xb13, [0.008, 0.065], [680, 1820, 3350], 0.22],
+    ['death',    0.91, 0x69b, [0.02, 0.08, 0.18, 0.33, 0.5, 0.66], [280, 890, 2680], 0.28],
+];
+
+function boneVoice([name, seconds, seed, impacts, frequencies, air]) {
+    let rng = seed, nextImpact = 0, chatter = 0, scrape = 0, wind = 0;
+    const resonators = frequencies.map((frequency, index) => {
+        const radius = Math.exp(-Math.PI * [52, 135, 360][index] / rate);
+        return { amount: [0.16, 0.12, 0.10][index], decay: radius * radius,
+            feedback: 2 * radius * Math.cos(tau * frequency / rate), last: 0, older: 0 };
+    });
+    return (time, progress) => {
+        rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;
+        const noise = rng / 0x80000000 - 1;
+        if (time >= impacts[nextImpact]) {
+            chatter = (0.70 + 0.23 * noise) * (name === 'death' ? 1 - 0.7 * progress : 1);
+            ++nextImpact;
+        }
+        scrape += (noise - scrape) * 0.27;
+        wind += (noise - wind) * 0.048;
+        const click = chatter * (noise - scrape);
+        const flow = Math.sin(Math.PI * progress) ** (name === 'slash' ? 3 : 1.6);
+        chatter *= name === 'warning' ? 0.987 : 0.972;
+        const breath = air * flow * (scrape - wind);
+        let vibration = 0;
+        for (const mode of resonators) {
+            const sample = mode.amount * (click + breath * 0.28) + mode.feedback * mode.last - mode.decay * mode.older;
+            mode.older = mode.last;
+            mode.last = sample;
+            vibration += sample;
+        }
+        const fade = Math.min(1, time / 0.007, (seconds - time) / 0.045);
+        return fade * 0.64 * Math.tanh(1.55 * vibration + 0.34 * click + 0.9 * breath);
+    };
+}
 
 function fuglVoice([name, seconds, rateOfPulse, breath, level, seed, bands]) {
     let rng = seed;
@@ -57,9 +99,9 @@ function fuglVoice([name, seconds, rateOfPulse, breath, level, seed, bands]) {
     };
 }
 
-const directory = path.join(output, electrical ? "jetpack" : "aerial");
+const directory = path.join(output, skeletal ? "skelebird" : electrical ? "jetpack" : "aerial");
 fs.mkdirSync(directory, { recursive: true });
-for (const clip of electrical ? electricalClips : fuglClips) {
+for (const clip of skeletal ? boneClips : electrical ? electricalClips : fuglClips) {
     const [name, seconds, base, slide, flutter, hiss, rasp, resonance, level, seed] = clip;
     const count = Math.round(seconds * rate);
     const wav = Buffer.alloc(44 + count * 2);
@@ -75,7 +117,7 @@ for (const clip of electrical ? electricalClips : fuglClips) {
     wav.writeUInt16LE(16, 34);
     wav.write('data', 36);
     wav.writeUInt32LE(count * 2, 40);
-    const voice = electrical ? null : fuglVoice(clip);
+    const voice = skeletal ? boneVoice(clip) : electrical ? null : fuglVoice(clip);
     let rng = seed, phase = 0, lowNoise = 0, highNoise = 0;
     for (let i = 0; i < count; i++) {
         const time = i / rate, progress = i / count;

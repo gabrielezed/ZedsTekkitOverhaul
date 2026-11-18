@@ -13,6 +13,7 @@ public final class AerialPredators {
 
     public static void register() {
         ModLoader.registerEntityID(EntityAerialPredator.class, ENTITY_NAME, ModLoader.getUniqueEntityId());
+        ModLoader.addLocalization("entity." + ENTITY_NAME + ".name", "Fugl");
     }
 
     public static void registerEgg(int id) {
@@ -24,6 +25,6 @@ public final class AerialPredators {
             @Override
             protected boolean isSpawnClear(EntityLiving mob, World world) { return mob.getCanSpawnHere(); }
         };
-        ModLoader.addName(egg, "Aerial Predator Spawn Egg");
+        ModLoader.addName(egg, "Fugl Spawn Egg");
     }
 }

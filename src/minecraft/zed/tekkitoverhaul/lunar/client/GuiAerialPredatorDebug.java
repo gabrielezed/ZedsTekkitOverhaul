@@ -93,7 +93,7 @@ final class GuiAerialPredatorDebug extends GuiScreen {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTick) {
         drawDefaultBackground();
-        drawCenteredString(fontRenderer, "Aerial Predator", width / 2, 14, 0xFFFFFF);
+        drawCenteredString(fontRenderer, "Fugl", width / 2, 14, 0xFFFFFF);
         for (int i = 0; i < lines.length; i++) {
             drawCenteredString(fontRenderer, lines[i], width / 2, 26 + i * 9, 0xDFEBE7);
         }

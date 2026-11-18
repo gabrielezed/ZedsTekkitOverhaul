@@ -25,10 +25,13 @@ public final class RenderAerialPredator extends RenderLiving {
         GL11.glTranslatef(0, 0.30F, 0);
         float pitch = mob.prevRotationPitch + (mob.rotationPitch - mob.prevRotationPitch) * partialTick;
         if (mob.getHealth() <= 0) pitch = Math.min(70, pitch + mob.deathTime * 3);
-        GL11.glRotatef(pitch, 1, 0, 0);
+        // The model faces -Z before the vanilla yaw transform. Negative X rotation pitches its beak down.
+        GL11.glRotatef(modelPitch(pitch), 1, 0, 0);
         GL11.glRotatef(Math.max(-25, Math.min(25, turn * 2.5F)), 0, 0, 1);
         GL11.glTranslatef(0, -0.30F, 0);
     }
+
+    static float modelPitch(float flightPitch) { return -flightPitch; }
 
     @Override
     protected float getDeathMaxRotation(EntityLiving mob) { return 48; }

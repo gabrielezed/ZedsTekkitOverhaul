@@ -62,7 +62,12 @@ final class ModelAerialPredator extends ModelBase {
 
     @Override
     public void render(Entity entity, float stride, float swing, float age, float yaw, float pitch, float scale) {
-        EntityAerialPredator.Flight flight = ((EntityAerialPredator) entity).flight();
+        EntityAerialPredator bird = (EntityAerialPredator) entity;
+        pose(bird.flight(), age, bird.phaseTicks());
+        body.render(scale);
+    }
+
+    private void pose(EntityAerialPredator.Flight flight, float age, int phaseTicks) {
         float stroke = MathHelper.sin(age * 0.53F);
         float sweep = 0.03F;
         float wing = 0.16F + stroke * 0.43F;
@@ -89,17 +94,23 @@ final class ModelAerialPredator extends ModelBase {
                 head.rotateAngleX = 0.22F;
                 break;
             case DIVE:
-                sweep = -0.68F;
-                wing = 0.18F;
-                wrist = -0.31F;
-                talons = -0.44F;
-                jaw.rotateAngleX = 0.31F;
-                tail.rotateAngleX = -0.15F;
+                sweep = -1.03F;
+                wing = 0.13F;
+                wrist = -0.38F;
+                talons = 1.45F;
+                head.rotateAngleX = 0.10F;
+                jaw.rotateAngleX = 0.33F;
+                tail.rotateAngleX = -0.06F;
                 break;
             case RECOVER:
-                wing = 0.25F + stroke * 0.62F;
-                wrist = -0.05F + MathHelper.sin(age * 0.53F - 0.9F) * 0.41F;
-                tail.rotateAngleX = 0.25F;
+                float spread = Math.min(1, (phaseTicks + age % 1) / 6);
+                sweep = -1.03F * (1 - spread);
+                wing = 0.13F + (0.12F + stroke * 0.62F) * spread;
+                wrist = -0.38F + (0.33F + MathHelper.sin(age * 0.53F - 0.9F) * 0.41F) * spread;
+                talons = 1.45F - 0.4F * spread;
+                head.rotateAngleX = 0.10F - 0.15F * spread;
+                jaw.rotateAngleX = 0.33F * (1 - spread);
+                tail.rotateAngleX = -0.06F + 0.31F * spread;
                 break;
             case FALL:
                 wing = 0.68F + stroke * 0.09F;
@@ -119,6 +130,5 @@ final class ModelAerialPredator extends ModelBase {
             wrists[i].rotateAngleZ = side * wrist;
             feet[i].rotateAngleX = talons;
         }
-        body.render(scale);
     }
 }

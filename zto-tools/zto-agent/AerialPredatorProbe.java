@@ -4,6 +4,7 @@ import cpw.mods.fml.common.registry.FMLRegistry;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -115,7 +116,7 @@ public final class AerialPredatorProbe {
         world.q = 0;
         world.a(reloaded, true);
         check(reloaded.G, "Peaceful removes the predator");
-        System.out.println("PASS aerial predator egg, renderer construction, atlas, flight, ground and airborne acquisition, "
+        System.out.println("PASS Fugl naming, legacy egg and save IDs, dive pose, atlas, flight, ground and airborne acquisition, "
                 + "eight approach bearings, blocked warning retry, impact, dodge, climb, shelter, death fall, NBT and native WAV audio");
     }
 
@@ -128,13 +129,14 @@ public final class AerialPredatorProbe {
         aan stack = new aan(egg);
         Properties names = new Properties();
         FMLCommonHandler.instance().handleLanguageLoad(names, "en_US");
-        check(names.containsValue("Aerial Predator Spawn Egg") && egg.c(), "localized two-pass egg");
+        check(names.containsValue("Fugl Spawn Egg") && egg.c(), "localized two-pass egg");
+        check("Fugl".equals(names.getProperty("entity.ZTO.AerialPredator.name")), "Fugl has a localized display name");
         player.aT.d = true;
         check(egg.a(stack, player, world, 290, 3, 288, 1) && stack.a == 1, "Creative egg spawns without spending");
         check(!egg.a(stack, player, world, 290, 3, 288, 1), "egg rejects occupied space");
         EntityAerialPredator spawned = (EntityAerialPredator) world.a(EntityAerialPredator.class,
                 wu.b(286, 4, 286, 294, 8, 292)).get(0);
-        check(AerialPredators.ENTITY_NAME.equals(aao.b(spawned)), "native entity name");
+        check("ZTO.AerialPredator".equals(aao.b(spawned)), "legacy entity save identifier");
         for (int tick = 0; tick < 32; tick++) world.a(spawned, true);
         check(spawned.y.b > 7, "egg hatch climbs from ground level");
         spawned.A();
@@ -143,9 +145,33 @@ public final class AerialPredatorProbe {
         Map<Class<? extends nn>, um> renderers = new HashMap<Class<? extends nn>, um>();
         RenderAerialPredator.register(renderers);
         check(renderers.get(EntityAerialPredator.class) instanceof RenderAerialPredator, "native renderer mapping");
+        verifyDivePose();
         BufferedImage texture = ImageIO.read(EntityAerialPredator.class.getResource(EntityAerialPredator.TEXTURE));
         check(texture.getWidth() == 64 && texture.getHeight() == 64
                 && texture.getRGB(17, 5) != texture.getRGB(10, 40), "readable model atlas");
+    }
+
+    private static void verifyDivePose() throws Exception {
+        Method pitch = RenderAerialPredator.class.getDeclaredMethod("modelPitch", float.class);
+        pitch.setAccessible(true);
+        double diveAngle = Math.toRadians((Float) pitch.invoke(null, 43F));
+        double climbAngle = Math.toRadians((Float) pitch.invoke(null, -20F));
+        // After model scaling, the beak points along -Z. Its Y component is sin(pitch).
+        check(Math.sin(diveAngle) < -0.65 && Math.sin(climbAngle) > 0.32, "beak follows descending and climbing pitch");
+        Class<?> modelClass = Class.forName("zed.tekkitoverhaul.survival.aerial.client.ModelAerialPredator");
+        java.lang.reflect.Constructor<?> constructor = modelClass.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object model = constructor.newInstance();
+        Method pose = modelClass.getDeclaredMethod("pose", Flight.class, float.class, int.class);
+        pose.setAccessible(true);
+        Field wings = modelClass.getDeclaredField("wings");
+        wings.setAccessible(true);
+        qp[] wing = (qp[]) wings.get(model);
+        pose.invoke(model, Flight.DIVE, 0F, 0);
+        float folded = wing[1].g;
+        check(folded < -0.9F && wing[0].g == -folded, "symmetric backward wing sweep during the dive");
+        pose.invoke(model, Flight.RECOVER, 0F, 3);
+        check(wing[1].g > folded && wing[1].g < -0.3F, "wing unfolds progressively during recovery");
     }
 
     private static void verifySoundPool() {

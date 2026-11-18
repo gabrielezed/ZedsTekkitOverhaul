@@ -8,7 +8,7 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | --- | --- | --- |
 | `playerAssault` | true | Full-moon player assaults |
 | `lunarPatrols` | true | First-quarter and waxing-gibbous patrols |
-| `lunarOutdoorLightPressure` | true | Limited lunar outdoor artificial-light exception. Set false for alpha.5 placement rules. |
+| `lunarOutdoorLightPressure` | true | Allow the limited artificial-light exception for open lunar encounters. Set false to use ordinary light checks. |
 | `experimentalEnderkinEncounters` | false | Set true to allow opt-in substitutions. Set false for ordinary lunar composition. Creative spawn eggs work either way. |
 | `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. |
 | `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
@@ -46,7 +46,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `item.gasolineBucket`, `item.keroseneBucket`, `item.dieselBucket`, `item.heavygasoilBucket` | 22000–22003 in this order |
 | `item.skirmisherEgg`, `item.breacherEgg` | 22004, 22005 |
 | `item.saboteurEgg` | 22006 (stack ID 22262). Added to the unified config with the existing ID rules. |
-| `item.tankEgg`, `item.thiefEgg` | 22007, 22008 (stack IDs 22263, 22264). Creative visual prototypes. |
+| `item.tankEgg`, `item.thiefEgg` | 22007, 22008 (stack IDs 22263, 22264). Creative Tank and Thief spawn eggs. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 

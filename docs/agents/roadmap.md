@@ -43,19 +43,11 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 
 ## Survival gameplay
 
-- **Implemented for 0.1:** [lunar player assault](survival-assault-acceptance.md) follows the active player's vicinity. Tune the warning, distance and wave cadence with a short Survival playtest.
-- **Implemented in `0.1.0-alpha.3`:** opt-in hand and armor slots for vanilla Zombies and Skeletons with rendering, combat effects, entity NBT and death drops. [Specification](MOB_EQUIPMENT_BACKPORT_SPEC.md) · [Tekkit Dev evidence](mob-equipment-acceptance.md)
-- **Implemented in `0.1.0-alpha.4`:** bounded first-quarter and waxing-gibbous patrols with pause and same-night replay protection. [Patrol rules and Tekkit Dev evidence](lunar-pressure.md)
-- **Alpha.5 candidate:** [encounter loadouts, respawn bed anchors and armor Shift+Click](survival-alpha5.md). Owner feedback will guide later tactical enemy roles and defenses.
-- **Alpha.6 candidate:** [outdoor lunar pressure and local fortification](survival-alpha6.md). Evaluate the placement model across representative shelters and Tekkit compounds before expanding tactical roles.
-- **Alpha.8 experiment:** [bounded Enderkin substitutions](survival-alpha8.md) in existing patrols and player assaults. Owner acceptance governs broader adoption.
-- **0.2 alpha.1 candidate:** [persistent local activity and bounded threat](survival-02-alpha1.md) supply one opt-in budget decision at PLAYER_ASSAULT admission. Further 0.2 work can test regional danger and encounter pacing in ordinary Survival sessions.
-- **0.2 alpha.2 candidate:** [qualified activity, regional environment and contextual waves](survival-02-alpha2.md) give full-moon assaults a bounded local variation.
-- **0.2 alpha.3 candidate:** [contextual vanilla composition](survival-02-alpha3.md) changes the balance and timing of melee and ranged pressure on Easy and Normal.
-- **0.2 alpha.4 candidate:** [Hard assault pressure and Enderkin presence](survival-02-alpha4.md) restores native wooden-door risk and reserves room for opt-in roles in later waves. Calibrate player recognition, retreat and active defense in owner playtests. Prototype each of the [future Enderkin roles](enderkin-future-roles.md) separately.
-- **0.2 alpha.5 prototype:** [Enderkin Saboteur](survival-02-alpha5-saboteur.md) tests blink mobility, interruptible windup and a reversible ZTO Hopper output pause through Creative access. A shared special-role budget and terrain-aware composition remain future encounter work.
-- **Later release lines:** settlement recognition in 0.3 and `SITE_SIEGE` in 0.4. Site sieges require separately established sites. Construction and provenance, automation, ambiguous older worlds and the distinction between interior protection and site identity remain open.
-- **Optional developer feature, deferred:** an opt-in in-game Dev Bridge panel may show scenario, step, simulation tick and PASS/FAIL. Keep it off by default and independent of gameplay.
+- **Survival 0.2.1.** Regional activity raises ordinary hostile pressure. Natural lunar encounters, five tactical Enderkin, recoverable theft and the Debug Hub give players ways to observe and respond to the added pressure. See the [implementation guide](survival-021-implementation.md) and [integration results](survival-021-integration.md).
+- **Follow-up work.** Equipped armor theft, cooperative theft, broader industrial sabotage and aerial ecology each need their own design and verification.
+- **Later development.** Settlement recognition and strategic site sieges depend on separately established site ownership and provenance. Keep ordinary territorial threat and player assaults independent of site ownership.
+- **Optional developer feature.** An opt-in in-game Dev Bridge panel could show a scenario, step, simulation tick and result. It stays independent of gameplay.
+
 
 ## Fractional distillation prototype
 

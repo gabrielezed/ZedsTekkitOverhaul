@@ -1,6 +1,6 @@
 # Survival 0.2.1 integration campaign
 
-The baseline was PR #36 at `93748e7a7f9a13295e0224ec29dcb4dd122900b1`, mod SHA-256 `0dbe7f5a064822a6a3bc089e8dbf8e5e9878f35e035a88537d33a683eb35ea12`. The [implementation guide](survival-021-implementation.md) describes the candidate behavior. The Draft stays open for owner acceptance.
+The baseline was PR #36 at `93748e7a7f9a13295e0224ec29dcb4dd122900b1`, mod SHA-256 `0dbe7f5a064822a6a3bc089e8dbf8e5e9878f35e035a88537d33a683eb35ea12`. The [implementation guide](survival-021-implementation.md) describes the shipped gameplay. The coverage below records which checks ran and which still require graphical evidence.
 
 ## Reproduced defects
 

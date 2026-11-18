@@ -1,6 +1,6 @@
 # Survival 0.2.1 implementation
 
-The [full design specification](survival-021-spec.md) governs the milestone. The draft includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation, ordinary Enderkin ecology, the Thief encounter and the Saboteur pipe theft for local single-player Tekkit Classic 3.1.2. See the [integration campaign](survival-021-integration.md) for paired runs and owner playtests.
+The [full design specification](survival-021-spec.md) governs the milestone. Survival 0.2.1 includes ordinary hostile pressure, live diagnostics, Tank combat and localized breaching, role-specific teleportation, ordinary Enderkin ecology, the Thief encounter and Saboteur pipe theft for local single-player Tekkit Classic 3.1.2. See the [integration campaign](survival-021-integration.md) for paired runs and owner playtests.
 
 ## Debug Hub
 
@@ -78,6 +78,6 @@ The Thief probe checks a canceled grab, the contact tick, distinct sound dispatc
 
 The focused pack probe exercises actual pipe removal, the resulting BuildCraft disconnection, interrupted dismantling, cargo recovery and temporary guidance around a wall. In an isolated playtest, place a draining item line with a stone or cobblestone segment at foot level. Interrupt one dismantle, let another finish, pursue the Saboteur and reinstall the recovered pipe. Try refreshing the Ender Trail beside a wall or hillside and around a Thief cache.
 
-Equipped armor theft, cooperative theft and broader integration acceptance remain pending. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
+Equipped armor theft, cooperative theft and wider industrial sabotage are follow-up work. Aerial fauna and settlement recognition belong to later development. Ecology consumes the existing assessment and the native hostile budget, leaving future settlement data and lunar encounter ownership with their respective systems.
 
 The [integration campaign](survival-021-integration.md) reproduces failures related to the owner reports through real AI updates and natural dusk dispatch. It records what remains to be checked in the owner's scenes.

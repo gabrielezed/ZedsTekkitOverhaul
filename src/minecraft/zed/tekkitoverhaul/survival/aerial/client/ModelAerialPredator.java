@@ -15,30 +15,32 @@ final class ModelAerialPredator extends ModelBase {
     ModelAerialPredator() {
         textureWidth = 64;
         textureHeight = 64;
-        body = box(0, 0, -5, -4, -6, 10, 7, 13);
+        body = box(0, 0, -2.5F, -2, -7, 5, 4, 16);
         body.setRotationPoint(0, 19, 0);
-        head = box(0, 20, -3, -3, -5, 6, 6, 6);
-        head.setRotationPoint(0, -2, -5);
+        body.addChild(box(0, 20, -1, -3, -5, 2, 2, 12));
+        head = box(30, 20, -2, -2, -4, 4, 4, 6);
+        head.setRotationPoint(0, -0.5F, -7);
         body.addChild(head);
-        head.addChild(box(24, 20, -2, -1, -9, 4, 3, 4));
-        head.addChild(box(40, 20, -1.5F, 1, -9, 3, 3, 2));
-        jaw = box(24, 27, -1.5F, 0, -6, 3, 2, 6);
-        jaw.setRotationPoint(0, 2, -3);
+        head.addChild(box(46, 0, -1.5F, -0.5F, -8, 3, 2, 5));
+        jaw = box(42, 8, -1.5F, 0, -7, 3, 1, 7);
+        jaw.setRotationPoint(0, 1.5F, -1);
         head.addChild(jaw);
-        tail = box(42, 27, -1.5F, -1, 0, 3, 2, 7);
-        tail.setRotationPoint(0, 0, 6);
+        head.addChild(box(54, 23, -1.45F, 1, -7, 1, 2, 1));
+        head.addChild(box(54, 23, 0.45F, 1, -7, 1, 2, 1));
+        tail = box(42, 29, -1, -0.5F, 0, 2, 1, 9);
+        tail.setRotationPoint(0, 0, 8);
         body.addChild(tail);
         for (int i = 0; i < 2; i++) {
             int side = i == 0 ? -1 : 1;
-            ModelRenderer fan = box(0, 55, side < 0 ? -3 : 0, -0.5F, 0, 3, 1, 7);
-            fan.setRotationPoint(0, 0, 4);
-            fan.rotateAngleY = side * 0.28F;
+            ModelRenderer fan = box(0, 55, side < 0 ? -1 : 0, -0.5F, 0, 1, 1, 8);
+            fan.setRotationPoint(0, 0, 7);
+            fan.rotateAngleY = side * 0.34F;
             tail.addChild(fan);
 
             wings[i] = box(0, 36, side < 0 ? -12 : 0, -1, -3, 12, 2, 9);
-            wings[i].setRotationPoint(side * 4, -2, -2);
+            wings[i].setRotationPoint(side * 2.4F, -1, -3);
             body.addChild(wings[i]);
-            wrists[i] = box(0, 47, side < 0 ? -10 : 0, -0.5F, -2, 10, 1, 6);
+            wrists[i] = box(0, 47, side < 0 ? -10 : 0, -0.5F, -2, 10, 1, 5);
             wrists[i].setRotationPoint(side * 11, 0, 0);
             wings[i].addChild(wrists[i]);
             ModelRenderer tip = box(32, 47, side < 0 ? -5 : 0, -0.5F, -1, 5, 1, 3);
@@ -46,9 +48,9 @@ final class ModelAerialPredator extends ModelBase {
             tip.rotateAngleY = side * -0.32F;
             wrists[i].addChild(tip);
 
-            feet[i] = box(50, 20, -1, 0, -1, 2, 3, 3);
-            feet[i].setRotationPoint(side * 2.5F, 2, 3);
-            feet[i].addChild(box(50, 37, -1, 2, -3, 2, 1, 3));
+            feet[i] = box(54, 17, -0.5F, 0, -1, 1, 2, 2);
+            feet[i].setRotationPoint(side * 1.65F, 1.5F, 4);
+            feet[i].addChild(box(50, 42, -0.5F, 1.5F, -3, 1, 1, 3));
             body.addChild(feet[i]);
         }
     }

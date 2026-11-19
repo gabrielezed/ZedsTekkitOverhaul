@@ -31,17 +31,14 @@ final class BuildCraftPipeTheft {
     private final Object pipe;
     private final Method nativeLookup;
     private final int blockId, metadata, itemId;
-    final String family;
 
-    private BuildCraftPipeTheft(TileEntity tile, Object pipe, Method nativeLookup, int blockId, int metadata,
-            int itemId, String family) {
+    private BuildCraftPipeTheft(TileEntity tile, Object pipe, Method nativeLookup, int blockId, int metadata, int itemId) {
         this.tile = tile;
         this.pipe = pipe;
         this.nativeLookup = nativeLookup;
         this.blockId = blockId;
         this.metadata = metadata;
         this.itemId = itemId;
-        this.family = family;
     }
 
     static String family(TileEntity tile) throws ReflectiveOperationException {
@@ -85,7 +82,7 @@ final class BuildCraftPipeTheft {
                     || !"buildcraft.transport.ItemPipe".equals(Item.itemsList[itemId].getClass().getName())
                     || ((Map<?, ?>) block.getClass().getField("pipes").get(null)).get(itemId) != type) return null;
             if (!quiescent(pipe, family)) return null;
-            return new BuildCraftPipeTheft(tile, pipe, lookup, blockId, world.getBlockMetadata(x, y, z), itemId, family);
+            return new BuildCraftPipeTheft(tile, pipe, lookup, blockId, world.getBlockMetadata(x, y, z), itemId);
         } catch (Exception unsupported) {
             return null;
         } catch (LinkageError unsupported) {
@@ -150,7 +147,7 @@ final class BuildCraftPipeTheft {
         return field.get(object);
     }
 
-    static Object field(Object object, String name) throws ReflectiveOperationException {
+    private static Object field(Object object, String name) throws ReflectiveOperationException {
         return object.getClass().getField(name).get(object);
     }
 

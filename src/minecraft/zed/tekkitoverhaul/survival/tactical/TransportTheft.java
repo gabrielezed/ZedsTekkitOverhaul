@@ -21,13 +21,14 @@ final class TransportTheft {
     private static final String CABLE_BLOCK = "ic2.common.BlockCable";
     private static final String MICRO_BLOCK = "eloraam.base.BlockMicro";
     private static final int CENTER = 29;
-    private static final int WIRE_PARTS = 63 | 1 << CENTER;
 
     enum State { READY, UNLOADED, TARGET_CHANGED, UNSAFE_TRANSPORT }
 
     final String family;
-    final int part;
+    private final int part;
     private final TileEntity tile;
+    private final World world;
+    private final int x, y, z;
     private final Block block;
     private final int metadata;
     private final ItemStack stack;
@@ -36,6 +37,10 @@ final class TransportTheft {
     private TransportTheft(TileEntity tile, Block block, int metadata, int part,
             String family, ItemStack stack, BuildCraftPipeTheft buildcraft) {
         this.tile = tile;
+        this.world = tile.worldObj;
+        this.x = tile.xCoord;
+        this.y = tile.yCoord;
+        this.z = tile.zCoord;
         this.block = block;
         this.metadata = metadata;
         this.part = part;
@@ -143,7 +148,7 @@ final class TransportTheft {
     private static int transportParts(TileEntity tile, int extendedId) throws ReflectiveOperationException {
         if (extendedId >= 7 && extendedId <= 11) return 1 << CENTER;
         int sides = number(field(tile, "ConSides"));
-        return (sides & 63 | (sides & 64) << 23) & WIRE_PARTS;
+        return sides & 63 | (sides & 64) << 23;
     }
 
     private static boolean redPowerQuiescent(TileEntity tile, int extendedId) throws ReflectiveOperationException {
@@ -177,8 +182,6 @@ final class TransportTheft {
     }
 
     Vec3D visiblePoint(Vec3D eye) {
-        World world = tile.worldObj;
-        int x = tile.xCoord, y = tile.yCoord, z = tile.zCoord;
         int eyeX = MathHelper.floor_double(eye.xCoord), eyeZ = MathHelper.floor_double(eye.zCoord);
         if (!world.checkChunksExist(Math.min(x, eyeX) - 1, 0, Math.min(z, eyeZ) - 1,
                 Math.max(x, eyeX) + 1, 0, Math.max(z, eyeZ) + 1)) return null;
@@ -204,8 +207,8 @@ final class TransportTheft {
     }
 
     State state() {
-        World world = tile.worldObj;
-        int x = tile.xCoord, y = tile.yCoord, z = tile.zCoord;
+        if (tile.worldObj != world || tile.xCoord != x || tile.yCoord != y || tile.zCoord != z)
+            return State.TARGET_CHANGED;
         if (!loaded(tile, part >= 0 ? 3 : 1)) return State.UNLOADED;
         if (LoadedTile.at(world, x, y, z) != tile || world.getBlockId(x, y, z) != block.blockID
                 || world.getBlockMetadata(x, y, z) != metadata) return State.TARGET_CHANGED;
@@ -227,8 +230,6 @@ final class TransportTheft {
     ItemStack remove(Vec3D eye) {
         if (state() != State.READY || visiblePoint(eye) == null) return null;
         if (buildcraft != null) return buildcraft.remove();
-        World world = tile.worldObj;
-        int x = tile.xCoord, y = tile.yCoord, z = tile.zCoord;
         if (part < 0) {
             if (!world.setBlockWithNotify(x, y, z, 0) || world.getBlockId(x, y, z) != 0
                     || LoadedTile.at(world, x, y, z) != null || !tile.isInvalid()) return null;
@@ -240,10 +241,10 @@ final class TransportTheft {
                 return null;
             }
         }
-        return harvestPart(world, x, y, z);
+        return harvestPart();
     }
 
-    private ItemStack harvestPart(World world, int x, int y, int z) {
+    private ItemStack harvestPart() {
         AxisAlignedBB area = AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1);
         List<?> previous = world.getEntitiesWithinAABB(EntityItem.class, area);
         try {

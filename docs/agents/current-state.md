@@ -2,7 +2,7 @@
 
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** is complete on `main`. Its final stabilization adds Skelebird bone drops and strengthens Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The 0.2.3 development branch identifies itself as `0.2.3-alpha.1`. It introduces biome-weighted ordinary Enderkin, forest magpies, and occasional Fugl predation on exposed chickens. [Current prototype](survival-023-implementation.md) · [Design draft](survival-023-spec.md)
+The 0.2.3 development branch identifies itself as `0.2.3-alpha.2`. It extends the Saboteur's physical dismantle to exposed Tekkit transport components. The alpha.1 prototype introduced biome-weighted ordinary Enderkin, forest magpies, and occasional Fugl predation on exposed chickens. [Industrial Saboteur](saboteur-industrial.md) · [Biome ecology prototype](survival-023-implementation.md)
 
 | Owner | Current responsibility |
 | --- | --- |

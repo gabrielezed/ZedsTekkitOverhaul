@@ -63,6 +63,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
     private boolean directCountered, directStopped, directEngineSeeded;
     private float directPauseStroke;
     private long directBaselineTick;
+    private aan cableItem;
+    private kw exposedCable;
 
     public static final class Bootstrap implements ITickHandler {
         private boolean ready;
@@ -159,6 +161,8 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
                 direct(game, age);
             } else if (mode.startsWith("industrial")) {
                 industrial(game, age);
+            } else if ("theft-cable".equals(mode)) {
+                cableTheft(game);
             } else if ("combat".equals(mode)) {
                 combat(game, age);
             } else if ("terrain".equals(mode)) {
@@ -205,6 +209,12 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             setupIndustrial(game);
         } else if (mode.startsWith("transport")) {
             setupTransport(game);
+        } else if ("theft-cable".equals(mode)) {
+            cableItem = ((aan) staticField("ic2.common.Ic2Items", "glassFiberCableItem")).k();
+            check(cableItem.k().a(game.h, game.f, HOPPER_X, Y - 1, Z, 1), "native glass fibre placement");
+            exposedCable = game.f.b(HOPPER_X, Y, Z);
+            player(game, HOPPER_X - 5.5D, Z + 1.5D, -90);
+            mob = spawn(game, HOPPER_X - 1.6D, Z + 0.5D);
         } else if ("combat".equals(mode)) {
             startFight(game, 1);
         } else if ("stress".equals(mode)) {
@@ -227,6 +237,53 @@ public final class SaboteurRuntimeProbe implements ITickHandler {
             identity(game);
         }
         advance(game);
+    }
+
+    private void cableTheft(Minecraft game) throws Exception {
+        game.h.l(20);
+        if (stage == 1 && mob.pose() == EntitySaboteur.DISMANTLE) {
+            check("IC2_CABLE".equals(mob.targetType()) && mob.disruptionTarget() == exposedCable
+                    && Boolean.TRUE.equals(member(exposedCable, "addedToEnergyNet")), "native live cable and dismantle cue");
+            screenshot(game, "cable-dismantle");
+            shieldCable(game, 20);
+            advance(game);
+        } else if (stage == 2 && mob.pose() == EntitySaboteur.CANCELLED) {
+            check("NO_SIGHT".equals(mob.lastOutcome()) && game.f.b(HOPPER_X, Y, Z) == exposedCable,
+                    "glass cover cancels dismantle and retains the live tile");
+            mob.A();
+            shieldCable(game, 0);
+            mob = spawn(game, HOPPER_X - 1.6D, Z + 0.5D);
+            advance(game);
+        } else if (stage == 3 && mob.pose() == EntitySaboteur.CARRY) {
+            check(game.f.a(HOPPER_X, Y, Z) == 0 && exposedCable.l()
+                    && Boolean.FALSE.equals(member(exposedCable, "addedToEnergyNet")), "native cable removed from EnergyNet");
+            advance(game);
+        } else if (stage == 4 && "ESCAPE".equals(mob.recoveryOutcome())) {
+            fq drop = null;
+            for (Object entity : game.f.b) {
+                if (!(entity instanceof fq)) continue;
+                fq item = (fq) entity;
+                if (item.G || item.a.c != cableItem.c || item.a.i() != cableItem.i()) continue;
+                check(drop == null && item.a.a == 1, "one exact placeable glass fibre");
+                drop = item;
+            }
+            check(drop != null && drop.a.a(game.h, game.f, HOPPER_X, Y - 1, Z, 1), "reinstall the recovered component");
+            drop.A();
+            advance(game);
+        } else if (stage == 5) {
+            kw restored = game.f.b(HOPPER_X, Y, Z);
+            check(restored != null && restored != exposedCable, "a fresh native cable tile");
+            if (Boolean.TRUE.equals(member(restored, "addedToEnergyNet"))) finish(game);
+        }
+    }
+
+    private static void shieldCable(Minecraft game, int block) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                for (int y = Y; y <= Y + 1; y++) game.f.g(HOPPER_X + dx, y, Z + dz, block);
+            }
+        }
     }
 
     private void setupTerrain(Minecraft game) {

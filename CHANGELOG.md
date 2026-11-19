@@ -1,5 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.3-alpha.2 — Industrial Saboteur
+
+- Let Saboteurs dismantle one exposed BuildCraft, Additional Pipes, IC2 or RedPower transport component on Normal and Hard.
+- Target exposed cable and tube installations during natural Enderkin selection. Block the approach or interrupt the dismantle to protect a line.
+- Recover the original transport component when the carrier dies or finishes escaping.
+
+[Industrial coverage and playtest](docs/agents/saboteur-industrial.md)
+
 ## 0.2.3-alpha.1 — Biome ecology prototype
 
 - Vary ordinary Enderkin roles by legacy biome family within the established hostile spawn budget.

@@ -98,8 +98,10 @@ public final class EnderkinEcology {
                     if (tile.isInvalid() || tile.worldObj != world || Math.abs(tile.yCoord - candidate.posY) > 4) continue;
                     int dx = tile.xCoord - cx, dz = tile.zCoord - cz;
                     if (dx * dx + dz * dz > INDUSTRY_RADIUS * INDUSTRY_RADIUS) continue;
-                    if (!(tile instanceof SabotageTarget) && !IndustrialSabotage.transportSignal(tile)) continue;
-                    if (exposed(candidate, tile, cx, cz)) return true;
+                    if ((tile instanceof SabotageTarget || IndustrialSabotage.transportSignal(tile))
+                            && exposed(candidate, tile, cx, cz)) return true;
+                    if (TransportTheft.exposedSignal(tile,
+                            Vec3D.createVector(candidate.posX, candidate.posY + 0.8D, candidate.posZ))) return true;
                 }
             }
         }

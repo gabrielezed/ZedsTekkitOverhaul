@@ -29,11 +29,16 @@ try {
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
+        $transports = @('buildcraft-client-B-energy-2.2.14.zip','buildcraft-client-B-factory-2.2.14.zip',
+            'buildcraft-client-DA-additionalpipes-2.1.3.zip','RedPowerCore-2.0pr5b2.zip',
+            'RedPowerMachine-2.0pr5b2.zip','RedPowerWiring-2.0pr5b2.zip','RedPowerControl-2.0pr5b2.zip') |
+            ForEach-Object { Join-Path $game "mods/$_" }
+        $industrialClasspath = ($headless + $buildCraft + $industrialCraft + $transports) -join ';'
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
-        & javac -source 8 -target 8 -cp (($headless + $buildCraft + $industrialCraft) -join ';') -d $out.FullName @headlessSources
+        & javac -source 8 -target 8 -cp $industrialClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
@@ -66,7 +71,7 @@ try {
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Thief behavior probe failed.' }
-            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft + $industrialCraft) -join ';') IndustrialTheftProbe $out.FullName
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath IndustrialTheftProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Industrial theft and Ender Trail probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') SurvivalIntegrationProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Survival integration probe failed.' }

@@ -63,6 +63,8 @@ final class BridgeSnapshots {
                     .append(",\"blinkResult\":\"").append(mob.lastBlinkResult()).append('"')
                     .append(",\"blinkCause\":\"").append(mob.lastBlinkCause()).append('"')
                     .append(",\"targetType\":\"").append(mob.targetType()).append('"')
+                    .append(",\"cargoFamily\":\"").append(mob.cargoFamily()).append('"')
+                    .append(",\"recovery\":\"").append(mob.recoveryOutcome()).append('"')
                     .append(",\"scans\":").append(mob.scans())
                     .append(",\"scannedBlocks\":").append(mob.scannedBlocks())
                     .append(",\"pathPlans\":").append(mob.pathPlans())

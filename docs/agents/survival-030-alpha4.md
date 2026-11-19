@@ -39,6 +39,31 @@ Recognition and protection share a ceiling of 169 block/metadata reads between s
 
 The native headless fixtures exercise the owner's `Recognized` with `Partial footprint` case, interrupted surveys, a furnished compound and independent used outpost, a connecting observation with competing IDs, an extension, contraction, dormancy and return. They reopen both new and migrated saves and retain IDs on different floors. The protection consumer compares an interior, closed and open entrance, courtyard, open-sided shelter and natural cave. It also exercises solid, glass and slab roofs, roof removal, a ladder opening, a gate, unavailable terrain and a budget-exhausted roof. A matched ordinary-spawn selection sample and the full pack encounter probes cover the existing gameplay authorities.
 
+### Measured workloads
+
+On Windows 11 / Ryzen 7 5800X, the compound workload warmed 600 frames and measured 1,800 frames per run while rotating among the house interior, doorway and courtyard. Each run assessed 1,638 requests and deferred 162 against recognition slices. The longest deferral was nine ticks. The combined peak was 169 reads, with zero queued protection jobs and zero requests for absent chunks in the audit. The dense covered-area control used all 169 reads on each assessment and returned UNKNOWN in that same tick.
+
+| Pinned workload | Samples per run | Median µs | p95 µs | p99 µs | Maximum µs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Resolve + protection, `-Focus compound` | 1,800 | 1.5 | 6.5 | 10.9 | 80.7 |
+| Resolve + protection, `-Focus query` | 1,800 | 1.0 | 3.6 | 8.0 | 78.0 |
+| Dense covered area, `-Focus protection` | 144 | 11.8 | 44.6 | 60.6 | 106.6 |
+| Dirty registry save, `-Focus compound` | 24 | 1,100.2 | 1,357.5 | — | 1,572.6 |
+| Dirty registry save, `-Focus query` | 24 | 1,002.5 | 1,085.5 | — | 1,122.6 |
+
+The dirty-save timings cover the two-site, three-part, 153-byte registry using its production writer and file replacement. The narrowed footprint occupied 114 bytes. The dense protection control uses a wide low roof and reports bounded computation time separately from the wait for a budget slot. These timings are descriptive; deterministic bounds and outcomes are the gates.
+
+### Staged artifact identity
+
+Clean source `241ece1107ad16028db6356c964863716134b120` compiled with MCP 6.2, JDK 8u504 and development Forge 3.4.9.171. Client reobfuscation and streaming validation of 455 mod entries passed. The headless runtime was the Minecraft 1.2.5 / Tekkit Classic 3.1.2 overlay `9808277d362d4f67ed5031b9d47afbe90f696125e06cc333342917719f0c3ad5`, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51.
+
+| Artifact in local `dist-zto/settlement-alpha4/stage` | SHA-256 |
+| --- | --- |
+| `mods/ZedsTekkitOverhaul.jar` | `dab3fedd3b643772d9f3b92bcba7a7383c1f815f28178c2b95d887b7e907bdae` |
+| `ZTOAgent.jar` | `bea15285c92439d2606c3d8e4cd33de54167b21811b8818e0f31aa6c21e30578` |
+
+The staged pair passed `-Focus cabin`, `-Focus mutations`, `-Focus compound`, `-Focus protection`, `-Focus query`, `-Focus provenance`, `-Focus settlement`, `-Focus furnace` and the full pinned headless `-Pack`. The final ecology fixture collected 500 cave and 5,252 surface candidates in 1,719 passes. Portable territory, legacy NBT and documentation checks also passed. The owner Tekkit Dev instance received the same pair, with matching installed hashes and one managed Prism agent component.
+
 ## Owner walkthrough
 
 Use a disposable Survival save with a furnished house, a short open courtyard, an open workshop and a nearby independent outpost. Stand inside the recognized house, open two linked utilities at least one second apart and wait one survey cycle. Open the door, walk across the courtyard and open two workshop utilities, again one second apart. Walk four columns in the workshop and wait for its survey. Check that it shares the house ID and that the outpost, used independently, receives another ID.

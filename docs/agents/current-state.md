@@ -2,7 +2,7 @@
 
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The current build identifies itself as `0.3.0-alpha.2`. Local singleplayer surveys can recognize small sites and persist their Overworld identities. The Settlement Recognition screen reports the supporting evidence and the latest decision. [Recognition implementation and tests](survival-030-implementation.md)
+The current build identifies itself as `0.3.0-alpha.3`. Bounded follow-up surveys help recognize cabins at entrances and survey edges, including suspended builds. The Settlement Recognition screen shows the latest spatial and utility evidence and provides a separate survey and storage page. [Recognition implementation and tests](survival-030-implementation.md)
 
 Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a wooden-entrance tactic for the Breacher. The fieldwork correction suspends vein mining and restores native extraction. Biome ecology favors ordinary Enderkin underground and gives surface magpies occasional one-item theft. The alpha.1 Fugl chicken hunt remains available. [Industrial Saboteur](saboteur-industrial.md) · [Mining, furnaces and entrances](survival-023-alpha2-fieldwork.md) · [Biome ecology](survival-023-implementation.md)
 

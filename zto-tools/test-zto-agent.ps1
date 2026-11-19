@@ -4,7 +4,7 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
-    [ValidateSet('furnace','mining','breacher','provenance','settlement')][string]$Focus
+    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -51,6 +51,11 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Focus -eq 'cabin') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName cabin
+                if ($LASTEXITCODE) { throw 'Native suspended cabin probe failed.' }
+                return
+            }
             if ($Pack -or $Focus -eq 'settlement') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Native settlement recognition probe failed.' }

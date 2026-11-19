@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.3.0-alpha.3 — Suspended cabins
+
+- Recenter clipped cabin surveys and use cover from walked columns on the same floor.
+- Keep existing site IDs when corroborated local construction modestly extends their bounds.
+- Show survey age, anchor, clipping, utility evidence and separate storage details in the Debug Hub.
+
 ## 0.3.0-alpha.2 — Settlement candidates
 
 - Observe supported manual placements, removals and BuildCraft Quarry excavation.

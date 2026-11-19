@@ -32,7 +32,7 @@ public final class SettlementRecognition {
     private SiteRegistry registry;
     private Method useHook;
     private long tick;
-    private int anchorX, anchorY, anchorZ, walked, useIndex, delay, peakReads;
+    private int anchorX, anchorY, anchorZ, walked, walkIndex, useIndex, delay, peakReads;
     private int resultX, resultY, resultZ;
     private Decision latest;
 
@@ -75,6 +75,7 @@ public final class SettlementRecognition {
         survey.active = false;
         survey.reads = 0;
         walked = 0;
+        walkIndex = 0;
         delay = 0;
         for (int i = 0; i < recentUse.length; i++) recentUse[i] = null;
         useIndex = 0;
@@ -114,7 +115,9 @@ public final class SettlementRecognition {
         }
         if (!survey.sample(world, provenance)) {
             survey.active = false;
-            publish(new Decision(null, "", "Terrain unavailable", -1, 0, 0, -1, null));
+            Decision unavailable = new Decision(survey, tick, null, -1, -1);
+            unavailable.reason = "Terrain unavailable";
+            publish(unavailable);
             return;
         }
         peakReads = Math.max(peakReads, survey.reads);
@@ -122,17 +125,19 @@ public final class SettlementRecognition {
     }
 
     private void rememberWalk(int x, int y, int z) {
-        if (walked == 0 || Math.abs(anchorX - x) > 3 || Math.abs(anchorY - y) > 2 || Math.abs(anchorZ - z) > 3) {
+        if (walked == 0 || Math.abs(anchorX - x) > 6 || Math.abs(anchorY - y) > 2 || Math.abs(anchorZ - z) > 6) {
             walked = 0;
+            walkIndex = 0;
             anchorX = x;
             anchorY = y;
             anchorZ = z;
         }
-        if (walked == RECENT_LIMIT) return;
         for (int i = 0; i < walked; i++) if (walkedX[i] == x && walkedZ[i] == z) return;
-        walkedX[walked] = x;
-        walkedY[walked] = y;
-        walkedZ[walked++] = z;
+        walkedX[walkIndex] = x;
+        walkedY[walkIndex] = y;
+        walkedZ[walkIndex] = z;
+        walkIndex = (walkIndex + 1) % RECENT_LIMIT;
+        walked = Math.min(RECENT_LIMIT, walked + 1);
     }
 
     private void recordUse(Object[] context, int[] target) {
@@ -140,76 +145,103 @@ public final class SettlementRecognition {
                 || !SiteSurvey.utility(target[3])) return;
         Use previous = recentUse[(useIndex + RECENT_LIMIT - 1) % RECENT_LIMIT];
         if (previous != null && tick - previous.when < 20) return;
-        recentUse[useIndex] = new Use(target[0], target[1], target[2], tick);
+        recentUse[useIndex] = new Use(target[0], target[1], target[2], SiteSurvey.utilityType(target[3]), tick);
         useIndex = (useIndex + 1) % RECENT_LIMIT;
     }
 
     private void evaluate(Evidence evidence) {
-        int activity = territory.activityAt(world, survey.x, survey.z);
+        int activity = territory.activityAt(world, survey.focusX, survey.focusZ);
         long clock = territory.observationClock(world);
         Bounds bounds = evidence.bounds;
-        int steps = 0, uses = 0;
+        Decision result = new Decision(survey, tick, evidence, activity, clock);
+        result.cover = evidence.anchorCover;
         if (bounds != null) {
-            for (int i = 0; i < walked; i++) if (bounds.contains(walkedX[i], walkedY[i], walkedZ[i], 0)) steps++;
+            for (int i = 0; i < walked; i++) {
+                int x = walkedX[i], y = walkedY[i], z = walkedZ[i];
+                if (!bounds.contains(x, y, z, 0) || Math.abs(y - survey.focusY) > 1) continue;
+                result.walked++;
+                if (result.cover < 9 && survey.walkable(x, y, z))
+                    result.cover = Math.max(result.cover, survey.cover(evidence, x, y, z));
+            }
             for (Use use : recentUse) {
-                if (use != null && tick - use.when <= USE_MEMORY && bounds.contains(use.x, use.y, use.z, 1)
-                        && survey.sampledUtility(use.x, use.y, use.z)) uses++;
+                if (use == null) continue;
+                if (!survey.associatedUtility(evidence, use.x, use.y, use.z, use.type)) result.outside[use.type]++;
+                else if (tick - use.when > USE_MEMORY) result.expired[use.type]++;
+                else {
+                    result.opened[use.type]++;
+                    result.uses++;
+                }
             }
         }
+        classify(result);
+        publish(result);
+    }
+
+    private void classify(Decision result) {
+        Evidence evidence = result.evidence;
+        Bounds bounds = evidence.bounds;
+        int activity = result.activity, steps = result.walked, uses = result.uses;
+        long clock = result.clock;
         boolean observed = evidence.manual >= 8;
         boolean familiar = evidence.inferred >= 16 && uses >= 2;
-        boolean shelter = evidence.cover >= 4;
+        boolean shelter = result.cover >= 4;
         Site known = bounds == null ? null : registry.matching(bounds);
-        if (known == null) known = registry.containing(survey.x, survey.y, survey.z);
-        String state = "No site";
-        String reason;
+        if (known == null) known = registry.containing(survey.focusX, survey.focusY, survey.focusZ);
+        result.site = known;
+        if (survey.recenter(evidence)) {
+            result.state = known == null ? "Candidate" : "Recognized";
+            result.reason = "Partial footprint. Sampling closer to the clipped edge.";
+            return;
+        }
         if (known != null) {
-            state = "Recognized";
-            if (evidence.spread() && (evidence.manual >= 4 || evidence.inferred >= 8)
+            result.state = "Recognized";
+            if (evidence.faces == 0 && evidence.spread() && (evidence.manual >= 4 || evidence.inferred >= 8)
                     && (steps >= 2 || uses > 0) && clock >= 0) {
                 registry.reobserve(known, clock, observed);
-                reason = "Existing site re-observed";
+                result.reason = observed && (shelter || uses > 0) && registry.expand(known, bounds)
+                        ? "Existing site footprint expanded" : "Existing site re-observed";
             } else {
-                reason = "Identity retained. Current evidence is weak.";
+                result.reason = "Identity retained. Current footprint is partial or evidence is weak.";
             }
         } else if (!registry.writable()) {
-            reason = "Registry unavailable";
+            result.reason = "Registry unavailable";
         } else if (!evidence.spread() || (evidence.manual < 6 && evidence.inferred < 12)) {
-            reason = "Insufficient connected construction";
+            result.reason = "Insufficient connected construction";
+        } else if (evidence.faces != 0) {
+            result.state = "Candidate";
+            result.reason = "Construction reaches the survey edge";
         } else if (!shelter && uses == 0) {
-            reason = "Exposed structure needs evidence of use";
+            result.reason = "Little cover in this sample. Open a local utility to corroborate use.";
         } else if (activity < 1 && uses < 2) {
-            reason = "Insufficient local activity";
+            result.reason = "Insufficient local activity";
         } else {
-            state = "Candidate";
-            if (evidence.clipped) {
-                reason = "Construction reaches the survey edge";
-            } else if (!observed && !familiar) {
-                reason = "Unknown authorship. Needs repeated utility use.";
+            result.state = "Candidate";
+            if (!observed && !familiar) {
+                result.reason = "Unknown authorship. Needs repeated utility use.";
             } else if (steps < 4 || (activity < 2 && uses < 2) || clock < 0) {
-                reason = "Structure found. Needs corroborating local use.";
+                result.reason = "Structure found. Needs corroborating local use.";
             } else {
-                known = registry.promote(bounds, clock, observed);
-                state = known == null ? "Candidate" : "Recognized";
-                reason = known == null ? "Registry capacity reached"
+                result.site = registry.promote(bounds, clock, observed);
+                result.state = result.site == null ? "Candidate" : "Recognized";
+                result.reason = result.site == null ? "Registry capacity reached"
                         : observed ? "Construction and local use corroborated" : "Structure and repeated utility use corroborated";
             }
         }
-        publish(new Decision(evidence, state, reason, activity, steps, uses, clock, known));
     }
 
     private void publish(Decision decision) {
         latest = decision;
-        resultX = survey.x;
-        resultY = survey.y;
-        resultZ = survey.z;
+        resultX = survey.focusX;
+        resultY = survey.focusY;
+        resultZ = survey.focusZ;
     }
 
     public Snapshot snapshot(World context, int x, int y, int z) {
         if (Thread.currentThread() != owner || context == null || context != world || registry == null) return null;
         boolean overworld = context.worldProvider.worldType == 0;
         boolean nearResult = Math.abs(x - resultX) <= 3 && Math.abs(y - resultY) <= 2 && Math.abs(z - resultZ) <= 3;
-        Decision local = overworld && nearResult ? latest : null;
+        Decision local = overworld && latest != null && (nearResult || latest.evidence != null
+                && latest.evidence.bounds != null && latest.evidence.bounds.contains(x, y, z, 0)) ? latest : null;
         Site site = overworld ? registry.containing(x, y, z) : null;
         if (site == null && local != null) site = local.site;
         boolean useActive = false;
@@ -218,55 +250,64 @@ public final class SettlementRecognition {
         } catch (ReflectiveOperationException unavailable) {
             useHook = null;
         }
+        boolean pending = overworld && survey.active && survey.near(x, y, z, 3, 2);
         return new Snapshot(overworld ? registry.status : "OUTSIDE_OVERWORLD", registry.size(), site, local,
-                useActive, survey.active, survey.reads, peakReads);
+                useActive, pending, survey.reads, peakReads, tick, pending ? survey.extent() : null);
     }
 
     private static final class Use {
-        final int x, y, z;
+        final int x, y, z, type;
         final long when;
 
-        Use(int x, int y, int z, long when) {
+        Use(int x, int y, int z, int type, long when) {
             this.x = x;
             this.y = y;
             this.z = z;
+            this.type = type;
             this.when = when;
         }
     }
 
     private static final class Decision {
         final Evidence evidence;
-        final String state, reason;
-        final int activity, walked, uses;
-        final long clock;
-        final Site site;
+        final int activity, anchorX, anchorY, anchorZ, footY, layers;
+        final long clock, tick;
+        final Bounds extent;
+        final int[] opened = new int[4], expired = new int[4], outside = new int[4];
+        int walked, uses, cover;
+        String state = "No site", reason;
+        Site site;
 
-        Decision(Evidence evidence, String state, String reason, int activity, int walked, int uses,
-                 long clock, Site site) {
+        Decision(SiteSurvey survey, long tick, Evidence evidence, int activity, long clock) {
+            anchorX = survey.x;
+            anchorY = survey.y;
+            anchorZ = survey.z;
+            footY = survey.focusY;
+            layers = survey.layer;
+            extent = survey.extent();
+            this.tick = tick;
             this.evidence = evidence;
-            this.state = state;
-            this.reason = reason;
             this.activity = activity;
-            this.walked = walked;
-            this.uses = uses;
             this.clock = clock;
-            this.site = site;
         }
     }
 
     public static final class Snapshot {
-        public final String registry, state, confidence, reason, boundary;
-        public final int id, siteCount, placed, inferred, utilities, cover, activity, walked, uses, reads, peakReads;
-        public final long observedTick;
+        public final String registry, state, confidence, reason, boundary, component, assessment, extent, pendingExtent, clipping;
+        public final int id, siteCount, placed, inferred, utilities, cover, anchorCover, clipFaces, activity, walked, uses, reads, peakReads;
+        public final int anchorX, anchorY, anchorZ, footY, sampledLayers;
+        public final long observedTick, assessedTick, assessmentAge;
         public final boolean useHook, queued;
+        public final UtilitySnapshot workbench, furnace, chest;
 
         private Snapshot(String registry, int count, Site site, Decision decision, boolean useHook, boolean queued,
-                         int reads, int peakReads) {
+                         int reads, int peakReads, long tick, Bounds pendingExtent) {
             this.registry = registry;
             this.useHook = useHook;
             this.queued = queued;
             this.reads = reads;
             this.peakReads = peakReads;
+            this.pendingExtent = pendingExtent == null ? "-" : pendingExtent.toString();
             // A cached re-evaluation may belong to a different nearby site.
             if (site != null && decision != null && decision.site != null && decision.site != site) decision = null;
             Evidence evidence = decision == null ? null : decision.evidence;
@@ -278,14 +319,44 @@ public final class SettlementRecognition {
                     : "Insufficient for recognition";
             reason = decision == null ? "Awaiting local survey" : decision.reason;
             boundary = box == null ? "-" : box.toString();
+            component = evidence == null || evidence.bounds == null ? "-" : evidence.bounds.toString();
+            assessment = decision == null ? "Awaiting survey" : evidence == null ? "Terrain unavailable"
+                    : evidence.faces != 0 ? "Partial footprint" : "Complete";
+            extent = decision == null ? "-" : decision.extent.toString();
+            anchorX = decision == null ? 0 : decision.anchorX;
+            anchorY = decision == null ? 0 : decision.anchorY;
+            anchorZ = decision == null ? 0 : decision.anchorZ;
+            footY = decision == null ? 0 : decision.footY;
+            sampledLayers = decision == null ? 0 : decision.layers;
+            assessedTick = decision == null ? -1 : decision.tick;
+            assessmentAge = decision == null ? -1 : tick - decision.tick;
             placed = evidence == null ? -1 : evidence.manual;
             inferred = evidence == null ? -1 : evidence.inferred;
-            utilities = evidence == null ? -1 : evidence.utility;
-            cover = evidence == null ? -1 : evidence.cover;
+            workbench = new UtilitySnapshot(decision, 1);
+            furnace = new UtilitySnapshot(decision, 2);
+            chest = new UtilitySnapshot(decision, 3);
+            utilities = evidence == null ? -1 : workbench.associated + furnace.associated + chest.associated;
+            cover = evidence == null ? -1 : decision.cover;
+            anchorCover = evidence == null ? -1 : evidence.anchorCover;
+            clipFaces = evidence == null ? 0 : evidence.faces;
+            clipping = SiteSurvey.clipping(clipFaces);
             activity = decision == null ? -1 : decision.activity;
             walked = decision == null ? -1 : decision.walked;
             uses = decision == null ? -1 : decision.uses;
-            observedTick = site != null ? site.lastSeen : decision != null && "Candidate".equals(state) ? decision.clock : -1;
+            observedTick = site == null ? -1 : site.lastSeen;
+        }
+    }
+
+    public static final class UtilitySnapshot {
+        public final int found, associated, opened, expired, outside;
+
+        private UtilitySnapshot(Decision decision, int type) {
+            Evidence evidence = decision == null ? null : decision.evidence;
+            found = evidence == null ? -1 : evidence.found[type];
+            associated = evidence == null ? -1 : evidence.associated[type];
+            opened = evidence == null ? -1 : decision.opened[type];
+            expired = evidence == null ? -1 : decision.expired[type];
+            outside = evidence == null ? -1 : decision.outside[type];
         }
     }
 }

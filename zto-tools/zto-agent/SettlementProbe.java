@@ -34,6 +34,11 @@ public final class SettlementProbe implements ISaveEventHandler {
     public static void main(String[] args) {
         try {
             SettlementProbe probe = new SettlementProbe(new File(args[0]));
+            if (args.length == 2 && "cabin".equals(args[1])) {
+                probe.suspendedCabins();
+                System.exit(0);
+            }
+            probe.suspendedCabins();
             probe.sites();
             probe.negatives();
             probe.village();
@@ -43,6 +48,176 @@ public final class SettlementProbe implements ISaveEventHandler {
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    private void suspendedCabins() throws Exception {
+        int feet = 83;
+        lowCabin("suspended-cabin", feet);
+        position(104, feet, 236);
+        ticks(9);
+        Snapshot partial = here();
+        check(partial.queued && "Partial footprint".equals(partial.assessment) && "north".equals(partial.clipping)
+                        && partial.anchorZ == 236 && partial.anchorCover == 3 && partial.sampledLayers == 9
+                        && !partial.extent.equals(partial.pendingExtent) && partial.assessedTick >= 0,
+                "entrance sample exposes clipping and scheduled follow-up", partial);
+        showSurvey("entrance partial", partial);
+        walkInside();
+        for (int i = 0; i < 12; i++) {
+            player.b(0, 0, .25);
+            ticks(1);
+        }
+        ticks(550);
+        Snapshot suspended = recognized("suspended cabin from the entrance", true);
+        check(suspended.anchorCover == 9 && suspended.uses == 0 && suspended.utilities == 2
+                        && suspended.workbench.found == 1 && suspended.workbench.associated == 1
+                        && suspended.furnace.found == 1 && suspended.furnace.associated == 1
+                        && suspended.furnace.opened == 0 && suspended.placed >= 8
+                        && "Complete".equals(suspended.assessment) && suspended.assessmentAge >= 0,
+                "follow-up sees low roof, selected component and unopened utilities", suspended);
+        WorldProvenance.Snapshot storage = provenance.snapshot(world, 104, feet, 236);
+        check(storage.capacity == 1024 && storage.sections < storage.capacity && storage.placed < suspended.placed,
+                "storage usage and local section history have their own scale", suspended);
+        showSurvey("entrance recentered", suspended);
+        for (int[] point : new int[][] {{105, 234}, {103, 232}}) {
+            position(point[0], feet, point[1]);
+            ticks(130);
+            check(here().id == suspended.id && here().cover >= 4 && here().utilities == 2,
+                    "near-wall and middle surveys retain the same site", here());
+            showSurvey("inside", here());
+        }
+
+        useUtility(101, feet, 230);
+        ticks(25);
+        useUtility(102, feet, 230);
+        ticks(130);
+        check(here().workbench.opened == 1 && here().furnace.opened == 1 && here().id == suspended.id,
+                "native openings are counted separately", here());
+        world.g(108, feet - 1, 232, 1);
+        place(FURNACE, 108, feet - 1, 232, 1);
+        position(108, feet, 233);
+        useUtility(108, feet, 232);
+        position(103, feet, 232);
+        ticks(1250);
+        Snapshot aged = here();
+        check(aged.furnace.found == 2 && aged.furnace.associated == 1 && aged.furnace.opened == 0
+                        && aged.furnace.expired == 1 && aged.furnace.outside == 1,
+                "neighboring furnace and expired openings have distinct diagnostics", aged);
+
+        place(PLANK, 106, feet - 1, 232, 5);
+        walk();
+        ticks(140);
+        Snapshot extended = here();
+        check(extended.id == suspended.id && extended.boundary.endsWith("(107, 85, 235)"),
+                "a connected one-block extension updates bounds without a new ID", extended);
+        save();
+        open("suspended-cabin", false);
+        world.d(6, 14);
+        position(104, feet, 235);
+        check(!world.j(104, feet, 240), "neighbor chunk starts unavailable", here());
+        ticks(15);
+        check("Terrain unavailable".equals(here().assessment) && here().sampledLayers == 0
+                        && !world.j(104, feet, 240) && here().id == suspended.id
+                        && here().boundary.equals(extended.boundary),
+                "reopen retains extended ID and bounds without loading a neighbor", here());
+        prepare(104, 235);
+        walkInside();
+        ticks(145);
+        check(here().id == suspended.id, "native chunks reloaded and re-observed", here());
+
+        lowCabin("ground-cabin-twin", 5);
+        position(104, 5, 236);
+        walkInside();
+        ticks(480);
+        Snapshot ground = recognized("ground-level cabin twin", true);
+        check(ground.placed == suspended.placed && ground.cover == suspended.cover && ground.uses == 0,
+                "same geometry and evidence above ground and on ground", ground);
+
+        lowCabin("suspended-cabin-empty", feet);
+        check(controller.b(101, feet, 230, 1) && controller.b(102, feet, 230, 1), "native utility removal", null);
+        position(104, feet, 236);
+        walkInside();
+        ticks(480);
+        check(recognized("furniture-free suspended cabin", true).utilities == 0,
+                "covered suspended sites can corroborate use through movement", here());
+
+        lowCabin("suspended-cabin-roof-removed", feet);
+        for (int x = 100; x <= 106; x++) {
+            for (int z = 229; z <= 235; z++) check(controller.b(x, feet + 2, z, 1), "native roof removal", null);
+        }
+        position(103, feet, 232);
+        walk();
+        ticks(480);
+        Snapshot roofless = here();
+        check(roofless.id == 0 && roofless.cover == 0 && roofless.utilities == 2 && roofless.uses == 0
+                        && roofless.assessedTick >= 0 && roofless.observedTick < 0 && roofless.reason.startsWith("Little cover"),
+                "roofless cabin reports a completed rejection with equipment present", roofless);
+
+        open("suspended-platform", false);
+        prepare(103, 232);
+        position(98, feet, 232);
+        platform(100, feet, 230);
+        // Put an independent floor overhead. Its planks belong to another component.
+        platform(100, feet + 4, 230);
+        for (int x = 100; x < 105; x++) {
+            for (int z = 230; z < 235; z++) world.g(x, feet + 2, z, 0);
+        }
+        position(101, feet, 231);
+        walk();
+        ticks(480);
+        check(here().id == 0 && here().cover == 0 && here().uses == 0 && here().placed >= 8,
+                "a bare platform cannot borrow cover from a separate floor", here());
+        System.out.println("PASS suspended and ground twin, doorway follow-up, utility diagnostics, expansion, save/reopen and roofless controls");
+    }
+
+    private void showSurvey(String name, Snapshot sample) {
+        System.out.printf("CABIN %s anchor (%d,%d,%d), feet Y %d, age %d, window %s, component %s, clip %s, "
+                        + "cover %d/9 anchor %d/9, bench %d/%d/%d, furnace %d/%d/%d: %s / %s%n",
+                name, sample.anchorX, sample.anchorY, sample.anchorZ, sample.footY, sample.assessmentAge,
+                sample.extent, sample.component, sample.clipping, sample.cover, sample.anchorCover,
+                sample.workbench.found, sample.workbench.associated, sample.workbench.opened,
+                sample.furnace.found, sample.furnace.associated, sample.furnace.opened, sample.assessment, sample.reason);
+    }
+
+    private void lowCabin(String name, int feet) throws Exception {
+        int x = 100, z = 229;
+        open(name, false);
+        prepare(x, z);
+        position(x - 3, feet, z);
+        world.g(x, feet - 2, z, 1);
+        place(PLANK, x, feet - 2, z, 1);
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) {
+                if (dx > 0) place(PLANK, x + dx - 1, feet - 1, z + dz, 5);
+                else if (dz > 0) place(PLANK, x, feet - 1, z + dz - 1, 3);
+            }
+        }
+        if (feet > 5) world.g(x, feet - 2, z, 0);
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) {
+                if (dx != 0 && dx != 6 && dz != 0 && dz != 6 || dx == 4 && dz == 6) continue;
+                place(PLANK, x + dx, feet - 1, z + dz, 1);
+                place(PLANK, x + dx, feet, z + dz, 1);
+            }
+        }
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) {
+                if (dx > 0) place(PLANK, x + dx - 1, feet + 2, z + dz, 5);
+                else place(PLANK, x, feet + 1, z + dz, 1);
+            }
+        }
+        place(BENCH, x + 1, feet - 1, z + 1, 1);
+        place(FURNACE, x + 2, feet - 1, z + 1, 1);
+        place(50, x + 1, feet + 1, z + 3, 5);
+        // An approach ledge allows movement through the doorway without adding authored floor area.
+        world.g(x + 4, feet - 1, z + 7, 1);
+    }
+
+    private void walkInside() {
+        for (int i = 0; i < 12; i++) {
+            player.b(0, 0, -0.25);
+            ticks(1);
+        }
+        walk();
     }
 
     private SettlementProbe(File root) throws Exception {

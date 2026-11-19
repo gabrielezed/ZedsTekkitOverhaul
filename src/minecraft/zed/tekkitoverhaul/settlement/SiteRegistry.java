@@ -69,6 +69,19 @@ final class SiteRegistry {
         dirty = true;
     }
 
+    boolean expand(Site site, Bounds surveyed) {
+        Bounds old = site.bounds;
+        if (old.overlap(surveyed) * 3 < old.volume() * 2) return false;
+        Bounds union = new Bounds(Math.min(old.minX, surveyed.minX), Math.min(old.minY, surveyed.minY),
+                Math.min(old.minZ, surveyed.minZ), Math.max(old.maxX, surveyed.maxX),
+                Math.max(old.maxY, surveyed.maxY), Math.max(old.maxZ, surveyed.maxZ));
+        if (!union.valid() || union.volume() == old.volume()) return false;
+        for (Site other : sites) if (other != site && other.bounds.overlap(union) > 0) return false;
+        site.bounds = union;
+        dirty = true;
+        return true;
+    }
+
     private void read() throws IOException {
         long length = Files.size(path);
         if (length < 8) throw invalid();
@@ -140,7 +153,7 @@ final class SiteRegistry {
 
     static final class Site {
         final int id;
-        final Bounds bounds;
+        Bounds bounds;
         long lastSeen;
         boolean observed;
 

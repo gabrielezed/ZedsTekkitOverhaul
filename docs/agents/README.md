@@ -14,7 +14,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Machines, rendering and external APIs | [Architecture](architecture.md), [integrations](integrations.md), [distillation](distillation.md), [pack ABI](../reference/tekkit-classic-3.1.2/README.md) |
 | Diagnostics protocol | [Dev Bridge](dev-bridge.md) |
 | Territorial activity and threat | [Ordinary hostile pressure](survival-021-implementation.md#ordinary-hostile-pressure), [design direction](territorial-threat-design.md), [roadmap](roadmap.md) |
-| Provenance and site identity | [Survival 0.3 design](survival-030-spec.md), [alpha.2 rules and tests](survival-030-implementation.md) |
+| Provenance and site identity | [Survival 0.3 design](survival-030-spec.md), [recognition rules and tests](survival-030-implementation.md) |
 
 ## Historical evidence and reference material
 

@@ -8,14 +8,27 @@ import zed.tekkitoverhaul.settlement.SiteRegistry.Bounds;
 final class SiteSurvey {
     static final int RADIUS = 6, WIDTH = 2 * RADIUS + 1, LAYERS = 9;
     static final int SLICE = WIDTH * WIDTH, VOLUME = LAYERS * SLICE;
-    private static final int SOLID = 1, MANUAL = 2, INFERRED = 4, UTILITY = 8, VISITED = 16;
+    private static final int SOLID = 1, MANUAL = 2, INFERRED = 4, VISITED = 8;
     private static final int CONSTRUCTION = MANUAL | INFERRED;
+    static final int WEST = 1, EAST = 2, BELOW = 4, ABOVE = 8, NORTH = 16, SOUTH = 32;
+    private static final String[] FACE_NAMES = {"west", "east", "below", "above", "north", "south"};
     private final byte[] blocks = new byte[VOLUME];
+    private final byte[] devices = new byte[VOLUME];
+    private final int[] membership = new int[VOLUME];
     private final int[] queue = new int[VOLUME];
-    int x, y, z, minY, layer, reads;
+    int x, y, z, minY, layer, reads, focusX, focusY, focusZ;
+    boolean followUp;
     boolean active;
 
     void start(int x, int y, int z) {
+        focusX = x;
+        focusY = y;
+        focusZ = z;
+        followUp = false;
+        center(x, y, z);
+    }
+
+    private void center(int x, int y, int z) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -25,7 +38,35 @@ final class SiteSurvey {
     }
 
     boolean near(int px, int py, int pz, int horizontal, int vertical) {
-        return Math.abs(x - px) <= horizontal && Math.abs(y - py) <= vertical && Math.abs(z - pz) <= horizontal;
+        return Math.abs(focusX - px) <= horizontal && Math.abs(focusY - py) <= vertical
+                && Math.abs(focusZ - pz) <= horizontal;
+    }
+
+    boolean recenter(Evidence evidence) {
+        if (followUp || !evidence.spread() || (evidence.manual < 6 && evidence.inferred < 12)) return false;
+        Bounds box = evidence.bounds;
+        int nx = shift(x, box.minX, box.maxX, evidence.faces, WEST, EAST, 3, WIDTH);
+        int ny = shift(y, box.minY, box.maxY, evidence.faces, BELOW, ABOVE, 2, LAYERS);
+        int nz = shift(z, box.minZ, box.maxZ, evidence.faces, NORTH, SOUTH, 3, WIDTH);
+        if (nx == x && ny == y && nz == z) return false;
+        if (!ProvenanceStore.valid(nx - RADIUS, ny, nz - RADIUS)
+                || !ProvenanceStore.valid(nx + RADIUS, ny, nz + RADIUS)) return false;
+        followUp = true;
+        center(nx, ny, nz);
+        return true;
+    }
+
+    private static int shift(int axis, int min, int max, int faces, int low, int high, int limit, int span) {
+        int clipped = faces & (low | high);
+        if (clipped == 0 || clipped == (low | high) || max - min + 1 > span - 2) return axis;
+        // The observed midpoint safely moves the window toward the clipped face.
+        int delta = min + (max - min) / 2 - axis;
+        if (clipped == low) return axis + Math.min(-1, Math.max(-limit, delta));
+        return axis + Math.max(1, Math.min(limit, delta));
+    }
+
+    Bounds extent() {
+        return new Bounds(x - RADIUS, minY, z - RADIUS, x + RADIUS, minY + LAYERS - 1, z + RADIUS);
     }
 
     /** Check each intersecting chunk before a block read. A partial survey yields uncertainty. */
@@ -43,7 +84,8 @@ final class SiteSurvey {
             for (int px = left; px < left + WIDTH; px++) {
                 int id = world.getBlockId(px, height, pz);
                 reads++;
-                int flags = utility(id) ? UTILITY : 0;
+                devices[index] = (byte) utilityType(id);
+                int flags = 0;
                 Block block = id > 0 && id < Block.blocksList.length ? Block.blocksList[id] : null;
                 if (block != null && block.blockMaterial.isSolid()) {
                     flags |= SOLID;
@@ -57,13 +99,17 @@ final class SiteSurvey {
         return true;
     }
 
-    private int cover() {
+    int cover(Evidence evidence, int px, int feetY, int pz) {
         int columns = 0;
-        for (int dz = RADIUS - 1; dz <= RADIUS + 1; dz++) {
-            for (int dx = RADIUS - 1; dx <= RADIUS + 1; dx++) {
-                for (int h = y + 2 - minY; h < LAYERS; h++) {
-                    if ((blocks[h * SLICE + dz * WIDTH + dx] & SOLID) != 0) {
-                        columns++;
+        int dx = px - x + RADIUS, dz = pz - z + RADIUS;
+        for (int row = Math.max(0, dz - 1); row <= Math.min(WIDTH - 1, dz + 1); row++) {
+            for (int column = Math.max(0, dx - 1); column <= Math.min(WIDTH - 1, dx + 1); column++) {
+                for (int h = Math.max(0, feetY + 2 - minY); h < LAYERS; h++) {
+                    int index = h * SLICE + row * WIDTH + column;
+                    if ((blocks[index] & SOLID) != 0) {
+                        // The first solid hit can be terrain or the selected structure.
+                        if ((blocks[index] & CONSTRUCTION) == 0 || membership[index] == evidence.component)
+                            columns++;
                         break;
                     }
                 }
@@ -75,30 +121,52 @@ final class SiteSurvey {
     Evidence finish() {
         active = false;
         Evidence best = new Evidence();
-        best.cover = cover();
         for (int i = 0; i < VOLUME; i++) {
             if ((blocks[i] & CONSTRUCTION) == 0 || (blocks[i] & VISITED) != 0) continue;
-            Evidence component = component(i, best.cover);
+            Evidence component = component(i);
             // Match the place being used. Remote components cannot borrow the player's activity.
-            if (!component.bounds.contains(x, y, z, 1)) continue;
+            if (!component.bounds.contains(focusX, focusY, focusZ, 1)) continue;
             if (component.rank() > best.rank()) best = component;
         }
+        for (int i = 0; i < VOLUME; i++) {
+            int type = devices[i];
+            if (type == 0) continue;
+            best.found[type]++;
+            if (associated(best, i)) best.associated[type]++;
+        }
+        best.anchorCover = cover(best, x, focusY, z);
         return best;
     }
 
-    boolean sampledUtility(int px, int py, int pz) {
+    boolean associatedUtility(Evidence evidence, int px, int py, int pz, int type) {
         int dx = px - x + RADIUS, dz = pz - z + RADIUS, h = py - minY;
-        return dx >= 0 && dx < WIDTH && dz >= 0 && dz < WIDTH && h >= 0 && h < LAYERS
-                && (blocks[h * SLICE + dz * WIDTH + dx] & UTILITY) != 0;
+        if (dx < 0 || dx >= WIDTH || dz < 0 || dz >= WIDTH || h < 0 || h >= LAYERS) return false;
+        int index = h * SLICE + dz * WIDTH + dx;
+        return devices[index] == type && associated(evidence, index);
     }
 
-    private Evidence component(int start, int cover) {
+    boolean walkable(int px, int py, int pz) {
+        int dx = px - x + RADIUS, dz = pz - z + RADIUS, h = py - minY;
+        if (dx < 0 || dx >= WIDTH || dz < 0 || dz >= WIDTH || h <= 0 || h + 1 >= LAYERS) return false;
+        int index = h * SLICE + dz * WIDTH + dx;
+        return (blocks[index - SLICE] & SOLID) != 0 && ((blocks[index] | blocks[index + SLICE]) & SOLID) == 0;
+    }
+
+    private boolean associated(Evidence evidence, int index) {
+        if (evidence.component == 0 || Math.abs(minY + index / SLICE - focusY) > 1) return false;
+        if ((blocks[index] & CONSTRUCTION) != 0 && membership[index] == evidence.component) return true;
+        return index >= SLICE && (blocks[index - SLICE] & CONSTRUCTION) != 0
+                && membership[index - SLICE] == evidence.component;
+    }
+
+    private Evidence component(int start) {
         Evidence evidence = new Evidence();
-        evidence.cover = cover;
+        evidence.component = start + 1;
         int head = 0, tail = enqueue(start, 0);
         int minX = WIDTH, minZ = WIDTH, minH = LAYERS, maxX = 0, maxH = 0, maxZ = 0;
         while (head < tail) {
             int index = queue[head++];
+            membership[index] = evidence.component;
             int dx = index % WIDTH, dz = index / WIDTH % WIDTH, h = index / SLICE;
             minX = Math.min(minX, dx);
             minH = Math.min(minH, h);
@@ -108,7 +176,6 @@ final class SiteSurvey {
             maxZ = Math.max(maxZ, dz);
             if ((blocks[index] & MANUAL) != 0) evidence.manual++;
             if ((blocks[index] & INFERRED) != 0) evidence.inferred++;
-            if ((blocks[index] & UTILITY) != 0) evidence.utility++;
             if (dx > 0) tail = enqueue(index - 1, tail);
             if (dx < WIDTH - 1) tail = enqueue(index + 1, tail);
             if (dz > 0) tail = enqueue(index - WIDTH, tail);
@@ -116,12 +183,16 @@ final class SiteSurvey {
             if (h > 0) tail = enqueue(index - SLICE, tail);
             if (h < LAYERS - 1) tail = enqueue(index + SLICE, tail);
         }
-        evidence.clipped = minX == 0 || maxX == WIDTH - 1 || minZ == 0 || maxZ == WIDTH - 1
-                || (minH == 0 && minY > 0) || (maxH == LAYERS - 1 && minY + LAYERS < 256);
+        if (minX == 0) evidence.faces |= WEST;
+        if (maxX == WIDTH - 1) evidence.faces |= EAST;
+        if (minZ == 0) evidence.faces |= NORTH;
+        if (maxZ == WIDTH - 1) evidence.faces |= SOUTH;
+        if (minH == 0 && minY > 0) evidence.faces |= BELOW;
+        if (maxH == LAYERS - 1 && minY + LAYERS < 256) evidence.faces |= ABOVE;
         int bottom = minY + minH, top = minY + maxH;
         // Include the occupied layer immediately above a floor, or below a low roof.
-        if (y == top + 1) top = y;
-        if (y == bottom - 1) bottom = y;
+        if (focusY == top + 1) top = focusY;
+        if (focusY == bottom - 1) bottom = focusY;
         evidence.bounds = new Bounds(x - RADIUS + minX, bottom, z - RADIUS + minZ,
                 x - RADIUS + maxX, top, z - RADIUS + maxZ);
         return evidence;
@@ -135,8 +206,23 @@ final class SiteSurvey {
     }
 
     static boolean utility(int id) {
-        return id == Block.workbench.blockID || id == Block.chest.blockID
-                || id == Block.stoneOvenIdle.blockID || id == Block.stoneOvenActive.blockID;
+        return utilityType(id) != 0;
+    }
+
+    static int utilityType(int id) {
+        if (id == Block.workbench.blockID) return 1;
+        if (id == Block.stoneOvenIdle.blockID || id == Block.stoneOvenActive.blockID) return 2;
+        return id == Block.chest.blockID ? 3 : 0;
+    }
+
+    static String clipping(int faces) {
+        StringBuilder label = new StringBuilder();
+        for (int i = 0; i < FACE_NAMES.length; i++) {
+            if ((faces & (1 << i)) == 0) continue;
+            if (label.length() != 0) label.append(", ");
+            label.append(FACE_NAMES[i]);
+        }
+        return label.length() == 0 ? "None" : label.toString();
     }
 
     private static boolean builtMaterial(int id) {
@@ -147,8 +233,8 @@ final class SiteSurvey {
 
     static final class Evidence {
         Bounds bounds;
-        int manual, inferred, utility, cover;
-        boolean clipped;
+        int manual, inferred, anchorCover, faces, component;
+        final int[] found = new int[4], associated = new int[4];
 
         boolean spread() {
             return bounds != null && bounds.maxX - bounds.minX >= 2 && bounds.maxZ - bounds.minZ >= 2;

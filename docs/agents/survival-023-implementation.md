@@ -85,6 +85,36 @@ Open **Numpad 1 → Aerial Predators** for the exposure requirement, next possib
 
 For an egg-free check, use a disposable Survival save outside full moon, with ordinary encounters enabled and lunar aerial encounters disabled. Spend at least 30 seconds away from roofs, water and canopy on a plain. Watch for solo birds after dusk and read the last check and shared cooldown in the Debug Hub. On another run, hold open flight more than 36 blocks above surrounding terrain until the High Sky band appears. Compare quiet Normal with established Hard, then land under a roof after a warning to check retreat.
 
+### Attack follow-through
+
+Ordinary hunters begin target acquisition during arrival. An exposed player can remain a staging target behind a local obstacle, with a clear swept launch corridor and sight still required at warning and commitment. An obstructed ordinary hunter can search five alternate bearings per re-stage and make at most four searches within the existing hunt deadline. A candidate can approach directly or climb over local terrain before settling into its launch lane. Skelebird keeps its wider staging radius, shallow crossing, locked warning aim and forward runout. Fugl closes from above and retains its raised-wing warning and steep dive.
+
+Ordinary birds can recover and re-stage after up to two cancelled warnings before a third cancellation ends their hunt. A cancellation releases the turn without spending the committed pass. The 64-tick flock gap, one ordinary committed pass per hunter, swept contact, damage, descent, shelter and jetpack protection remain in the original handlers. Lunar and manual birds keep their original acquisition and staging rules. Passing Fugl and its bounded chicken opportunity remain in their original path.
+
+Compare the silhouettes on an ordinary night. For Fugl, look for the raised wings above the target and the steeper descent. For Skelebird, use established territory or exposed night flight, listen for the rattle and sidestep after the warning to see the locked shallow crossing and climb. Watch from a route with an adjacent roof or ridge to see an aborted warning or an alternate approach.
+
+### Ordinary aerial balance sample
+
+Run `zto-tools/test-zto-agent.ps1 -AerialSample -PackJava java` after staging. Supply `-CandidateJar <baseline jar>` with the archived `80b158e` mod to replay the same seeded scenarios. The harness runs ordinary admission and native bird ticks with lunar admission off. Trials use the same loaded terrain, time, difficulty, activity and RNG seed per scenario. It resets the check delay and saved cooldown between independent observations and lets each hunt run until first commitment, exit, or the deadline. These are probabilities conditional on eligibility, rather than an estimate of encounters per real play hour.
+
+Each paired cell reads baseline → candidate. Groups list actual inserted sizes from one through five. Hunt stages list acquisition/warning/commitment out of the admitted hunts. Passing encounters are admissions minus hunts.
+
+| Scenario | Check trials | Admissions | Inserted Fugl / Skelebird | Groups by size | Hunt stages / hunts |
+| --- | ---: | ---: | --- | --- | --- |
+| Normal day ground, activity 0 | 2,400 | 29 → 35 | 29/0 → 35/0 | 29,0,0,0,0 → 35,0,0,0,0 | 14/14/14 of 14 → 19/19/19 of 19 |
+| Normal night ground, activity 0 | 2,400 | 99 → 155 | 99/0 → 155/0 | 99,0,0,0,0 → 155,0,0,0,0 | 65/65/65 of 65 → 101/101/101 of 103 |
+| Normal night ground, activity 24 | 2,400 | 116 → 167 | 116/0 → 153/14 | 116,0,0,0,0 → 167,0,0,0,0 | 74/74/74 of 74 → 110/110/110 of 113 |
+| Hard night ground, activity 24 | 2,400 | 128 → 171 | 120/8 → 142/29 | 128,0,0,0,0 → 171,0,0,0,0 | 81/81/81 of 84 → 110/110/110 of 114 |
+| Hard night ground with ridge, activity 24 | 1,600 | 85 → 114 | 79/6 → 93/21 | 85,0,0,0,0 → 114,0,0,0,0 | 42/36/36 of 55 → 73/73/73 of 76 |
+| Hard night under glass, activity 24 | 400, zero eligible checks | 0 → 0 | 0/0 → 0/0 | 0,0,0,0,0 → 0,0,0,0,0 | 0 → 0 |
+| Normal low air, day, activity 0 | 400 | 133 → 166 | 133/0 → 166/0 | 133,0,0,0,0 → 166,0,0,0,0 | 98/98/98 of 100 → 122/122/122 of 127 |
+| Normal exposed flight, day, activity 0 | 400 | 137 → 176 | 185/0 → 298/0 | 89,48,0,0,0 → 96,38,42,0,0 | 109/109/109 of 112 → 154/154/154 of 155 |
+| Normal high sky, night, activity 0 | 400 | 136 → 174 | 242/30 → 254/52 | 68,0,68,0,0 → 93,30,51,0,0 | 114/114/114 of 119 → 146/146/146 of 150 |
+| Hard high sky, night, activity 0 | 400 | 146 → 187 | 289/46 → 339/73 | 83,0,0,63,0 → 112,0,0,75,0 | 120/120/120 of 125 → 154/154/154 of 158 |
+| Hard high sky, night, activity 24 | 400 | 197 → 254 | 493/212 → 568/342 | 37,0,66,0,94 → 36,0,108,0,110 | 187/187/187 of 187 → 244/244/244 of 245 |
+
+The rolls accounted for every eligible miss in the repeated sample. In the ridge fixture, the large remaining losses were before acquisition and launch. With tuning alone, 55 of 76 hunts committed there. Alternate lanes increased that to 73 of 76 while preserving zero admissions under glass. In the open night-air sample, established Hard had 126 Skelebird groups on 254 admissions, up from 80 on 197, and five-bird Fugl formations increased from 94 to 110. Established ground observed 14 of 167 Normal and 29 of 171 Hard Skelebird encounters. A separate controlled formation fixture blocked all eight three-bird attempts, then observed two actual insertions on the ninth site. Controlled fixtures also exercise cap rejection, unavailable space, warning cancellation, a later flock member's pass, and protected jetpack behavior.
+
 ## Verification
 
 - Portable checks passed for configuration, lunar calendar, assault and patrol schedules, outdoor approaches, and current documentation.

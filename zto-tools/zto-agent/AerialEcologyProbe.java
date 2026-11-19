@@ -193,11 +193,59 @@ public final class AerialEcologyProbe {
         check(disabled.snapshot().status.contains("Disabled") && disabled.snapshot().admissions == 0,
                 "natural admission can be disabled independently of the registered species");
         verifySkelebirdEcology(root);
+        verifyNaturalRestage(root);
         verifyChickenHunting(root);
         System.out.printf("Admission fixtures: Normal flock 3, Hard flock %d at activity %d, ground rolls %d/%d per 1000%n",
                 hardSize, hard.snapshot().activity, daytimeChance, night.snapshot().chance);
         System.out.println("PASS aerial altitude, exposure, ground day/night, ambient flight, safe spawn, "
                 + "Normal/Hard territory flocks, stagger, lost attacker, cooldown, reload, bounds and disabled admission");
+    }
+
+    private static void verifyNaturalRestage(File root) throws Exception {
+        Fixture fixture = new Fixture(root, "aerial-natural-restage", 2, 18000);
+        fixture.position(288.5, 4, true);
+        fixture.world.forceRoll = 0;
+        fixture.seconds(30);
+        EntityAerialPredator bird = fixture.mobs().get(0);
+        for (int i = 0; i < 210 && bird.flight() != Flight.PREPARE; ++i) fixture.ticks(1);
+        check(bird.flight() == Flight.PREPARE, "naturally admitted ground Fugl warns");
+        int x = (int) Math.floor((bird.o + fixture.player.o) * 0.5);
+        int y = (int) Math.floor((bird.p + fixture.player.y.b + 1) * 0.5);
+        int z = (int) Math.floor((bird.q + fixture.player.q) * 0.5);
+        for (int bx = x - 1; bx <= x + 1; ++bx)
+            for (int by = y - 2; by <= y + 2; ++by)
+                for (int bz = z - 1; bz <= z + 1; ++bz) fixture.world.g(bx, by, bz, 1);
+        for (int i = 0; i < 22 && bird.flight() == Flight.PREPARE; ++i) fixture.ticks(1);
+        check(bird.rejectedWarnings() == 1 && bird.diveCommitments() == 0 && fixture.snapshot().attackerId < 0
+                && fixture.snapshot().gapTicks > 0, "obstruction cancels the warning and releases the turn");
+        boolean changedLane = false;
+        for (int i = 0; i < 400 && bird.diveCommitments() == 0; ++i) {
+            fixture.ticks(1);
+            changedLane |= bird.diveStatus().contains("different lane");
+        }
+        check(changedLane && bird.diveCommitments() == 1 && fixture.warnings >= 2,
+                "Fugl commits from an alternate lane with the barrier still standing: " + bird.lastExit()
+                        + " / " + bird.lastDiveRejection());
+
+        Fixture skeleton = new Fixture(root, "aerial-natural-sidestep", 2, 18000);
+        skeleton.position(288.5, 4, true);
+        for (int i = 0; i < 4800; ++i) skeleton.territory.tick(skeleton.player, false);
+        skeleton.world.speciesRoll = 7;
+        skeleton.world.forceRoll = 0;
+        skeleton.seconds(30);
+        EntityAerialPredator crossing = skeleton.mobs().get(0);
+        check(crossing instanceof EntitySkelebird, "established Normal night ground admits a solitary Skelebird");
+        for (int i = 0; i < 300 && crossing.flight() != Flight.PREPARE; ++i) skeleton.ticks(1);
+        check(crossing.flight() == Flight.PREPARE, "natural Skelebird locks its warning aim");
+        double lockX = crossing.destinationX(), lockZ = crossing.destinationZ();
+        double dx = crossing.o - skeleton.player.o, dz = crossing.q - skeleton.player.q;
+        double length = Math.sqrt(dx * dx + dz * dz);
+        skeleton.player.c(lockX - dz / length * 4, 4, lockZ + dx / length * 4, 0, 0);
+        skeleton.player.z = true;
+        for (int i = 0; i < 70 && crossing.flight() != Flight.RECOVER; ++i) skeleton.ticks(1);
+        check(crossing.diveCommitments() == 1 && crossing.lastFailure().contains("missed"),
+                "the warning-time sidestep defeats a natural Skelebird crossing");
+        System.out.println("PASS ordinary Fugl restage around a persistent barrier and natural Skelebird warning-time dodge");
     }
 
     private static void sample(File root) throws Exception {
@@ -317,7 +365,27 @@ public final class AerialEcologyProbe {
                         + " / " + bird.lastFailure() + " / " + farm.commitments + " health " + exposed.bb());
         check(roofed.bb() == 4 && second.bb() == 4,
                 "roofed and subsequent chickens take no damage");
-        System.out.println("PASS occasional Fugl predation, exposed chicken damage, shelter and one-prey budget");
+
+        Fixture enclosure = new Fixture(root, "fugl-walled-prey", 2, 6000);
+        enclosure.position(288.5, 4, true);
+        enclosure.world.passiveAfterAdmission = true;
+        for (int i = 0; i < 45 && enclosure.snapshot().admissions == 0; ++i) enclosure.seconds(1);
+        EntityAerialPredator passer = enclosure.mobs().get(0);
+        random.set(passer, new Random(44L) {
+            @Override public int nextInt(int bound) { return bound == 8 ? 0 : super.nextInt(bound); }
+        });
+        enclosure.ticks(80);
+        int gx = (int) Math.floor(passer.o + 7), gz = (int) Math.floor(passer.q);
+        for (int x = gx - 1; x <= gx + 1; ++x) {
+            for (int z = gz - 1; z <= gz + 1; ++z) {
+                if (x == gx && z == gz) continue;
+                for (int y = 4; y <= 10; ++y) enclosure.world.g(x, y, z, 1);
+            }
+        }
+        rd walled = chicken(enclosure, gx + 0.5, gz + 0.5);
+        enclosure.ticks(365);
+        check(walled.bb() == 4 && enclosure.commitments == 0, "tall side walls prevent a descending strike");
+        System.out.println("PASS exposed chicken damage, roofed and walled enclosure protection, one-prey budget");
     }
 
     private static rd chicken(Fixture farm, double x, double z) {

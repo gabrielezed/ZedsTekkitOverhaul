@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.survival.tactical;
 import java.util.List;
 import java.util.function.BiConsumer;
 import net.minecraft.src.BiomeGenBase;
+import net.minecraft.src.Block;
 import net.minecraft.src.Chunk;
 import net.minecraft.src.ChunkProvider;
 import net.minecraft.src.EntityCreeper;
@@ -21,6 +22,8 @@ import net.minecraft.src.World;
 public final class EnderkinEcology {
     private static final int INDUSTRY_RADIUS = 12;
     private static final int TILES_PER_CHUNK = 32;
+    private static final int SABOTEUR_TICKETS = 111;
+    private static final int UNDERGROUND_TICKETS = 85;
 
     private EnderkinEcology() {}
 
@@ -35,7 +38,7 @@ public final class EnderkinEcology {
         World world = original.worldObj;
         int roll = world.rand.nextInt(1000);
         int ordinaryBudget = 34 + 2 * (Math.min(20, Math.max(0, activity)) / 2);
-        if (roll >= ordinaryBudget + 111) return original;
+        if (roll >= ordinaryBudget + SABOTEUR_TICKETS + UNDERGROUND_TICKETS) return original;
 
         int x = MathHelper.floor_double(original.posX), z = MathHelper.floor_double(original.posZ);
         BiomeGenBase biome = BiomeEcology.loadedBiome(world, x, z);
@@ -45,10 +48,16 @@ public final class EnderkinEcology {
         if (world.worldProvider.worldType != 0 || family == BiomeEcology.MUSHROOM || family == BiomeEcology.OUTSIDE_OVERWORLD)
             return rejected(original, observer, location + ": protected habitat");
 
+        int y = MathHelper.floor_double(original.boundingBox.minY);
+        boolean underground = subterranean(world, x, y, z);
+        location += underground ? ", underground" : ", surface or built";
+        boolean bonus = roll >= ordinaryBudget + SABOTEUR_TICKETS;
+        if (bonus && !underground) return rejected(original, observer, location + ": outside underground bonus");
+        boolean saboteur = !bonus && roll >= ordinaryBudget;
         // Keep the previous five incidental Saboteur tickets, plus 106 conditional industrial tickets.
-        if (roll >= ordinaryBudget + 5 && !nearIndustry(original))
+        if (saboteur && roll >= ordinaryBudget + 5 && !nearIndustry(original))
             return rejected(original, observer, location + ": no exposed industry");
-        int role = roll < ordinaryBudget ? new BiomeEcology.Profile(world, x, z, biome).choose(world.rand) : 4;
+        int role = saboteur ? 4 : new BiomeEcology.Profile(world, x, z, biome).choose(world.rand);
 
         List<?> nearby = world.getEntitiesWithinAABB(TacticalHostile.class, original.boundingBox.expand(32, 16, 32));
         int alive = 0;
@@ -75,6 +84,30 @@ public final class EnderkinEcology {
             return rejected(original, observer, location + ": replacement clearance");
         if (observer != null) observer.accept(true, location + ": " + replacement.getClass().getSimpleName().substring(6));
         return replacement;
+    }
+
+    /** The native spawn hook has already validated lighting and population for these feet coordinates. */
+    private static boolean subterranean(World world, int x, int y, int z) {
+        if (world.getHeightValue(x, z) - y < 6 || !naturalGround(world.getBlockId(x, y - 1, z))) return false;
+        int cover = 0;
+        for (int roof = y + 2; roof <= y + 12 && roof < world.getHeight(); ++roof) {
+            int block = world.getBlockId(x, roof, z);
+            if (naturalGround(block)) {
+                if (++cover == 3) return true;
+            } else {
+                cover = 0;
+                if (world.getBlockMaterial(x, roof, z).blocksMovement()) return false;
+            }
+        }
+        return false;
+    }
+
+    private static boolean naturalGround(int id) {
+        return id == Block.stone.blockID || id == Block.dirt.blockID || id == Block.grass.blockID
+                || id == Block.gravel.blockID || id == Block.sand.blockID || id == Block.sandStone.blockID
+                || id == Block.oreCoal.blockID || id == Block.oreIron.blockID || id == Block.oreGold.blockID
+                || id == Block.oreDiamond.blockID || id == Block.oreLapis.blockID
+                || id == Block.oreRedstone.blockID || id == Block.oreRedstoneGlowing.blockID;
     }
 
     private static EntityLiving rejected(EntityLiving original, BiConsumer<Boolean, String> observer, String reason) {

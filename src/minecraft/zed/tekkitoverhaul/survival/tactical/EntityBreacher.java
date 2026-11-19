@@ -1,8 +1,13 @@
 package zed.tekkitoverhaul.survival.tactical;
 
 import net.minecraft.src.Block;
+import net.minecraft.src.BlockDoor;
+import net.minecraft.src.DamageSource;
+import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.MathHelper;
 import net.minecraft.src.MovingObjectPosition;
 import net.minecraft.src.PathEntity;
+import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 
@@ -12,6 +17,10 @@ public final class EntityBreacher extends TacticalHostile {
     private static final int ROUTE_INTERVAL = 24;
     private static final int GIVE_UP_TICKS = 192;
     private static final int MAX_IMPACTS = 3;
+    private static final int FORCE_TICKS = 36;
+    private static final int FORCE_RETRY = 60;
+    private static final int FORCE_RECOVERY = 12;
+    private static final double ENTRANCE_REACH_SQ = 3.24D;
     private static final double CONTACT_SQ = 4.0D;
 
     private int nextRoute;
@@ -24,9 +33,12 @@ public final class EntityBreacher extends TacticalHostile {
     private boolean pressureSwing;
     private int pressureSoundTick = -1;
     private double impactX, impactY, impactZ;
+    private Entrance entrance;
+    private int forceAt, retryAt, recoveryUntil;
 
     public EntityBreacher(World world) {
-        super(world, 0.85F, 1.9F, "breacher");
+        // A centered legacy path must clear the open door's three-sixteenths panel.
+        super(world, 0.60F, 1.9F, "breacher");
         attackStrength = 3;
     }
 
@@ -38,6 +50,11 @@ public final class EntityBreacher extends TacticalHostile {
 
     @Override
     protected void fight(double distanceSq, boolean visible) {
+        if (entrance != null) {
+            continueForcing();
+            return;
+        }
+        if (ticksExisted < recoveryUntil) return;
         if (visible && distanceSq < CONTACT_SQ && target.boundingBox.maxY > boundingBox.minY
                 && target.boundingBox.minY < boundingBox.maxY) {
             getNavigator().clearPathEntity();
@@ -67,8 +84,24 @@ public final class EntityBreacher extends TacticalHostile {
         }
         double y = target.boundingBox.minY;
         PathEntity path = plan(target.posX, y, target.posZ);
-        // A path may start inside a door's block cell while its panel still blocks collision.
         boolean route = reaches(path, target.posX, y, target.posZ);
+        if (worldObj.difficultySetting >= 2) {
+            Entrance barrier = entranceBetween(target);
+            if (barrier != null && (!route || usesClosedEntrance(path, barrier))) {
+                if (ticksExisted >= retryAt && onGround && barrier.inReach(this)) {
+                    entrance = barrier;
+                    forceAt = ticksExisted + FORCE_TICKS;
+                    getNavigator().clearPathEntity();
+                    motionX = motionZ = 0;
+                    lookAt(barrier);
+                    return;
+                }
+                PathEntity approach = approach(barrier);
+                if (approach != null) getNavigator().setPath(approach, SPEED);
+                else getNavigator().clearPathEntity();
+                return;
+            }
+        }
         boolean stalled = ticksExisted - lastProgress >= 2 * ROUTE_INTERVAL;
         if (visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
             double[] landing = EnderkinBlink.elevatedLanding(this, target, 2.6D, 3);
@@ -85,6 +118,104 @@ public final class EntityBreacher extends TacticalHostile {
         if ((route && !stalled) || !pressure()) getNavigator().setPath(path, SPEED);
         else getNavigator().clearPathEntity();
     }
+
+    @Override
+    protected boolean canAcquireUnseen(EntityPlayer player) {
+        if (worldObj.difficultySetting < 2 || getDistanceSqToEntity(player) > 49.0D) return false;
+        Entrance barrier = entranceBetween(player);
+        return barrier != null && (barrier.inReach(this) || approach(barrier) != null);
+    }
+
+    private Entrance entranceBetween(EntityPlayer player) {
+        double height = boundingBox.minY + 0.8D;
+        double playerHeight = player.boundingBox.minY + 0.8D;
+        MovingObjectPosition hit = worldObj.rayTraceBlocks(Vec3D.createVector(posX, height, posZ),
+                Vec3D.createVector(player.posX, playerHeight, player.posZ));
+        if (hit == null || hit.sideHit < 2 || hit.sideHit > 5
+                || !worldObj.blockExists(hit.blockX, hit.blockY, hit.blockZ)) return null;
+        int id = worldObj.getBlockId(hit.blockX, hit.blockY, hit.blockZ);
+        boolean door = id == Block.doorWood.blockID;
+        if (!door && id != Block.fenceGate.blockID) return null;
+        int bottom = hit.blockY;
+        if (door && (worldObj.getBlockMetadata(hit.blockX, bottom, hit.blockZ) & 8) != 0) bottom--;
+        Entrance barrier = new Entrance(worldObj, hit, bottom, door);
+        if (!barrier.stillClosed(worldObj) || !barrier.onFarSide(player)) return null;
+
+        // Start the second ray immediately beyond this cell to reject a second obstacle.
+        double edge = barrier.farEdge();
+        double offset = barrier.side < 4 ? player.posZ - posZ : player.posX - posX;
+        double start = barrier.side < 4 ? posZ : posX;
+        double fraction = (edge - start) / offset;
+        if (fraction <= 0 || fraction >= 1) return null;
+        Vec3D beyond = Vec3D.createVector(posX + (player.posX - posX) * fraction,
+                height + (playerHeight - height) * fraction, posZ + (player.posZ - posZ) * fraction);
+        return worldObj.rayTraceBlocks(beyond, Vec3D.createVector(player.posX, playerHeight, player.posZ)) == null
+                ? barrier : null;
+    }
+
+    private boolean usesClosedEntrance(PathEntity path, Entrance barrier) {
+        if (MathHelper.floor_double(posX) == barrier.x && MathHelper.floor_double(posZ) == barrier.z) return true;
+        for (int i = path.getCurrentPathIndex(); i < path.getCurrentPathLength(); i++) {
+            PathPoint point = path.getPathPointFromIndex(i);
+            int x = point.xCoord, y = point.yCoord, z = point.zCoord;
+            for (int dy = 0; dy <= 1; dy++) {
+                Block block = Block.blocksList[worldObj.getBlockId(x, y + dy, z)];
+                if ((block == Block.doorWood || block == Block.doorSteel || block == Block.fenceGate)
+                        && !block.getBlocksMovement(worldObj, x, y + dy, z)) return true;
+            }
+        }
+        return false;
+    }
+
+    private PathEntity approach(Entrance barrier) {
+        double x = barrier.x + 0.5D + (barrier.side == 4 ? -1 : barrier.side == 5 ? 1 : 0);
+        double z = barrier.z + 0.5D + (barrier.side == 2 ? -1 : barrier.side == 3 ? 1 : 0);
+        PathEntity path = plan(x, barrier.y, z);
+        return reaches(path, x, barrier.y, z) && !usesClosedEntrance(path, barrier) ? path : null;
+    }
+
+    private void continueForcing() {
+        Entrance current = entrance.stillClosed(worldObj) ? entranceBetween(target) : null;
+        if (worldObj.difficultySetting < 2 || !onGround || current == null || !entrance.samePart(current)
+                || !current.inReach(this)) {
+            stopForcing();
+            return;
+        }
+        lookAt(current);
+        if (ticksExisted < forceAt) return;
+        if (current.door) {
+            ((BlockDoor) Block.doorWood).onPoweredBlockChange(worldObj, current.x, current.y, current.z, true);
+        } else {
+            // The native powered gate transition sets the open bit and emits event 1003.
+            worldObj.setBlockMetadataWithNotify(current.x, current.y, current.z, current.lower | 4);
+            worldObj.playAuxSFX(1003, current.x, current.y, current.z, 0);
+        }
+        stopForcing();
+        pressureSwing = true;
+        swing();
+        lastProgress = ticksExisted;
+        getNavigator().setPath(plan(target.posX, target.boundingBox.minY, target.posZ), SPEED);
+    }
+
+    private void stopForcing() {
+        entrance = null;
+        retryAt = ticksExisted + FORCE_RETRY;
+        nextRoute = ticksExisted;
+        recoveryUntil = ticksExisted + FORCE_RECOVERY;
+    }
+
+    private void lookAt(Entrance barrier) {
+        getLookHelper().setLookPosition(barrier.hitX, barrier.hitY, barrier.hitZ, 30.0F, 30.0F);
+    }
+
+    @Override
+    public boolean attackEntityFrom(DamageSource source, int damage) {
+        boolean landed = super.attackEntityFrom(source, damage);
+        if (landed && damage > 0 && entrance != null) stopForcing();
+        return landed;
+    }
+
+    public boolean isForcingEntrance() { return entrance != null; }
 
     private boolean pressure() {
         double height = boundingBox.minY + 0.8D;
@@ -128,5 +259,53 @@ public final class EntityBreacher extends TacticalHostile {
     protected void resetTactics() {
         lastProgress = 0;
         impacts = 0;
+        if (entrance != null) stopForcing();
+    }
+
+    private static final class Entrance {
+        final int x, y, z, side, lower, upper;
+        final boolean door;
+        final double hitX, hitY, hitZ;
+
+        Entrance(World world, MovingObjectPosition hit, int bottom, boolean door) {
+            x = hit.blockX;
+            y = bottom;
+            z = hit.blockZ;
+            side = hit.sideHit;
+            this.door = door;
+            lower = world.getBlockMetadata(x, y, z);
+            upper = door ? world.getBlockMetadata(x, y + 1, z) : 0;
+            hitX = hit.hitVec.xCoord;
+            hitY = hit.hitVec.yCoord;
+            hitZ = hit.hitVec.zCoord;
+        }
+
+        boolean stillClosed(World world) {
+            if (!world.checkChunksExist(x - 1, y, z - 1, x + 1, y + 1, z + 1) || (lower & 12) != 0
+                    || world.getBlockMetadata(x, y, z) != lower) return false;
+            return door ? world.getBlockId(x, y, z) == Block.doorWood.blockID
+                    && world.getBlockId(x, y + 1, z) == Block.doorWood.blockID && (upper & 8) != 0
+                    && world.getBlockMetadata(x, y + 1, z) == upper
+                    : world.getBlockId(x, y, z) == Block.fenceGate.blockID;
+        }
+
+        boolean samePart(Entrance other) {
+            return x == other.x && y == other.y && z == other.z && door == other.door
+                    && lower == other.lower && upper == other.upper && side == other.side;
+        }
+
+        double farEdge() {
+            return side == 2 ? z + 1.001D : side == 3 ? z - 0.001D
+                    : side == 4 ? x + 1.001D : x - 0.001D;
+        }
+
+        boolean onFarSide(EntityPlayer player) {
+            double position = side < 4 ? player.posZ : player.posX;
+            return (side & 1) == 0 ? position > farEdge() : position < farEdge();
+        }
+
+        boolean inReach(EntityBreacher actor) {
+            return actor.getDistanceSq(hitX, hitY, hitZ) <= ENTRANCE_REACH_SQ;
+        }
     }
 }

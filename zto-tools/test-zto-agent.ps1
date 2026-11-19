@@ -66,7 +66,8 @@ try {
                 return
             }
             if ($siteSiegeSuite) {
-                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeProbe $out.FullName
+                $siegeWorlds = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'site-siege-worlds')
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeProbe $siegeWorlds.FullName
                 if ($LASTEXITCODE) { throw 'Native site siege probe failed.' }
                 if ($Focus -eq 'site-siege') { return }
             }

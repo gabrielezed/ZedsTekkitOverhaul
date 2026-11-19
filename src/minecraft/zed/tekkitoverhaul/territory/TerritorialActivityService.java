@@ -88,6 +88,17 @@ public final class TerritorialActivityService {
 
     private boolean overworld() { return world != null && world.worldProvider.worldType == 0; }
     private boolean ready() { return overworld() && state != null && "READY".equals(state.status); }
+
+    /** Read-only regional evidence with no biome or threat evaluation. */
+    public int activityAt(World context, int x, int z) {
+        if (context != world || !ready() || !TerritorialActivity.inBounds(x)
+                || !TerritorialActivity.inBounds(z)) return -1;
+        return state.activity.score(TerritorialActivity.cell(x), TerritorialActivity.cell(z));
+    }
+
+    public long observationClock(World context) {
+        return context == world && ready() ? state.activity.clock : -1L;
+    }
     private static int block(double position) { return (int) Math.floor(position); }
 
     private boolean eligible(EntityPlayer player) {

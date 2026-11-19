@@ -60,6 +60,13 @@ public final class WorldProvenance {
                 && context.getSaveHandler() == handler) store.save(path);
     }
 
+    /** Historical observation only. Callers validate the current block against a positive placement ID. */
+    short observation(World context, int x, int y, int z) {
+        if (context != world || store == null) return ProvenanceStore.UNKNOWN;
+        ProvenanceStore.Section section = store.section(ProvenanceStore.key(x, y, z));
+        return section == null ? ProvenanceStore.UNKNOWN : section.blocks[ProvenanceStore.offset(x, y, z)];
+    }
+
     private void observe(Object[] context, int[] change) {
         if (Thread.currentThread() != owner || world == null || context[0] != world
                 || world.worldProvider.worldType != 0 || store == null

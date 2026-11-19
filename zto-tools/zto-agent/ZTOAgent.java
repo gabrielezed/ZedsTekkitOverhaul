@@ -35,6 +35,7 @@ public final class ZTOAgent {
     private static volatile WeakReference<ObjDoubleConsumer<Object>> jetpack = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> jetpackGuard = new WeakReference<>(null);
     private static volatile WeakReference<BiConsumer<Object[], int[]>> provenance = new WeakReference<>(null);
+    private static volatile WeakReference<BiConsumer<Object[], int[]>> siteUse = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -108,10 +109,25 @@ public final class ZTOAgent {
         int active = 0;
         if (provenance.get() != null) {
             for (ProvenanceHook hook : ProvenanceHook.values()) {
-                if (installed(loader, hook.target)) active |= 1 << hook.ordinal();
+                if (hook != ProvenanceHook.USE && installed(loader, hook.target)) active |= 1 << hook.ordinal();
             }
         }
         return active;
+    }
+
+    public static void registerSiteUse(BiConsumer<Object[], int[]> callback) {
+        siteUse = new WeakReference<>(callback);
+    }
+
+    public static boolean siteUseActive(ClassLoader loader) {
+        return siteUse.get() != null && installed(loader, ProvenanceHook.USE.target);
+    }
+
+    public static void observeSiteUse(boolean success, Object world, Object actor, int x, int y, int z,
+                                      int block, Object previous, Object opened) {
+        BiConsumer<Object[], int[]> callback = siteUse.get();
+        if (success && opened != null && opened != previous && callback != null)
+            callback.accept(new Object[] {world, actor}, new int[] {x, y, z, block});
     }
 
     public static void observeMutation(boolean success, Object world, Object actor, int x, int y, int z,

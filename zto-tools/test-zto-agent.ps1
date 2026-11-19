@@ -4,7 +4,7 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
-    [ValidateSet('furnace','mining','breacher','provenance')][string]$Focus
+    [ValidateSet('furnace','mining','breacher','provenance','settlement')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,7 +40,7 @@ try {
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
-            'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java') |
+            'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -51,6 +51,11 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Pack -or $Focus -eq 'settlement') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Native settlement recognition probe failed.' }
+                if ($Focus -eq 'settlement') { return }
+            }
             if ($Pack -or $Focus -eq 'provenance') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath ProvenanceProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Native provenance probe failed.' }

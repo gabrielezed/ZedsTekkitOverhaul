@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.3.0-alpha.2 — Settlement candidates
+
+- Observe supported manual placements, removals and BuildCraft Quarry excavation.
+- Recognize small sites from connected construction, current geometry and corroborated local use. Older sites can qualify with inferred structure and repeated utility use while retaining unknown authorship.
+- Keep recognized site IDs and approximate three-dimensional bounds across save and reopen.
+- Expose the current decision, evidence and storage status in the local Settlement Recognition Debug Hub screen.
+
 ## 0.2.3-alpha.2 — Industrial survival and fieldwork
 
 - Let Saboteurs dismantle one exposed BuildCraft, Additional Pipes, IC2 or RedPower transport component on Normal and Hard.

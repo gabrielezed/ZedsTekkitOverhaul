@@ -33,6 +33,7 @@ import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.settlement.WorldProvenance;
+import zed.tekkitoverhaul.settlement.SettlementRecognition;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 
 /** Owns the one active single-player save session. */
@@ -47,6 +48,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private SiegeDirector assault;
     private final TerritorialActivityService territory = new TerritorialActivityService();
     private final WorldProvenance provenance = new WorldProvenance();
+    private final SettlementRecognition settlements = new SettlementRecognition(territory, provenance);
     private NaturalSpawnPressure naturalSpawning;
     private AerialEcology aerialEcology;
     private ForestWildlife forestWildlife;
@@ -74,6 +76,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
         provenance.register();
+        settlements.register();
         aerialEcology = new AerialEcology(naturalAerialEncounters, lunarAerialEncounters, aerialEncounterCooldownSeconds,
                 territory, naturalSpawning);
         assault.attachAerialEcology(aerialEcology);
@@ -185,6 +188,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         save = handler;
         territory.bind(active);
         provenance.bind(active);
+        settlements.bind(active);
         provenance.bindPlayer(game.thePlayer);
         naturalSpawning.bind(active);
         aerialEcology.bind(active);
@@ -242,6 +246,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private void detach() {
         territory.bind(null);
         provenance.bind(null);
+        settlements.bind(null);
         naturalSpawning.bind(null);
         aerialEcology.bind(null);
         forestWildlife.bind(null);
@@ -282,6 +287,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         JetpackWeather.LOCAL.tick(world, world == null ? null : game.thePlayer, game.isGamePaused);
         territory.tick(game.thePlayer, game.isGamePaused);
         provenance.bindPlayer(game.thePlayer);
+        settlements.tick(game.thePlayer, game.isGamePaused);
         aerialEcology.tick(game.thePlayer, game.isGamePaused);
         forestWildlife.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {
@@ -300,7 +306,14 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         return provenance.snapshot(context, x, y, z);
     }
 
-    public void onWorldSave(World world) { provenance.save(world); }
+    SettlementRecognition.Snapshot settlementSnapshot(World context, int x, int y, int z) {
+        return settlements.snapshot(context, x, y, z);
+    }
+
+    public void onWorldSave(World world) {
+        provenance.save(world);
+        settlements.save(world);
+    }
     public void onChunkLoad(World world, Chunk chunk) { }
     public void onChunkUnload(World world, Chunk chunk) { }
     public void onChunkLoadData(World world, Chunk chunk, NBTTagCompound data) { }

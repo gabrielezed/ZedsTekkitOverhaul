@@ -13,7 +13,9 @@ enum ProvenanceHook implements Opcodes {
     REMOVE("ki", "fb011f152e3f00f3b1b641264e1182351fdc08d0b3bece01d46347cf33d243c6",
             "b", "(IIII)Z", "pb", "removeBlockByPlayer", "(Lxd;Lyw;III)Z"),
     QUARRY("buildcraft/factory/TileQuarry", "48cb3acd69af64a40d161462a679a963df2fa13b9cdf73f589f1b34f1ce3d11a",
-            "positionReached", "(Lbuildcraft/factory/EntityMechanicalArm;)V", "xd", "g", "(IIII)Z");
+            "positionReached", "(Lbuildcraft/factory/EntityMechanicalArm;)V", "xd", "g", "(IIII)Z"),
+    USE("aes", "9bad8a2a6ec65f96084b1ce2d2de483be2b00c3de4f3e8504cf79cfef85e88c0",
+            "a", "(Lyw;Lxd;Laan;IIII)Z", "pb", "b", "(Lxd;IIILyw;)Z");
 
     final String target, hash;
     private final String method, signature, callOwner, call, callSignature;
@@ -33,6 +35,7 @@ enum ProvenanceHook implements Opcodes {
         if (PLACE.target.equals(name)) return PLACE;
         if (REMOVE.target.equals(name)) return REMOVE;
         if (QUARRY.target.equals(name)) return QUARRY;
+        if (USE.target.equals(name)) return USE;
         return null;
     }
 
@@ -48,9 +51,14 @@ enum ProvenanceHook implements Opcodes {
                 return new MethodVisitor(ASM9, output) {
                     @Override
                     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                        boolean site = opcode == INVOKEVIRTUAL && callOwner.equals(owner)
+                                && call.equals(name) && callSignature.equals(desc);
+                        if (site && ProvenanceHook.this == USE) {
+                            currentContainer();
+                            visitVarInsn(ASTORE, 9);
+                        }
                         super.visitMethodInsn(opcode, owner, name, desc, itf);
-                        if (opcode != INVOKEVIRTUAL || !callOwner.equals(owner)
-                                || !call.equals(name) || !callSignature.equals(desc)) return;
+                        if (!site) return;
                         sites[0]++;
                         if (ProvenanceHook.this == PLACE) {
                             visitInsn(ICONST_1);
@@ -68,13 +76,24 @@ enum ProvenanceHook implements Opcodes {
                             coordinates(1);
                             visitVarInsn(ALOAD, 6);
                             visitFieldInsn(GETFIELD, "pb", "bO", "I");
-                        } else {
+                        } else if (ProvenanceHook.this == QUARRY) {
                             visitInsn(DUP);
                             visitVarInsn(ALOAD, 0);
                             visitFieldInsn(GETFIELD, QUARRY.target, "i", "Lxd;");
                             visitInsn(ACONST_NULL);
                             coordinates(2);
                             visitVarInsn(ILOAD, 5);
+                        } else {
+                            visitInsn(DUP);
+                            visitVarInsn(ALOAD, 2);
+                            visitVarInsn(ALOAD, 1);
+                            coordinates(4);
+                            visitVarInsn(ILOAD, 8);
+                            visitVarInsn(ALOAD, 9);
+                            currentContainer();
+                            super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "observeSiteUse",
+                                    "(ZLjava/lang/Object;Ljava/lang/Object;IIIILjava/lang/Object;Ljava/lang/Object;)V", false);
+                            return;
                         }
                         visitInsn(ICONST_0 + ordinal());
                         super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "observeMutation",
@@ -83,6 +102,11 @@ enum ProvenanceHook implements Opcodes {
 
                     private void coordinates(int first) {
                         for (int local = first; local < first + 3; local++) visitVarInsn(ILOAD, local);
+                    }
+
+                    private void currentContainer() {
+                        visitVarInsn(ALOAD, 1);
+                        visitFieldInsn(GETFIELD, "yw", "ar", "Ldd;");
                     }
                 };
             }

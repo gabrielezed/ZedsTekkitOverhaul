@@ -2,6 +2,7 @@ import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.registry.FMLRegistry;
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -127,7 +128,7 @@ public final class BiomeEcologyProbe {
             break;
         }
         check(bird != null, "magpie inserted by native world");
-        java.lang.reflect.Field random = nn.class.getDeclaredField("U");
+        Field random = nn.class.getDeclaredField("U");
         random.setAccessible(true);
         random.set(bird, new Random(73123L));
         bird.c(297.5, 4, 288.5, 0, 0);
@@ -142,7 +143,7 @@ public final class BiomeEcologyProbe {
             poses.add(bird.pose());
             landed |= poses.contains(Pose.FLY) && bird.z;
         }
-        check(poses.containsAll(Arrays.asList(Pose.WATCH, Pose.WALK, Pose.HOP, Pose.PECK, Pose.FLY)) && landed,
+        check(poses.containsAll(Arrays.asList(Pose.WATCH, Pose.WALK, Pose.PECK, Pose.FLY, Pose.LAND)) && landed,
                 "observed ground movement, curiosity, flight and landing: " + poses);
         check(!seed.G && seed.a.a == 3, "pecking leaves ownership and stack intact");
         ady saved = new ady();
@@ -159,6 +160,16 @@ public final class BiomeEcologyProbe {
         check(resumed.pose() == Pose.PERCH && resumed.z, "bird rests on a leaf perch");
         check(ImageIO.read(EntityMagpie.class.getResource(EntityMagpie.TEXTURE)).getWidth() == 32,
                 "original texture atlas packaged");
+        verifyTravel(world, random);
+        verifyAttention(world, random, player);
+        player.c(288, 4, 288, 0, 0);
+        EntityMagpie curious = directedBird(world, random, 284.5, 282.5, 0);
+        fq feather = new fq(world, 284.9, 4.1, 282.5, new aan(288, 2, 0));
+        check(world.a(feather), "dropped feather stack inserted");
+        for (int i = 0; i < 10; ++i) world.a(curious, true);
+        check(curious.pose() == Pose.PECK && curious.headYaw(1) < -20 && !feather.G && feather.a.a == 2,
+                "stationary bird looks toward the nearby feather without consuming it");
+        curious.A();
 
         bird.c(290, 4, 288, 0, 0);
         bird.a(md.a(player), 1);
@@ -167,7 +178,107 @@ public final class BiomeEcologyProbe {
         player.c(900, 4, 900, 0, 0);
         world.a(bird, true);
         check(bird.G, "ordinary distance despawn");
-        System.out.println("PASS forest-only daylight placement and loaded cap, magpie poses, non-consuming curiosity, flight, evasion, despawn and native NBT");
+        System.out.println("PASS forest-only daylight placement and loaded cap, physical movement, attention, non-consuming curiosity, flight, evasion, despawn and native NBT");
+    }
+
+    private static EntityMagpie directedBird(xd world, Field random, double x, double z, int roll) throws Exception {
+        EntityMagpie bird = new EntityMagpie(world);
+        bird.c(x, 4, z, 0, 0);
+        random.set(bird, new Random(17) {
+            @Override public int nextInt(int bound) {
+                if (bound == 10) return roll;
+                if (bound == 111) return 55;
+                return super.nextInt(bound);
+            }
+        });
+        check(world.a(bird), "directed fixture bird inserted");
+        return bird;
+    }
+
+    private static void verifyTravel(xd world, Field random) throws Exception {
+        EntityMagpie flat = directedBird(world, random, 281.5, 292.5, 5);
+        boolean positive = false, negative = false, stopped = false;
+        for (int i = 0; i < 40; ++i) {
+            double before = flat.q;
+            float gait = flat.gait(1);
+            world.a(flat, true);
+            double distance = flat.q - before;
+            if (distance > 0.06) {
+                check(flat.z && flat.stride(1) > 0.5 && flat.gait(1) > gait, "applied ground travel drives gait");
+                double swing = Math.sin(flat.gait(1));
+                positive |= swing > 0.5;
+                negative |= swing < -0.5;
+            } else if (positive && flat.pose() == Pose.WATCH) {
+                check(Math.abs(distance) < 1.0e-9 && flat.gait(1) == gait && flat.stride(1) == 0, "feet settle during a pause");
+                stopped = true;
+            }
+        }
+        check(positive && negative && stopped, "flat ground has an alternating gait and a settled pause");
+        flat.A();
+
+        verifyStep(world, random, 300, 1, false, false);
+        verifyStep(world, random, 306, 2, false, false);
+        verifyStep(world, random, 312, 3, false, false);
+        verifyStep(world, random, 318, 2, true, false);
+        verifyStep(world, random, 324, 2, false, true);
+    }
+
+    private static void verifyStep(xd world, Field random, int x, int rise, boolean canopy, boolean blockedLanding)
+            throws Exception {
+        for (int z = 294; z <= 296; ++z) {
+            for (int column = x - 1; column <= x + 1; ++column) {
+                for (int y = 4; y < 4 + rise; ++y) world.g(column, y, z, 3);
+                if (blockedLanding) world.g(column, 4 + rise, z, 18);
+            }
+        }
+        if (canopy) world.g(x, 5, 293, 18);
+        EntityMagpie bird = directedBird(world, random, x + 0.5, 292.5, 5);
+        boolean clear = rise <= 2 && !canopy && !blockedLanding;
+        boolean hopped = false, climbed = false, redirected = false, landed = false;
+        boolean settled = false;
+        double peak = bird.p;
+        int ticks = 0;
+        while (ticks < 36 && !landed && !redirected) {
+            ++ticks;
+            world.a(bird, true);
+            peak = Math.max(peak, bird.p);
+            hopped |= bird.pose() == Pose.HOP;
+            climbed |= bird.pose() == Pose.CLIMB;
+            landed = bird.pose() == Pose.LAND && bird.z && bird.q > 294.25 && Math.abs(bird.p - (4 + rise)) < 0.02;
+            settled |= Math.abs(bird.u) > 45 && bird.stride(1) == 0;
+            redirected = settled && Math.abs(bird.o - (x + 0.5)) > 0.30 && bird.q < 294;
+        }
+        if (clear) check(landed && (rise == 1 ? hopped : climbed) && peak > 4 + rise,
+                "bird crosses and lands on a " + rise + "-block step: " + bird.pose() + " @ " + bird.o + ", " + bird.p + ", " + bird.q);
+        else check(redirected && !hopped && !climbed, "blocked path causes prompt ground redirection: "
+                + rise + " / canopy " + canopy + " / landing " + blockedLanding + " @" + bird.o + ", " + bird.p + ", " + bird.q);
+        check(clear || ticks <= 25, "ground redirection is prompt");
+        System.out.printf("Magpie rise %d, canopy %b, blocked landing %b: %s at Y=%.2f (peak %.2f) in %d ticks%n",
+                rise, canopy, blockedLanding, landed ? "landed" : "redirected", bird.p, peak, ticks);
+        bird.A();
+    }
+
+    private static void verifyAttention(xd world, Field random, yw player) throws Exception {
+        EntityMagpie bird = directedBird(world, random, 287.5, 278.5, 0);
+        player.c(290.5, 4, 280.5, 0, 0);
+        for (int i = 0; i < 9; ++i) world.a(bird, true);
+        check(bird.pose() == Pose.WATCH && bird.headYaw(1) < -35 && Math.abs(bird.u) < 0.1,
+                "stationary player draws the head independently of body heading");
+        player.c(284.5, 4, 280.5, 0, 0);
+        player.c(true);
+        for (int i = 0; i < 14; ++i) {
+            player.l = player.o;
+            player.b(0.10, 0, 0);
+            world.a(bird, true);
+        }
+        check(bird.pose() == Pose.WATCH && bird.headYaw(1) > 30 && Math.abs(bird.u) < 0.1,
+                "sneaking approach draws the head without displacing or startling the bird");
+        player.c(false);
+        player.l = player.o;
+        player.b(0.25, 0, 0);
+        world.a(bird, true);
+        check(bird.pose() == Pose.FLY, "quick close approach starts evasive flight");
+        bird.A();
     }
 
     private static void paint(xd world, int biome) {

@@ -45,6 +45,55 @@ public final class BiomeEcologyProbe {
         FMLRegistry.registerRegistry(new ClientRegistry());
         AerialPredators.register();
         verifyWildlife(world);
+        verifyMagpieHabitat(world);
+    }
+
+    private static void verifyMagpieHabitat(xd world) {
+        world.b(new ArrayList(world.b));
+        world.n();
+        paint(world, 4);
+        yw player = NaturalSpawnProbe.join(world);
+        ForestWildlife wildlife = new ForestWildlife(true);
+        wildlife.bind(world);
+        for (int x = 303; x <= 309; ++x) for (int z = 285; z <= 291; ++z) {
+            for (int y = 16; y <= 18; ++y) world.g(x, y, z, 1);
+            world.g(x, 19, z, 2);
+        }
+        world.r = new Random(81) {
+            @Override public double nextDouble() { return 0; }
+            @Override public int nextInt(int bound) { return bound == 15 ? 0 : super.nextInt(bound); }
+        };
+        for (int t = 0; t < 1200; ++t) wildlife.tick(player, false);
+        check(wildlife.loaded() == 0, "daylight forest overhead admits no bird in a deep cave");
+        player.c(288, 20, 288, 0, 0);
+        for (int t = 0; t < 200; ++t) wildlife.tick(player, false);
+        check(wildlife.loaded() == 1, "same column admits a bird on surface grass");
+        EntityMagpie natural = null;
+        for (Object entry : world.b) if (entry instanceof EntityMagpie) natural = (EntityMagpie) entry;
+        check(natural != null, "forest director inserted the surface bird");
+        ady saved = new ady();
+        check(natural.c(saved) && saved.o("ZtoMagpieNatural"), "natural provenance is saved by the world");
+        natural.A();
+        saved.a("ZtoMagpieAge", 19);
+        EntityMagpie loaded = (EntityMagpie) aao.a(saved, world);
+        EntityMagpie escapee = (EntityMagpie) aao.a(saved, world);
+        EntityMagpie manual = new EntityMagpie(world);
+        loaded.c(306.5, 4, 288.5, 0, 0);
+        escapee.c(303.5, 4, 288.5, 90, 0);
+        escapee.z = true;
+        manual.c(308.5, 4, 288.5, 0, 0);
+        player.c(312.5, 4, 288.5, 0, 0);
+        check(world.a(loaded) && world.a(escapee) && world.a(manual), "place loaded and manual controls under deep cover");
+        for (int t = 0; t < 23; ++t) world.a(escapee, true);
+        check(!escapee.G && escapee.o < 303, "bounded corrective hop reaches the exposed side of a roof edge");
+        escapee.A();
+        for (int t = 0; t < 145; ++t) {
+            if (!loaded.G) world.a(loaded, true);
+            world.a(manual, true);
+        }
+        check(loaded.G && !manual.G, "trapped natural bird retires, deliberate placement stays: "
+                + loaded.ecologyStatus() + " / " + manual.ecologyStatus());
+        System.out.println("PASS natural magpie surface admission, cave exclusion and trapped retirement after native reload");
     }
 
     private static void verifyUndergroundGeometry(xd world) {

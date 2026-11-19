@@ -55,6 +55,7 @@ public final class ForestWildlife {
                     || world.getBlockId(x, y - 1, z) != Block.grass.blockID || !world.canBlockSeeTheSky(x, y, z)) continue;
             EntityMagpie bird = new EntityMagpie(world);
             bird.setLocationAndAngles(x + 0.5, y, z + 0.5, world.rand.nextFloat() * 360, 0);
+            bird.markNaturallyAdmitted();
             if (!bird.getCanSpawnHere() || !world.spawnEntityInWorld(bird)) continue;
             if (world.rand.nextInt(100) == 0) bird.takeNaturalGold();
             return true;

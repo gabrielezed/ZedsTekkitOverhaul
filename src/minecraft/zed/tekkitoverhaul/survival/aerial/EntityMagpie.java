@@ -7,11 +7,13 @@ import net.minecraft.src.Entity;
 import net.minecraft.src.EntityItem;
 import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
+import net.minecraft.src.InventoryPlayer;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.Material;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.survival.Shoreline;
 
@@ -20,11 +22,24 @@ public final class EntityMagpie extends EntityLiving {
     public static final String TEXTURE = "/zed/textures/magpie.png";
     private static final int POSE_WATCHER = 20;
     private static final int MAX_AGE = 6000;
+    private static final int HABITAT_CHECK_INTERVAL = 20;
+    private static final int HABITAT_GRACE = 120;
+    private static final int SHELTER_DEPTH = 6;
+    private static final int THEFT_WINDOW = 60;
+    private static final int THEFT_WARNING = 12;
+    private static final double THEFT_REACH = 0.95;
     private static final Pose[] POSES = Pose.values();
     private static final double WALK_SPEED = 0.105;
     private static final int[] RELEASE_DIRECTIONS = {0, 60, -60, 120, -120, 180};
     public enum Pose { WATCH, WALK, HOP, FLY, PECK, PERCH, CLIMB, LAND }
     private int decisionDelay, flightTicks, lifeTicks, stepTick;
+    private int habitatTicks;
+    private boolean naturallyAdmitted;
+    private EntityPlayer theftTarget;
+    private ItemStack theftStack;
+    private int theftSlot, theftDeadline, theftPecks;
+    private boolean theftConsidered;
+    private String stolenFrom = "";
     private EntityItem curiosity;
     private EntityItem lastReleased;
     private ItemStack carried;
@@ -60,7 +75,20 @@ public final class EntityMagpie extends EntityLiving {
     /** The beak renderer reads the actual one-item stack on the local client. */
     public ItemStack carriedItem() { return carried; }
 
+    public String ecologyStatus() {
+        String origin = naturallyAdmitted ? (habitatTicks > 0 ? "Seeking surface" : "Natural") : "Manual or legacy";
+        if (carried != null) {
+            String source = wildGold ? "wild" : stolenFrom.isEmpty() ? "scavenged" : "stolen";
+            return origin + " | " + source + " " + carried.getItem().getItemDisplayName(carried);
+        }
+        if (theftTarget != null) return origin + (theftPecks > 0 ? " | Warning peck" : " | Approaching player");
+        return origin + (theftConsidered ? " | Theft opportunity spent" : " | " + pose());
+    }
+
+    void markNaturallyAdmitted() { naturallyAdmitted = true; }
+
     void takeNaturalGold() {
+        if (carried != null) return;
         carried = new ItemStack(Item.ingotGold);
         wildGold = true;
     }
@@ -84,9 +112,15 @@ public final class EntityMagpie extends EntityLiving {
         ++entityAge;
         despawnEntity();
         if (isDead) return;
+        if (naturallyAdmitted && lifeTicks % HABITAT_CHECK_INTERVAL == 0 && !checkHabitat()) return;
 
         if (isInWater() || flightTicks > 0 || step != null || !onGround) {
+            cancelTheft();
             lookAt(null);
+            return;
+        }
+        if (habitatTicks != 0) {
+            motionX = motionZ = 0;
             return;
         }
         EntityPlayer observer = worldObj.getClosestPlayerToEntity(this, 6.0);
@@ -98,6 +132,7 @@ public final class EntityMagpie extends EntityLiving {
         if (startled) {
             startled = false;
             curiosity = null;
+            cancelTheft();
             if (carried != null) {
                 escapedWithGold = wildGold;
                 releasePlanned = true;
@@ -113,11 +148,157 @@ public final class EntityMagpie extends EntityLiving {
             carryOnGround();
             return;
         }
-        if (--decisionDelay <= 0) chooseActivity();
+        if (theftTarget != null) {
+            approachPlayer();
+            return;
+        }
+        if (--decisionDelay <= 0) {
+            if (carried == null && curiosity == null && observer != null && considerTheft(observer)) return;
+            chooseActivity();
+        }
         if (curiosity != null) approachItem();
         lookAt(curiosity != null ? curiosity : observer != null && attentiveTo(observer) ? observer : null);
         motionX = motionZ = 0;
         if (pose() == Pose.WALK) walk();
+    }
+
+    private boolean checkHabitat() {
+        int depth = coverDepth(boundingBox);
+        if (depth <= SHELTER_DEPTH) {
+            habitatTicks = 0;
+            return true;
+        }
+        habitatTicks += HABITAT_CHECK_INTERVAL;
+        curiosity = null;
+        cancelTheft();
+        if (habitatTicks >= HABITAT_GRACE) {
+            setDead(); // A carried stack must successfully release before retirement.
+        } else if (onGround && !isInWater() && flightTicks == 0 && step == null) {
+            seekShallowerFooting(depth);
+        }
+        return false;
+    }
+
+    private boolean considerTheft(EntityPlayer player) {
+        if (theftConsidered || !eligiblePlayer(player) || horizontalDistanceSq(player) > 9
+                || !attentiveTo(player) || coverDepth(boundingBox) > SHELTER_DEPTH) return false;
+        InventoryPlayer inventory = player.inventory;
+        for (int slot = 9; slot < inventory.mainInventory.length; ++slot) {
+            ItemStack stack = inventory.getStackInSlot(slot);
+            if (!theftItem(stack)) continue;
+            theftConsidered = true;
+            if (rand.nextInt(8) != 0) return false;
+            theftTarget = player;
+            theftSlot = slot;
+            theftStack = stack;
+            theftDeadline = ticksExisted + THEFT_WINDOW;
+            approachPlayer();
+            return true;
+        }
+        return false;
+    }
+
+    private boolean eligiblePlayer(EntityPlayer player) {
+        return !worldObj.isRemote && worldObj.worldProvider.worldType == 0 && worldObj.playerEntities.size() == 1
+                && worldObj.playerEntities.get(0) == player && player.worldObj == worldObj && player.isEntityAlive()
+                && !player.capabilities.disableDamage && !player.capabilities.isCreativeMode && !player.isPlayerSleeping()
+                && player.username != null && !player.username.isEmpty()
+                && player.craftingInventory == player.inventorySlots && player.inventory.getItemStack() == null
+                && Math.abs(player.boundingBox.minY - boundingBox.minY) <= 0.5;
+    }
+
+    private static boolean theftItem(ItemStack stack) {
+        return isScavengedItem(stack) && stack.getItemDamage() == 0 && !stack.hasTagCompound();
+    }
+
+    private double horizontalDistanceSq(EntityPlayer player) {
+        double dx = player.posX - posX, dz = player.posZ - posZ;
+        return dx * dx + dz * dz;
+    }
+
+    private void approachPlayer() {
+        EntityPlayer player = theftTarget;
+        motionX = motionZ = 0;
+        double range = horizontalDistanceSq(player);
+        boolean close = range <= THEFT_REACH * THEFT_REACH;
+        if (ticksExisted >= theftDeadline || range > 9 || (theftPecks > 0 && !close)
+                || !eligiblePlayer(player) || !visible(player) || !theftItem(theftStack)
+                || player.inventory.getStackInSlot(theftSlot) != theftStack) {
+            cancelTheft();
+            rest();
+            return;
+        }
+        face(player.posX - posX, player.posZ - posZ);
+        lookAt(player);
+        if (close) {
+            if (worldObj.rayTraceBlocks(Vec3D.createVector(posX, boundingBox.minY + 0.25, posZ),
+                    Vec3D.createVector(player.posX, player.boundingBox.minY + 0.25, player.posZ)) != null) {
+                cancelTheft();
+                rest();
+                return;
+            }
+            pose(Pose.PECK);
+            if (++theftPecks >= THEFT_WARNING) {
+                carried = player.inventory.decrStackSize(theftSlot, 1);
+                stolenFrom = player.username;
+                player.inventory.onInventoryChanged();
+                cancelTheft();
+                releasePlanned = walkingToRelease = false;
+                face(posX - player.posX, posZ - player.posZ);
+                worldObj.playSoundAtEntity(this, "random.pop", 0.50F, 1.55F);
+                launch();
+            }
+        } else if (clearAhead(rotationYaw, 0.37)) {
+            pose(Pose.WALK);
+            double distance = Math.sqrt(range);
+            motionX = (player.posX - posX) * WALK_SPEED / distance;
+            motionZ = (player.posZ - posZ) * WALK_SPEED / distance;
+        } else {
+            cancelTheft();
+            rest();
+        }
+    }
+
+    private void cancelTheft() {
+        theftTarget = null;
+        theftStack = null;
+        theftPecks = 0;
+    }
+
+    private int coverDepth(AxisAlignedBB box) {
+        int x = MathHelper.floor_double((box.minX + box.maxX) * 0.5);
+        int y = MathHelper.floor_double(box.minY + 0.05);
+        int z = MathHelper.floor_double((box.minZ + box.maxZ) * 0.5);
+        return worldObj.blockExists(x, y, z) ? worldObj.getHeightValue(x, z) - y : Integer.MAX_VALUE;
+    }
+
+    private boolean remainsNearSurface(AxisAlignedBB next, double dx, double dy, double dz) {
+        double feet = boundingBox.minY + 0.05;
+        if (MathHelper.floor_double(posX) == MathHelper.floor_double(posX + dx)
+                && MathHelper.floor_double(posZ) == MathHelper.floor_double(posZ + dz)
+                && MathHelper.floor_double(feet) == MathHelper.floor_double(feet + dy)) return true;
+        return coverDepth(next) <= Math.max(SHELTER_DEPTH, coverDepth(boundingBox));
+    }
+
+    private void seekShallowerFooting(int depth) {
+        int feet = MathHelper.floor_double(boundingBox.minY + 0.05);
+        for (int bend : RELEASE_DIRECTIONS) {
+            double angle = Math.toRadians(rotationYaw + bend);
+            int x = MathHelper.floor_double(posX - Math.sin(angle) * 1.5);
+            int z = MathHelper.floor_double(posZ + Math.cos(angle) * 1.5);
+            if (!worldObj.blockExists(x, feet + 2, z)) continue;
+            for (int rise = 0; rise <= 2; ++rise) {
+                if (!worldObj.isBlockNormalCube(x, feet + rise - 1, z)
+                        && worldObj.getBlockId(x, feet + rise - 1, z) != Block.leaves.blockID) continue;
+                Step exit = new Step(x + 0.5 - posX, feet + rise - boundingBox.minY, z + 0.5 - posZ, 22);
+                if (coverDepth(boundingBox.getOffsetBoundingBox(exit.dx, exit.dy, exit.dz)) < depth && exit.clear()) {
+                    startStep(exit, rise);
+                    return;
+                }
+            }
+        }
+        motionX = motionZ = 0;
+        pose(Pose.WATCH);
     }
 
     private void chooseActivity() {
@@ -315,6 +496,7 @@ public final class EntityMagpie extends EntityLiving {
         try {
             if (!worldObj.spawnEntityInWorld(drop)) return false;
             carried = null;
+            stolenFrom = "";
             lastReleased = drop;
             wildGold = escapedWithGold = false;
             return true;
@@ -360,7 +542,21 @@ public final class EntityMagpie extends EntityLiving {
     private boolean clearAhead(float heading, double distance) {
         double angle = Math.toRadians(heading);
         double dx = -Math.sin(angle) * distance, dz = Math.cos(angle) * distance;
-        return AerialTerrain.clear(this, boundingBox.addCoord(dx, 0, dz)) && Shoreline.mayStep(this, dx, dz);
+        return AerialTerrain.clear(this, boundingBox.addCoord(dx, 0, dz)) && Shoreline.mayStep(this, dx, dz)
+                && (!naturallyAdmitted || shallowStep(boundingBox.getOffsetBoundingBox(dx, 0, dz)));
+    }
+
+    private boolean shallowStep(AxisAlignedBB next) {
+        int x = MathHelper.floor_double((next.minX + next.maxX) * 0.5);
+        int z = MathHelper.floor_double((next.minZ + next.maxZ) * 0.5);
+        int feet = MathHelper.floor_double(next.minY + 0.05);
+        for (int y = feet - 1; y >= Math.max(0, feet - 2); --y) {
+            if (worldObj.isBlockNormalCube(x, y, z) || worldObj.getBlockId(x, y, z) == Block.leaves.blockID) {
+                int currentDepth = coverDepth(boundingBox);
+                return worldObj.getHeightValue(x, z) - (y + 1) <= Math.max(SHELTER_DEPTH, currentDepth);
+            }
+        }
+        return false;
     }
 
     private void redirect() {
@@ -401,7 +597,7 @@ public final class EntityMagpie extends EntityLiving {
         stepTick = 0;
         curiosity = null;
         face(step.dx, step.dz);
-        pose(rise == 1 ? Pose.HOP : Pose.CLIMB);
+        pose(rise <= 1 ? Pose.HOP : Pose.CLIMB);
     }
 
     private final class Step {
@@ -455,6 +651,7 @@ public final class EntityMagpie extends EntityLiving {
     public boolean attackEntityFrom(DamageSource source, int damage) {
         boolean hit = super.attackEntityFrom(source, damage);
         if (hit && getHealth() > 0 && source != DamageSource.drown) {
+            cancelTheft();
             if (wildGold) escapedWithGold = true;
             if (source.getEntity() != null) face(posX - source.getEntity().posX, posZ - source.getEntity().posZ);
             startled = true;
@@ -495,8 +692,10 @@ public final class EntityMagpie extends EntityLiving {
             double dx = -Math.sin(angle) * 0.23, dz = Math.cos(angle) * 0.23;
             double dy = flightTicks > 22 ? 0.18 : flightTicks > 12 ? 0.025 : -0.15;
             AxisAlignedBB path = boundingBox.addCoord(dx, dy, dz);
+            AxisAlignedBB next = boundingBox.getOffsetBoundingBox(dx, dy, dz);
             if (AerialTerrain.clear(this, path)
-                    && Shoreline.mayLand(worldObj, boundingBox.getOffsetBoundingBox(dx, dy, dz))) {
+                    && Shoreline.mayLand(worldObj, next)
+                    && (!naturallyAdmitted || remainsNearSurface(next, dx, dy, dz))) {
                 moveEntity(dx, dy, dz);
                 fallDistance = 0;
                 motionX = dx;
@@ -534,8 +733,11 @@ public final class EntityMagpie extends EntityLiving {
     public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         tag.setInteger("ZtoMagpieAge", lifeTicks);
+        if (naturallyAdmitted) tag.setBoolean("ZtoMagpieNatural", true);
+        if (theftConsidered) tag.setBoolean("ZtoMagpieTheftConsidered", true);
         if (carried != null) {
             tag.setCompoundTag("ZtoMagpieBeak", carried.writeToNBT(new NBTTagCompound()));
+            if (!stolenFrom.isEmpty()) tag.setString("ZtoMagpieStolenFrom", stolenFrom);
             if (wildGold) {
                 tag.setBoolean("ZtoMagpieWildGold", true);
                 tag.setBoolean("ZtoMagpieGoldEscaped", escapedWithGold);
@@ -547,12 +749,17 @@ public final class EntityMagpie extends EntityLiving {
     public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
         lifeTicks = MathHelper.clamp_int(tag.getInteger("ZtoMagpieAge"), 0, MAX_AGE);
+        naturallyAdmitted = tag.getBoolean("ZtoMagpieNatural");
+        theftConsidered = tag.getBoolean("ZtoMagpieTheftConsidered");
+        cancelTheft();
         ItemStack saved = tag.hasKey("ZtoMagpieBeak")
                 ? ItemStack.loadItemStackFromNBT(tag.getCompoundTag("ZtoMagpieBeak")) : null;
         wildGold = saved != null && saved.stackSize > 0 && saved.itemID == Item.ingotGold.shiftedIndex
                 && tag.getBoolean("ZtoMagpieWildGold");
         escapedWithGold = wildGold && tag.getBoolean("ZtoMagpieGoldEscaped");
         carried = wildGold || isScavengedItem(saved) ? saved : null;
+        stolenFrom = theftItem(carried) ? tag.getString("ZtoMagpieStolenFrom") : "";
+        if (!stolenFrom.isEmpty()) theftConsidered = true;
         if (carried != null) carried.stackSize = 1;
         releasePlanned = walkingToRelease = false;
     }

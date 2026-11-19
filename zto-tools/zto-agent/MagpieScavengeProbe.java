@@ -1,5 +1,6 @@
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.registry.FMLRegistry;
 import java.io.File;
 import java.lang.reflect.Field;
@@ -25,6 +26,9 @@ public final class MagpieScavengeProbe {
         Fixture world = new Fixture(root);
         Files.createFile(new File(root, "magpie-scavenging/.zto-disposable").toPath());
         FMLCommonHandler.instance().beginLoading(FMLClientHandler.instance());
+        Field registeredMods = Loader.class.getDeclaredField("mods");
+        registeredMods.setAccessible(true);
+        registeredMods.set(Loader.instance(), Collections.emptyList());
         FMLRegistry.registerRegistry(new ClientRegistry());
         AerialPredators.register();
         Field random = nn.class.getDeclaredField("U");
@@ -34,7 +38,88 @@ public final class MagpieScavengeProbe {
         verifyTransfers(world, player, random);
         verifyGold(world, player);
         verifyEgg(world, player, random);
+        verifyInventoryTheft(world, player, random);
         System.out.println("PASS magpie item conservation, native save/reload, release retry, retirement, natural gold and spawn egg");
+    }
+
+    private static void verifyInventoryTheft(Fixture world, yw player, Field random) throws Exception {
+        player.aA = "MagpieProbe";
+        player.c(300.5, 4, 290.5, 0, 0);
+        player.ap.a(0, new aan(SEED, 4, 0));
+        player.ap.a(9, new aan(264, 3, 0));
+        aan tagged = new aan(SEED, 2, 0);
+        ady identity = new ady();
+        identity.a("Fixture", "protected");
+        tagged.d(identity);
+        player.ap.a(10, tagged);
+        aan feathers = new aan(FEATHER, 3, 0);
+        player.ap.a(11, feathers);
+        int droppedBefore = count(world, FEATHER, false);
+
+        EntityMagpie aborted = bird(world, random, 298.5, 290.5);
+        waitForWarning(world, aborted);
+        player.c(300.5, 4, 293.5, 0, 0);
+        for (int t = 0; t < 20; ++t) tick(world, aborted);
+        check(feathers.a == 3 && aborted.carriedItem() == null, "walking away aborts the warned theft");
+        aborted.A();
+
+        player.c(300.5, 4, 290.5, 0, 0);
+        EntityMagpie swapped = bird(world, random, 298.5, 290.5);
+        waitForWarning(world, swapped);
+        player.ap.a(12, feathers);
+        player.ap.a(11, null);
+        for (int t = 0; t < 20; ++t) tick(world, swapped);
+        check(feathers.a == 3 && swapped.carriedItem() == null, "moving the observed inventory stack aborts the theft");
+        swapped.A();
+        player.ap.a(11, feathers);
+        player.ap.a(12, null);
+
+        EntityMagpie creative = bird(world, random, 298.5, 290.5);
+        player.aT.d = true;
+        for (int t = 0; t < 65; ++t) tick(world, creative);
+        check(feathers.a == 3 && creative.carriedItem() == null, "Creative inventory is protected");
+        player.aT.d = false;
+        creative.A();
+
+        EntityMagpie bird = bird(world, random, 298.5, 290.5);
+        waitForWarning(world, bird);
+        check(feathers.a == 3 && bird.carriedItem() == null, "warning precedes inventory mutation");
+        untilCarrying(world, bird);
+        check(feathers.a == 2 && player.ap.a[0].a == 4 && player.ap.a[9].a == 3 && tagged.a == 2,
+                "only one plain feather leaves the main inventory");
+        check(bird.pose() == Pose.FLY && bird.carriedItem().c == FEATHER && bird.carriedItem().a == 1,
+                "native flight starts with exactly one stolen item");
+
+        ady saved = new ady();
+        check(bird.c(saved) && "MagpieProbe".equals(saved.j("ZtoMagpieStolenFrom")),
+                "native saved bird records the owner's name while carrying");
+        world.b(Collections.singletonList(bird));
+        world.n();
+        EntityMagpie loaded = (EntityMagpie) aao.a(saved, world);
+        check(loaded != null && world.a(loaded) && loaded.carriedItem() != null, "unloading retains the one carried item");
+        untilReleased(world, loaded);
+        check(count(world, FEATHER, false) == droppedBefore + 1, "native release returns exactly one feather after reload");
+        player.c(loaded.o + 0.8, 4, loaded.q, 0, 0);
+        for (int t = 0; t < 100; ++t) tick(world, loaded);
+        check(feathers.a == 2 && loaded.carriedItem() == null && count(world, FEATHER, false) == droppedBefore + 1,
+                "reload and recovery cannot reopen the bird's one theft opportunity");
+        fq recovered = null;
+        for (Object entry : world.b) if (entry instanceof fq) {
+            fq item = (fq) entry;
+            if (!item.G && item.a.c == FEATHER && item.a.o() == null) recovered = item;
+        }
+        check(recovered != null, "released feather is available for pickup");
+        for (int i = 0; i < 10; ++i) world.a(recovered, true);
+        recovered.a(player);
+        check(recovered.G && feathers.a == 3 && count(world, FEATHER, false) == droppedBefore,
+                "native item collision restores the original count without a duplicate");
+        loaded.A();
+        System.out.println("PASS magpie warning, player retreat, Creative and inventory protections, one-item theft, flight and exactly-once recovery");
+    }
+
+    private static void waitForWarning(Fixture world, EntityMagpie bird) {
+        for (int t = 0; t < 45 && bird.pose() != Pose.PECK; ++t) tick(world, bird);
+        check(bird.pose() == Pose.PECK, "bird walks into reach and visibly pecks before committing");
     }
 
     private static void verifyTransfers(Fixture world, yw player, Field random) throws Exception {
@@ -218,7 +303,10 @@ public final class MagpieScavengeProbe {
                 "non-forest egg places the saved species empty-beaked and without a gold roll");
         check(!egg.a(stack, player, world, 309, 3, 288, 1) && stack.a == 1, "an occupied site rejects another egg");
         player.aT.d = true;
-        check(egg.a(stack, player, world, 310, 3, 288, 1) && stack.a == 1, "Creative use preserves stack");
+        world.g(310, 16, 288, 1);
+        check(egg.a(stack, player, world, 310, 3, 288, 1) && stack.a == 1,
+                "Creative egg can deliberately place a bird under deep cover and preserves the stack");
+        world.g(310, 16, 288, 0);
         player.aT.d = false;
         forcePickup(spawned, random);
         placeStack(world, spawned, FEATHER, 1);
@@ -238,7 +326,7 @@ public final class MagpieScavengeProbe {
     private static void forcePickup(EntityMagpie bird, Field random) throws Exception {
         random.set(bird, new Random(19L) {
             @Override public int nextInt(int bound) {
-                if (bound == 5 || bound == 10) return 0;
+                if (bound == 5 || bound == 8 || bound == 10) return 0;
                 if (bound == 111) return 55;
                 return super.nextInt(bound);
             }

@@ -16,6 +16,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |
 | `electricJetpackWeather` | true | Progressive exposure and temporary lift restriction for the installed IC2 1.97 Electric Jetpack in local play. Requires the matching ZTOAgent. |
 | `lunarAerialEncounters` | true | Allow selected natural full-moon assaults to spend up to two of their slots on aerial predators. |
+| `forestMagpies` | true | Admit small ambient magpies in loaded temperate forest clearings during dry daylight. Egg placement and existing birds remain available. |
+| `fuglChickenHunting` | true | Allow a passing solitary daytime Fugl to attempt one hunt on an exposed chicken. |
 | `aerialEncounterCooldownSeconds` | 180 | Quiet period after an admitted encounter, in active Overworld seconds. Bounds 90–600. |
 | `disableNightSkipping` | true | Use eligible local Overworld beds as respawn anchors without sleep or time advancement. Set false for native bed behavior. |
 | `assaultSpawnBudget` | 15 | 1–24 hostiles per assault |
@@ -53,6 +55,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `item.tankEgg`, `item.thiefEgg` | 22007, 22008 (stack IDs 22263, 22264). Creative Tank and Thief spawn eggs. |
 | `item.aerialPredatorEgg` | 22009 (stack ID 22265). Creative Fugl Spawn Egg in the Overworld. |
 | `item.skelebirdEgg` | 22010 (stack ID 22266). Creative Skelebird Spawn Egg in the Overworld. |
+| `item.magpieEgg` | 22011 (stack ID 22267). Magpie Spawn Egg for safe Overworld placement. Older configurations use this default when the key is absent. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 

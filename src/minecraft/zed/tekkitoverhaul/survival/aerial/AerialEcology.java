@@ -36,7 +36,7 @@ public final class AerialEcology {
     private String lunarStatus = "No lunar request";
     private AerialExposure exposure = new AerialExposure();
     private int ticks, nextCheck, activity, chance, loadedPredators, localHostiles, placementTries;
-    private int admissions;
+    private int admissions, ordinaryAttempts, ordinaryAdmissions, requestedMembers, insertedMembers;
     private String status = "No local Overworld", lastAttempt = "None", lastEnd = "None";
 
     public AerialEcology(boolean enabled, int cooldownSeconds, TerritorialActivityService territory,
@@ -62,6 +62,7 @@ public final class AerialEcology {
         observer = null;
         exposure = new AerialExposure();
         ticks = nextCheck = activity = chance = loadedPredators = localHostiles = placementTries = admissions = 0;
+        ordinaryAttempts = ordinaryAdmissions = requestedMembers = insertedMembers = 0;
         status = !enabled ? "Disabled in settings" : state == null ? "Outside local Overworld" : "Waiting for sample";
         lastAttempt = lastEnd = "None";
         lunarStatus = "No lunar request";
@@ -137,11 +138,10 @@ public final class AerialEcology {
         int desired = world.difficultySetting == 3 && pressure >= 12 && budget >= 10 && activeCap >= 5 ? 2 : 1;
         desired = Math.min(desired, capacity);
         if (desired == 0) return lunarRejected("Aerial or ordinary hostile cap");
-        placementTries = 0;
         boolean airborne = !player.onGround && exposure.height >= 8;
         boolean skeletal = moon.nextInt(100) < (world.difficultySetting == 3 ? 72 : 50);
         for (int size = desired; size >= 1; --size) {
-            if (!place(player, size, airborne, true, skeletal)) continue;
+            if (!place(player, size, airborne, true, skeletal, false)) continue;
             lunar = true;
             lunarX = player.posX;
             lunarZ = player.posZ;
@@ -173,7 +173,8 @@ public final class AerialEcology {
 
     private void admit(EntityPlayer player) {
         NaturalSpawnPressure.Snapshot nativePass = naturalSpawning.snapshot(world);
-        placementTries = 0;
+        ++ordinaryAttempts;
+        placementTries = requestedMembers = insertedMembers = chance = 0;
         if (nativePass != null && nativePass.hookActive && !nativePass.hostileEnabled) {
             reject("Hostile spawning disabled by world");
             return;
@@ -185,9 +186,10 @@ public final class AerialEcology {
         boolean day = world.isDaytime();
         int difficulty = world.difficultySetting;
         if (ground) {
-            chance = (day ? 9 : 37) + difficulty * (day ? 2 : 4) + activity / (day ? 8 : 3);
+            chance = (day ? 14 : 57) + difficulty * (day ? 2 : 4) + activity / (day ? 8 : 3);
         } else {
-            chance = 115 + (int) (exposure.exposure * 2) + difficulty * 24 + activity * 4;
+            int base = 115 + (int) (exposure.exposure * 2) + difficulty * 24 + activity * 4;
+            chance = exposure.band == AerialExposure.Band.LOW_AIR ? (base * 6 + 2) / 5 : (base * 5 + 2) / 4;
         }
         if (world.rand.nextInt(1000) >= chance) {
             reject("Admission roll missed");
@@ -203,13 +205,16 @@ public final class AerialEcology {
         int groupSize = ground ? 1 : flockSize(difficulty);
         if (skeletal) groupSize = Math.min(groupSize, difficulty == 3 && activity >= 12 ? 3 : 1);
         int desired = Math.min(room, groupSize);
+        requestedMembers = desired;
         boolean hunting = desired > 1 || world.rand.nextInt(1000) < (ground ? (day ? 460 : 670) : 730);
         for (int size = desired; size >= (desired > 1 ? desired - 1 : 1); --size) {
-            if (place(player, size, !ground, hunting, skeletal)) {
+            if (place(player, size, !ground, hunting, skeletal, true)) {
                 state.reserve(cooldownSeconds);
                 ++admissions;
-                lastAttempt = "Admitted " + encounter.size() + (skeletal ? " Skelebird" : " Fugl")
-                        + (hunting ? " (hunting)" : " (cruising)");
+                ++ordinaryAdmissions;
+                insertedMembers = encounter.size();
+                lastAttempt = "Admitted " + insertedMembers + (skeletal ? " Skelebird" : " Fugl")
+                        + (hunting ? " (hunting)" : " (passing)");
                 status = hunting ? "Active hunt" : "Wildlife passing through";
                 return;
             }
@@ -221,19 +226,19 @@ public final class AerialEcology {
 
     private boolean selectSkelebird(boolean ground, int difficulty) {
         if (!EntitySkelebird.isNight(world)) return false;
-        if (ground && (difficulty < 3 || activity < 12)) return false;
-        int share = ground ? 8 : difficulty == 1 ? 6 + activity / 4 : 10 * difficulty + activity / 2;
+        if (ground && (difficulty < 2 || activity < 12)) return false;
+        int share = ground ? (difficulty == 3 ? 16 : 8)
+                : difficulty == 1 ? 8 + activity / 4 : (difficulty == 3 ? 39 : 28) + activity / 2;
         return world.rand.nextInt(100) < share;
     }
 
     private int flockSize(int difficulty) {
         boolean high = exposure.band == AerialExposure.Band.HIGH_SKY;
         if (!high && exposure.band != AerialExposure.Band.EXPOSED) return 1;
-        int groupChance = (high ? 340 : 180) + difficulty * 80 + activity * 7;
-        if (difficulty == 1) groupChance /= 3;
+        if (difficulty == 1) return high && world.rand.nextInt(1000) < (420 + activity * 7) / 3 ? 2 : 1;
+        int groupChance = (high ? 420 : 270) + difficulty * 90 + activity * 8;
         if (world.rand.nextInt(1000) >= groupChance) return 1;
-        if (difficulty == 1) return high ? 2 : 1;
-        if (difficulty == 2) return high || activity >= 16 ? 3 : 2;
+        if (difficulty == 2) return world.rand.nextInt(1000) < (high ? 640 : 520) + activity * 8 ? 3 : 2;
         if (!high) return activity >= 16 ? 4 : 3;
         return activity >= 16 ? 5 : 4;
     }
@@ -252,12 +257,13 @@ public final class AerialEcology {
                 Math.min(hostileCap + HOSTILE_CAP_SLACK - hostiles, LOCAL_HOSTILE_CAP - localHostiles)));
     }
 
-    private boolean place(EntityPlayer player, int size, boolean airborne, boolean hunting, boolean skeletal) {
+    private boolean place(EntityPlayer player, int size, boolean airborne, boolean hunting, boolean skeletal,
+                          boolean ordinary) {
         EntityAerialPredator[] candidates = new EntityAerialPredator[size];
         for (int lane = 0; lane < size; ++lane)
             candidates[lane] = skeletal ? new EntitySkelebird(world) : new EntityAerialPredator(world);
         for (int attempt = 0; attempt < PLACEMENT_TRIES; ++attempt) {
-            ++placementTries;
+            if (ordinary) ++placementTries;
             double angle = Math.toRadians(player.rotationYaw + 180 + world.rand.nextInt(121) - 60);
             double xDir = -Math.sin(angle), zDir = Math.cos(angle);
             double distance = 25 + world.rand.nextInt(9);
@@ -274,7 +280,7 @@ public final class AerialEcology {
             }
             if (!clear) continue;
 
-            AerialEncounter incoming = new AerialEncounter(player, airborne, hunting,
+            AerialEncounter incoming = new AerialEncounter(player, airborne, hunting, ordinary,
                     player.posX + xDir * 12, player.posZ + zDir * 12);
             for (int lane = 0; lane < size; ++lane) {
                 EntityAerialPredator mob = candidates[lane];
@@ -309,11 +315,24 @@ public final class AerialEcology {
 
     public Snapshot snapshot() { return new Snapshot(this); }
 
+    private String nextOrdinaryCheck() {
+        if (!enabled) return "Ordinary admission disabled";
+        if (state == null || !eligible(observer)) return status;
+        if (encounter != null) return "Ordinary checks resume after encounter and cooldown";
+        if (JetpackWeather.LOCAL.protects(observer)) return "Ordinary checks wait for jetpack recovery";
+        int wait = Math.max(nextCheck, state.cooldownSeconds);
+        if (exposure.band == AerialExposure.Band.GROUND) wait = Math.max(wait, 30 - exposure.groundSeconds);
+        else if (!exposure.ready()) return "Ordinary checks wait for open exposure";
+        return "Next ordinary check " + (wait == 0 ? "on next sample" : "in " + wait + "s");
+    }
+
     public static final class Snapshot {
         public final double height, exposure;
-        public final String band, status, lastAttempt, lastEnd, membership, lunarStatus;
+        public final String band, status, lastAttempt, lastEnd, membership, lunarStatus, preyStatus;
         public final int cooldownSeconds, checkSeconds, admissions, activity, chance, loadedPredators, localHostiles;
         public final int placementTries, activeMembers, attackerId, gapTicks;
+        public final int ordinaryAttempts, ordinaryAdmissions, requestedMembers, insertedMembers;
+        public final String exposureRequirement, ordinarySchedule, encounterSource;
 
         private Snapshot(AerialEcology ecology) {
             AerialEncounter active = ecology.encounter;
@@ -321,12 +340,19 @@ public final class AerialEcology {
             exposure = ecology.exposure.exposure;
             band = ecology.exposure.band.name();
             status = ecology.status;
+            exposureRequirement = ecology.exposure.requirement();
+            ordinarySchedule = ecology.nextOrdinaryCheck();
+            encounterSource = active == null ? "No active encounter" : active.ordinary ? "Ordinary" : "Lunar";
             lunarStatus = ecology.lunarStatus;
             lastAttempt = ecology.lastAttempt;
             lastEnd = ecology.lastEnd;
             cooldownSeconds = ecology.state == null ? 0 : ecology.state.cooldownSeconds;
             checkSeconds = ecology.nextCheck;
             admissions = ecology.admissions;
+            ordinaryAttempts = ecology.ordinaryAttempts;
+            ordinaryAdmissions = ecology.ordinaryAdmissions;
+            requestedMembers = ecology.requestedMembers;
+            insertedMembers = ecology.insertedMembers;
             activity = ecology.activity;
             chance = ecology.chance;
             loadedPredators = ecology.loadedPredators;
@@ -334,6 +360,7 @@ public final class AerialEcology {
             placementTries = ecology.placementTries;
             activeMembers = active == null ? 0 : active.size();
             membership = active == null ? "" : active.membership();
+            preyStatus = active == null ? "No active Fugl prey target" : active.preyStatus();
             attackerId = active == null ? -1 : active.attackerId();
             gapTicks = active == null ? 0 : active.gapTicks();
         }

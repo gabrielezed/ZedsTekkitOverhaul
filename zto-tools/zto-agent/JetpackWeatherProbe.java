@@ -54,7 +54,7 @@ public final class JetpackWeatherProbe {
         yw player = NaturalSpawnProbe.join(world);
         player.ap.b[2] = pack;
         JetpackWeather weather = JetpackWeather.LOCAL;
-        weather.configure(true);
+        weather.configure(true, () -> player);
         position(player, 24, false);
         weather.tick(world, player, false);
         check(weather.available() && ZTOAgent.jetpackActive(electric.getClass().getClassLoader()), "native IC2 hook is active");
@@ -206,7 +206,8 @@ public final class JetpackWeatherProbe {
         weather.tick(world, player, false);
         check(!weather.equipped() && !weather.protects(player), "death clears the local state");
         player.l(20);
-        weather.configure(false);
+        immersion(game, world, player, electric, fuel, pack);
+        weather.configure(false, () -> player);
         player.ap.b[2] = pack;
         double disabledFlight = continuousFlight("thunder disabled", world, player, electric, pack, false, false);
         check(weather.phase() == Phase.DRY && Math.abs(disabledFlight - normalFlight) < 0.001,
@@ -214,6 +215,113 @@ public final class JetpackWeatherProbe {
         System.out.println("Native powered ticks to fault: rain " + rainTime + ", thunder " + stormTime
                 + ", repeats after 119 recovery ticks: rain " + repeatRain + ", thunder " + repeatTicks);
         System.out.println("PASS native IC2 thrust, EU, weather, shelter, descent braking at 3 heights, equipment and save lifecycle");
+    }
+
+    private static void immersion(Minecraft game, Fixture world, yw player, ItemArmorJetpackElectric item,
+                                  ItemArmorJetpack fuel, aan pack) {
+        JetpackWeather weather = JetpackWeather.LOCAL;
+        world.rain = world.storm = false;
+        weather.configure(true, () -> player);
+        player.ap.b[2] = pack;
+        for (int y = 20; y <= 23; ++y) world.g(288, y, 288, 9);
+        world.b(288, 24, 288, 8, 4); // Legacy submersion surface Y=24+5/9.
+        position(player, 24, true);
+        input(player, pack, false);
+        int charge = item.getCharge(pack);
+        check(item.onTick(player, pack) && item.getCharge(pack) == charge - 7 && weather.phase() == Phase.DRY,
+                "shallow wading leaves the chest dry and thrust available");
+        player.c(288.5, 23.3, 288.5, 0, 0); // Pack at 24.65, above the flowing water surface.
+        check(item.onTick(player, pack) && weather.phase() == Phase.DRY, "air above flowing water allows thrust");
+        for (boolean hover : new boolean[] {false, true}) {
+            position(player, 23, false); // Pack at 24.35, below the flowing water surface.
+            input(player, pack, hover);
+            charge = item.getCharge(pack);
+            player.s = -0.45;
+            player.M = 12;
+            check(!item.onTick(player, pack) && player.s == -0.45 && player.M == 12
+                    && item.getCharge(pack) == charge && weather.phase() == Phase.IMMERSED
+                    && weather.wetness() == 100, "first immersed armor tick blocks lift and powered fall reset");
+            verifyInventoryStatus(game, player, "wet, water protection");
+            if (hover) {
+                mod_IC2.setIsJumpingOfEntityLiving(player, false);
+                check(!item.onTick(player, pack) && player.s == -0.45 && item.getCharge(pack) == charge,
+                        "immersion blocks automatic hover braking even with jump released");
+            }
+            double bare = swim(world, player, item, null, hover);
+            double equipped = swim(world, player, item, pack, hover);
+            check(Math.abs(bare - equipped) < 1.0e-9 && item.getCharge(pack) == charge,
+                    "immersed armor tick matches unpowered swimming");
+            System.out.printf("Immersed %s: %.3f blocks swimming with or without equipment, zero EU%n",
+                    hover ? "hover" : "normal", equipped);
+        }
+
+        player.ap.b[2] = null;
+        weather.tick(world, player, false);
+        player.ap.b[2] = pack;
+        position(player, 23, false);
+        input(player, pack, true);
+        check(!item.onTick(player, pack) && weather.phase() == Phase.IMMERSED,
+                "re-equipping underwater blocks propulsion before the weather tick");
+        ady saved = new ady();
+        pack.b(saved);
+        weather.tick(null, null, true);
+        aan restored = aan.a(saved);
+        player.ap.b[2] = restored;
+        charge = item.getCharge(restored);
+        check(!item.onTick(player, restored) && weather.phase() == Phase.IMMERSED
+                && item.getCharge(restored) == charge, "loaded equipment is protected before the first weather tick");
+
+        position(player, 26, false);
+        check(!item.onTick(player, restored) && weather.remaining() == 20, "emergence begins a 20-tick restart");
+        verifyInventoryStatus(game, player, "wet, restarting 1.0s");
+        for (int i = 0; i < 5; ++i) weather.tick(world, player, false);
+        position(player, 23, false);
+        check(!item.onTick(player, restored) && weather.phase() == Phase.IMMERSED, "re-entry interrupts restart");
+        position(player, 26, false);
+        check(!item.onTick(player, restored) && weather.remaining() == 20, "second emergence starts a full restart");
+        for (int i = 0; i < 20; ++i) {
+            check(!item.onTick(player, restored) && player.s == 0 && item.getCharge(restored) == charge,
+                    "restart denies propulsion for the full interval");
+            weather.tick(world, player, false);
+        }
+        check(weather.phase() == Phase.WET && item.onTick(player, restored) && player.s > 0
+                && item.getCharge(restored) == charge - 4, "native hover resumes while the pack is still wet");
+        aan dryFuel = new aan(fuel, 1, 1);
+        aan wetFuel = new aan(fuel, 1, 1);
+        position(player, 26, false);
+        player.ap.b[2] = dryFuel;
+        input(player, dryFuel, false);
+        check(fuel.onTick(player, dryFuel) && player.s > 0.19, "dry fuel control thrusts");
+        double fuelMotion = player.s;
+        position(player, 23, false);
+        player.ap.b[2] = wetFuel;
+        input(player, wetFuel, false);
+        charge = fuel.getCharge(wetFuel);
+        check(fuel.onTick(player, wetFuel) && player.s == fuelMotion
+                && fuel.getCharge(wetFuel) == fuel.getCharge(dryFuel) && fuel.getCharge(wetFuel) < charge,
+                "immersed fuel jetpack matches its dry control");
+        System.out.println("PASS chest-height flowing-water protection, first activation, full restart, and fuel control");
+        for (int y = 20; y <= 24; ++y) world.g(288, y, 288, 0);
+        player.B(); // Refresh vanilla's cached water contact after draining the fixture.
+        world.rain = world.storm = true;
+    }
+
+    private static double swim(Fixture world, yw player, ItemArmorJetpackElectric item, aan pack, boolean hover) {
+        position(player, 21, false);
+        double start = player.p;
+        player.ap.b[2] = pack;
+        for (int i = 0; i < 5; ++i) {
+            player.B(); // Native water contact and current.
+            check(player.H(), "swimming fixture is in water");
+            if (pack != null) {
+                input(player, pack, hover);
+                check(!item.onTick(player, pack), "immersed swimming has no propulsion");
+            }
+            player.s += 0.04; // Native EntityLiving jump impulse in water.
+            player.a_(0, 0);
+            JetpackWeather.LOCAL.tick(world, player, false);
+        }
+        return player.p - start;
     }
 
     private static int count(List<String> values, String value) {
@@ -274,7 +382,7 @@ public final class JetpackWeatherProbe {
 
     private static void verifyLanding(Fixture world, yw player, ItemArmorJetpackElectric item, aan pack, int platform) {
         JetpackWeather weather = JetpackWeather.LOCAL;
-        weather.configure(true);
+        weather.configure(true, () -> player);
         world.g(288, platform, 288, 1);
         position(player, platform + 13, false);
         untilFault(world, player, item);
@@ -312,7 +420,7 @@ public final class JetpackWeatherProbe {
         }
     }
 
-    private static void position(yw player, int height, boolean grounded) {
+    private static void position(yw player, double height, boolean grounded) {
         player.c(288.5, height, 288.5, 0, 0);
         player.z = grounded;
         player.r = player.s = player.t = 0;

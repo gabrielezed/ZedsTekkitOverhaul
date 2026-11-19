@@ -36,6 +36,8 @@ import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.survival.BedRespawn;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
+import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
+import zed.tekkitoverhaul.survival.aerial.client.RenderMagpie;
 import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
 import zed.tekkitoverhaul.survival.aerial.client.RenderAerialPredator;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostiles;
@@ -70,6 +72,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
         AerialPredators.register();
+        EntityAerialPredator.configureChickenHunting(settings.fuglChickenHunting);
         AerialSoundRegistration.register(ModLoader.getMinecraftInstance().sndManager);
         AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
@@ -91,7 +94,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
                 settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent,
                 settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds,
-                settings.electricJetpackWeather, settings.lunarAerialEncounters);
+                settings.electricJetpackWeather, settings.lunarAerialEncounters, settings.forestMagpies);
         DragDistributionIntegration.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);
@@ -99,6 +102,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         TacticalHostiles.registerEggs(settings);
         AerialPredators.registerEgg(settings.aerialPredatorEgg);
         AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
+        AerialPredators.registerMagpieEgg(settings.magpieEgg);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
@@ -120,6 +124,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         RenderMobEquipment.register(renderers);
         TacticalHostileRenderers.register(renderers);
         RenderAerialPredator.register(renderers);
+        RenderMagpie.register(renderers);
     }
 
     @Override

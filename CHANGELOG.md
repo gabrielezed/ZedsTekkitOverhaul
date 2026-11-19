@@ -1,5 +1,14 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.3-alpha.1 — Biome ecology prototype
+
+- Vary ordinary Enderkin roles by legacy biome family within the established hostile spawn budget.
+- Add small forest magpies that walk, hop, fly, perch and investigate dropped seeds and feathers.
+- Let a passing daytime Fugl occasionally hunt an exposed chicken.
+- Add a Biome Ecology monitor to the local Debug Hub.
+
+[Implementation and playtest](docs/agents/survival-023-implementation.md)
+
 ## 0.2.2-alpha.5 — Fugl stabilization
 
 - Name the aerial predator Fugl in game and preserve its save identifier and spawn egg ID.

@@ -3,12 +3,16 @@ package zed.tekkitoverhaul.survival.aerial;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntityFlying;
+import net.minecraft.src.EntityChicken;
+import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.Material;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.Shoreline;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 
 /** A single predator with server-owned steering, commitment and contact. */
@@ -25,6 +29,8 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     private static final int DISENGAGE_TICKS = 120;
     private static final double AIRBORNE_HEIGHT = 8;
     private static final int[] AVOID_ANGLES = {0, -10, 10, -20, 20};
+    private static final int[] ALTERNATE_LANES = {60, -60, 115, -115, 180};
+    private static final int MAX_RESTAGES = 4;
 
     private Flight flight = Flight.CRUISE;
     private AerialEncounter encounter;
@@ -32,9 +38,14 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     private int ambientDelay = 80 + rand.nextInt(61);
     private boolean natural, approaching;
     private double arrivalX, arrivalY, arrivalZ;
-    private EntityPlayer target;
+    private EntityLiving target;
+    private static boolean chickenHunting = true;
+    private boolean preyOpportunitySpent;
     private int stateTicks, huntTicks, attempts, attemptLimit, scanDelay = 30, blockedTicks, hiddenTicks;
     private int cruiseTicks, rejectedWarnings, commitments, restageUntil;
+    private int restages, nextLaneSearch;
+    private boolean needsLane;
+    private LaunchStage launchStage;
     private String diveStatus = "No target", lastDiveRejection = "none";
     private boolean aerialHunt;
     private float cruiseYaw;
@@ -90,7 +101,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         lane = slot;
         natural = approaching = true;
         wildTicks = 1000;
-        scanDelay = 65 + slot * 8;
+        scanDelay = group.ordinary && group.hunting ? 30 + slot * 7 : 65 + slot * 8;
         // Set a single arrival waypoint ahead of a traveling pilot before the first target scan.
         double leadX = group.airborne ? clamp(group.player.motionX * 48, -10, 10) : 0;
         double leadZ = group.airborne ? clamp(group.player.motionZ * 48, -10, 10) : 0;
@@ -121,13 +132,18 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
 
     @Override
     protected void updateEntityActionState() {
-        if (worldObj.difficultySetting == 0 || (natural && --wildTicks <= 0)) {
+        // A nearby submerged bird stays present for native drowning, including after leaving its encounter.
+        if (worldObj.difficultySetting == 0 || (natural && !isInWater() && --wildTicks <= 0)) {
             setDead();
             return;
         }
         ++entityAge;
         despawnEntity();
         if (isDead) return;
+        if (isInWater()) {
+            if (target != null || encounter != null) disengage("entered water");
+            return;
+        }
         ++stateTicks;
 
         if (target != null) {
@@ -163,7 +179,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
             case RECOVER:
                 climb();
                 if (stateTicks >= recoverTicks()) {
-                    if (attempts >= attemptLimit || rejectedWarnings >= 2)
+                    if (attempts >= attemptLimit || rejectedWarnings >= (ordinaryHunt() ? 3 : 2))
                         disengage(attempts >= attemptLimit ? "attack budget" : "repeated blocked launch");
                     else enter(Flight.CIRCLE);
                 }
@@ -181,14 +197,22 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         }
     }
 
+    public static void configureChickenHunting(boolean enabled) { chickenHunting = enabled; }
+
     private void detect() {
         if (slashingPass() && !EntitySkelebird.isNight(worldObj)) return;
         if (natural) {
-            if (encounter == null || !encounter.hunting) return;
+            if (encounter == null) return;
+            if (!encounter.hunting) {
+                detectPrey();
+                return;
+            }
             EntityPlayer player = encounter.player;
-            if (eligible(player) && getDistanceSqToEntity(player) <= 36 * 36
-                    && targetClearance(player) >= 0 && visible(player)) {
+            int range = encounter.ordinary ? 39 : 36;
+            if (eligible(player) && getDistanceSqToEntity(player) <= range * range && targetClearance(player) >= 0
+                    && (encounter.ordinary || visible(player))) {
                 startHunt(player, encounter.airborne, 1);
+                if (encounter.ordinary && !visible(player)) needsLane = true;
             }
             return;
         }
@@ -201,7 +225,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
             double distance = getDistanceSqToEntity(player);
             if (distance > 36 * 36 || !eligible(player)) continue;
             double altitude = targetClearance(player);
-            if (altitude < 0 || Math.abs(centerY() - playerCenter(player)) > 30) continue;
+            if (altitude < 0 || Math.abs(centerY() - targetCenter(player)) > 30) continue;
             boolean airborne = !player.onGround && altitude >= AIRBORNE_HEIGHT;
             if (slashingPass() && !airborne && worldObj.difficultySetting < 3) continue;
             if (!airborne && (distance > 24 * 24 || bestAirborne)) continue;
@@ -216,11 +240,34 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         startHunt(best, bestAirborne, bestAirborne ? 2 : 1);
     }
 
-    private void startHunt(EntityPlayer player, boolean airborne, int allowedAttempts) {
-        target = player;
+    private void detectPrey() {
+        if (!chickenHunting || slashingPass() || preyOpportunitySpent || approaching || encounter.airborne
+                || encounter.size() != 1 || !worldObj.isDaytime() || worldObj.isRaining()
+                || rand.nextInt(8) != 0) return;
+        EntityChicken nearest = null;
+        double distance = 22 * 22;
+        for (Object entry : worldObj.getEntitiesWithinAABB(EntityChicken.class, boundingBox.expand(18, 18, 18))) {
+            EntityChicken chicken = (EntityChicken) entry;
+            double range = getDistanceSqToEntity(chicken);
+            if (chicken.isEntityAlive() && range < distance && targetClearance(chicken) >= 0 && visible(chicken)) {
+                distance = range;
+                nearest = chicken;
+            }
+        }
+        if (nearest != null) {
+            preyOpportunitySpent = true;
+            startHunt(nearest, false, 1);
+        }
+    }
+
+    private void startHunt(EntityLiving subject, boolean airborne, int allowedAttempts) {
+        target = subject;
         aerialHunt = airborne;
         approaching = false;
         attempts = huntTicks = hiddenTicks = rejectedWarnings = restageUntil = 0;
+        restages = nextLaneSearch = 0;
+        needsLane = false;
+        launchStage = null;
         lastDiveRejection = "none";
         attemptLimit = allowedAttempts;
         enter(Flight.CIRCLE);
@@ -232,28 +279,38 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private String invalidTarget() {
-        if (!eligible(target)) return "target unavailable";
-        if (huntTicks > (encounter == null ? 400 : AerialEncounter.HUNT_LIMIT)
+        if (target instanceof EntityPlayer ? !eligible((EntityPlayer) target)
+                : !target.isEntityAlive()) return "target unavailable";
+        if (huntTicks > (target instanceof EntityChicken ? 200 : encounter == null ? 400 : AerialEncounter.HUNT_LIMIT)
                 || getDistanceSqToEntity(target) > 48 * 48) return "pursuit limit";
         // Native block collision protects all intervening terrain. A roof also ends pursuit.
         double altitude = targetClearance(target);
         if (altitude < 0) return "target under cover or unloaded";
         if (aerialHunt && altitude < 3 && flight != Flight.DIVE) return "target descended";
         if (huntTicks % 5 == 0) hiddenTicks = visible(target) ? 0 : hiddenTicks + 5;
-        if (hiddenTicks >= 30 && flight != Flight.DIVE) return "target out of sight";
+        if (hiddenTicks >= (ordinaryHunt() ? 145 : 30) && flight != Flight.DIVE) return "target out of sight";
         return null;
     }
 
-    private double targetClearance(EntityPlayer player) {
-        double height = AerialTerrain.skyHeight(player);
-        if (slashingPass() && height >= 0 && worldObj.getPrecipitationHeight(
-                MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ))
-                > player.boundingBox.minY + player.height * 0.5) return -1;
+    private boolean ordinaryHunt() {
+        return encounter != null && encounter.ordinary && target instanceof EntityPlayer;
+    }
+
+    private double targetClearance(EntityLiving subject) {
+        double height = AerialTerrain.skyHeight(subject);
+        if (height >= 0 && (subject.isInWater() || subject.isInsideOfMaterial(Material.water))) return -1;
+        if ((slashingPass() || subject instanceof EntityChicken) && height >= 0 && worldObj.getPrecipitationHeight(
+                MathHelper.floor_double(subject.posX), MathHelper.floor_double(subject.posZ))
+                > subject.boundingBox.minY + subject.height * 0.5) return -1;
         return height;
     }
 
-    private boolean visible(EntityPlayer player) {
-        return AerialTerrain.loaded(worldObj, posX, posZ, player.posX, player.posZ) && canEntityBeSeen(player);
+    private boolean visible(EntityLiving subject) {
+        return AerialTerrain.loaded(worldObj, posX, posZ, subject.posX, subject.posZ) && canEntityBeSeen(subject);
+    }
+
+    private boolean pilotProtected() {
+        return target instanceof EntityPlayer && JetpackWeather.LOCAL.protects((EntityPlayer) target);
     }
 
     private void cruise() {
@@ -289,30 +346,33 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
             disengage("no dive approach");
             return;
         }
-        if (hiddenTicks > 0) {
+        boolean ordinary = ordinaryHunt();
+        boolean turnAvailable = !pilotProtected() && (encounter == null || encounter.diveAvailable());
+        if (ordinary && (turnAvailable || hiddenTicks > 0)
+                && (needsLane || hiddenTicks > 0 || launchStage != null) && followAlternateLane()) return;
+        if (hiddenTicks > 0 && !ordinary) {
             diveStatus = "Target obscured";
             steer(destinationX, destinationY, destinationZ, 0.26);
             return;
         }
         int ring = encounter == null ? 0 : lane % 3;
         boolean pass = slashingPass();
-        double altitude = limitAltitude(playerCenter(target) + (pass ? 5.5 + ring : 8 + ring * 1.5));
+        double altitude = limitAltitude(targetCenter(target) + (pass ? 5.5 + ring : 8 + ring * 1.5));
         double offset = Math.atan2(posZ - target.posZ, posX - target.posX);
         double range = horizontalRange(target.posX, target.posZ);
-        boolean turnAvailable = !JetpackWeather.LOCAL.protects(target) && (encounter == null || encounter.diveAvailable());
-        double minimumRange = pass ? 11 : 6;
+        double minimumRange = pass ? (ordinary ? 13 : 11) : 6;
         if (stateTicks < (pass ? 36 : 26) || !turnAvailable || stateTicks < restageUntil || range < minimumRange) {
             double direction = pass && lane % 2 != 0 ? -1 : 1;
             double angle = offset + direction * (range < minimumRange ? 0.22 : 0.82);
             double radius = (pass ? 17 : 10) + (encounter == null ? 0 : lane * 1.1);
             diveStatus = turnAvailable ? "Repositioning"
-                    : JetpackWeather.LOCAL.protects(target) ? "Pilot recovering from jetpack fault" : "Waiting for flock turn";
+                    : pilotProtected() ? "Pilot recovering from jetpack fault" : "Waiting for flock turn";
             steer(target.posX + Math.cos(angle) * radius, altitude, target.posZ + Math.sin(angle) * radius, 0.37);
             return;
         }
 
         double endX = leadX(), endZ = leadZ();
-        double height = centerY() - playerCenter(target);
+        double height = centerY() - targetCenter(target);
         double maximumRange = pass ? 21 : 15;
         if (range > maximumRange || height < (pass ? 3.5 : 4) || height > (pass ? 8.5 : 14)) {
             // Close the range from above without running straight into the pilot.
@@ -323,14 +383,17 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         }
 
         aim(endX, altitude, endZ);
-        if (stateTicks < (pass ? 52 : 42) || stateTicks % 4 != 0) return;
+        int windupReady = ordinary ? (pass ? 44 : 32) : (pass ? 52 : 42);
+        if (stateTicks < windupReady || stateTicks % 4 != 0) return;
         double endY = leadY();
         String rejection = diveRejection(endX, endY, endZ);
         diveStatus = rejection == null ? "Ready" : rejection;
         if (rejection != null) {
             lastDiveRejection = rejection;
-            if ("Blocked dive corridor".equals(rejection) || "Unloaded dive corridor".equals(rejection))
-                restageUntil = stateTicks + 20;
+            if ("Blocked dive corridor".equals(rejection) || "Unloaded dive corridor".equals(rejection)) {
+                if (ordinary) needsLane = true;
+                else restageUntil = stateTicks + 20;
+            }
             return;
         }
         if (encounter != null && !encounter.reserveDive(this)) return;
@@ -342,6 +405,84 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         enter(Flight.PREPARE);
         diveStatus = "Telegraphing";
         worldObj.playSoundAtEntity(this, sound("warning"), 0.76F, 1.0F);
+    }
+
+    private boolean followAlternateLane() {
+        if (launchStage == null && restages < MAX_RESTAGES && huntTicks >= nextLaneSearch) {
+            ++restages;
+            nextLaneSearch = huntTicks + 26;
+            launchStage = findAlternateLane();
+        }
+        if (launchStage == null) {
+            if (restages >= MAX_RESTAGES) needsLane = false;
+            return false; // Existing local orbit remains available until the original hunt deadline.
+        }
+        LaunchStage stage = launchStage;
+        double targetDx = leadX() - stage.targetX, targetDz = leadZ() - stage.targetZ;
+        if (huntTicks >= stage.deadline || targetDx * targetDx + targetDz * targetDz > 7 * 7) {
+            launchStage = null;
+            return false;
+        }
+        if (stage.climbing && centerY() >= stage.loft - 0.45) stage.climbing = false;
+        double range = horizontalRange(stage.x, stage.z);
+        if (!stage.climbing && range < 2.3 && Math.abs(centerY() - stage.y) < 1.2) {
+            launchStage = null;
+            needsLane = !visible(target);
+            if (!needsLane) hiddenTicks = 0;
+            return false;
+        }
+        diveStatus = "Re-staging from a different lane";
+        if (stage.climbing) steer(posX, stage.loft, posZ, 0);
+        else steer(stage.x, range < 3.5 ? stage.y : stage.loft, stage.z, range < 3.5 ? 0.23 : 0.40);
+        return true;
+    }
+
+    private LaunchStage findAlternateLane() {
+        boolean pass = slashingPass();
+        double radius = (pass ? 17 : 11) + lane % 3 * 0.85;
+        double x = leadX(), y = leadY(), z = leadZ();
+        double altitude = limitAltitude(y + (pass ? 5.3 : 9.0));
+        if (altitude - y < (pass ? 3.5 : 4)) return null;
+        double bearing = Math.atan2(posZ - z, posX - x);
+        int direction = lane % 2 == 0 ? 1 : -1;
+        for (int offset : ALTERNATE_LANES) {
+            double angle = bearing + Math.toRadians(offset * direction);
+            double dx = Math.cos(angle) * radius, dz = Math.sin(angle) * radius;
+            double sx = x + dx, sz = z + dz;
+            double moveX = sx - posX, moveY = altitude - centerY(), moveZ = sz - posZ;
+            if (moveX * moveX + moveZ * moveZ > 39 * 39) continue;
+            AxisAlignedBB stage = boundingBox.getOffsetBoundingBox(moveX, moveY, moveZ);
+            if (!clearDivePath(stage, -dx, y - altitude, -dz)) continue;
+            if (clearPath(boundingBox, moveX, moveY, moveZ)) {
+                return new LaunchStage(sx, altitude, sz, x, z, altitude, false, huntTicks + 110);
+            }
+            double loft = limitAltitude(Math.max(altitude, centerY()) + 6);
+            double up = loft - centerY();
+            if (clearPath(boundingBox, 0, up, 0)
+                    && clearPath(boundingBox.getOffsetBoundingBox(0, up, 0), moveX, 0, moveZ)
+                    && clearPath(stage.getOffsetBoundingBox(0, loft - altitude, 0), 0, altitude - loft, 0)) {
+                return new LaunchStage(sx, altitude, sz, x, z, loft, true, huntTicks + 135);
+            }
+        }
+        return null;
+    }
+
+    private static final class LaunchStage {
+        final double x, y, z, targetX, targetZ, loft;
+        final int deadline;
+        boolean climbing;
+
+        LaunchStage(double x, double y, double z, double targetX, double targetZ, double loft,
+                    boolean climbing, int deadline) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.targetX = targetX;
+            this.targetZ = targetZ;
+            this.loft = loft;
+            this.climbing = climbing;
+            this.deadline = deadline;
+        }
     }
 
     private void aim(double x, double y, double z) {
@@ -360,7 +501,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     private double leadX() { return target.posX + clamp(target.motionX * 10, -3, 3); }
     private double leadZ() { return target.posZ + clamp(target.motionZ * 10, -3, 3); }
     private double leadY() {
-        return playerCenter(target) + (aerialHunt ? clamp(target.motionY * 8, -2, 2) : 0);
+        return targetCenter(target) + (aerialHunt ? clamp(target.motionY * 8, -2, 2) : 0);
     }
 
     private String diveRejection(double x, double y, double z) {
@@ -373,26 +514,33 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         if (!AerialTerrain.loaded(worldObj, posX, posZ, x, z)) return "Unloaded dive corridor";
         if (!visible(target) || !unobstructed(posX, centerY(), posZ, x, y, z)) return "Blocked dive corridor";
 
+        return clearDivePath(boundingBox, dx, dy, dz) ? null : "Blocked dive corridor";
+    }
+
+    private boolean clearDivePath(AxisAlignedBB origin, double dx, double dy, double dz) {
         if (slashingPass()) {
-            double scale = 1 + passRunout() / length;
+            double scale = 1 + passRunout() / Math.sqrt(dx * dx + dy * dy + dz * dz);
             dx *= scale;
             dy *= scale;
             dz *= scale;
-            length *= scale;
         }
+        return clearPath(origin, dx, dy, dz);
+    }
+
+    private boolean clearPath(AxisAlignedBB origin, double dx, double dy, double dz) {
         // Check short swept boxes along the launch line instead of testing a single diagonal-sized box.
-        int segments = (int) Math.ceil(length / 2.5);
+        int segments = Math.max(1, (int) Math.ceil(Math.sqrt(dx * dx + dy * dy + dz * dz) / 2.5));
         for (int i = 0; i < segments; ++i) {
             double fraction = (double) i / segments;
-            AxisAlignedBB section = boundingBox.getOffsetBoundingBox(dx * fraction, dy * fraction, dz * fraction);
+            AxisAlignedBB section = origin.getOffsetBoundingBox(dx * fraction, dy * fraction, dz * fraction);
             if (!AerialTerrain.clear(this, section.addCoord(dx / segments, dy / segments, dz / segments)))
-                return "Blocked dive corridor";
+                return false;
         }
-        return null;
+        return true;
     }
 
     private void prepare() {
-        if (JetpackWeather.LOCAL.protects(target)) {
+        if (pilotProtected()) {
             lastDiveRejection = "Pilot recovering from jetpack fault";
             recover();
             return;
@@ -402,7 +550,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         double endY = pass ? destinationY : leadY();
         double endZ = pass ? destinationZ : leadZ();
         if (pass) blend(0, 0, 0);
-        else if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), playerCenter(target) + 5)), endZ);
+        else if (hiddenTicks == 0) aim(endX, limitAltitude(Math.max(centerY(), targetCenter(target) + 5)), endZ);
         else blend(0, 0, 0);
         if (stateTicks < prepareTicks()) return;
 
@@ -410,6 +558,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         if (rejection != null) {
             ++rejectedWarnings;
             lastDiveRejection = lastFailure = rejection;
+            if (ordinaryHunt()) needsLane = true;
             recover();
             return;
         }
@@ -521,8 +670,16 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     @Override
+    public boolean handleWaterMovement() { return Shoreline.birdWaterContact(this); }
+
+    @Override
     public void moveEntityWithHeading(float strafe, float forward) {
         if (worldObj.isRemote || isDead) return;
+        if (isInWater() && getHealth() > 0) {
+            motionY = Math.min(0, motionY) - 0.02D;
+            super.moveEntityWithHeading(0, 0);
+            return;
+        }
         if (getHealth() <= 0) {
             motionX *= 0.91;
             motionY = Math.max(-0.85, motionY - 0.085);
@@ -530,12 +687,22 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         }
         boolean diving = flight == Flight.DIVE && getHealth() > 0;
         double fromX = posX, fromY = centerY(), fromZ = posZ;
-        if (!AerialTerrain.loaded(worldObj, boundingBox.addCoord(motionX, motionY, motionZ))) {
+        AxisAlignedBB path = boundingBox.addCoord(motionX, motionY, motionZ);
+        if (!AerialTerrain.loaded(worldObj, path)) {
             lastFailure = "unloaded boundary";
             motionX = motionY = motionZ = 0;
             rotationYaw += 11;
             cruiseTicks = 0;
             if (target != null) disengage("unloaded boundary");
+            return;
+        }
+        // The native block collision pass does not stop a dive or drift at a liquid boundary.
+        if (getHealth() > 0 && (diving || hurtTime == 0)
+                && worldObj.isMaterialInBB(path.contract(0.001D, 0.001D, 0.001D), Material.water)) {
+            if (diving) recover();
+            lastFailure = "water in flight path";
+            motionX = motionZ = 0;
+            motionY = clearance(0, 0.22D, 0, 1) ? 0.22D : 0;
             return;
         }
         moveEntity(motionX, motionY, motionZ);
@@ -557,13 +724,13 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     private boolean hitAlongMovement(double x, double y, double z) {
-        if (target == null) return false;
+        if (target == null || (target instanceof EntityChicken && targetClearance(target) < 0)) return false;
         AxisAlignedBB contact = target.boundingBox.expand(width * 0.43, height * 0.43, width * 0.43);
         Vec3D start = Vec3D.createVector(x, y, z);
         Vec3D end = Vec3D.createVector(posX, centerY(), posZ);
         if (!contact.isVecInside(start) && !contact.isVecInside(end)
                 && contact.calculateIntercept(start, end) == null) return false;
-        if (!visible(target) || !unobstructed(posX, centerY(), posZ, target.posX, playerCenter(target), target.posZ)) return false;
+        if (!visible(target) || !unobstructed(posX, centerY(), posZ, target.posX, targetCenter(target), target.posZ)) return false;
         double vx = target.motionX, vy = target.motionY, vz = target.motionZ;
         int damage = slashingPass() ? 5 : 4 + worldObj.difficultySetting;
         boolean hit = target.attackEntityFrom(DamageSource.causeMobDamage(this), damage);
@@ -613,7 +780,12 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         motionZ = clamp(motionZ, -0.32, 0.32);
     }
 
-    public String targetName() { return target == null ? "-" : target.username; }
+    public String targetName() {
+        if (target instanceof EntityPlayer) return ((EntityPlayer) target).username;
+        return huntingChicken() ? "Chicken #" + target.entityId : "-";
+    }
+
+    boolean huntingChicken() { return target instanceof EntityChicken; }
     public String encounterStatus() { return encounter != null ? "Encounter member" : natural ? "Retiring wildlife" : "Manual"; }
     public double terrainClearance() { return AerialTerrain.skyHeight(this); }
     public double destinationX() { return destinationX; }
@@ -636,8 +808,8 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     public String lastExit() { return lastExit; }
 
     private double centerY() { return boundingBox.minY + height * 0.5; }
-    private static double playerCenter(EntityPlayer player) {
-        return (player.boundingBox.minY + player.boundingBox.maxY) * 0.5;
+    private static double targetCenter(EntityLiving subject) {
+        return (subject.boundingBox.minY + subject.boundingBox.maxY) * 0.5;
     }
     private double horizontalRange(double x, double z) {
         return Math.sqrt((x - posX) * (x - posX) + (z - posZ) * (z - posZ));

@@ -2,16 +2,23 @@ package zed.tekkitoverhaul.survival.weather;
 
 import java.lang.reflect.Method;
 import java.util.function.ObjDoubleConsumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import net.minecraft.src.AxisAlignedBB;
+import net.minecraft.src.BlockFluid;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.Material;
 import net.minecraft.src.World;
 
 /** Local IC2 1.97 weather state. IC2 owns activation, charge, steering and fall bookkeeping. */
 public final class JetpackWeather {
-    public enum Phase { DRY, WET, UNSTABLE, FAULT, RECOVERING }
+    public enum Phase { DRY, WET, UNSTABLE, FAULT, RECOVERING, IMMERSED, RESTARTING }
     private static final String ELECTRIC = "ic2.common.ItemArmorJetpackElectric";
+    private static final double PACK_HEIGHT = 1.35;
+    private static final int RESTART_TICKS = 20;
+    private static final int RESIDUAL_WETNESS = 48;
     private static final int RECOVERY_TICKS = 120;
     private static final int LANDING_CLEARANCE = 8;
     public static final JetpackWeather LOCAL = new JetpackWeather();
@@ -20,6 +27,13 @@ public final class JetpackWeather {
             if (player instanceof EntityPlayer) onThrust((EntityPlayer) player, previousY);
         }
     };
+    private final Predicate<Object> guard = new Predicate<Object>() {
+        @Override public boolean test(Object player) {
+            return Thread.currentThread() == owner && player instanceof EntityPlayer && player == localPlayer.get()
+                    && blocksThrust((EntityPlayer) player);
+        }
+    };
+    private Supplier<EntityPlayer> localPlayer;
     private Method activeHook;
     private Thread owner;
     private World world;
@@ -32,13 +46,15 @@ public final class JetpackWeather {
 
     private JetpackWeather() {}
 
-    public void configure(boolean enabled) {
+    public void configure(boolean enabled, Supplier<EntityPlayer> localPlayer) {
         this.enabled = enabled;
+        this.localPlayer = localPlayer;
         owner = Thread.currentThread();
         bind(null, null);
         try {
             Class<?> agent = Class.forName("zed.tekkitoverhaul.agent.ZTOAgent", false, ClassLoader.getSystemClassLoader());
-            agent.getMethod("registerJetpackMotion", ObjDoubleConsumer.class).invoke(null, enabled ? thrust : null);
+            agent.getMethod("registerJetpack", ObjDoubleConsumer.class, Predicate.class)
+                    .invoke(null, enabled ? thrust : null, enabled ? guard : null);
             activeHook = agent.getMethod("jetpackActive", ClassLoader.class);
         } catch (ReflectiveOperationException unavailable) {
             activeHook = null;
@@ -71,6 +87,47 @@ public final class JetpackWeather {
         ItemStack chest = player.inventory.armorInventory[2];
         return chest != null && chest.getItem() != null && ELECTRIC.equals(chest.getItem().getClass().getName())
                 ? chest : null;
+    }
+
+    private boolean blocksThrust(EntityPlayer player) {
+        World context = player.worldObj;
+        // IC2 can tick equipment before the local end-of-tick observer, including on load.
+        if (!enabled || context == null || context.isRemote || !eligible(player)) return false;
+        if (context != world || player != pilot) bind(context, player);
+        ItemStack current = electric(player);
+        if (current != pack) identify(current);
+        return pack != null && available && updateImmersion(false);
+    }
+
+    private boolean updateImmersion(boolean advance) {
+        double chest = pilot.boundingBox.minY + PACK_HEIGHT;
+        int x = MathHelper.floor_double(pilot.posX);
+        int y = MathHelper.floor_double(chest);
+        int z = MathHelper.floor_double(pilot.posZ);
+        // Same water surface as the legacy entity submersion check, sampled at the pack.
+        if (world.blockExists(x, y, z) && world.getBlockMaterial(x, y, z) == Material.water
+                && chest < y + 1 - (BlockFluid.getFluidHeightPercent(world.getBlockMetadata(x, y, z)) - 0.11111111F)) {
+            phase = Phase.IMMERSED;
+            wetness = 100;
+            remaining = flightTicks = 0;
+            used = exposed = poweredRain = false;
+            untilSample = 0;
+            condition = "Pack immersed in water";
+            return true;
+        }
+        if (phase == Phase.IMMERSED) {
+            phase = Phase.RESTARTING;
+            remaining = RESTART_TICKS;
+            condition = "Pack above water. Restart delay.";
+            return true;
+        }
+        if (phase != Phase.RESTARTING) return false;
+        if (advance && --remaining == 0) {
+            phase = Phase.WET;
+            wetness = RESIDUAL_WETNESS;
+            condition = "Propulsion restored. Pack still wet.";
+        }
+        return true;
     }
 
     private void onThrust(EntityPlayer player, double previousY) {
@@ -106,6 +163,7 @@ public final class JetpackWeather {
         if (pack == null) { condition = "Electric Jetpack not equipped"; return; }
         if (!available) { condition = "Pinned IC2 thrust hook unavailable"; return; }
         if (paused) return;
+        if (updateImmersion(true)) return;
         boolean justPowered = used && !player.onGround;
         if (justPowered) ++flightTicks;
         used = false;
@@ -115,7 +173,7 @@ public final class JetpackWeather {
             raining = world.isRaining();
             storm = raining && world.isThundering();
             int x = MathHelper.floor_double(player.posX);
-            int y = MathHelper.floor_double(player.boundingBox.minY + 1.35);
+            int y = MathHelper.floor_double(player.boundingBox.minY + PACK_HEIGHT);
             int z = MathHelper.floor_double(player.posZ);
             exposed = raining && world.blockExists(x, y, z) && world.canLightningStrikeAt(x, y, z);
             boolean powered = flightTicks >= 3 && !player.onGround;

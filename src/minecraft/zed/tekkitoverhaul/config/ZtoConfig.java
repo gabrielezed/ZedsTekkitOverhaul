@@ -13,6 +13,7 @@ public final class ZtoConfig {
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
     public final int territorialHostileCapBonusPercent;
     public final boolean naturalEnderkinSpawning, naturalAerialEncounters;
+    public final boolean forestMagpies, fuglChickenHunting;
     public final int aerialEncounterCooldownSeconds;
     public final boolean electricJetpackWeather, lunarAerialEncounters;
     public final boolean creativeInventoryBackport, partialRecipeFill;
@@ -20,7 +21,7 @@ public final class ZtoConfig {
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
     public final boolean lunarVerboseLogging, survivalDebugHud;
     public final int advancedCraftingTable, foundry, alchemicalConverter, skirmisherEgg, breacherEgg, saboteurEgg;
-    public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg;
+    public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg, magpieEgg;
     public final Integer hopper;
     public final int buildcraftOilBucketItemId;
     public final String emcProfile;
@@ -38,6 +39,8 @@ public final class ZtoConfig {
         experimentalEnderkinEncounters = values.flag("experimentalEnderkinEncounters", false);
         experimentalTerritorialThreat = values.flag("experimentalTerritorialThreat", false);
         territorialHostileCapBonusPercent = values.bounded("territorialHostileCapBonusPercent", 70, 0, 100);
+        forestMagpies = values.flag("forestMagpies", true);
+        fuglChickenHunting = values.flag("fuglChickenHunting", true);
         naturalEnderkinSpawning = values.flag("naturalEnderkinSpawning", true);
         naturalAerialEncounters = values.flag("naturalAerialEncounters", true);
         electricJetpackWeather = values.flag("electricJetpackWeather", true);
@@ -77,6 +80,7 @@ public final class ZtoConfig {
         thiefEgg = values.item("thiefEgg", 22008);
         aerialPredatorEgg = values.item("aerialPredatorEgg", 22009);
         skelebirdEgg = values.item("skelebirdEgg", 22010);
+        magpieEgg = values.item("magpieEgg", 22011);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);
         }

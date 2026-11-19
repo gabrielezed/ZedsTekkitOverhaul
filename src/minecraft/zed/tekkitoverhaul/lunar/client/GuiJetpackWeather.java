@@ -23,14 +23,19 @@ final class GuiJetpackWeather extends GuiScreen {
         JetpackWeather gear = JetpackWeather.LOCAL;
         boolean rain = mc.theWorld != null && mc.theWorld.isRaining();
         boolean storm = rain && mc.theWorld.isThundering();
+        JetpackWeather.Phase phase = gear.phase();
+        String propulsion = "Native propulsion";
+        if (phase == JetpackWeather.Phase.FAULT) propulsion = "Ascent interrupted. Hold thrust to brake descent.";
+        if (phase == JetpackWeather.Phase.IMMERSED) propulsion = "Water protection. Surface to restart propulsion.";
+        if (phase == JetpackWeather.Phase.RESTARTING) propulsion = "Propulsion locked during restart.";
         String[] lines = {
             "Electric Jetpack",
             gear.status(),
             "Equipment " + (gear.equipped() ? "detected" : "absent") + " | Hook " + (gear.available() ? "active" : "inactive"),
             "Weather " + (storm ? "thunderstorm" : rain ? "rain" : "clear")
                     + " | Rain exposure " + (gear.available() ? gear.exposed() ? "yes" : "no" : "-"),
-            gear.phase() + " | Wetness " + gear.wetness() + "/100 | Timer " + gear.remaining() + " ticks",
-            gear.phase() == JetpackWeather.Phase.FAULT ? "Ascent interrupted. Hold thrust to brake descent." : "Native propulsion"
+            phase + " | Wetness " + gear.wetness() + "/100 | Timer " + gear.remaining() + " ticks",
+            propulsion
         };
         for (int i = 0; i < lines.length; ++i) drawCenteredString(fontRenderer, lines[i], width / 2, 25 + i * 14, 0xDFEBE7);
         super.drawScreen(mouseX, mouseY, partialTick);

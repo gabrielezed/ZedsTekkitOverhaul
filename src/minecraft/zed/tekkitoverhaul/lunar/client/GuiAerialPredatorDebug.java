@@ -41,14 +41,17 @@ final class GuiAerialPredatorDebug extends GuiScreen {
         List<String> display = new ArrayList<String>();
         String height = ecology.height < 0 ? "-" : String.format(Locale.ROOT, "%.1f blocks", ecology.height);
         display.add(String.format(Locale.ROOT, "%s   Clearance %s   Exposure %.0f/100", ecology.band, height, ecology.exposure));
-        display.add(ecology.status);
+        display.add(ecology.exposureRequirement + "  |  " + ecology.status);
+        display.add(ecology.ordinarySchedule);
         display.add("Lunar: " + ecology.lunarStatus);
-        display.add("Cooldown " + ecology.cooldownSeconds + "s   Check " + ecology.checkSeconds + "s");
-        display.add("Last check activity " + ecology.activity + "   Chance " + ecology.chance + "/1000");
-        display.add("Last check loaded predators " + ecology.loadedPredators + "   Local hostiles " + ecology.localHostiles);
-        display.add("Last attempt: " + ecology.lastAttempt + "  (" + ecology.placementTries + " sites)");
+        display.add("Ordinary checks " + ecology.ordinaryAttempts + "   Admissions " + ecology.ordinaryAdmissions
+                + "   Shared cooldown " + ecology.cooldownSeconds + "s");
+        display.add("Last ordinary: " + ecology.lastAttempt);
+        display.add("Roll " + ecology.chance + "/1000   Activity " + ecology.activity + "   Sites " + ecology.placementTries
+                + "   Birds " + ecology.insertedMembers + "/" + ecology.requestedMembers);
         display.add("Last end: " + ecology.lastEnd);
-        String group = ecology.activeMembers > 1 ? "1 flock" : ecology.activeMembers == 1 ? "1 predator" : "No active encounter";
+        String group = ecology.activeMembers == 0 ? ecology.encounterSource
+                : ecology.encounterSource + " encounter   " + ecology.activeMembers + (ecology.activeMembers == 1 ? " bird" : " birds");
         display.add(group + "   " + ecology.membership);
         if (ecology.activeMembers > 0) {
             display.add(ecology.attackerId < 0 ? "Attack pause: " + ecology.gapTicks + "t"

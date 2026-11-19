@@ -36,7 +36,8 @@ public final class ZtoConfigSelfTest {
                 && defaults.alchemicalConverter == 3024 && defaults.breacherEgg == 22005
                 && defaults.skirmisherEgg == 22004 && defaults.saboteurEgg == 22006
                 && defaults.tankEgg == 22007 && defaults.thiefEgg == 22008
-                && defaults.aerialPredatorEgg == 22009 && defaults.skelebirdEgg == 22010 && defaults.emcProfile.isEmpty(),
+                && defaults.aerialPredatorEgg == 22009 && defaults.skelebirdEgg == 22010
+                && defaults.magpieEgg == 22011 && defaults.emcProfile.isEmpty(),
                 "other defaults");
         byte[] generated = Files.readAllBytes(canonical);
         try (java.util.stream.Stream<Path> files = Files.list(fresh)) {
@@ -76,12 +77,13 @@ public final class ZtoConfigSelfTest {
 
         Path partial = Files.createDirectory(root.resolve("partial"));
         String edits = "# Personal comments\nunknown=kept\nplayerAssault = TRUE\nassaultOuterRadius=banana\n"
-                + "survivalDebugLogCapacity=999\nassaultActiveCap=-2\n";
+                + "survivalDebugLogCapacity=999\nassaultActiveCap=-2\nitem.magpieEgg=23223\n";
         write(partial, ZtoConfigLoader.FILE_NAME, edits);
         write(partial, "mod_ZedsTekkitOverhaul.cfg.bak", "playerAssault=false\nlunarPatrols=invalid\n"
                 + "assaultOuterRadius=22\nassaultSpawnBudget=99\nassaultWaveInterval=1\n");
         ZtoConfig mixed = ZtoConfigLoader.load(partial, false, LOG);
         check(mixed.playerAssault && mixed.lunarPatrols && mixed.assaultOuterRadius == 16, "precedence and invalid fallback");
+        check(mixed.magpieEgg == 23223 && mixed.skelebirdEgg == 22010, "independent magpie egg ID override");
         check(mixed.survivalDebugLogCapacity == 300 && mixed.assaultActiveCap == 2
                 && mixed.assaultSpawnBudget == 24 && mixed.assaultWaveInterval == 400, "legacy clamps");
         check(read(partial, ZtoConfigLoader.FILE_NAME).startsWith(edits), "comments and unknown keys preserved");

@@ -31,6 +31,7 @@ public final class ZTOAgent {
     private static volatile WeakReference<UnaryOperator<Object>> spawnReplacement = new WeakReference<>(null);
 
     private static volatile WeakReference<ObjDoubleConsumer<Object>> jetpack = new WeakReference<>(null);
+    private static volatile WeakReference<Predicate<Object>> jetpackGuard = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -87,16 +88,27 @@ public final class ZTOAgent {
         return hooks != null && Boolean.TRUE.equals(hooks.get(name));
     }
 
-    public static void registerJetpackMotion(ObjDoubleConsumer<Object> callback) { jetpack = new WeakReference<>(callback); }
+    public static void registerJetpack(ObjDoubleConsumer<Object> callback, Predicate<Object> guard) {
+        jetpack = new WeakReference<>(callback);
+        jetpackGuard = new WeakReference<>(guard);
+    }
 
     public static boolean jetpackActive(ClassLoader loader) {
-        return jetpack.get() != null && installed(loader, JetpackHook.TARGET);
+        return jetpack.get() != null && jetpackGuard.get() != null && installed(loader, JetpackHook.TARGET);
+    }
+
+    public static boolean jetpackBlocked(Object item, Object player) {
+        Predicate<Object> guard = jetpackGuard.get();
+        return guard != null && electricJetpack(item) && guard.test(player);
     }
 
     public static void jetpackThrust(Object item, Object player, double previousY) {
         ObjDoubleConsumer<Object> callback = jetpack.get();
-        if (callback != null && "ic2.common.ItemArmorJetpackElectric".equals(item.getClass().getName()))
-            callback.accept(player, previousY);
+        if (callback != null && electricJetpack(item)) callback.accept(player, previousY);
+    }
+
+    private static boolean electricJetpack(Object item) {
+        return "ic2.common.ItemArmorJetpackElectric".equals(item.getClass().getName());
     }
 
     public static void registerMouse(Predicate<Object> callback) { mouse = new WeakReference<>(callback); }

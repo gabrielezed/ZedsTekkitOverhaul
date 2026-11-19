@@ -2,8 +2,10 @@ import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.registry.FMLRegistry;
 import java.io.File;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import zed.tekkitoverhaul.survival.aerial.AerialEcology;
@@ -23,6 +25,10 @@ public final class AerialEcologyProbe {
         FMLCommonHandler.instance().beginLoading(FMLClientHandler.instance());
         FMLRegistry.registerRegistry(new ClientRegistry());
         AerialPredators.register();
+        if (args.length > 1 && "sample".equals(args[1])) {
+            sample(root);
+            return;
+        }
         terrain.world.forceRoll = 0;
         terrain.position(288.5, 52, false);
         terrain.seconds(6);
@@ -48,7 +54,7 @@ public final class AerialEcologyProbe {
         day.position(288.5, 4, true);
         day.seconds(30);
         int daytimeChance = day.snapshot().chance;
-        check(daytimeChance > 0 && day.snapshot().admissions == 0 && "GROUND".equals(day.snapshot().band),
+        check(daytimeChance == 18 && day.snapshot().admissions == 0 && "GROUND".equals(day.snapshot().band),
                 "ground daytime has a small nonzero chance");
         // Pass the next admission roll and miss the separate aggression roll.
         day.world.passiveAfterAdmission = true;
@@ -62,7 +68,7 @@ public final class AerialEcologyProbe {
         night.world.forceRoll = 0;
         night.position(288.5, 4, true);
         night.seconds(30);
-        check(night.snapshot().chance > daytimeChance && night.snapshot().activeMembers == 1,
+        check(night.snapshot().chance == 65 && night.snapshot().activeMembers == 1,
                 "night is more favorable and still permits only a single ground predator");
         night.ticks(420);
         check(night.warnings == 1 && night.commitments == 1 && night.snapshot().admissions == 1,
@@ -72,6 +78,15 @@ public final class AerialEcologyProbe {
         admitHigh(normal, 0);
         check(normal.snapshot().activeMembers == 3, "Normal cap admits a three-member flock");
         verifyFormation(normal);
+        Fixture fallback = new Fixture(root, "aerial-fallback", 2, 6000);
+        fallback.world.lowFormationCeiling = true;
+        admitHigh(fallback, 0);
+        Snapshot smaller = fallback.snapshot();
+        check(smaller.requestedMembers == 3 && smaller.insertedMembers == 2 && smaller.placementTries == 9
+                && smaller.ordinaryAdmissions == 1 && "Ordinary".equals(smaller.encounterSource),
+                "eight blocked three-bird sites trigger a real two-bird formation");
+        verifyFormation(fallback);
+        System.out.println("Formation fallback: requested 3, inserted 2 on site 9");
         int lastDive = -100;
         int dives = 0;
         boolean removed = false;
@@ -178,10 +193,206 @@ public final class AerialEcologyProbe {
         check(disabled.snapshot().status.contains("Disabled") && disabled.snapshot().admissions == 0,
                 "natural admission can be disabled independently of the registered species");
         verifySkelebirdEcology(root);
+        verifyNaturalRestage(root);
+        verifyChickenHunting(root);
         System.out.printf("Admission fixtures: Normal flock 3, Hard flock %d at activity %d, ground rolls %d/%d per 1000%n",
                 hardSize, hard.snapshot().activity, daytimeChance, night.snapshot().chance);
         System.out.println("PASS aerial altitude, exposure, ground day/night, ambient flight, safe spawn, "
                 + "Normal/Hard territory flocks, stagger, lost attacker, cooldown, reload, bounds and disabled admission");
+    }
+
+    private static void verifyNaturalRestage(File root) throws Exception {
+        Fixture fixture = new Fixture(root, "aerial-natural-restage", 2, 18000);
+        fixture.position(288.5, 4, true);
+        fixture.world.forceRoll = 0;
+        fixture.seconds(30);
+        EntityAerialPredator bird = fixture.mobs().get(0);
+        for (int i = 0; i < 210 && bird.flight() != Flight.PREPARE; ++i) fixture.ticks(1);
+        check(bird.flight() == Flight.PREPARE, "naturally admitted ground Fugl warns");
+        int x = (int) Math.floor((bird.o + fixture.player.o) * 0.5);
+        int y = (int) Math.floor((bird.p + fixture.player.y.b + 1) * 0.5);
+        int z = (int) Math.floor((bird.q + fixture.player.q) * 0.5);
+        for (int bx = x - 1; bx <= x + 1; ++bx)
+            for (int by = y - 2; by <= y + 2; ++by)
+                for (int bz = z - 1; bz <= z + 1; ++bz) fixture.world.g(bx, by, bz, 1);
+        for (int i = 0; i < 22 && bird.flight() == Flight.PREPARE; ++i) fixture.ticks(1);
+        check(bird.rejectedWarnings() == 1 && bird.diveCommitments() == 0 && fixture.snapshot().attackerId < 0
+                && fixture.snapshot().gapTicks > 0, "obstruction cancels the warning and releases the turn");
+        boolean changedLane = false;
+        for (int i = 0; i < 400 && bird.diveCommitments() == 0; ++i) {
+            fixture.ticks(1);
+            changedLane |= bird.diveStatus().contains("different lane");
+        }
+        check(changedLane && bird.diveCommitments() == 1 && fixture.warnings >= 2,
+                "Fugl commits from an alternate lane with the barrier still standing: " + bird.lastExit()
+                        + " / " + bird.lastDiveRejection());
+
+        Fixture skeleton = new Fixture(root, "aerial-natural-sidestep", 2, 18000);
+        skeleton.position(288.5, 4, true);
+        for (int i = 0; i < 4800; ++i) skeleton.territory.tick(skeleton.player, false);
+        skeleton.world.speciesRoll = 7;
+        skeleton.world.forceRoll = 0;
+        skeleton.seconds(30);
+        EntityAerialPredator crossing = skeleton.mobs().get(0);
+        check(crossing instanceof EntitySkelebird, "established Normal night ground admits a solitary Skelebird");
+        for (int i = 0; i < 300 && crossing.flight() != Flight.PREPARE; ++i) skeleton.ticks(1);
+        check(crossing.flight() == Flight.PREPARE, "natural Skelebird locks its warning aim");
+        double lockX = crossing.destinationX(), lockZ = crossing.destinationZ();
+        double dx = crossing.o - skeleton.player.o, dz = crossing.q - skeleton.player.q;
+        double length = Math.sqrt(dx * dx + dz * dz);
+        skeleton.player.c(lockX - dz / length * 4, 4, lockZ + dx / length * 4, 0, 0);
+        skeleton.player.z = true;
+        for (int i = 0; i < 70 && crossing.flight() != Flight.RECOVER; ++i) skeleton.ticks(1);
+        check(crossing.diveCommitments() == 1 && crossing.lastFailure().contains("missed"),
+                "the warning-time sidestep defeats a natural Skelebird crossing");
+        System.out.println("PASS ordinary Fugl restage around a persistent barrier and natural Skelebird warning-time dodge");
+    }
+
+    private static void sample(File root) throws Exception {
+        measure(root, "ground-day-N0", 2, 6000, 4, false, false, 2400);
+        measure(root, "ground-night-N0", 2, 18000, 4, false, false, 2400);
+        measure(root, "ground-night-N24", 2, 18000, 4, true, false, 2400);
+        measure(root, "ground-night-H24", 3, 18000, 4, true, false, 2400);
+        measure(root, "ridge-night-H24", 3, 18000, 4, true, false, 1600);
+        measure(root, "shelter-night-H24", 3, 18000, 4, true, true, 400);
+        measure(root, "low-air-day-N0", 2, 6000, 13, false, false, 400);
+        measure(root, "exposed-day-N0", 2, 6000, 27, false, false, 400);
+        measure(root, "high-night-N0", 2, 18000, 52, false, false, 400);
+        measure(root, "high-night-H0", 3, 18000, 52, false, false, 400);
+        measure(root, "high-night-H24", 3, 18000, 52, true, false, 400);
+    }
+
+    private static void measure(File root, String name, int difficulty, int time, int altitude,
+                                boolean established, boolean sheltered, int trials) throws Exception {
+        Fixture fixture = new Fixture(root, name, difficulty, time);
+        fixture.position(288.5, 4, true);
+        if (established) for (int t = 0; t < 4800; ++t) fixture.territory.tick(fixture.player, false);
+        if (sheltered) fixture.world.g(288, 7, 288, 20);
+        if (name.startsWith("ridge")) {
+            for (int x = 278; x <= 298; ++x) {
+                for (int y = 4; y <= 15; ++y) fixture.world.g(x, y, 277, 1);
+            }
+        }
+        fixture.position(288.5, altitude, altitude == 4);
+        fixture.seconds(130);
+        Field nextCheck = AerialEcology.class.getDeclaredField("nextCheck");
+        nextCheck.setAccessible(true);
+        Field data = AerialEcology.class.getDeclaredField("state");
+        data.setAccessible(true);
+        Object saved = data.get(fixture.ecology);
+        Field cooldown = saved.getClass().getDeclaredField("cooldownSeconds");
+        cooldown.setAccessible(true);
+        Field birdRandom = nn.class.getDeclaredField("U");
+        birdRandom.setAccessible(true);
+        fixture.world.r = new Random(926833L);
+        int attempts = 0, misses = 0, blocked = 0, hunting = 0, passing = 0;
+        int acquired = 0, warned = 0, committed = 0, fugl = 0, skeletal = 0, fallback = 0;
+        int skeletalGroups = 0;
+        int[] sizes = new int[5];
+        for (int trial = 0; trial < trials; ++trial) {
+            // Each trial samples an eligible check independently of time spent on quiet cooldown.
+            nextCheck.setInt(fixture.ecology, 0);
+            cooldown.setInt(saved, 0);
+            fixture.seconds(1);
+            Snapshot result = fixture.snapshot();
+            if (result.checkSeconds == 0) continue;
+            ++attempts;
+            List<EntityAerialPredator> birds = fixture.mobs();
+            if (birds.isEmpty()) {
+                if (result.lastAttempt.contains("roll missed")) ++misses;
+                else ++blocked;
+                continue;
+            }
+            ++sizes[birds.size() - 1];
+            if (birds.get(0) instanceof EntitySkelebird) ++skeletalGroups;
+            if (result.placementTries > 8) ++fallback;
+            for (EntityAerialPredator bird : birds) {
+                if (bird instanceof EntitySkelebird) ++skeletal;
+                else ++fugl;
+                birdRandom.set(bird, new Random(7519L + trial));
+            }
+            if (result.status.contains("hunt")) {
+                ++hunting;
+                boolean hasTarget = false;
+                fixture.warnings = fixture.commitments = 0;
+                for (int t = 0; t < 660 && fixture.commitments == 0 && fixture.snapshot().activeMembers > 0; ++t) {
+                    fixture.ticks(1);
+                    for (EntityAerialPredator bird : birds) hasTarget |= !"-".equals(bird.targetName());
+                }
+                if (hasTarget) ++acquired;
+                if (fixture.warnings > 0) ++warned;
+                if (fixture.commitments > 0) ++committed;
+            } else ++passing;
+            for (EntityAerialPredator bird : birds) bird.A();
+            fixture.world.n();
+            fixture.position(288.5, altitude, altitude == 4);
+            fixture.seconds(1);
+        }
+        Snapshot end = fixture.snapshot();
+        System.out.printf("%s %s activity=%d odds=%d trials=%d checks=%d miss=%d blocked=%d admitted=%d Fugl=%d Skelebird=%d skeletalGroups=%d sizes=%s fallback=%d passing=%d hunting=%d acquired=%d warned=%d committed=%d%n",
+                name, end.band, end.activity, end.chance, trials, attempts, misses, blocked, hunting + passing, fugl, skeletal,
+                skeletalGroups, Arrays.toString(sizes), fallback, passing, hunting, acquired, warned, committed);
+    }
+
+    private static void verifyChickenHunting(File root) throws Exception {
+        Fixture farm = new Fixture(root, "fugl-chicken-hunt", 2, 6000);
+        farm.position(288.5, 4, true);
+        farm.world.passiveAfterAdmission = true;
+        for (int i = 0; i < 45 && farm.snapshot().admissions == 0; ++i) farm.seconds(1);
+        check(farm.snapshot().activeMembers == 1 && farm.snapshot().status.contains("passing"),
+                "chicken fixture uses the ordinary passive daytime encounter");
+        EntityAerialPredator bird = farm.mobs().get(0);
+        java.lang.reflect.Field random = nn.class.getDeclaredField("U");
+        random.setAccessible(true);
+        random.set(bird, new Random(44L) {
+            @Override public int nextInt(int bound) { return bound == 8 ? 0 : super.nextInt(bound); }
+        });
+
+        farm.ticks(80); // Finish the arrival leg before placing the farm alongside the passing bird.
+        rd exposed = chicken(farm, bird.o + 7, bird.q);
+        rd roofed = chicken(farm, bird.o - 9, bird.q - 7);
+        for (int x = (int) roofed.o - 2; x <= (int) roofed.o + 2; ++x) {
+            for (int z = (int) roofed.q - 2; z <= (int) roofed.q + 2; ++z) farm.world.g(x, 7, z, 1);
+        }
+        rd second = chicken(farm, bird.o + 10, bird.q + 2);
+        boolean activePrey = false;
+        for (int tick = 0; tick < 365; ++tick) {
+            farm.ticks(1);
+            activePrey |= farm.snapshot().preyStatus.contains("Chicken #" + exposed.f);
+        }
+        check(activePrey && exposed.bb() <= 0 && farm.commitments == 1,
+                "the passing Fugl selects exposed prey and commits one damaging dive; " + bird.lastExit()
+                        + " / " + bird.lastFailure() + " / " + farm.commitments + " health " + exposed.bb());
+        check(roofed.bb() == 4 && second.bb() == 4,
+                "roofed and subsequent chickens take no damage");
+
+        Fixture enclosure = new Fixture(root, "fugl-walled-prey", 2, 6000);
+        enclosure.position(288.5, 4, true);
+        enclosure.world.passiveAfterAdmission = true;
+        for (int i = 0; i < 45 && enclosure.snapshot().admissions == 0; ++i) enclosure.seconds(1);
+        EntityAerialPredator passer = enclosure.mobs().get(0);
+        random.set(passer, new Random(44L) {
+            @Override public int nextInt(int bound) { return bound == 8 ? 0 : super.nextInt(bound); }
+        });
+        enclosure.ticks(80);
+        int gx = (int) Math.floor(passer.o + 7), gz = (int) Math.floor(passer.q);
+        for (int x = gx - 1; x <= gx + 1; ++x) {
+            for (int z = gz - 1; z <= gz + 1; ++z) {
+                if (x == gx && z == gz) continue;
+                for (int y = 4; y <= 10; ++y) enclosure.world.g(x, y, z, 1);
+            }
+        }
+        rd walled = chicken(enclosure, gx + 0.5, gz + 0.5);
+        enclosure.ticks(365);
+        check(walled.bb() == 4 && enclosure.commitments == 0, "tall side walls prevent a descending strike");
+        System.out.println("PASS exposed chicken damage, roofed and walled enclosure protection, one-prey budget");
+    }
+
+    private static rd chicken(Fixture farm, double x, double z) {
+        rd prey = new rd(farm.world);
+        prey.c(x, 4, z, 0, 0);
+        check(farm.world.a(prey), "insert farm chicken");
+        return prey;
     }
 
     private static void verifySkelebirdEcology(File root) throws Exception {
@@ -278,6 +489,7 @@ public final class AerialEcologyProbe {
             world.r = new Random(3865L) {
                 @Override public int nextInt(int bound) {
                     if (bound == 100) return world.speciesRoll;
+                    if (bound == 6 && world.lowFormationCeiling) return 0;
                     if (bound != 1000) return super.nextInt(bound);
                     if (world.passiveAfterAdmission) {
                         world.passiveAfterAdmission = false;
@@ -304,6 +516,8 @@ public final class AerialEcologyProbe {
 
         void ticks(int count) {
             for (int i = 0; i < count; i++) {
+                wu.b(); // Reset the native AABB and ray vector pools like the windowed client loop.
+                bo.b();
                 for (EntityAerialPredator mob : mobs()) {
                     Flight before = mob.flight();
                     world.a(mob, true);
@@ -335,12 +549,15 @@ public final class AerialEcologyProbe {
 
     private static final class ProbeWorld extends xd {
         int forceRoll = 999, speciesRoll = 99;
-        boolean limitPlacement, passiveAfterAdmission;
+        boolean limitPlacement, passiveAfterAdmission, lowFormationCeiling;
         ProbeWorld(File root, String name) {
             super(new aia(root, name, false), name, NaturalSpawnProbe.SETTINGS);
         }
         @Override public void a(nn entity, String sound, float volume, float pitch) {}
         @Override public void a(double x, double y, double z, String sound, float volume, float pitch) {}
+        @Override public boolean m(int x, int y, int z) {
+            return (!lowFormationCeiling || y < 64) && super.m(x, y, z);
+        }
         @Override public boolean b(int x, int y, int z, int maxX, int maxY, int maxZ) {
             if (limitPlacement && (x < 267 || z < 267 || maxX > 309 || maxZ > 309)) return false;
             return super.b(x, y, z, maxX, maxY, maxZ);

@@ -1,6 +1,8 @@
 package zed.tekkitoverhaul.survival.tactical;
 
 import java.util.List;
+import java.util.function.BiConsumer;
+import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.Chunk;
 import net.minecraft.src.ChunkProvider;
 import net.minecraft.src.EntityCreeper;
@@ -23,42 +25,61 @@ public final class EnderkinEcology {
     private EnderkinEcology() {}
 
     public static EntityLiving select(EntityLiving original, int activity) {
+        return select(original, activity, null);
+    }
+
+    public static EntityLiving select(EntityLiving original, int activity, BiConsumer<Boolean, String> observer) {
         Class<?> type = original.getClass();
         if (type != EntityZombie.class && type != EntitySkeleton.class && type != EntityCreeper.class
                 && type != EntityEnderman.class) return original;
         World world = original.worldObj;
         int roll = world.rand.nextInt(1000);
-        int residentBonus = Math.min(20, activity);
-        if (roll >= 145 + residentBonus) return original;
+        int ordinaryBudget = 34 + 2 * (Math.min(20, Math.max(0, activity)) / 2);
+        if (roll >= ordinaryBudget + 111) return original;
 
-        // Cheap independent habitat rejection before looking up the nearby hostile population.
-        int skirmisher = 15 + residentBonus / 2;
-        int breacher = skirmisher + 11 + residentBonus / 2;
-        int thief = breacher + 6;
-        int tank = thief + 2;
-        int saboteur = tank + 5;
-        if (roll >= saboteur && !nearIndustry(original)) return original;
+        int x = MathHelper.floor_double(original.posX), z = MathHelper.floor_double(original.posZ);
+        BiomeGenBase biome = BiomeEcology.loadedBiome(world, x, z);
+        if (biome == null) return rejected(original, observer, "Candidate chunk unavailable");
+        String location = biome.biomeName + " (" + biome.biomeID + ")";
+        BiomeEcology family = BiomeEcology.family(biome.biomeID);
+        if (world.worldProvider.worldType != 0 || family == BiomeEcology.MUSHROOM || family == BiomeEcology.OUTSIDE_OVERWORLD)
+            return rejected(original, observer, location + ": protected habitat");
+
+        // Keep the previous five incidental Saboteur tickets, plus 106 conditional industrial tickets.
+        if (roll >= ordinaryBudget + 5 && !nearIndustry(original))
+            return rejected(original, observer, location + ": no exposed industry");
+        int role = roll < ordinaryBudget ? new BiomeEcology.Profile(world, x, z, biome).choose(world.rand) : 4;
 
         List<?> nearby = world.getEntitiesWithinAABB(TacticalHostile.class, original.boundingBox.expand(32, 16, 32));
         int alive = 0;
         for (Object entity : nearby) {
             TacticalHostile mob = (TacticalHostile) entity;
             if (!mob.isEntityAlive()) continue;
-            if (++alive >= 5 || (roll >= thief && roll < tank && mob instanceof EntityTank)
-                    || (roll >= tank && mob instanceof EntitySaboteur)) return original;
+            if (++alive >= 5 || (role == 3 && mob instanceof EntityTank)
+                    || (role == 4 && mob instanceof EntitySaboteur))
+                return rejected(original, observer, location + ": local Enderkin cap");
         }
         TacticalHostile replacement;
-        if (roll < skirmisher) replacement = new EntitySkirmisher(world);
-        else if (roll < breacher) replacement = new EntityBreacher(world);
-        else if (roll < thief) replacement = new EntityThief(world);
-        else if (roll < tank) replacement = new EntityTank(world);
-        else replacement = new EntitySaboteur(world);
+        switch (role) {
+            case 0: replacement = new EntitySkirmisher(world); break;
+            case 1: replacement = new EntityBreacher(world); break;
+            case 2: replacement = new EntityThief(world); break;
+            case 3: replacement = new EntityTank(world); break;
+            default: replacement = new EntitySaboteur(world); break;
+        }
         replacement.setLocationAndAngles(original.posX, original.boundingBox.minY, original.posZ, original.rotationYaw, 0);
         // The vanilla candidate already passed the light roll at these feet coordinates.
         if (!EnderkinBlink.loaded(world, replacement.boundingBox)
                 || !EnderkinBlink.floor(world, replacement.boundingBox) || !EnderkinBlink.clear(replacement, replacement.boundingBox)
-                || !world.checkIfAABBIsClear(replacement.boundingBox)) return original;
+                || !world.checkIfAABBIsClear(replacement.boundingBox))
+            return rejected(original, observer, location + ": replacement clearance");
+        if (observer != null) observer.accept(true, location + ": " + replacement.getClass().getSimpleName().substring(6));
         return replacement;
+    }
+
+    private static EntityLiving rejected(EntityLiving original, BiConsumer<Boolean, String> observer, String reason) {
+        if (observer != null) observer.accept(false, reason);
+        return original;
     }
 
     private static boolean nearIndustry(EntityLiving candidate) {

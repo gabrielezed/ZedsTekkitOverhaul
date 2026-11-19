@@ -1,7 +1,9 @@
 param(
     [string[]]$Java = @('java'),
     [string]$PackJava,
-    [switch]$Pack
+    [switch]$Pack,
+    [switch]$AerialSample,
+    [string]$CandidateJar
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,15 +22,16 @@ try {
         & $runtime '-Xverify:all' "-javaagent:$agent" -cp $out.FullName zed.tekkitoverhaul.agent.AgentProbe archive $overlay
         if ($LASTEXITCODE) { throw "Standalone agent probe failed for $runtime" }
     }
-    if ($Pack) {
+    if ($Pack -or $AerialSample) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
+        if ($CandidateJar) { $CandidateJar = (Resolve-Path -LiteralPath $CandidateJar).Path }
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
-        $headlessSources = @('NaturalSpawnProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
+        $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
-            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java') |
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft + $industrialCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -39,6 +42,13 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($AerialSample) {
+                $sampleClasspath = $headless.Clone()
+                if ($CandidateJar) { $sampleClasspath[2] = $CandidateJar }
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($sampleClasspath -join ';') AerialEcologyProbe $out.FullName sample
+                if ($LASTEXITCODE) { throw 'Ordinary aerial balance sample failed.' }
+            }
+            if (!$Pack) { return }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($classpath + $mods.FullName) -join ';') zed.tekkitoverhaul.agent.AgentProbe pack
             if ($LASTEXITCODE) { throw 'Pack ABI agent probe failed.' }
             $reduced = @($mods | Where-Object Name -in 'buildcraft-client-A-core-2.2.14.zip','industrialcraft-2-client_1.97.jar')
@@ -46,6 +56,12 @@ try {
             if ($LASTEXITCODE) { throw 'Reduced pack ABI agent probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') NaturalSpawnProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Natural spawning comparison failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') BiomeEcologyProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') MagpieScavengeProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Magpie scavenging and egg probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') WaterBehaviorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Mob shoreline and drowning probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') EnderkinBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName

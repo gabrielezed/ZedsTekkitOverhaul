@@ -9,6 +9,7 @@ import zed.tekkitoverhaul.survival.ItemSurvivalSpawnEgg;
 public final class AerialPredators {
     public static final String ENTITY_NAME = "ZTO.AerialPredator";
     public static final String SKELEBIRD_NAME = "ZTO.Skelebird";
+    public static final String MAGPIE_NAME = "ZTO.Magpie";
 
     private AerialPredators() {}
 
@@ -17,6 +18,8 @@ public final class AerialPredators {
         ModLoader.addLocalization("entity." + ENTITY_NAME + ".name", "Fugl");
         ModLoader.registerEntityID(EntitySkelebird.class, SKELEBIRD_NAME, ModLoader.getUniqueEntityId());
         ModLoader.addLocalization("entity." + SKELEBIRD_NAME + ".name", "Skelebird");
+        ModLoader.registerEntityID(EntityMagpie.class, MAGPIE_NAME, ModLoader.getUniqueEntityId());
+        ModLoader.addLocalization("entity." + MAGPIE_NAME + ".name", "Magpie");
     }
 
     public static void registerEgg(int id) {
@@ -25,6 +28,10 @@ public final class AerialPredators {
 
     public static void registerSkelebirdEgg(int id) {
         registerEgg(id, SKELEBIRD_NAME, "skelebirdEgg", "ztoSkelebirdEgg", "Skelebird", 0x989898, 0x494949);
+    }
+
+    public static void registerMagpieEgg(int id) {
+        registerEgg(id, MAGPIE_NAME, "magpieEgg", "ztoMagpieEgg", "Magpie", 0x202634, 0xDFE0D4);
     }
 
     private static void registerEgg(int id, String entity, String setting, String key, String name, int shell, int spots) {

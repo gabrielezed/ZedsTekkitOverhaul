@@ -1,6 +1,8 @@
 package zed.tekkitoverhaul.settlement;
 
+import java.util.Arrays;
 import net.minecraft.src.Block;
+import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 
@@ -16,6 +18,9 @@ final class SiteSurvey {
     private final byte[] devices = new byte[VOLUME];
     private final int[] membership = new int[VOLUME];
     private final int[] queue = new int[VOLUME];
+    private final TileEntity[] tiles = new TileEntity[VOLUME];
+    private final byte[] industrial = new byte[VOLUME], faces = new byte[VOLUME];
+    private int cursor, pendingId, cableCount, unsupported;
     int x, y, z, minY, layer, reads, focusX, focusY, focusZ;
     boolean followUp;
     boolean active, changed;
@@ -34,12 +39,22 @@ final class SiteSurvey {
         this.z = z;
         minY = Math.max(0, Math.min(256 - LAYERS, y - 2));
         layer = 0;
+        cursor = 0;
+        pendingId = 0;
+        cableCount = 0;
+        unsupported = 0;
+        Arrays.fill(tiles, null);
         changed = false;
         active = true;
     }
 
+    void cancel() {
+        active = false;
+        Arrays.fill(tiles, null);
+    }
+
     void observeMutation(int px, int py, int pz) {
-        if (active && py >= minY && py < minY + layer
+        if (active && py >= minY && py < minY + layer + (cursor > 0 ? 1 : 0)
                 && Math.abs(px - x) <= RADIUS && Math.abs(pz - z) <= RADIUS) changed = true;
     }
 
@@ -102,23 +117,61 @@ final class SiteSurvey {
                 if (!world.blockExists(cx << 4, height, cz << 4)) return false;
             }
         }
-        int index = layer * SLICE;
-        for (int pz = front; pz < front + WIDTH; pz++) {
-            for (int px = left; px < left + WIDTH; px++) {
-                int id = world.getBlockId(px, height, pz);
+        Ic2SiteAdapter adapter = Ic2SiteAdapter.get();
+        while (cursor < SLICE && reads < SLICE) {
+            int index = layer * SLICE + cursor;
+            int px = left + cursor % WIDTH, pz = front + cursor / WIDTH;
+            int id = pendingId;
+            if (id == 0) {
+                id = world.getBlockId(px, height, pz);
                 reads++;
-                devices[index] = (byte) utilityType(id);
-                int flags = 0;
-                Block block = id > 0 && id < Block.blocksList.length ? Block.blocksList[id] : null;
-                if (block != null && block.blockMaterial.isSolid()) {
-                    flags |= SOLID;
-                    if (provenance.observation(world, px, height, pz) == id) flags |= MANUAL;
-                    else if (builtMaterial(id)) flags |= INFERRED;
+            }
+            if (adapter.inspect(id) && reads + 3 > SLICE) {
+                pendingId = id;
+                return true;
+            }
+            pendingId = 0;
+            cursor++;
+            devices[index] = (byte) utilityType(id);
+            industrial[index] = 0;
+            blocks[index] = 0;
+            if (adapter.family(id)) {
+                if (adapter.inspect(id)) {
+                    int meta = world.getBlockMetadata(px, height, pz);
+                    TileEntity tile = Ic2SiteAdapter.loadedTile(world.getChunkFromChunkCoords(px >> 4, pz >> 4),
+                            px, height, pz);
+                    reads += 3; // Metadata, loaded chunk retrieval and tile lookup.
+                    int type = adapter.type(id, meta, tile);
+                    if (type == Ic2SiteAdapter.CABLE) {
+                        int color = adapter.cableColor(meta, tile);
+                        if (color >= 0) {
+                            tiles[index] = tile;
+                            industrial[index] = (byte) (color + 1);
+                            cableCount++;
+                            continue;
+                        }
+                    } else if (type > 0) {
+                        tiles[index] = tile;
+                        industrial[index] = (byte) -type;
+                        faces[index] = (byte) adapter.outputFace(type, tile);
+                        if (provenance.observation(world, px, height, pz) == id) blocks[index] = INDUSTRIAL_MANUAL;
+                        continue;
+                    }
                 }
-                blocks[index++] = (byte) flags;
+                unsupported++;
+                continue;
+            }
+            Block block = id > 0 && id < Block.blocksList.length ? Block.blocksList[id] : null;
+            if (block != null && block.blockMaterial.isSolid()) {
+                blocks[index] = SOLID;
+                if (provenance.observation(world, px, height, pz) == id) blocks[index] |= MANUAL;
+                else if (builtMaterial(id)) blocks[index] |= INFERRED;
             }
         }
-        layer++;
+        if (cursor == SLICE) {
+            layer++;
+            cursor = 0;
+        }
         return true;
     }
 
@@ -153,26 +206,44 @@ final class SiteSurvey {
         }
         for (int i = 0; i < VOLUME; i++) {
             int type = devices[i];
+            if (tiles[i] != null && tiles[i].isInvalid()) {
+                if (industrial[i] > 0) cableCount--;
+                industrial[i] = 0;
+                tiles[i] = null;
+            }
+            if (industrial[i] < 0) {
+                best.found[IC2]++;
+                if (associated(best, i)) {
+                    best.associated[IC2]++;
+                    best.machineTypes |= 1 << -industrial[i];
+                    if ((blocks[i] & INDUSTRIAL_MANUAL) != 0) best.placedMachines++;
+                }
+            }
             if (type == 0) continue;
             best.found[type]++;
             if (associated(best, i)) best.associated[type]++;
         }
+        best.cables = cableCount;
+        best.unsupported = unsupported;
+        if (cableCount > 0 && best.associated[IC2] >= 2) observeNetworks(best);
         best.anchorCover = cover(best, x, focusY, z);
         return best;
     }
 
-    boolean associatedUtility(Evidence evidence, int px, int py, int pz, int type) {
+    boolean associatedUtility(Evidence evidence, int px, int py, int pz, int type, TileEntity tile) {
         int dx = px - x + RADIUS, dz = pz - z + RADIUS, h = py - minY;
         if (dx < 0 || dx >= WIDTH || dz < 0 || dz >= WIDTH || h < 0 || h >= LAYERS) return false;
         int index = h * SLICE + dz * WIDTH + dx;
-        return devices[index] == type && associated(evidence, index);
+        return (type == IC2 ? industrial[index] < 0 && tile != null && tiles[index] == tile && !tile.isInvalid()
+                : devices[index] == type) && associated(evidence, index);
     }
 
     boolean walkable(int px, int py, int pz) {
         int dx = px - x + RADIUS, dz = pz - z + RADIUS, h = py - minY;
         if (dx < 0 || dx >= WIDTH || dz < 0 || dz >= WIDTH || h <= 0 || h + 1 >= LAYERS) return false;
         int index = h * SLICE + dz * WIDTH + dx;
-        return (blocks[index - SLICE] & SOLID) != 0 && ((blocks[index] | blocks[index + SLICE]) & SOLID) == 0;
+        return (blocks[index - SLICE] & SOLID) != 0 && ((blocks[index] | blocks[index + SLICE]) & SOLID) == 0
+                && industrial[index] >= 0 && industrial[index + SLICE] >= 0;
     }
 
     private boolean associated(Evidence evidence, int index) {
@@ -232,6 +303,69 @@ final class SiteSurvey {
         return utilityType(id) != 0;
     }
 
+    static final int IC2 = 4, UTILITY_TYPES = 5;
+    private static final byte INDUSTRIAL_MANUAL = 16, NETWORK_VISITED = 32;
+    private static final int MAX_LOCAL_CABLES = 12;
+
+    /** Components use only sampled cable faces. Machines terminate paths and must share the selected floor. */
+    private void observeNetworks(Evidence evidence) {
+        byte[] endpoints = new byte[VOLUME];
+        int[] touched = new int[VOLUME];
+        for (int root = 0; root < VOLUME; root++) {
+            if (industrial[root] <= 0 || (blocks[root] & NETWORK_VISITED) != 0) continue;
+            int head = 0, tail = 1, count = 0;
+            boolean clipped = false;
+            queue[0] = root;
+            blocks[root] |= NETWORK_VISITED;
+            while (head < tail) {
+                int cell = queue[head++];
+                for (int face = 0; face < 6; face++) {
+                    int next = neighbor(cell, face);
+                    if (next < 0) {
+                        clipped = true;
+                    } else if (industrial[next] > 0 && (blocks[next] & NETWORK_VISITED) == 0
+                            && (industrial[cell] == 1 || industrial[next] == 1 || industrial[cell] == industrial[next])) {
+                        blocks[next] |= NETWORK_VISITED;
+                        queue[tail++] = next;
+                    } else if (industrial[next] < 0 && associated(evidence, next)) {
+                        int type = -industrial[next];
+                        int role = type == Ic2SiteAdapter.GENERATOR ? 1 : type < Ic2SiteAdapter.STORAGE ? 2
+                                : faces[next] < 0 ? 0 : faces[next] == (face ^ 1) ? 1 : 2;
+                        if (role == 0) continue;
+                        if (endpoints[next] == 0) touched[count++] = next;
+                        endpoints[next] |= role;
+                    }
+                }
+            }
+            int sources = 0, sinks = 0, both = 0;
+            for (int i = 0; i < count; i++) {
+                int roles = endpoints[touched[i]];
+                if ((roles & 1) != 0) sources++;
+                if ((roles & 2) != 0) sinks++;
+                if (roles == 3) both++;
+                endpoints[touched[i]] = 0;
+            }
+            int pairs = sources * sinks - both;
+            if (clipped || tail > MAX_LOCAL_CABLES) {
+                evidence.limitedNetworks++;
+            } else if (pairs > 0) {
+                evidence.clusters++;
+                evidence.connections += pairs;
+            }
+        }
+    }
+
+    private static int neighbor(int cell, int face) {
+        switch (face) {
+            case 0: return cell < SLICE ? -1 : cell - SLICE;
+            case 1: return cell >= VOLUME - SLICE ? -1 : cell + SLICE;
+            case 2: return cell / WIDTH % WIDTH == 0 ? -1 : cell - WIDTH;
+            case 3: return cell / WIDTH % WIDTH == WIDTH - 1 ? -1 : cell + WIDTH;
+            case 4: return cell % WIDTH == 0 ? -1 : cell - 1;
+            default: return cell % WIDTH == WIDTH - 1 ? -1 : cell + 1;
+        }
+    }
+
     static int utilityType(int id) {
         if (id == Block.workbench.blockID) return 1;
         if (id == Block.stoneOvenIdle.blockID || id == Block.stoneOvenActive.blockID) return 2;
@@ -257,7 +391,8 @@ final class SiteSurvey {
     static final class Evidence {
         Bounds bounds;
         int manual, inferred, anchorCover, faces, component;
-        final int[] found = new int[4], associated = new int[4];
+        int cables, unsupported, limitedNetworks, clusters, connections, machineTypes, placedMachines;
+        final int[] found = new int[UTILITY_TYPES], associated = new int[UTILITY_TYPES];
 
         boolean spread() {
             return bounds != null && bounds.maxX - bounds.minX >= 2 && bounds.maxZ - bounds.minZ >= 2;

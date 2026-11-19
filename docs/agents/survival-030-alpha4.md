@@ -1,5 +1,7 @@
 # Survival 0.3.0-alpha.4 implementation and 0.4 handoff
 
+The [industrial recognition follow-up](settlement-industrial-recognition.md) extends the utility and local survey observations described here. This record describes the original alpha.4 implementation and its historical acceptance.
+
 This iteration implements the owner-approved compound, protection and read-only query scope. The [milestone specification](survival-030-spec.md) still contains proposals for later work. The [alpha.3 record](survival-030-implementation.md) describes the earlier single-part registry and the local survey it introduced. This implementation supports the [Project Vision](../../PROJECT_VISION.md) by recognizing a player's ordinary work areas without claims and giving future encounters observations of actual construction. The [0.4 director](survival-040-spec.md#5-integration-with-settlement-recognition) owns eligibility and tactical decisions.
 
 ## Compound recognition

@@ -1,4 +1,60 @@
-# Alpha.5 Saboteur industrial integration
+# Saboteur industrial integration
+
+## Survival 0.2.3-alpha.2 dismantling
+
+On Normal and Hard, one in three eligible actor scans considers physical removal. The actor selects a visible block or multipart face, moves within 2.4 blocks and signals with an orange link and sparks for 35 ticks. A hit, obstruction, lost reach, replacement, unloaded neighbor or unsafe transport state cancels the attempt. The actor can carry one successfully removed component in its lifetime. It takes a short evasive route and tries a nearby clear recovery point after 100 ticks. Death uses the same release check. Cargo stays with the actor until a release succeeds, including across saves.
+
+The natural selector keeps the five incidental Saboteur tickets and 106 industrial tickets within the existing roll. Exposed supported cables, pipes, tubes and wires qualify without an extractor. The selector bounds the loaded tile and sight checks. The actor validates the individual part and its buffers. This supports the Project Vision's controlled griefing and practical defenses while keeping the industrial targeting contract independent of lunar and future settlement ownership.
+
+| Installed family | Eligible variants and states | Native removal and recoverable item | Focused fixture |
+| --- | --- | --- | --- |
+| BuildCraft 2.2.14 item pipes | Wood, cobblestone, stone, iron, gold, diamond and obsidian. Empty transport and restore queues, empty filters, and idle power provider where applicable. | Notified `BlockGenericPipe` removal, tile invalidation and persistent registry teardown. The registered `ItemPipe` with damage 0. | `verifyPipe` for every variant. The original item-line scenario checks committed items and chest delivery. |
+| BuildCraft liquid pipes | Wood, cobblestone, stone, iron and gold. Empty center and six side buffers, including ready amounts and both travel queues. Wooden extraction credit and stored power must be idle. | Same native teardown and exact waterproof pipe item. Native placement restores pipe topology. | `verifyPipe` and `verifyPipeThroughput`. |
+| BuildCraft conductive pipes | Wood, stone and gold. No current or next power transfers or requests and idle extractor power. | Same native teardown and exact conductive pipe item. | `verifyPipe` and `verifyPipeThroughput`. |
+| Additional Pipes 2.1.3 | Advanced wooden, advanced insertion, distribution, item redstone and liquid redstone. Same transport guards, empty advanced wooden filters and default distribution weights. | The add-on registers these classes with `BlockGenericPipe.registerPipe`. Exact registered add-on `ItemPipe` through the same teardown. | `verifyPipe` for the five registrations and explicit rejection of all three teleport variants. |
+| IC2 1.97 ordinary cables | Unpainted, unfoamed copper, gold, iron, glass fibre and tin across installed insulation variants. Damage 0–10. Live transfer is allowed. | Native cable drop lookup followed by notified removal. Tile invalidation removes the conductor from EnergyNet. Exact placeable `ItemCable` damage. | `verifyIC2`, including a live glass-fibre branch and parallel route. |
+| IC2 detector and splitter | Unfoamed damage 11 and 12. Detector output and redstone-disabled splitter use their respective native tile types. | Same cable teardown. Neighbor notifications and native EnergyNet membership resolve current redstone state. | `verifyIC2` checks active detector output and the redstone-disabled EnergyNet state. |
+| RedPower Machine 2.0pr5b2 tubes | Pneumatic, redstone, restriction and magnetic. Empty flow and no paint channel. | `TileTube.onHarvestPart` at index 29 preserves covers and produces the exact `ItemMicro`. | `verifyRedPower`, `verifyTubeTraffic` and `verifyCoveredParts`. |
+| RedPower copper fluid pipe | Center part with zero level and delta. | `TilePipe.onHarvestPart` preserves covers and notifies neighbors. Copper pipe micro item. | `verifyRedPower`. |
+| RedPower BluePower | Exposed blue alloy face wire or jacketed center. | `TileWiring.onHarvestPart` for one face or center. Exact wire or jacket material metadata. | `verifyRedPower` and `verifyJackets`. |
+| RedPower red alloy, insulated and bundled signal wiring | Red alloy face wire or jacketed center, all 16 insulated colors, all 17 bundled face variants and jacketed bundled center. | Same face-specific native harvest. Exact color or jacket material metadata. | `verifyRedPower`, `verifyJackets`, `verifyWireColors`, `verifyCoveredParts` and red alloy `verifyWireSignals`. |
+| RedPower Control ribbon | Exposed ribbon wire face. | Inherited native wiring harvest and exact ribbon micro item. | `verifyRedPower`. |
+
+The RedPower recovery path takes ownership only of the single matching item emitted at the harvested part during the native call. BuildCraft and IC2 use one native component stack without invoking a second harvest. Reinstallation follows each mod's ordinary item placement. BuildCraft orientation and other transient settings follow their native placement rules. The legacy cargo and one-theft NBT keys still load. If an optional item registry is unavailable, the actor retains the original stack data.
+
+### Installed cases outside physical removal
+
+- Additional Pipes item, liquid and power teleport endpoints maintain channel, owner and remote routing state that their item does not carry. Teleport Tethers own chunk-loading state.
+- IC2 construction foam covers the cable and has a special block teardown drop. Painted IC2 cable and painted RedPower tube carry network colors only in the tile. Native drops cannot reproduce those channels. Stocked filters, custom distribution weights and live or queued transport states listed above are ineligible.
+- BuildCraft pre-2.2.5 legacy pipe IDs convert through their native legacy tile tick. The resulting registered generic pipe can qualify. Docking Stations hold inventory and fluid.
+- RedPower covered parts require the selected part to be the first native ray hit. Accelerators, pumps, grates, relay and inventory machines, moving frames and bundled I/O peripherals are combined or stateful machine blocks. The Relay retains its existing interruption path.
+- TubeStuff supplies combined inventory and automation blocks. PowerConverters and CompactSolars supply endpoints and sources. Wireless Redstone supplies linked transmitter and receiver tiles. Railcraft supplies tracks and rail machines. These packs register no additional ordinary pipe, tube or cable segment in this installation.
+
+### Owner playtest
+
+1. In a disposable Survival world on Normal or Hard, run an item or EU line with one accessible segment. Use a Saboteur egg and switch to Survival. Keep a clear approach, watch for the orange link and strike during it. A fresh Saboteur lets you test a successful dismantle afterward.
+2. Repeat with the same line inside a wall and roof, or with a RedPower cover facing the approach. Leave a nearby exposed comparison segment so you can see which part the actor selects.
+3. Let the carrier flee, or defeat it before it escapes. Pick up one component and reinstall it. Compare the signal or downstream delivery before and after the repair.
+
+The headless suite is `zto-tools/test-zto-agent.ps1 -Pack`. The graphical `theft-cable` fixture exercises the cue, cover cancellation and escape recovery in a fully initialized client. Run it with `-WithAgent` under the [guest input-isolation rules](testing.md#background-client-launch).
+
+### Alpha.2 candidate evidence
+
+Production commit `770f1aa1c214f7e53c7aac07c75a43e9283c0edd` on base `1433fb8c5eeaed4e4029d01e0507e6f017d6049a`. Tracked sources matched the candidate. Three pre-existing untracked owner documents set the build sidecar's dirty flag.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `ZedsTekkitOverhaul.jar` | `23788e7f57c2ac33dcf11915c1ea0a11fae07d0fcfc42ec0917c66e54e78153e` |
+| `ZTOAgent.jar` | `dff82cffb2688cc847e7a21ecc9e2c161a5c97065ca3b1cfff156e6770ca67e4` |
+
+- **PASS, portable.** Configuration, agent documentation and lunar policy checks.
+- **PASS, build and staging.** JDK 8u504 and MCP 6.2 compiled and reobfuscated with development Forge 3.4.9.171. Streaming ZIP validation read 421 mod entries. Repeated installation in a copied Prism manifest kept one component and both JAR hashes matched the tested artifacts.
+- **PASS, native transport.** Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The headless fixture used pinned implementations and registered the tested components at the installed IDs. The production actor and native item placement were used across 15 BuildCraft variants, five Additional Pipes variants, 13 IC2 cable variants, and ten RedPower transport classes, including three wiring jackets and the full insulated and bundled color ranges.
+- **PASS, native transfers and counterplay.** Five BuildCraft items reached their original chest after windup cancellation. Two water runs accounted for 20 mB each. Two 100-unit power offers delivered 98 units each after native pipe loss. The parallel IC2 route carried EU after the short branch was removed and the exact replacement carried EU again. RedPower conserved five plus three pneumatic items and restored red alloy signal after reconnection. Covers, neighboring multipart faces, target replacement, the unloaded boundary, hit interruption and competing actors passed. BuildCraft Hopper output resumed after its existing temporary lease.
+- **PASS, persistence and natural selection.** Anvil reopened both a pending attempt and an actor carrying a component. Legacy pipe cargo released once. An absent item registry entry kept the saved stack attached. The same industrial selection roll admitted a Saboteur for an exposed cable and preserved the zombie behind a wall. A controlled native tick run of the selected actor began winding up at tick 3, removed the cable at tick 38 and released one item at tick 139. Full and reduced pack linkage, all nine pinned direct hook classes, the natural Enderkin suite and the alpha.1 biome, magpie and aerial regressions passed.
+- **BLOCKED, graphical automation.** `test-saboteur-runtime.ps1 -Mode theft-cable -WithAgent` stopped before launch with `INPUT_ISOLATION_UNVERIFIED`. The graphical fixture compiled against the pack ABI. Cue readability, manual balance and the live direct-interruption fixtures remain pending.
+
+## Temporary interruption
 
 In Tekkit Classic 3.1.2 the mod JAR provides the actor and native transfer gates. The managed Prism deployment adds the single ZTOAgent for direct industrial gates, using the same startup component as mouse gestures and moon rendering. [Installation](../deploy-prism.md)
 

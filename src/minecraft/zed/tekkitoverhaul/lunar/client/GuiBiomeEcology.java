@@ -5,6 +5,7 @@ import net.minecraft.src.GuiScreen;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.World;
 import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.survival.aerial.EntityMagpie;
 import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
 import zed.tekkitoverhaul.survival.tactical.BiomeEcology;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
@@ -15,6 +16,7 @@ final class GuiBiomeEcology extends GuiScreen {
     private final GuiScreen parent;
     private BiomeEcology.Profile habitat;
     private NaturalSpawnPressure.Snapshot spawn;
+    private String magpie;
     private int refreshTicks;
 
     GuiBiomeEcology(LocalLunarCalendar local, World world, GuiScreen parent) {
@@ -40,6 +42,17 @@ final class GuiBiomeEcology extends GuiScreen {
         habitat = mc.thePlayer == null ? null : BiomeEcology.sample(world, MathHelper.floor_double(mc.thePlayer.posX),
                 MathHelper.floor_double(mc.thePlayer.posZ));
         spawn = local.naturalSpawnSnapshot(world);
+        magpie = null;
+        if (mc.thePlayer == null) return;
+        double nearest = 64;
+        for (Object entry : world.getEntitiesWithinAABB(EntityMagpie.class, mc.thePlayer.boundingBox.expand(8, 8, 8))) {
+            EntityMagpie bird = (EntityMagpie) entry;
+            double distance = bird.getDistanceSqToEntity(mc.thePlayer);
+            if (bird.isEntityAlive() && distance < nearest) {
+                nearest = distance;
+                magpie = bird.ecologyStatus();
+            }
+        }
     }
 
     @Override
@@ -76,6 +89,7 @@ final class GuiBiomeEcology extends GuiScreen {
         line("Magpies " + wildlife.loaded() + "/" + ForestWildlife.LOADED_CAP + " loaded at last check", 140);
         line(wildlife.status(), 152);
         line(local.aerialSnapshot().preyStatus, 164);
+        if (magpie != null && height >= 224) line("Nearby magpie: " + magpie, 176);
         super.drawScreen(mouseX, mouseY, partialTick);
     }
 

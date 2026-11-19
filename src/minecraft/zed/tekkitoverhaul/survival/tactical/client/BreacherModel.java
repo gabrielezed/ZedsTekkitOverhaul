@@ -45,7 +45,7 @@ final class BreacherModel extends EnderkinModel {
         float phase = onGround;
         boolean pressure = breacher.isPressureSwing();
         float contact = EntityBreacher.PRESSURE_CONTACT_TICKS / 10.0F;
-        float lift = pressure ? pulse(phase, 0.22F, contact + 0.02F) : 0;
+        float lift = breacher.isForcingEntrance() ? 0.82F : pressure ? pulse(phase, 0.22F, contact + 0.02F) : 0;
         float impact = pressure ? pulse(phase, contact, 0.97F) : 0;
         float punch = pressure ? 0 : pulse(phase, 0.19F, 0.90F);
         float breathing = wave(age * 0.068F + mob.entityId);

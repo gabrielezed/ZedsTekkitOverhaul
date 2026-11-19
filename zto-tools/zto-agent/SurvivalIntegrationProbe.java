@@ -27,6 +27,10 @@ public final class SurvivalIntegrationProbe {
 
     public static void main(String[] args) throws Exception {
         File root = new File(args[0]);
+        if (args.length > 1 && "--breacher".equals(args[1])) {
+            rangedAndDoor(root);
+            System.exit(0);
+        }
         baseline = args.length > 1 && "--baseline".equals(args[1]);
         tank(root, "open", 0, 0, false, false);
         tank(root, "hidden-cobble", 4, 0, false, true);
@@ -59,31 +63,80 @@ public final class SurvivalIntegrationProbe {
             lateral = Math.max(lateral, Math.abs(ranged.q - 288.5));
         }
         check(aim && shot && lateral >= 2.0D, "Skirmisher repositions and fires a native projectile after aiming");
-        world.e(ranged);
-        for (int x = 287; x <= 296; x++)
-            for (int y = 4; y < 7; y++) {
-                world.g(x, y, 291, 1);
-                world.g(x, y, 287, 1);
-            }
-        world.d(292, 4, 289, 64, 0);
-        world.d(292, 5, 289, 64, 8);
-        for (int y = 4; y < 7; y++) {
-            world.g(292, y, 288, 1);
-            world.g(292, y, 290, 1);
+        System.out.println("ENDERKIN Skirmisher aimed, repositioned and fired");
+        for (String scenario : new String[] {"normal", "retreat", "gate", "alternate", "easy", "iron", "wall", "hit",
+                "changed", "player-opens"})
+            breacherDoor(root, scenario);
+    }
+
+    private static void breacherDoor(File root, String scenario) {
+        TestWorld world = new TestWorld(root, "door-" + scenario, vx.c);
+        world.q = "easy".equals(scenario) ? 1 : "retreat".equals(scenario) ? 3 : 2;
+        load(world, CENTER, CENTER, 3);
+        boolean gate = "gate".equals(scenario);
+        boolean alternate = "alternate".equals(scenario);
+        boolean retreat = "retreat".equals(scenario);
+        int block = gate ? 107 : "iron".equals(scenario) ? 71 : "wall".equals(scenario) ? 1 : 64;
+        int lower = gate ? 1 : 0;
+        int x = 292, y = 4, z = 289;
+        for (int wallZ = z - 19; wallZ <= z + 19; wallZ++) {
+            if (wallZ == z || alternate && wallZ == z + 3) continue;
+            for (int height = 0; height < 4; height++) world.g(x, y + height, wallZ, 1);
         }
-        player.c(295.5, 4, 289.5, 0, 0);
-        EntityBreacher melee = new EntityBreacher(world);
-        melee.c(290.5, 4, 289.5, 0, 0);
-        melee.engageEncounterPlayer(player);
-        check(world.a(melee), "Breacher inserted");
-        boolean pressure = false;
-        for (int tick = 0; tick < 135; tick++) {
+        world.d(x, y, z, block, lower);
+        if (!gate) world.d(x, y + 1, z, block, block == 1 ? 0 : 9);
+        world.g(x, y + 2, z, 1);
+        if (gate) world.g(x, y + 1, z, 0);
+        yw player = NaturalSpawnProbe.join(world);
+        player.c(retreat ? 290.8 : 295.4, y, z + 0.5, 0, 0);
+        EntityBreacher actor = new EntityBreacher(world);
+        actor.c(289.0, y, z + 0.5, 0, 0);
+        check(world.a(actor), "Breacher inserted " + scenario);
+        int telegraph = -1, opened = -1, crossed = -1, intervention = -1, healthOnOpening = -1;
+        for (int tick = 0; tick < 200; tick++) {
+            if (retreat && tick == 8) player.c(295.4, y, z + 0.5, 0, 0);
             world.n();
-            pressure |= melee.isPressureSwing();
+            if (telegraph < 0 && actor.isForcingEntrance()) {
+                telegraph = tick;
+                if ("hit".equals(scenario)) {
+                    check(actor.a(md.a(player), 2), "player hit lands during windup");
+                    intervention = tick;
+                } else if ("changed".equals(scenario)) {
+                    world.g(x, y, z, 0);
+                    world.g(x, y + 1, z, 0);
+                    world.d(x, y, z, 71, 0);
+                    world.d(x, y + 1, z, 71, 8);
+                    intervention = tick;
+                } else if ("player-opens".equals(scenario)) {
+                    check(pb.m[64].b(world, x, y, z, player), "player uses the native door");
+                    intervention = tick;
+                }
+            }
+            if ((world.e(x, y, z) & 4) != 0 && opened < 0) {
+                opened = tick;
+                healthOnOpening = player.bb();
+            }
+            if (actor.o > x + 1.2D && crossed < 0) crossed = tick;
+            if (intervention >= 0 && !"player-opens".equals(scenario) && tick >= intervention + 43) break;
         }
-        check(pressure && world.a(292, 4, 289) == 64 && world.a(292, 5, 289) == 64,
-                "Breacher pressures a closed wooden door without removing its halves");
-        System.out.println("ENDERKIN Skirmisher aimed, repositioned and fired; Breacher pressured an intact door");
+        if ("normal".equals(scenario) || retreat || gate) {
+            check(telegraph >= 0 && opened - telegraph == 36 && crossed > opened,
+                    "native doorway pursuit " + scenario + " at " + telegraph + "/" + opened + "/" + crossed
+                            + " actor=" + actor.o + "," + actor.q);
+            check(world.a(x, y, z) == block && world.e(x, y, z) == (lower | 4)
+                    && (gate || world.a(x, y + 1, z) == block && world.e(x, y + 1, z) == 9),
+                    "orientation and hinge survive native opening");
+            if (!retreat) check(player.bb() < healthOnOpening, "Breacher resumes ordinary melee after crossing");
+        } else if ("player-opens".equals(scenario)) {
+            check(opened == intervention && crossed > opened && !actor.isForcingEntrance()
+                    && world.e(x, y, z) == 4 && world.e(x, y + 1, z) == 9, "player opening cancels the force and admits pursuit");
+        } else {
+            check(opened < 0 && (alternate ? crossed >= 0 && telegraph < 0 : crossed < 0),
+                    "protected or unnecessary opening " + scenario + " at " + telegraph + "/" + opened + "/" + crossed);
+            check(intervention >= 0 ? !actor.isForcingEntrance() : telegraph < 0, "telegraph scope " + scenario);
+            check(world.a(x, y, z) == ("changed".equals(scenario) ? 71 : block), "barrier block survives");
+        }
+        System.out.printf("BREACHER %s windup=%d open=%d crossed=%d%n", scenario, telegraph, opened, crossed);
     }
 
     private static void tank(File root, String name, int material, int rise, boolean retreat, boolean breach)

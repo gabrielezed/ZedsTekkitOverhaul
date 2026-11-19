@@ -1,8 +1,23 @@
 # ZedsTekkitOverhaul
 
-## Survival 0.2.1 · The Enderkin bestiary
+A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
-A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and five Enderkin turn familiar ground into a reason to prepare, fortify, and explore.
+## Survival 0.2.3-alpha.2 · Biome ecology and industrial survival
+
+| Fugl | Skelebird (Skelerakk) | Magpie |
+| :---: | :---: | :---: |
+| ![Fugl gliding with outstretched wings](docs/agents/images/fugl-portrait.png) | ![Skelebird in flight with open ribs and jointed wing bones](docs/agents/images/skelebird-portrait.png) | ![Black-and-white magpie with a blue wing patch](docs/agents/images/magpie-portrait.png) |
+| Aerial predator that circles and dives. Passing Fugls can hunt exposed chickens. | Nocturnal skeletal hunter that crosses low over exposed ground. | Forest bird that perches, scavenges, and occasionally steals one recoverable seed or feather. |
+
+*Portraits rendered from the game's models and textures.*
+
+- **Underground ecology.** Caves favor ordinary Enderkin within the native hostile spawn budget. The biome still shapes which roles appear.
+- **Industrial survival.** Saboteurs can dismantle exposed transport, and on Normal and Hard, Breachers can force open wooden doors and fence gates. Fuel gets priority when Shift-clicked into supported furnaces.
+- **Mining.** The experimental vein mining gesture is suspended. Survival mining uses the original tool costs and drop rules.
+
+[Biome ecology and wildlife](docs/agents/survival-023-implementation.md) · [Industrial Saboteur](docs/agents/saboteur-industrial.md) · [Fieldwork and verification](docs/agents/survival-023-alpha2-fieldwork.md) · [Changelog](CHANGELOG.md)
+
+## Survival 0.2.1 · The Enderkin bestiary
 
 ![The five Enderkin in Survival 0.2.1: Skirmisher, Breacher, Tank, Thief and Saboteur](docs/agents/images/enderkin-021-lineup.png)
 
@@ -11,10 +26,10 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows mor
 | Enderkin | Encounter |
 | --- | --- |
 | **Skirmisher** | Repositions with short blinks and telegraphs a ranged Ender Pulse. |
-| **Breacher** | Closes distance, pressures entrances, and can reach low platforms. |
+| **Breacher** | Closes distance, reaches low platforms, and can force open wooden entrances on Normal and Hard. |
 | **Tank** | Commits to heavy frontal strikes. On Hard it can open localized breaches in suitable walls when pursuit stalls. |
 | **Thief** | Steals an item from your inventory or hotbar and flees. Recover the loot by intercepting it or finding its cache. Sneak with a vanilla compass for a temporary **Ender Trail** toward the last recorded location. |
-| **Saboteur** | Briefly disrupts supported machinery. It can also dismantle an exposed, empty BuildCraft stone or cobblestone item pipe and flee with the recoverable component. |
+| **Saboteur** | Briefly disrupts supported machinery. It can also dismantle one eligible exposed BuildCraft, Additional Pipes, IC2 or RedPower transport component and flee with it. |
 
 All five have Creative spawn eggs and can appear in ordinary Overworld Survival with ZTOAgent. Press **Numpad 1** in singleplayer to open the Debug Hub and inspect current territorial activity, ordinary hostile pressure, and lunar encounter decisions. [Survival guide](docs/agents/survival-021-implementation.md) · [Changelog](CHANGELOG.md) · [Integration results](docs/agents/survival-021-integration.md)
 

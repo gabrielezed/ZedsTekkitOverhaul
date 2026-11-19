@@ -11,6 +11,7 @@ import java.util.WeakHashMap;
 import java.util.function.Predicate;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.ObjDoubleConsumer;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
@@ -22,6 +23,7 @@ public final class ZTOAgent {
     private static final Map<ClassLoader, Map<String, Boolean>> STATUS = new WeakHashMap<>();
     private static boolean started;
     private static volatile WeakReference<Predicate<Object>> mouse = new WeakReference<>(null);
+    private static volatile WeakReference<BiPredicate<Object, int[]>> furnaceFuel = new WeakReference<>(null);
     private static volatile WeakReference<ToIntBiFunction<Object, Integer>> moon = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> industry = new WeakReference<>(null);
     private static volatile WeakReference<BiConsumer<Object, Boolean>> spawnStart = new WeakReference<>(null);
@@ -58,7 +60,8 @@ public final class ZTOAgent {
         IndustrialHooks.Hook industrial = IndustrialHooks.find(name);
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
-        if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name) && !JetpackHook.TARGET.equals(name)) return null;
+        if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
+                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -74,6 +77,8 @@ public final class ZTOAgent {
         if (NaturalSpawnHook.TARGET.equals(name) && NaturalSpawnHook.SHA256.equals(hash))
             return NaturalSpawnHook.patch(bytes);
         if (inventory && InventoryHook.SHA256.equals(hash)) return InventoryHook.patch(bytes);
+        if (FurnaceTransferHook.TARGET.equals(name) && FurnaceTransferHook.SHA256.equals(hash))
+            return FurnaceTransferHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
         throw new IllegalArgumentException("unsupported class fingerprint");
@@ -112,6 +117,13 @@ public final class ZTOAgent {
     }
 
     public static void registerMouse(Predicate<Object> callback) { mouse = new WeakReference<>(callback); }
+    public static void registerFurnaceFuel(BiPredicate<Object, int[]> callback) { furnaceFuel = new WeakReference<>(callback); }
+
+    public static boolean transferFurnaceFuel(Object player, int window, int slot) {
+        BiPredicate<Object, int[]> callback = furnaceFuel.get();
+        return callback != null && callback.test(player, new int[] {window, slot});
+    }
+
     public static void registerMoon(ToIntBiFunction<Object, Integer> callback) { moon = new WeakReference<>(callback); }
     public static void registerIndustry(Predicate<Object> callback) { industry = new WeakReference<>(callback); }
 

@@ -1,5 +1,18 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.2.3-alpha.2 — Industrial survival and fieldwork
+
+- Let Saboteurs dismantle one exposed BuildCraft, Additional Pipes, IC2 or RedPower transport component on Normal and Hard.
+- Target exposed cable and tube installations during natural Enderkin selection. Block the approach or interrupt the dismantle to protect a line.
+- Recover the original transport component when the carrier dies or finishes escaping.
+- Suspend the experimental Vein Mining gesture and restore native Survival mining.
+- Favor ordinary Enderkin in naturally covered caves while keeping the native hostile spawn budget.
+- Keep naturally admitted magpies near the surface. A magpie may approach a player and steal one recoverable seed or feather from their backpack.
+- Give fuel priority when using Shift-click in a fuel-burning furnace.
+- Let Breachers force open wooden doors and fence gates on Normal and Hard.
+
+[Industrial coverage and playtest](docs/agents/saboteur-industrial.md) · [Mining, furnaces and entrances](docs/agents/survival-023-alpha2-fieldwork.md)
+
 ## 0.2.3-alpha.1 — Biome ecology prototype
 
 - Vary ordinary Enderkin roles by legacy biome family within the established hostile spawn budget.

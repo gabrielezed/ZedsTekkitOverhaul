@@ -4,10 +4,12 @@ import cpw.mods.fml.common.registry.FMLRegistry;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 import javax.imageio.ImageIO;
+import zed.tekkitoverhaul.agent.ZTOAgent;
 import zed.tekkitoverhaul.survival.aerial.AerialPredators;
 import zed.tekkitoverhaul.survival.aerial.EntityMagpie;
 import zed.tekkitoverhaul.survival.aerial.EntityMagpie.Pose;
@@ -37,10 +39,136 @@ public final class BiomeEcologyProbe {
         Files.createFile(new File(root, "biome-ecology/.zto-disposable").toPath());
         for (int x = 14; x <= 22; ++x) for (int z = 14; z <= 22; ++z) world.d(x, z);
         compareDistributions(world);
+        verifyUndergroundGeometry(world);
+        compareNativeHabitats(world);
         FMLCommonHandler.instance().beginLoading(FMLClientHandler.instance());
         FMLRegistry.registerRegistry(new ClientRegistry());
         AerialPredators.register();
         verifyWildlife(world);
+        verifyMagpieHabitat(world);
+    }
+
+    private static void verifyMagpieHabitat(xd world) {
+        world.b(new ArrayList(world.b));
+        world.n();
+        paint(world, 4);
+        yw player = NaturalSpawnProbe.join(world);
+        ForestWildlife wildlife = new ForestWildlife(true);
+        wildlife.bind(world);
+        for (int x = 303; x <= 309; ++x) for (int z = 285; z <= 291; ++z) {
+            for (int y = 16; y <= 18; ++y) world.g(x, y, z, 1);
+            world.g(x, 19, z, 2);
+        }
+        world.r = new Random(81) {
+            @Override public double nextDouble() { return 0; }
+            @Override public int nextInt(int bound) { return bound == 15 ? 0 : super.nextInt(bound); }
+        };
+        for (int t = 0; t < 1200; ++t) wildlife.tick(player, false);
+        check(wildlife.loaded() == 0, "daylight forest overhead admits no bird in a deep cave");
+        player.c(288, 20, 288, 0, 0);
+        for (int t = 0; t < 200; ++t) wildlife.tick(player, false);
+        check(wildlife.loaded() == 1, "same column admits a bird on surface grass");
+        EntityMagpie natural = null;
+        for (Object entry : world.b) if (entry instanceof EntityMagpie) natural = (EntityMagpie) entry;
+        check(natural != null, "forest director inserted the surface bird");
+        ady saved = new ady();
+        check(natural.c(saved) && saved.o("ZtoMagpieNatural"), "natural provenance is saved by the world");
+        natural.A();
+        saved.a("ZtoMagpieAge", 19);
+        EntityMagpie loaded = (EntityMagpie) aao.a(saved, world);
+        EntityMagpie escapee = (EntityMagpie) aao.a(saved, world);
+        EntityMagpie manual = new EntityMagpie(world);
+        loaded.c(306.5, 4, 288.5, 0, 0);
+        escapee.c(303.5, 4, 288.5, 90, 0);
+        escapee.z = true;
+        manual.c(308.5, 4, 288.5, 0, 0);
+        player.c(312.5, 4, 288.5, 0, 0);
+        check(world.a(loaded) && world.a(escapee) && world.a(manual), "place loaded and manual controls under deep cover");
+        for (int t = 0; t < 23; ++t) world.a(escapee, true);
+        check(!escapee.G && escapee.o < 303, "bounded corrective hop reaches the exposed side of a roof edge");
+        escapee.A();
+        for (int t = 0; t < 145; ++t) {
+            if (!loaded.G) world.a(loaded, true);
+            world.a(manual, true);
+        }
+        check(loaded.G && !manual.G, "trapped natural bird retires, deliberate placement stays: "
+                + loaded.ecologyStatus() + " / " + manual.ecologyStatus());
+        System.out.println("PASS natural magpie surface admission, cave exclusion and trapped retirement after native reload");
+    }
+
+    private static void verifyUndergroundGeometry(xd world) {
+        check(caveBonus(world, 360, 4, 1, true), "deep natural mine");
+        check(caveBonus(world, 361, 76, 1, true), "high mountain tunnel");
+        check(!caveBonus(world, 362, 4, 0, true), "sky-exposed ravine floor");
+        check(!caveBonus(world, 363, 76, 0, true), "exposed cliff ledge");
+        check(!caveBonus(world, 364, 4, 5, true), "built roof beneath natural terrain");
+        check(!caveBonus(world, 365, 4, 1, false), "built floor under natural cover");
+        xd nether = new xd(world, new akf());
+        nether.d(22, 18);
+        check(!caveBonus(nether, 360, 40, 1, true), "non-Overworld candidate retains native species");
+        System.out.println("PASS deep mine, mountain tunnel, open ravine and ledge, built-interior geometry and other dimension");
+    }
+
+    private static boolean caveBonus(xd world, int x, int feet, int roof, boolean naturalFloor) {
+        int z = 288;
+        world.g(x, feet - 1, z, naturalFloor ? 1 : 5);
+        if (roof != 0) {
+            world.g(x, feet + 3, z, roof);
+            for (int y = feet + 6; y <= feet + 8; ++y) world.g(x, y, z, 1);
+        }
+        ajg candidate = new ajg(world);
+        candidate.c(x + 0.5, feet, z + 0.5, 0, 0);
+        world.r = new Random(79) {
+            @Override public int nextInt(int bound) { return bound == 1000 ? 185 : super.nextInt(bound); }
+        };
+        return EnderkinEcology.select(candidate, 0) != candidate;
+    }
+
+    private static void compareNativeHabitats(xd world) {
+        yw player = NaturalSpawnProbe.join(world);
+        for (int x = 9; x <= 27; ++x) for (int z = 9; z <= 27; ++z) paintChunk(world.d(x, z), 4);
+        for (int x = 217; x < 273; ++x) for (int z = 256; z < 320; ++z)
+            for (int y = 8; y <= 10; ++y) world.g(x, y, z, 1);
+        world.g(240, 4, 280, 50);
+        world.r = new Random(4134);
+        int[] eligible = new int[2], selected = new int[2], inserted = new int[2];
+        java.util.function.UnaryOperator<Object> observation = value -> {
+            if (!(value.getClass() == ajg.class || value.getClass() == xr.class
+                    || value.getClass() == yd.class || value.getClass() == jg.class)) return value;
+            acq mob = (acq) value;
+            check(mob.p != 4 || Math.abs(mob.o - 240.5) > 2 || Math.abs(mob.q - 280.5) > 2,
+                    "native light gate rejects the lit underground interior before substitution");
+            int habitat = cave(mob) ? 1 : 0;
+            ++eligible[habitat];
+            Object replacement = EnderkinEcology.select(mob, 0);
+            if (replacement != mob) ++selected[habitat];
+            return replacement;
+        };
+        try {
+            ZTOAgent.registerNaturalSpawnReplacement(observation);
+            for (int pass = 0; pass < 1800; ++pass) {
+                vf.a(world, true, false);
+                for (Object entity : world.b) if (entity instanceof zed.tekkitoverhaul.survival.tactical.TacticalHostile)
+                    ++inserted[cave((acq) entity) ? 1 : 0];
+                world.b(new ArrayList(world.b));
+                world.n();
+            }
+            double surface = inserted[0] / (double) eligible[0], cave = inserted[1] / (double) eligible[1];
+            System.out.printf("Native eligible surface %d, selected %d, inserted %d (%.2f%%); cave %d, selected %d, inserted %d (%.2f%%)%n",
+                    eligible[0], selected[0], inserted[0], surface * 100, eligible[1], selected[1], inserted[1], cave * 100);
+            check(eligible[0] >= 1000 && eligible[1] >= 500 && cave > surface * 2 && cave < 0.18,
+                    "native eligible cave slots have substantially more successful substitutions");
+        } finally {
+            ZTOAgent.registerNaturalSpawnReplacement(null);
+            world.d.remove(player);
+            world.g(240, 4, 280, 0);
+            for (int x = 217; x < 273; ++x) for (int z = 256; z < 320; ++z)
+                for (int y = 8; y <= 10; ++y) world.g(x, y, z, 0);
+        }
+    }
+
+    private static boolean cave(acq mob) {
+        return mob.o >= 217 && mob.o < 273 && mob.q >= 256 && mob.q < 320 && mob.p < 8;
     }
 
     private static void auditBiomes() {

@@ -29,6 +29,8 @@ public final class EntitySaboteur extends TacticalHostile {
     private static final int BLINK_RETRY = 8;
     private static final int SCAN_INTERVAL = 24;
     private static final int WINDUP_TICKS = 25;
+    private static final int DISMANTLE_TICKS = 35;
+    private static final int ESCAPE_TICKS = 100;
     private static final int RECOVERY_TICKS = 18;
     private static final int ACTION_COOLDOWN = 120;
     private static final double CONTACT_SQ = 5.76D;
@@ -50,16 +52,21 @@ public final class EntitySaboteur extends TacticalHostile {
     private TileEntity machine;
     private TileEntity connection;
     private SabotageTarget disruption;
-    private BuildCraftPipeTheft pipeTheft;
-    private ItemStack stolenPipe;
+    private TransportTheft transportTheft;
+    private ItemStack stolenComponent;
+    private NBTTagCompound unresolvedComponent;
+    private String componentItemClass = "";
     private boolean hasStolenPipe;
     private int escapeUntil, theftX, theftY, theftZ;
     private double escapeAngle;
+    private enum Recovery { NONE, CARRYING, WAITING_FOR_RELEASE, DEATH, ESCAPE }
+    private Recovery recovery = Recovery.NONE;
+    private String cargoFamily = "NONE";
     private String targetType = "NONE";
     private int machineX, machineY, machineZ;
     private long heartbeat = Long.MIN_VALUE;
     private enum Outcome { NONE, NO_SUPPORTED_TARGET, UNSUPPORTED_CONNECTION, OUT_OF_REACH, NO_SIGHT, TARGET_CHANGED, ALREADY_PAUSED,
-        HIT, PLAYER_LOST, APPLIED, DECOY, PIPE_STOLEN }
+        HIT, PLAYER_LOST, APPLIED, DECOY, COMPONENT_STOLEN, UNLOADED, UNSAFE_TRANSPORT, REMOVAL_FAILED }
     private Outcome outcome = Outcome.NONE;
     private SaboteurBlink.Result blinkResult = SaboteurBlink.Result.NOT_GROUNDED;
 
@@ -87,6 +94,8 @@ public final class EntitySaboteur extends TacticalHostile {
     public TileEntity disruptionConnection() { return connection; }
     public String targetType() { return targetType; }
     public String lastOutcome() { return outcome.name(); }
+    public String recoveryOutcome() { return recovery.name(); }
+    public String cargoFamily() { return cargoFamily; }
     public String lastBlinkResult() { return blinkResult.name(); }
     public String lastBlinkCause() { return blinkCause.name(); }
     public int evasiveAttempts() { return evasiveAttempts; }
@@ -156,7 +165,8 @@ public final class EntitySaboteur extends TacticalHostile {
 
     private Outcome approachRejection() {
         if (machine == null) return Outcome.NONE;
-        if (!sameMachine()) return Outcome.TARGET_CHANGED;
+        Outcome invalid = invalidTarget();
+        if (invalid != Outcome.NONE) return invalid;
         if (disruption != null && disruption.isDisrupted()) return Outcome.ALREADY_PAUSED;
         return ticksExisted >= approachEnd ? Outcome.OUT_OF_REACH : Outcome.NONE;
     }
@@ -171,7 +181,7 @@ public final class EntitySaboteur extends TacticalHostile {
         int baseZ = MathHelper.floor_double(posZ);
         int bestPriority = -1;
         double bestDistance = 64.0D;
-        boolean seekPipe = !hasStolenPipe && worldObj.difficultySetting >= 2 && rand.nextInt(3) == 0;
+        boolean seekTransport = !hasStolenPipe && worldObj.difficultySetting >= 2 && rand.nextInt(3) == 0;
         for (int x = baseX - 8; x <= baseX + 8; x++) {
             double dx = x + 0.5D - posX;
             for (int z = baseZ - 8; z <= baseZ + 8; z++) {
@@ -187,12 +197,12 @@ public final class EntitySaboteur extends TacticalHostile {
                     TileEntity candidate = LoadedTile.at(worldObj, x, y, z);
                     TileEntity pipe = null;
                     SabotageTarget effect;
-                    BuildCraftPipeTheft theft = seekPipe ? BuildCraftPipeTheft.find(candidate) : null;
+                    TransportTheft theft = seekTransport ? TransportTheft.find(candidate, eyes()) : null;
                     String type;
                     int priority;
                     if (theft != null) {
                         effect = null;
-                        type = "BUILDCRAFT_PIPE_THEFT";
+                        type = theft.family;
                         priority = 4;
                     } else if (candidate instanceof TileHopper) {
                         TileHopper hopper = (TileHopper) candidate;
@@ -229,7 +239,7 @@ public final class EntitySaboteur extends TacticalHostile {
                     if (priority < bestPriority || priority == bestPriority && distance >= bestDistance) continue;
                     if (effect != null && effect.isDisrupted()) {
                         outcome = Outcome.ALREADY_PAUSED;
-                    } else if (!seesMachine(x, y, z)) {
+                    } else if (theft == null && !seesMachine(x, y, z)) {
                         outcome = Outcome.NO_SIGHT;
                     } else {
                         bestPriority = priority;
@@ -237,7 +247,7 @@ public final class EntitySaboteur extends TacticalHostile {
                         machine = candidate;
                         connection = pipe;
                         disruption = effect;
-                        pipeTheft = theft;
+                        transportTheft = theft;
                         targetType = type;
                         machineX = x;
                         machineY = y;
@@ -256,8 +266,9 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private void approachMachine() {
-        lookAtMachine();
-        if (inContact() && seesMachine(machineX, machineY, machineZ)) {
+        Vec3D point = visibleTargetPoint();
+        lookAtMachine(point);
+        if (point != null && inContact(point)) {
             startWindup();
             return;
         }
@@ -272,20 +283,39 @@ public final class EntitySaboteur extends TacticalHostile {
         if (reaches(path, x, machineY, z)) getNavigator().setPath(path, SPEED);
     }
 
-    private boolean inContact() {
+    private boolean inContact(Vec3D point) {
+        double x = point == null ? machineX + 0.5D : point.xCoord;
+        double y = point == null || transportTheft == null ? machineY + 0.5D : point.yCoord;
+        double z = point == null ? machineZ + 0.5D : point.zCoord;
         return onGround && Math.abs(boundingBox.minY - machineY) <= 1.25D
-                && getDistanceSq(machineX + 0.5D, machineY + 0.5D, machineZ + 0.5D) <= CONTACT_SQ;
+                && getDistanceSq(x, y, z) <= CONTACT_SQ;
     }
 
     private boolean sameMachine() {
         if (machine == null || machine.xCoord != machineX || machine.yCoord != machineY || machine.zCoord != machineZ)
             return false;
         if (LoadedTile.at(worldObj, machineX, machineY, machineZ) != machine) return false;
-        if (pipeTheft != null) return worldObj.difficultySetting >= 2 && pipeTheft.stillEligible();
         if (disruption instanceof IndustrialSabotage) return ((IndustrialSabotage) disruption).stillBound();
         if (connection == null) return true;
         if (machine instanceof TileHopper) return ((TileHopper) machine).activeExtractionPeer() == connection;
         return ((TileEntityDistillationReceiver) machine).activeExtractionPipe() == connection;
+    }
+
+    private Outcome invalidTarget() {
+        if (transportTheft == null) return sameMachine() ? Outcome.NONE : Outcome.TARGET_CHANGED;
+        if (worldObj.difficultySetting < 2) return Outcome.UNSAFE_TRANSPORT;
+        switch (transportTheft.state()) {
+            case READY: return Outcome.NONE;
+            case UNLOADED: return Outcome.UNLOADED;
+            case TARGET_CHANGED: return Outcome.TARGET_CHANGED;
+            default: return Outcome.UNSAFE_TRANSPORT;
+        }
+    }
+
+    private Vec3D visibleTargetPoint() {
+        if (transportTheft != null) return transportTheft.visiblePoint(eyes());
+        return seesMachine(machineX, machineY, machineZ)
+                ? Vec3D.createVector(machineX + 0.5D, machineY + 0.65D, machineZ + 0.5D) : null;
     }
 
     private boolean seesMachine(int x, int y, int z) {
@@ -297,13 +327,15 @@ public final class EntitySaboteur extends TacticalHostile {
         return hit == null || hit.blockX == x && hit.blockY == y && hit.blockZ == z;
     }
 
-    private void lookAtMachine() {
-        getLookHelper().setLookPosition(machineX + 0.5D, machineY + 0.65D, machineZ + 0.5D, 30.0F, 30.0F);
+    private void lookAtMachine(Vec3D point) {
+        getLookHelper().setLookPosition(point == null ? machineX + 0.5D : point.xCoord,
+                point == null ? machineY + 0.65D : point.yCoord, point == null ? machineZ + 0.5D : point.zCoord,
+                30.0F, 30.0F);
     }
 
     private void startWindup() {
-        pose(machine == null ? DECOY : pipeTheft != null ? DISMANTLE : WINDUP);
-        windupEnd = ticksExisted + (pipeTheft == null ? WINDUP_TICKS : 35);
+        pose(machine == null ? DECOY : transportTheft != null ? DISMANTLE : WINDUP);
+        windupEnd = ticksExisted + (transportTheft == null ? WINDUP_TICKS : DISMANTLE_TICKS);
         windups++;
         getNavigator().clearPathEntity();
         motionX = motionZ = 0;
@@ -322,17 +354,22 @@ public final class EntitySaboteur extends TacticalHostile {
             return;
         }
 
-        if (!sameMachine()) finish(Outcome.TARGET_CHANGED, true);
-        else if (!inContact()) finish(Outcome.OUT_OF_REACH, true);
-        else if (!seesMachine(machineX, machineY, machineZ)) finish(Outcome.NO_SIGHT, true);
+        Outcome invalid = invalidTarget();
+        if (invalid != Outcome.NONE) {
+            finish(invalid, true);
+            return;
+        }
+        Vec3D point = visibleTargetPoint();
+        if (!inContact(point)) finish(Outcome.OUT_OF_REACH, true);
+        else if (point == null) finish(Outcome.NO_SIGHT, true);
         else if (disruption != null && disruption.isDisrupted()) finish(Outcome.ALREADY_PAUSED, true);
         else {
-            lookAtMachine();
+            lookAtMachine(point);
             if (ticksExisted >= windupEnd) {
-                if (pipeTheft != null) {
-                    ItemStack removed = pipeTheft.remove();
+                if (transportTheft != null) {
+                    ItemStack removed = transportTheft.remove(eyes());
                     if (removed != null) carry(removed);
-                    else finish(Outcome.TARGET_CHANGED, true);
+                    else finish(Outcome.REMOVAL_FAILED, true);
                 } else if (disruption.beginDisruption(this)) {
                     disruptions++;
                     if (connection == null) burst(machineX + 0.5D, machineY + 0.85D, machineZ + 0.5D, "portal");
@@ -343,17 +380,20 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private void carry(ItemStack component) {
-        stolenPipe = component;
+        stolenComponent = component;
+        componentItemClass = component.getItem().getClass().getName();
+        cargoFamily = targetType;
+        recovery = Recovery.CARRYING;
         hasStolenPipe = true;
         theftX = machineX;
         theftY = machineY;
         theftZ = machineZ;
         escapeAngle = Math.atan2(posZ - target.posZ, posX - target.posX);
-        escapeUntil = ticksExisted + 100;
+        escapeUntil = ticksExisted + ESCAPE_TICKS;
         nextRoute = ticksExisted;
         nextBlink = ticksExisted + 6;
         retryBlink = ticksExisted;
-        outcome = Outcome.PIPE_STOLEN;
+        outcome = Outcome.COMPONENT_STOLEN;
         pose(CARRY);
         burst(theftX + 0.5D, theftY + 0.55D, theftZ + 0.5D, "portal");
         worldObj.playSoundAtEntity(this, "step.stone", 0.8F, 0.65F);
@@ -362,13 +402,16 @@ public final class EntitySaboteur extends TacticalHostile {
 
     @Override
     protected boolean independentTactics() {
-        if (stolenPipe == null) return false;
+        if (!hasCargo()) return false;
         pose(CARRY);
-        EntityPlayer pursuer = worldObj.getClosestVulnerablePlayerToEntity(this, 28.0D);
-        if (pursuer == null && ticksExisted >= escapeUntil) {
+        if (ticksExisted >= escapeUntil && ticksExisted % 10 == 0 && releaseComponent(Recovery.ESCAPE)) {
+            nextAction = ticksExisted + ACTION_COOLDOWN;
+            recoverEnd = ticksExisted + RECOVERY_TICKS;
             getNavigator().clearPathEntity();
+            pose(RECOVER);
             return true;
         }
+        EntityPlayer pursuer = worldObj.getClosestVulnerablePlayerToEntity(this, 28.0D);
         if (pursuer != null) {
             escapeAngle = Math.atan2(posZ - pursuer.posZ, posX - pursuer.posX);
             if (getDistanceSqToEntity(pursuer) < 100 && blink(pursuer.posX, pursuer.posZ, BlinkCause.CARGO))
@@ -394,13 +437,20 @@ public final class EntitySaboteur extends TacticalHostile {
         double x = posX;
         double y = boundingBox.minY + 0.7D;
         double z = posZ;
+        Vec3D part = transportTheft == null ? null : transportTheft.visiblePoint(eyes());
+        if (part != null) worldObj.spawnParticle("crit", part.xCoord, part.yCoord, part.zCoord, 0, 0.12D, 0);
+        double endX = part == null ? machineX + 0.5D : part.xCoord;
+        double endY = part == null ? machineY + 0.7D : part.yCoord;
+        double endZ = part == null ? machineZ + 0.5D : part.zCoord;
+        double red = part != null ? 1.0D : machine == null ? 0.44D : 0.82D;
         for (int i = 1; i <= 3; i++) {
             double t = i / 3.0D;
             worldObj.spawnParticle("reddust",
-                    machine == null ? x : x + (machineX + 0.5D - x) * t,
-                    machine == null ? y + t * 0.3D : y + (machineY + 0.7D - y) * t,
-                    machine == null ? z : z + (machineZ + 0.5D - z) * t,
-                    machine == null ? 0.44D : 0.82D, machine == null ? 0.12D : 0.42D, 0.9D);
+                    machine == null ? x : x + (endX - x) * t,
+                    machine == null ? y + t * 0.3D : y + (endY - y) * t,
+                    machine == null ? z : z + (endZ - z) * t,
+                    red,
+                    machine == null ? 0.12D : 0.42D, part != null ? 0.15D : 0.9D);
         }
     }
 
@@ -418,15 +468,17 @@ public final class EntitySaboteur extends TacticalHostile {
     private void clearTarget() {
         machine = connection = null;
         disruption = null;
-        pipeTheft = null;
+        transportTheft = null;
     }
 
     @Override
     public boolean attackEntityFrom(DamageSource source, int damage) {
         boolean hit = super.attackEntityFrom(source, damage);
+        boolean dismantling = pose() == DISMANTLE;
+        if (hit && damage > 0 && !worldObj.isRemote && dismantling) finish(Outcome.HIT, true);
         if (hit && damage > 0 && !worldObj.isRemote && source.getEntity() instanceof EntityPlayer) {
-            boolean interrupted = windingUp();
-            if (interrupted) finish(Outcome.HIT, true);
+            boolean interrupted = dismantling || windingUp();
+            if (!dismantling && interrupted) finish(Outcome.HIT, true);
             if (isEntityAlive() && (interrupted || damage >= 2 && rand.nextInt(3) != 0)) {
                 pendingEvade = interrupted ? BlinkCause.INTERRUPTED : BlinkCause.HIT;
                 hitEvadeEnd = ticksExisted + 22;
@@ -541,54 +593,62 @@ public final class EntitySaboteur extends TacticalHostile {
         closeTicks = hitEvadeEnd = evadeEnd = 0;
         clearTarget();
         if (windingUp()) finish(Outcome.PLAYER_LOST, true);
-        else if (stolenPipe == null && ticksExisted >= recoverEnd) pose(IDLE);
+        else if (!hasCargo() && ticksExisted >= recoverEnd) pose(IDLE);
     }
 
     @Override
     protected void updateAttackPose() {
-        if (stolenPipe == null && target == null && ticksExisted >= recoverEnd && pose() != IDLE) pose(IDLE);
+        if (!hasCargo() && target == null && ticksExisted >= recoverEnd && pose() != IDLE) pose(IDLE);
     }
 
-    @Override protected boolean canDespawn() { return stolenPipe == null; }
+    private boolean hasCargo() { return stolenComponent != null || unresolvedComponent != null; }
+
+    @Override protected boolean canDespawn() { return !hasCargo(); }
 
     @Override
     public void onDeath(DamageSource source) {
         if (dead) return;
         super.onDeath(source);
-        if (dead) releasePipe();
+        if (dead) releaseComponent(Recovery.DEATH);
     }
 
     @Override
     public void setDead() {
-        releasePipe();
-        if (stolenPipe == null || worldObj.isRemote) super.setDead();
+        releaseComponent(Recovery.DEATH);
+        if (!hasCargo() || worldObj.isRemote) super.setDead();
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
-        if (getHealth() <= 0 && stolenPipe != null && ticksExisted % 20 == 0) setDead();
+        if (getHealth() <= 0 && hasCargo() && ticksExisted % 20 == 0) setDead();
     }
 
-    private void releasePipe() {
-        if (stolenPipe == null || worldObj.isRemote) return;
-        if (!dropPipe(MathHelper.floor_double(posX), MathHelper.floor_double(boundingBox.minY + 0.01D),
-                MathHelper.floor_double(posZ), 1)) dropPipe(theftX, theftY, theftZ, 2);
+    private boolean releaseComponent(Recovery cause) {
+        if (!hasCargo() || worldObj.isRemote) return false;
+        boolean dropped = stolenComponent != null && dropComponent(MathHelper.floor_double(posX),
+                MathHelper.floor_double(boundingBox.minY + 0.01D), MathHelper.floor_double(posZ));
+        recovery = dropped ? cause : Recovery.WAITING_FOR_RELEASE;
+        return dropped;
     }
 
-    private boolean dropPipe(int bx, int by, int bz, int radius) {
+    private boolean dropComponent(int bx, int by, int bz) {
         for (int dy : new int[] {0, 1, -1, 2, -2}) {
-            for (int x = bx - radius; x <= bx + radius; x++) {
-                for (int z = bz - radius; z <= bz + radius; z++) {
+            for (int x = bx - 1; x <= bx + 1; x++) {
+                for (int z = bz - 1; z <= bz + 1; z++) {
                     int y = by + dy;
                     if (y < 1 || y + 1 >= worldObj.getHeight() || !worldObj.blockExists(x, y, z)
                             || worldObj.getBlockId(x, y, z) != 0 || worldObj.getBlockId(x, y + 1, z) != 0
-                            || !worldObj.isBlockNormalCube(x, y - 1, z)) continue;
-                    EntityItem drop = new EntityItem(worldObj, x + 0.5D, y + 0.1D, z + 0.5D, stolenPipe);
+                            || !worldObj.isBlockNormalCube(x, y - 1, z)
+                            || !worldObj.checkChunksExist(Math.min(bx, x), 0, Math.min(bz, z),
+                                    Math.max(bx, x), 0, Math.max(bz, z))
+                            || worldObj.rayTraceBlocks(eyes(), Vec3D.createVector(x + 0.5D, y + 0.1D, z + 0.5D)) != null)
+                        continue;
+                    EntityItem drop = new EntityItem(worldObj, x + 0.5D, y + 0.1D, z + 0.5D, stolenComponent);
                     drop.motionX = drop.motionY = drop.motionZ = 0;
                     drop.delayBeforeCanPickup = 10;
                     if (!worldObj.spawnEntityInWorld(drop)) continue;
-                    stolenPipe = null;
+                    stolenComponent = null;
                     return true;
                 }
             }
@@ -600,8 +660,10 @@ public final class EntitySaboteur extends TacticalHostile {
     public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         if (hasStolenPipe) tag.setBoolean("ZtoPipeStolen", true);
-        if (stolenPipe != null) {
-            tag.setCompoundTag("ZtoPipeCargo", stolenPipe.writeToNBT(new NBTTagCompound()));
+        if (hasCargo()) {
+            tag.setCompoundTag("ZtoPipeCargo", stolenComponent == null ? unresolvedComponent
+                    : stolenComponent.writeToNBT(new NBTTagCompound()));
+            tag.setString("ZtoCargoItemClass", componentItemClass);
             tag.setInteger("ZtoPipeX", theftX);
             tag.setInteger("ZtoPipeY", theftY);
             tag.setInteger("ZtoPipeZ", theftZ);
@@ -611,11 +673,23 @@ public final class EntitySaboteur extends TacticalHostile {
     @Override
     public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
+        stolenComponent = null;
+        unresolvedComponent = null;
         hasStolenPipe = tag.getBoolean("ZtoPipeStolen");
         if (tag.hasKey("ZtoPipeCargo")) {
             NBTTagCompound cargo = tag.getCompoundTag("ZtoPipeCargo");
             int id = cargo.getShort("id");
-            if (id > 0 && id < Item.itemsList.length) stolenPipe = ItemStack.loadItemStackFromNBT(cargo);
+            if (id > 0 && id < Item.itemsList.length && cargo.getByte("Count") == 1) {
+                componentItemClass = tag.hasKey("ZtoCargoItemClass")
+                        ? tag.getString("ZtoCargoItemClass") : "buildcraft.transport.ItemPipe";
+                if (Item.itemsList[id] != null && componentItemClass.equals(Item.itemsList[id].getClass().getName()))
+                    stolenComponent = ItemStack.loadItemStackFromNBT(cargo);
+                if (stolenComponent == null) unresolvedComponent = cargo;
+                hasStolenPipe = true;
+                cargoFamily = "SAVED_COMPONENT";
+                recovery = Recovery.CARRYING;
+                escapeUntil = ticksExisted + ESCAPE_TICKS;
+            }
             theftX = tag.getInteger("ZtoPipeX");
             theftY = tag.getInteger("ZtoPipeY");
             theftZ = tag.getInteger("ZtoPipeZ");

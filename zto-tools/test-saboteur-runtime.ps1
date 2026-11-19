@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('exercise', 'restart', 'stress', 'dimension', 'transport', 'transport-quit', 'transport-restart', 'combat', 'terrain',
-        'smoke', 'industrial-item', 'industrial-redpower', 'industrial-redpower-quit',
+        'smoke', 'theft-cable', 'industrial-item', 'industrial-redpower', 'industrial-redpower-quit',
         'industrial-power', 'industrial-power-quit',
         'direct-item', 'direct-liquid', 'direct-engine', 'direct-eu', 'direct-eu-mfe', 'direct-eu-mfsu',
         'direct-eu-quit', 'direct-eu-restart', 'direct-eu-counterplay', 'direct-eu-peaceful', 'direct-eu-unload',

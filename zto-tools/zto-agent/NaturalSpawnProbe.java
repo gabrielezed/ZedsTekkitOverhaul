@@ -11,7 +11,7 @@ public final class NaturalSpawnProbe {
         File root = new File(args[0]);
         mod_MinecraftForge.SPAWNER_MAKE_MORE_RANDOM = false;
         TerritorialActivityService territory = new TerritorialActivityService();
-        NaturalSpawnPressure pressure = new NaturalSpawnPressure(territory, 70);
+        NaturalSpawnPressure pressure = new NaturalSpawnPressure(territory, 70, true);
         pressure.register();
         xd quiet = open(root, "quiet", 18000);
         yw visitor = join(quiet);

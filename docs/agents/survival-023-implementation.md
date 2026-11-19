@@ -42,6 +42,8 @@ The existing ZTOAgent callback still substitutes one validated Zombie, Skeleton,
 
 The candidate's biome contributes four parts. Each available cardinal sample 16 blocks away contributes one part. Sampling checks chunk availability first. Protected families neither lend weights to a neighbor nor admit replacements at their own center. Snow and mountains retain the same ordinary substitution budget, with Tank weighted at 10% of the four roles in the mountains before local role caps. The existing Saboteur lane has five incidental tickets and up to 106 additional tickets near exposed supported infrastructure per 1,000. It shares the same local cap and retains its one-Saboteur limit. Industrial eligibility is the same across ordinary biomes. Lunar role plans retain their separate selection and budgets.
 
+Alpha.2 adds 85 tickets per 1,000 eligible candidates for the four ordinary roles in suitable underground terrain. This gives 119–139 tickets underground and 34–54 at other eligible locations before local limits, with the same biome-weighted role draw. Bonus candidates need a natural floor, at least six blocks of depth relative to their column's heightmap and three consecutive natural blocks in the overhead band from 2 to 12 blocks above their feet. An artificial solid ceiling encountered first rejects the bonus. The heuristic recognizes high covered tunnels and leaves open ravine floors, exposed ledges and typical built interiors at their baseline. It uses the candidate's loaded column and the original native spawn opportunity. Spawnproof lighting and geometry still reject the original candidate before ZTO is called. A dark room excavated directly into natural stone can qualify if native hostiles can already spawn there. Block provenance and settlement ownership are outside this heuristic.
+
 ## Forest wildlife
 
 Small magpies can appear in dry Overworld daylight on exposed grass in Forest and ForestHills, including suitable clearings at their borders. One check tries six loaded positions 18–32 blocks from the player. Successful placements are spaced at least 30 seconds apart during normal 20 TPS play, with an admission cap of four loaded magpies. They can walk, hop, observe, flap through short flights, land and briefly perch when they land on leaves. Approaching closely without sneaking or damaging a bird can cause it to flee. Magpies use ordinary distance despawning and an age limit of five minutes of entity ticks that survives save/load.
@@ -56,6 +58,20 @@ Player-dropped items return on death or before ordinary retirement. A rejected i
 
 After successful natural insertion, one roll out of 100 gives a new magpie one vanilla gold ingot. Startling a gold carrier starts a short escape and subsequent release, and killing it also returns one ingot regardless of Looting. Untouched gold can expire on ordinary retirement. The independent **Magpie Spawn Egg** uses `item.magpieEgg` (constructor ID 22011, stack ID 22267) and places an empty-beaked bird in suitable loaded Overworld space, including outside the natural habitat.
 
+### Natural habitat boundaries
+
+The existing admission check targets exposed grass at the local heightmap and already checks sky visibility. The egg path permits deliberate placement in caves. The previous movement code checked water and clearance while allowing some dry drops, and reload kept the bird wherever it was saved. Those are supported ways a bird could be seen underground. The source of the reported sighting is unknown.
+
+New natural birds save an optional `ZtoMagpieNatural` flag. They can use shallow shelter and leaf cover. Their walking and short flights avoid deeper entries, with no recurring sky scan. Once per second a natural bird checks its depth. Beyond six blocks below the local heightmap it can try a short collision-checked hop toward shallower footing in a loaded column. A bird still trapped after six checks retires through the existing item-preserving path. Eggs and saves created before the flag preserve their original habitat behavior.
+
+### Minor player theft
+
+An empty-beaked bird near the surface gets one 1-in-8 roll in its lifetime when it notices an eligible local Survival player within three blocks. The backpack whitelist is plain vanilla seeds and feathers in slots outside the hotbar. The bird walks into reach and visibly pecks for 12 ticks before taking one item. Leaving reach during the warning, breaking sight or the low contact ray, startling the bird, moving the original stack or invalidating the player cancels the attempt. Inventory changes happen only at commitment on the owning world tick.
+
+After taking one item, the bird flies away briefly and reuses the local perch or ground release behavior. The item also returns through the shared death or retirement path. If the world refuses the drop, the bird keeps custody for retry. The existing beak stack persists with optional `ZtoMagpieStolenFrom` and `ZtoMagpieTheftConsidered` fields. Reload preserves the spent opportunity and carried item, and drops transient approaches. A recovered item uses ordinary pickup. Gold continues to use its own flags and an occupied beak cannot receive a gold assignment.
+
+These changes make caves more recognizable and wildlife encounters observable and recoverable. They use the existing spawn, movement and inventory boundaries so later integrations can preserve vanilla admission and protected builds.
+
 ## Electric Jetpack immersion
 
 Water reaching 1.35 blocks above the player's collision-box floor shuts down the equipped Electric Jetpack through the pinned IC2 1.97 guard. Shallow water below that sampled point permits normal operation. After 20 consecutive ticks above the waterline, propulsion returns at 48/100 wetness. The original rain and thunder behavior, inventory status, and Debug Hub stay in the existing weather service. See [water protection and owner checks](survival-022-aerial-predator.md#electric-jetpack-weather).
@@ -68,7 +84,7 @@ A solitary Fugl in a passing daytime ground encounter may select an exposed chic
 
 The existing naturalEnderkinSpawning setting controls the ordinary substitutions. The new forestMagpies and fuglChickenHunting settings both default to true and apply after restart. Disabling magpie admission leaves saved birds readable. Existing profiles get the new defaults from the settings loader. No world migration is required.
 
-Numpad 1 opens the Debug Hub. Biome Ecology displays the player's loaded biome ID, family and blended relative weights. It also shows hostile cap and pass activity, the latest ecological selection and latest ecological rejection, the magpie admission status and loaded count at the last check, and any active Fugl prey target. A recorded replacement decision precedes vanilla insertion. The monitor does not require Dev Bridge.
+Numpad 1 opens the Debug Hub. Biome Ecology displays the player's loaded biome ID, family and blended relative weights. It also shows hostile cap and pass activity, the latest ecological selection and rejection with habitat, magpie admission and count, and any active Fugl prey target. The nearby magpie line shows origin, approach or warning, and the carried item when the panel has room. A recorded replacement decision precedes vanilla insertion. The monitor does not require Dev Bridge.
 
 ## Owner playtest
 
@@ -76,9 +92,11 @@ Numpad 1 opens the Debug Hub. Biome Ecology displays the player's loaded biome I
 - In a disposable save in dry daylight, find flat grass at a forest edge with one- and two-block dirt ledges nearby. Leave one clear landing and put leaves over a second approach. Watch a magpie trot and pause, hop, climb, land and turn away under the canopy. Use the Creative egg to repeat the route and return to Survival for the approach checks.
 - Stand still to one side within a few blocks, then approach from the other side while sneaking. Check that the head tracks independently of the body and that a quick close approach still causes evasion. Drop a seed or feather during a pause. Review the darker plumage in open light and forest shade and the feel of the gait and wing transitions.
 - Search for **Magpie Spawn Egg** in Creative and NEI. Place a bird near flat grass and a low reachable perch. Drop several seeds or feathers and let it investigate several times. When it takes one, follow the beak during a head turn and relocation, then pick up the released item. Compare the ground route with the perch route. A gold carrier is a rare natural sighting during dry forest daylight.
+- In a marked Survival save on Normal, explore a dry forest clearing and the mine below it. Compare Enderkin composition on the surface at night and in the mine at similar activity. Check a high covered tunnel, an open ravine and a lit base. Use Biome Ecology to see the latest qualifying substitution or rejection. In the cave, an egg provides a separate manual-bird control.
+- For theft, use fresh birds on clear flat grass. Eggs can repeat the setup quickly. In Survival, put several seeds or feathers outside the hotbar, hold still within two or three blocks and watch the bird. The roll is rare and each bird gets one opportunity. On a warning, step away for an interruption trial. On a separate successful trial, follow the short flight and recover one item. Check the remaining stack and repeat with eligible items only in the hotbar as a control.
 - Put a few chickens in an exposed pen and others behind walls and a roof. Observe passing daytime Fugl across several encounters. Review visibility of the warning, hunt frequency and whether shelter is effective in a survival build.
 
-The weights, habitat and hunt cadence are reversible prototype defaults. Player-inventory theft, specialized calls, alternate prey and EE2 crafting remain open.
+The weights, habitat, theft and hunt cadence are reversible prototype defaults. Specialized calls, alternate prey and EE2 crafting remain open.
 
 ## Ordinary aerial encounters
 
@@ -122,7 +140,22 @@ Each paired cell reads baseline → candidate. Groups list actual inserted sizes
 
 The rolls accounted for every eligible miss in the repeated sample. In the ridge fixture, the large remaining losses were before acquisition and launch. With tuning alone, 55 of 76 hunts committed there. Alternate lanes increased that to 73 of 76 while preserving zero admissions under glass. In the open night-air sample, established Hard had 126 Skelebird groups on 254 admissions, up from 80 on 197, and five-bird Fugl formations increased from 94 to 110. Established ground observed 14 of 167 Normal and 29 of 171 Hard Skelebird encounters. A separate controlled formation fixture blocked all eight three-bird attempts, then observed two actual insertions on the ninth site. Controlled fixtures also exercise cap rejection, unavailable space, warning cancellation, a later flock member's pass, and protected jetpack behavior.
 
-## Verification
+## Alpha.2 correction verification
+
+The pinned pack's native hostile pass ran 1,800 times at matched Normal difficulty and zero activity in a marked disposable Forest world. A stone canopy created a covered floor while leaving surface opportunities in the same world. The callback counted only eligible Zombie, Skeleton, Creeper and Enderman candidates at the native insertion site. Population was cleared between passes for this sample. A lit area beneath the canopy never reached the substitution callback.
+
+| Habitat | Eligible native slots | Enderkin inserted | Substitution rate |
+| --- | ---: | ---: | ---: |
+| Surface | 5,557 | 222 | 3.99% |
+| Cave | 561 | 67 | 11.94% |
+
+The separate population fixture kept entities in the world with ordinary ecology enabled. The quiet world stopped at 82 hostiles with a vanilla threshold of 79 and the native pass overshoot. The elevated world stopped at its effective Territorial Activity cap of 134. These measurements establish substitution per eligible opportunity and the active population limits in the fixture. They do not estimate encounters per play hour. Geometry controls also covered a deep mine, high mountain tunnel, open ravine, exposed ledge, a constructed floor and roof, both mushroom biomes and a non-Overworld provider.
+
+The forest fixture admitted a bird on exposed grass and zero birds at the same site with the player deep beneath it. Native entity save/load kept the origin flag, a bounded hop took one bird back toward exposure, and a trapped natural bird retired while the deliberate control stayed. The egg could also place a bird beneath deep cover. A forced successful theft roll let the probe observe a warning, then check walking away, changing the target stack and Creative protection. One plain feather moved from a three-item backpack stack into the beak. The seed in the hotbar, tagged seed and diamonds stayed in inventory. Native save/unload/load kept ownership and a spent opportunity, and one native drop and pickup restored the starting inventory count. The natural gold, scavenging, retry and death behaviors passed in the same pack suite.
+
+Host graphical play was **NOT RUN**. Use the owner checks above for readability, interruption and how often theft is noticed during normal exploration. Build and deploy identity are recorded in the [fieldwork notes](survival-023-alpha2-fieldwork.md#corrected-alpha2-candidate).
+
+## Earlier verification
 
 - Portable checks passed for configuration, lunar calendar, assault and patrol schedules, outdoor approaches, and current documentation.
 - MCP 6.2 with JDK 8 compiled and reobfuscated the client. The staging build passed streaming validation of all 412 entries. The gameplay source is commit 3c730e695535e9d4197421ed6e66d963a281250b. The build sidecar reports a dirty workspace because documentation and test changes and unrelated local files were present at build time. Mod SHA-256 is 4c8472ffae33e2473ea9944503da396aebcdd8cd1fa7bf85f9ef41eeca1902d2. Agent SHA-256 is 35e8fc1ec25c552afd401890d4d444e63227d9ca1abfd1ffb5ddebf026613060.

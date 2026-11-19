@@ -1,8 +1,8 @@
 # Current implementation
 
-**Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** is complete on `main`. Its final stabilization adds Skelebird bone drops and strengthens Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
+**Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The 0.2.3 development branch identifies itself as `0.2.3-alpha.1`. It introduces biome-weighted ordinary Enderkin, forest magpies, and occasional Fugl predation on exposed chickens. [Current prototype](survival-023-implementation.md) · [Design draft](survival-023-spec.md)
+The current build identifies itself as `0.2.3-alpha.2`. It adds physical industrial sabotage, furnace fuel priority and a wooden-entrance tactic for the Breacher. The fieldwork correction suspends vein mining and restores native extraction. Biome ecology now favors ordinary Enderkin underground and gives surface magpies occasional one-item theft. The alpha.1 Fugl chicken hunt remains available. [Industrial Saboteur](saboteur-industrial.md) · [Mining, furnaces and entrances](survival-023-alpha2-fieldwork.md) · [Biome ecology](survival-023-implementation.md)
 
 | Owner | Current responsibility |
 | --- | --- |

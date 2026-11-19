@@ -1,4 +1,5 @@
 import buildcraft.api.PowerFramework;
+import buildcraft.core.TileBuildCraft;
 import buildcraft.energy.PneumaticPowerFramework;
 import buildcraft.factory.EntityMechanicalArm;
 import buildcraft.factory.TileQuarry;
@@ -67,14 +68,27 @@ public final class SettlementProbe implements ISaveEventHandler {
         walk();
         measureTicks("cabin center", 103, feet, 232, false, false);
         measureTicks("cabin entrance", 104, feet, 236, true, false);
+        for (int z = 237; z < 242; z++) world.g(104, feet - 1, z, 1);
         measureTicks("cabin movement", 104, feet, 236, false, true);
+        SettlementProfile.component("cabin center", world, provenance, 103, feet, 232);
 
         open("profile-industrial", false);
         prepare(X, Z);
-        for (int x = X - 6; x <= X + 6; x++) {
-            for (int z = Z - 6; z <= Z + 6; z++) {
-                for (int y = 80; y <= 88; y++) {
-                    if (Math.abs(x - X) > 2 || Math.abs(z - Z) > 2 || y < feet || y > feet + 1) {
+        industrialWorkshop(X, feet, Z);
+        measureTicks("dense industrial workshop", X, feet, Z, false, false);
+        SettlementProfile.component("dense industrial workshop", world, provenance, X, feet, Z);
+        profileRemoteQuarry(feet);
+        WorldProvenance.Snapshot store = provenance.snapshot(world, X, feet, Z);
+        check(store.hooks == 7, "profile uses the three native mutation hooks", here());
+        profilePressure(feet);
+        SettlementProfile.provenance(root.toPath());
+    }
+
+    private void industrialWorkshop(int centerX, int feet, int centerZ) {
+        for (int x = centerX - 6; x <= centerX + 6; x++) {
+            for (int z = centerZ - 6; z <= centerZ + 6; z++) {
+                for (int y = feet - 3; y <= feet + 5; y++) {
+                    if (Math.abs(x - centerX) > 2 || Math.abs(z - centerZ) > 2 || y < feet || y > feet + 1) {
                         int block = y == feet && ((x + z) & 3) == 0 ? FURNACE
                                 : y == feet + 1 && ((x + z) & 3) == 1 ? 33 : PLANK;
                         world.g(x, y, z, block);
@@ -82,12 +96,6 @@ public final class SettlementProbe implements ISaveEventHandler {
                 }
             }
         }
-        measureTicks("dense industrial workshop", X, feet, Z, false, false);
-        profileRemoteQuarry(feet);
-        WorldProvenance.Snapshot store = provenance.snapshot(world, X, feet, Z);
-        check(store.hooks == 7, "profile uses the three native mutation hooks", here());
-        profilePressure(feet);
-        SettlementProfile.provenance(root.toPath());
     }
 
     private void measureTicks(String label, int x, int y, int z, boolean recentered, boolean moving) {
@@ -105,8 +113,8 @@ public final class SettlementProbe implements ISaveEventHandler {
         boolean shifted = false;
         int remaining = 3599;
         while (remaining-- > 0) {
-            boolean leaving = moving && before.queued;
-            if (leaving) player.b(0, 0, 8);
+            if (moving && before.queued) player.b(0, 0, 0.6);
+            boolean leaving = moving && player.q >= z + 4;
             territory.tick(player, false);
             long start = System.nanoTime();
             settlements.tick(player, false);
@@ -152,9 +160,12 @@ public final class SettlementProbe implements ISaveEventHandler {
         prepare(remoteX, Z);
         position(X, y, Z);
         for (int i = 0; i < 12; i++) world.g(remoteX + i, y, Z, 1);
+        ticks(600);
+        SettlementProfile.Samples quietIdle = new SettlementProfile.Samples(), quietSurvey = new SettlementProfile.Samples();
+        SettlementProfile.Samples quarryIdle = new SettlementProfile.Samples(), quarrySurvey = new SettlementProfile.Samples();
         world.auditChunks = true;
         world.remoteChunk = remoteX >> 4;
-        ticks(400);
+        for (int i = 0; i < 400; i++) measureRemoteTick(quietIdle, quietSurvey);
         check(world.remoteReads == 0 && world.chunkMisses == 0, "loaded remote terrain schedules no remote reads", here());
         for (int i = 0; i < 120; i++) {
             settlements.tick(null, false);
@@ -168,14 +179,18 @@ public final class SettlementProbe implements ISaveEventHandler {
         quarry.j = remoteX;
         quarry.k = y + 1;
         quarry.l = Z + 2;
-        quarry.arm = new EntityMechanicalArm(world, remoteX + 0.5, y + 1, Z + 0.5, 10, 5);
+        // Supply a post-blueprint arm and targets. The pinned tile still drives it using real MJ.
+        Field initialized = TileBuildCraft.class.getDeclaredField("init");
+        initialized.setAccessible(true);
+        initialized.setBoolean(quarry, true);
+        quarry.arm = new EntityMechanicalArm(world, remoteX + 0.5, y + 3, Z + 0.5, 10, 5);
         Field listener = EntityMechanicalArm.class.getDeclaredField("listener");
         listener.setAccessible(true);
         listener.set(quarry.arm, quarry);
         Field digging = TileQuarry.class.getDeclaredField("isDigging");
         digging.setAccessible(true);
         digging.setBoolean(quarry, true);
-        int powerTicks = 0;
+        int powerTicks = 0, spent = 0;
         for (int i = 0; i < 12; i++) {
             quarry.targetX = remoteX + i;
             quarry.targetY = y + 1;
@@ -184,10 +199,12 @@ public final class SettlementProbe implements ISaveEventHandler {
             quarry.inProcess = true;
             for (int tick = 0; tick < 80 && quarry.inProcess; tick++) {
                 quarry.powerProvider.receiveEnergy(20);
+                int energy = quarry.powerProvider.energyStored;
                 quarry.n_();
+                spent += energy - quarry.powerProvider.energyStored;
                 powerTicks++;
                 world.auditChunks = true;
-                ticks(1);
+                measureRemoteTick(quarryIdle, quarrySurvey);
                 world.auditChunks = false;
             }
             check(!quarry.inProcess && quarry.isActive() && world.a(remoteX + i, y, Z) == 0,
@@ -195,17 +212,30 @@ public final class SettlementProbe implements ISaveEventHandler {
         }
         int removals = provenance.snapshot(world, remoteX, y, Z).quarryRemoval
                 + provenance.snapshot(world, remoteX + 8, y, Z).quarryRemoval;
-        check(removals == 12 && world.remoteReads == 0 && world.chunkMisses == 0,
+        check(removals == 12 && spent > 0 && world.remoteReads == 0 && world.chunkMisses == 0,
                 "remote excavation delivered provenance without recognition loading or reading remote chunks", here());
-        System.out.printf("PASS remote load control 400 ticks, no observer 120 ticks, powered quarry %d ticks / %d removals, "
-                + "%d remote chunk accesses / %d chunk misses in recognition%n", powerTicks, removals,
+        System.out.printf("PASS remote load control 400 ticks, no observer 120 ticks, powered quarry %d ticks / %d removals / %d MJ, "
+                + "%d remote chunk accesses / %d chunk misses in recognition%n", powerTicks, removals, spent,
                 world.remoteReads, world.chunkMisses);
+        quietIdle.report("loaded remote terrain / local idle");
+        quietSurvey.report("loaded remote terrain / local sampled");
+        quarryIdle.report("powered remote quarry / local idle");
+        quarrySurvey.report("powered remote quarry / local sampled");
 
         SettlementProfile.mutations(world, player, remoteX, y, Z);
     }
 
-    private void profilePressure(int y) {
-        for (int i = 0; i < 32; i++) prepare(X + i * 16, Z);
+    private void measureRemoteTick(SettlementProfile.Samples idle, SettlementProfile.Samples surveyed) {
+        territory.tick(player, false);
+        long start = System.nanoTime();
+        settlements.tick(player, false);
+        long elapsed = System.nanoTime() - start;
+        (here().reads == 0 ? idle : surveyed).add(elapsed);
+    }
+
+    private void profilePressure(int y) throws Exception {
+        open("profile-pressure", false);
+        for (int i = 0; i < 32; i++) industrialWorkshop(X + i * 32, y, Z);
         for (boolean dispersed : new boolean[] {false, true}) {
             for (int count : new int[] {1, 8, 16, 32}) {
                 SettlementRecognition[] origins = new SettlementRecognition[count];
@@ -217,7 +247,7 @@ public final class SettlementProbe implements ISaveEventHandler {
                     origins[i] = new SettlementRecognition(territory, replayProvenance);
                     origins[i].bind(world);
                     observers[i] = new vq(game, world, new fc("Replay" + i, ""), 0);
-                    observers[i].c(X + 0.5 + (dispersed ? i * 16 : 0), y, Z + 0.5, 0, 0);
+                    observers[i].c(X + 0.5 + (dispersed ? i * 32 : 0), y, Z + 0.5, 0, 0);
                 }
                 SettlementProfile.Samples idle = new SettlementProfile.Samples();
                 SettlementProfile.Samples slice = new SettlementProfile.Samples();
@@ -225,13 +255,16 @@ public final class SettlementProbe implements ISaveEventHandler {
                 world.auditChunks = true;
                 world.remoteChunk = Integer.MAX_VALUE;
                 for (int tick = 0; tick < 4200; tick++) {
+                    if (tick == 600) world.auditChunks = false;
                     long start = System.nanoTime();
                     for (int i = 0; i < count; i++) origins[i].tick(observers[i], false);
                     long elapsed = System.nanoTime() - start;
                     int step = tick % 100;
                     for (int i = 0; i < count; i++) {
                         Snapshot state = origins[i].snapshot(world, (int) observers[i].o, y, Z);
-                        check(state.reads == (step < 9 ? 169 : 0) && state.siteCount == 0, "bounded isolated origin replay", state);
+                        check(state.reads == (step < 9 ? 169 : 0) && state.siteCount == 0
+                                        && (step != 8 || state.inferred == 1266),
+                                "bounded isolated origin replay of matched workshops", state);
                     }
                     if (tick < 600) continue;
                     (step == 8 ? finish : step < 8 ? slice : idle).add(elapsed);

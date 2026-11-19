@@ -8,9 +8,32 @@ import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
 import zed.tekkitoverhaul.agent.ZTOAgent;
+import zed.tekkitoverhaul.settlement.WorldProvenance;
 
 /** Headless measurements against the pinned production classes. Timings are descriptive. */
 final class SettlementProfile {
+    static void component(String label, xd world, WorldProvenance provenance, int x, int y, int z) throws Exception {
+        Class<?> type = Class.forName("zed.tekkitoverhaul.settlement.SiteSurvey");
+        Constructor<?> constructor = type.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object survey = constructor.newInstance();
+        Method start = method(type, "start", int.class, int.class, int.class);
+        Method sample = method(type, "sample", xd.class, WorldProvenance.class);
+        Method finish = method(type, "finish");
+        Samples component = new Samples();
+        for (int pass = -64; pass < 144; pass++) {
+            start.invoke(survey, x, y, z);
+            for (int layer = 0; layer < 9; layer++) {
+                if (!Boolean.TRUE.equals(sample.invoke(survey, world, provenance)))
+                    throw new AssertionError("component window must be loaded");
+            }
+            long time = System.nanoTime();
+            finish.invoke(survey);
+            if (pass >= 0) component.add(System.nanoTime() - time);
+        }
+        component.report(label + " component pass alone");
+    }
+
     static void mutations(xd world, yw player, int x, int y, int z) {
         Samples placement = new Samples(), removal = new Samples(), quarry = new Samples();
         for (int i = -1000; i < 3600; i++) {

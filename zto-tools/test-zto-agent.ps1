@@ -4,11 +4,18 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
+    [string]$IndustrialProfileBaseline,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
-        'compound','protection','query')][string]$Focus
+        'compound','protection','query','industrial','industrial-profile')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
+if ($IndustrialProfileBaseline -and $Focus -ne 'industrial-profile') {
+    throw 'IndustrialProfileBaseline requires -Focus industrial-profile.'
+}
+if ($IndustrialProfileBaseline) {
+    $IndustrialProfileBaseline = (Resolve-Path -LiteralPath $IndustrialProfileBaseline).Path
+}
 $root = Split-Path $PSScriptRoot
 $agent = (Resolve-Path -LiteralPath (Join-Path $root 'dist-zto/ZTOAgent.jar')).Path
 $runtimeSource = Join-Path $root 'dist-zto/survival-hud-runtime'
@@ -58,7 +65,14 @@ try {
                 if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
                 return
             }
-            if ($Focus -in 'mutations','settlement-profile','compound','protection','query') {
+            if ($Focus -in 'mutations','settlement-profile','compound','protection','query','industrial-profile') {
+                if ($IndustrialProfileBaseline) {
+                    $before = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'before')
+                    Write-Output 'Industrial profile before'
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($industrialClasspath.Replace($candidate, $IndustrialProfileBaseline)) SettlementProbe $before.FullName $Focus
+                    if ($LASTEXITCODE) { throw 'Baseline industrial profile failed.' }
+                    Write-Output 'Industrial profile after'
+                }
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName $Focus
                 if ($LASTEXITCODE) { throw "Native settlement $Focus probe failed." }
                 return
@@ -71,7 +85,11 @@ try {
             if ($Pack -or $Focus -eq 'settlement') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Native settlement recognition probe failed.' }
-                if ($Focus -eq 'settlement') { return }
+            }
+            if ($Pack -or $Focus -in 'industrial','settlement') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName industrial
+                if ($LASTEXITCODE) { throw 'Native IC2 settlement probe failed.' }
+                if ($Focus) { return }
             }
             if ($Pack -or $Focus -eq 'provenance') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath ProvenanceProbe $out.FullName

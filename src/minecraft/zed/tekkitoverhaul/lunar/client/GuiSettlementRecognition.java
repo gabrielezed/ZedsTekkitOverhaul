@@ -21,7 +21,7 @@ final class GuiSettlementRecognition extends GuiScreen {
     private SiteSnapshot footprint;
     private Assessment protection;
     private int x, y, z, ticks, row, page;
-    private static final String[] NEXT_PAGE = {"Survey & Storage", "Protection", "Assessment"};
+    private static final String[] NEXT_PAGE = {"Survey & Storage", "Protection", "Industry", "Assessment"};
 
     GuiSettlementRecognition(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -96,6 +96,7 @@ final class GuiSettlementRecognition extends GuiScreen {
             row += 5;
             if (page == 1) drawTechnical();
             else if (page == 2) drawProtection();
+            else if (page == 3) drawIndustry();
             else drawAssessment();
         }
         super.drawScreen(mouseX, mouseY, partialTick);
@@ -134,6 +135,23 @@ final class GuiSettlementRecognition extends GuiScreen {
             line("Site #" + footprint.id + " | Footprint " + footprint.coverage + " | " + footprint.parts.size() + " known parts");
             line(footprint.contains(x, y, z) ? "Within a known part" : "Outside the known parts");
         }
+    }
+
+    private void drawIndustry() {
+        if (!site.ic2Available) {
+            line("Pinned IC2 adapter unavailable");
+            return;
+        }
+        if (site.ic2.found < 0) return;
+        utility("Machines (found / linked / openings)", site.ic2);
+        line("Linked types " + site.machineTypes + " | Matching placements " + site.placedMachines);
+        line("Unlinked " + (site.ic2.found - site.ic2.associated) + " | Unsupported " + site.unsupportedIndustrial);
+        line("Cables " + site.cables + " | Linked clusters " + site.clusters + " | Local pairs " + site.connections);
+        if (site.limitedNetworks > 0) line("Overlong or clipped cable groups " + site.limitedNetworks);
+        if (site.connections == 0 && site.cables > 0) line("No verified local source-to-sink path");
+        if (site.useHook) line("Excluded openings (expired / unlinked or changed): " + site.ic2.expired + " / " + site.ic2.outside);
+        else line("Openings unavailable: use hook inactive");
+        if (site.networkUsed) line("Local wiring corroborated the decision");
     }
 
     private void drawTechnical() {

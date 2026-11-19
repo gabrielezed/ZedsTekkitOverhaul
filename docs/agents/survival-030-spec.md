@@ -904,6 +904,10 @@ Do not interfere with native transport, energy, block updates or TileEntity life
 
 Observation should not change the behavior of the installed mods.
 
+## 13.6 Industrial workshop evidence
+
+The IC2 1.97 follow-up recognizes equipment associated with surveyed construction. Successful machine GUI openings supply functional evidence. Short, locally compatible source-to-sink cable paths can corroborate a workshop with diverse equipment. Construction and established compound rules govern footprint and identity. Matching manual provenance and inferred current infrastructure remain distinct. [Implemented subset, thresholds and acceptance](settlement-industrial-recognition.md)
+
 ---
 
 # 14. Evidence Aggregation and Classification

@@ -47,6 +47,7 @@ Avoid prematurely implementing frameworks for untested requirements. Prove each 
 - **Survival 0.2.2 complete.** Fugl and Skelebird hunt in bounded Overworld aerial encounters. Selected full-moon assaults share their existing budgets with aerial flocks. Rain and thunder interrupt sustained Electric Jetpack flight. [Implementation and verification](survival-022-aerial-predator.md) · [Skelebird](survival-022-skelebird.md)
 - **Follow-up work.** Equipped armor theft, cooperative theft and broader industrial sabotage each need their own design and verification.
 - **Survival 0.3.0-alpha.4.** Bounded compounds can link corroborated buildings across short gaps. Site IDs persist across registry migration and ordinary footprint changes. Protected Interior evaluates local geometry independently, and read-only site queries provide the 0.4 integration boundary. Automatic merge and split remain future work. Survival 0.4 owns SITE_SIEGE eligibility, scheduling and tactics. [Implementation and handoff](survival-030-alpha4.md)
+- **Survival 0.3 industrial follow-up.** IC2 1.97 workshops can provide their own functional evidence. Review the foundation and verify a real Survival save before bringing the 0.4 site siege candidate onto the updated main branch. [Acceptance and integration order](settlement-industrial-recognition.md)
 - **Optional developer feature.** An opt-in in-game Dev Bridge panel could show a scenario, step, simulation tick and result. It stays independent of gameplay.
 
 

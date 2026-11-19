@@ -127,7 +127,7 @@ public final class ZTOAgent {
                                       int block, Object previous, Object opened) {
         BiConsumer<Object[], int[]> callback = siteUse.get();
         if (success && opened != null && opened != previous && callback != null)
-            callback.accept(new Object[] {world, actor}, new int[] {x, y, z, block});
+            callback.accept(new Object[] {world, actor, opened}, new int[] {x, y, z, block});
     }
 
     public static void observeMutation(boolean success, Object world, Object actor, int x, int y, int z,

@@ -9,6 +9,7 @@ import java.util.function.BiConsumer;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ISaveHandler;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.settlement.SiteRegistry.Match;
 import zed.tekkitoverhaul.settlement.SiteRegistry.Part;
@@ -87,7 +88,7 @@ public final class SettlementRecognition implements SiteQueries {
     private void resetPlayer(EntityPlayer next) {
         player = next;
         latest = null;
-        survey.active = false;
+        survey.cancel();
         survey.reads = 0;
         walked = 0;
         walkIndex = 0;
@@ -192,13 +193,21 @@ public final class SettlementRecognition implements SiteQueries {
     }
 
     private void recordUse(Object[] context, int[] target) {
-        if (Thread.currentThread() != owner || context[0] != world || context[1] != player || !eligible(player)
-                || !SiteSurvey.utility(target[3])) return;
+        if (Thread.currentThread() != owner || context[0] != world || context[1] != player || !eligible(player)) return;
         Use previous = recentUse[(useIndex + RECENT_LIMIT - 1) % RECENT_LIMIT];
         if (previous != null && tick - previous.when < 20) return;
         boolean nearby = routeStarted && Math.abs(target[0] - routeX) + Math.abs(target[2] - routeZ) <= 4
                 && Math.abs(target[1] - routeY) <= 1;
-        recentUse[useIndex] = new Use(target[0], target[1], target[2], SiteSurvey.utilityType(target[3]), tick,
+        int type = SiteSurvey.utilityType(target[3]);
+        TileEntity tile = null;
+        if (type == 0) {
+            if (!nearby || context.length < 3) return;
+            tile = Ic2SiteAdapter.get().openedTile(target[3], context[2]);
+            if (tile == null || tile.isInvalid() || tile.worldObj != world
+                    || tile.xCoord != target[0] || tile.yCoord != target[1] || tile.zCoord != target[2]) return;
+            type = SiteSurvey.IC2;
+        }
+        recentUse[useIndex] = new Use(target[0], target[1], target[2], type, tile, tick,
                 nearby ? routeEpoch : -1, routeLength);
         useIndex = (useIndex + 1) % RECENT_LIMIT;
     }
@@ -219,7 +228,7 @@ public final class SettlementRecognition implements SiteQueries {
             }
             for (Use use : recentUse) {
                 if (use == null) continue;
-                if (!survey.associatedUtility(evidence, use.x, use.y, use.z, use.type)) result.outside[use.type]++;
+                if (!survey.associatedUtility(evidence, use.x, use.y, use.z, use.type, use.tile)) result.outside[use.type]++;
                 else if (tick - use.when > USE_MEMORY) result.expired[use.type]++;
                 else {
                     result.opened[use.type]++;
@@ -243,6 +252,11 @@ public final class SettlementRecognition implements SiteQueries {
         boolean observed = evidence.manual >= 8;
         boolean familiar = evidence.inferred >= 16 && uses >= 2;
         boolean shelter = result.cover >= 4;
+        int machineOpens = result.opened[SiteSurvey.IC2];
+        boolean diverse = Integer.bitCount(evidence.machineTypes) >= 2;
+        boolean connectedWorkshop = diverse && evidence.connections > 0;
+        boolean industrialGrowth = diverse && (machineOpens >= 2 || (connectedWorkshop && machineOpens >= 1));
+        boolean industrialOpenAir = observed && connectedWorkshop && activity >= 2;
         Match match = registry.match(bounds, survey.focusX, survey.focusY, survey.focusZ);
         if (match.ambiguous) {
             result.state = "Ambiguous";
@@ -267,7 +281,12 @@ public final class SettlementRecognition implements SiteQueries {
                 registry.reobserve(known, part, clock, evidence.manual, evidence.inferred, uses);
                 confirmUses(result);
                 result.confirmed = true;
-                if (observed && (shelter || uses > 0) && registry.expand(known, part, bounds)) {
+                boolean ordinaryGrowth = observed && (shelter || uses > 0);
+                boolean workshopGrowth = industrialGrowth && evidence.inferred >= 16 && steps >= 4
+                        && usedOutside(part.bounds, evidence);
+                if ((ordinaryGrowth || workshopGrowth)
+                        && registry.expand(known, part, bounds)) {
+                    result.networkUsed = !ordinaryGrowth && connectedWorkshop && machineOpens == 1;
                     result.reason = "Existing site footprint expanded";
                 } else if (fullPart && observed && part.bounds.covers(bounds) && part.bounds.volume() > bounds.volume()) {
                     if (registry.contract(known, part, bounds)) result.reason = "Existing site footprint narrowed";
@@ -294,7 +313,7 @@ public final class SettlementRecognition implements SiteQueries {
         } else if (evidence.faces != 0) {
             result.state = "Candidate";
             result.reason = "Construction reaches the survey edge";
-        } else if (!shelter && uses == 0) {
+        } else if (!shelter && uses == 0 && !industrialOpenAir) {
             result.reason = "Little cover in this sample. Open a local utility to corroborate use.";
         } else if (activity < 1 && uses < 2) {
             result.reason = "Insufficient local activity";
@@ -325,8 +344,11 @@ public final class SettlementRecognition implements SiteQueries {
                     result.reason = "Work area linked by observed construction and utility use";
                 } else {
                     result.site = registry.promote(bounds, clock, evidence.manual, evidence.inferred, uses);
-                    result.reason = result.site == null ? "Registry capacity reached"
-                            : observed ? "Construction and local use corroborated" : "Structure and repeated utility use corroborated";
+                    result.networkUsed = result.site != null && !shelter && uses == 0 && industrialOpenAir;
+                    if (result.site == null) result.reason = "Registry capacity reached";
+                    else if (result.networkUsed) result.reason = "Construction and local wiring corroborated";
+                    else result.reason = observed ? "Construction and local use corroborated"
+                            : "Structure and repeated utility use corroborated";
                     if (result.site != null) result.part = result.site.parts.get(0);
                 }
                 result.state = result.site == null ? "Candidate" : "Recognized";
@@ -336,10 +358,19 @@ public final class SettlementRecognition implements SiteQueries {
         }
     }
 
+    private boolean usedOutside(Bounds known, Evidence evidence) {
+        for (Use use : recentUse) {
+            if (use != null && use.type == SiteSurvey.IC2 && tick - use.when <= USE_MEMORY
+                    && !known.contains(use.x, use.y, use.z)
+                    && survey.associatedUtility(evidence, use.x, use.y, use.z, use.type, use.tile)) return true;
+        }
+        return false;
+    }
+
     private void confirmUses(Decision result) {
         for (Use use : recentUse) {
             if (use != null && use.epoch == routeEpoch && tick - use.when <= LINK_TIME
-                    && survey.associatedUtility(result.evidence, use.x, use.y, use.z, use.type)) {
+                    && survey.associatedUtility(result.evidence, use.x, use.y, use.z, use.type, use.tile)) {
                 use.site = result.site;
                 use.part = result.part;
             }
@@ -352,7 +383,7 @@ public final class SettlementRecognition implements SiteQueries {
         if (first == null || tick - first.when > LINK_TIME) return match;
         Bounds target = result.evidence.bounds;
         for (Use use : recentUse) {
-            if (use == null || use.site == null || use.epoch != first.epoch || use.when >= first.when
+            if (use == null || use.site == null || !use.current() || use.epoch != first.epoch || use.when >= first.when
                     || first.when - use.when > LINK_TIME || first.distance - use.distance < 3
                     || first.distance - use.distance > MAX_ROUTE || !use.site.parts.contains(use.part)) continue;
             Part part = use.part;
@@ -361,7 +392,7 @@ public final class SettlementRecognition implements SiteQueries {
                     || Math.abs(origin.minY - target.minY) > 2 || Math.abs(use.y - first.y) > 2) continue;
             int corroboration = 0;
             for (Use earlier : recentUse) {
-                if (earlier != null && earlier.part == part && earlier.epoch == first.epoch
+                if (earlier != null && earlier.part == part && earlier.current() && earlier.epoch == first.epoch
                         && earlier.when <= use.when && first.when - earlier.when <= LINK_TIME) corroboration++;
             }
             if (corroboration < 2) continue;
@@ -504,24 +535,29 @@ public final class SettlementRecognition implements SiteQueries {
         }
         boolean pending = overworld && survey.active && survey.near(x, y, z, 3, 2);
         return new Snapshot(overworld ? registry.status : "OUTSIDE_OVERWORLD", registry.size(), site, local,
-                useActive, pending, survey.reads, peakReads, tick, pending ? survey.extent() : null, atPoint.ambiguous);
+                useActive, pending, survey.reads, peakReads, tick, pending ? survey.extent() : null, atPoint.ambiguous,
+                Ic2SiteAdapter.get().available());
     }
 
     private static final class Use {
         final int x, y, z, type;
+        final TileEntity tile;
         final long when, epoch, distance;
         Site site;
         Part part;
 
-        Use(int x, int y, int z, int type, long when, long epoch, long distance) {
+        Use(int x, int y, int z, int type, TileEntity tile, long when, long epoch, long distance) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.type = type;
+            this.tile = tile;
             this.when = when;
             this.epoch = epoch;
             this.distance = distance;
         }
+
+        boolean current() { return tile == null || !tile.isInvalid(); }
     }
 
     private static final class Decision {
@@ -529,14 +565,15 @@ public final class SettlementRecognition implements SiteQueries {
         final int activity, anchorX, anchorY, anchorZ, footY, layers;
         final long clock, tick;
         final Bounds extent;
-        final int[] opened = new int[4], expired = new int[4], outside = new int[4];
+        final int[] opened = new int[SiteSurvey.UTILITY_TYPES], expired = new int[SiteSurvey.UTILITY_TYPES],
+                outside = new int[SiteSurvey.UTILITY_TYPES];
         int walked, uses, cover;
         String state = "No site", reason;
         Site site;
         Part part;
         Use firstUse;
         int localOpenings;
-        boolean confirmed;
+        boolean confirmed, networkUsed;
 
         Decision(SiteSurvey survey, long tick, Evidence evidence, int activity, long clock) {
             anchorX = survey.x;
@@ -559,9 +596,12 @@ public final class SettlementRecognition implements SiteQueries {
         public final long observedTick, assessedTick, assessmentAge;
         public final boolean useHook, queued;
         public final UtilitySnapshot workbench, furnace, chest;
+        public final UtilitySnapshot ic2;
+        public final boolean ic2Available, networkUsed;
+        public final int machineTypes, placedMachines, cables, unsupportedIndustrial, connections, clusters, limitedNetworks;
 
         private Snapshot(String registry, int count, Site site, Decision decision, boolean useHook, boolean queued,
-                         int reads, int peakReads, long tick, Bounds pendingExtent, boolean ambiguous) {
+                         int reads, int peakReads, long tick, Bounds pendingExtent, boolean ambiguous, boolean ic2Available) {
             this.registry = registry;
             this.useHook = useHook;
             this.queued = queued;
@@ -596,7 +636,17 @@ public final class SettlementRecognition implements SiteQueries {
             workbench = new UtilitySnapshot(decision, 1);
             furnace = new UtilitySnapshot(decision, 2);
             chest = new UtilitySnapshot(decision, 3);
-            utilities = evidence == null ? -1 : workbench.associated + furnace.associated + chest.associated;
+            ic2 = new UtilitySnapshot(decision, SiteSurvey.IC2);
+            this.ic2Available = ic2Available;
+            networkUsed = decision != null && decision.networkUsed;
+            machineTypes = evidence == null ? -1 : Integer.bitCount(evidence.machineTypes);
+            placedMachines = evidence == null ? -1 : evidence.placedMachines;
+            cables = evidence == null ? -1 : evidence.cables;
+            unsupportedIndustrial = evidence == null ? -1 : evidence.unsupported;
+            connections = evidence == null ? -1 : evidence.connections;
+            clusters = evidence == null ? -1 : evidence.clusters;
+            limitedNetworks = evidence == null ? -1 : evidence.limitedNetworks;
+            utilities = evidence == null ? -1 : workbench.associated + furnace.associated + chest.associated + ic2.associated;
             cover = evidence == null ? -1 : decision.cover;
             anchorCover = evidence == null ? -1 : evidence.anchorCover;
             clipFaces = evidence == null ? 0 : evidence.faces;

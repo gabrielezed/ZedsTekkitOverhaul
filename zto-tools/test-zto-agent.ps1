@@ -3,7 +3,8 @@ param(
     [string]$PackJava,
     [switch]$Pack,
     [switch]$AerialSample,
-    [string]$CandidateJar
+    [string]$CandidateJar,
+    [ValidateSet('furnace','mining','breacher')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,7 +23,7 @@ try {
         & $runtime '-Xverify:all' "-javaagent:$agent" -cp $out.FullName zed.tekkitoverhaul.agent.AgentProbe archive $overlay
         if ($LASTEXITCODE) { throw "Standalone agent probe failed for $runtime" }
     }
-    if ($Pack -or $AerialSample) {
+    if ($Pack -or $AerialSample -or $Focus) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
         if ($CandidateJar) { $CandidateJar = (Resolve-Path -LiteralPath $CandidateJar).Path }
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
@@ -34,11 +35,13 @@ try {
             'RedPowerMachine-2.0pr5b2.zip','RedPowerWiring-2.0pr5b2.zip','RedPowerControl-2.0pr5b2.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialClasspath = ($headless + $buildCraft + $industrialCraft + $transports) -join ';'
+        $furnaces = @('EE2ClientV1.4.6.5.jar','Railcraft_Client_5.3.3.zip') | ForEach-Object { Join-Path $game "mods/$_" }
+        $furnaceClasspath = "$industrialClasspath;$($furnaces -join ';')"
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
-            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java') |
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java','FurnaceFuelProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
-        & javac -source 8 -target 8 -cp $industrialClasspath -d $out.FullName @headlessSources
+        & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
@@ -47,6 +50,11 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Pack -or $Focus -eq 'furnace') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $furnaceClasspath FurnaceFuelProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Furnace fuel transfer probe failed.' }
+                if ($Focus -eq 'furnace') { return }
+            }
             if ($AerialSample) {
                 $sampleClasspath = $headless.Clone()
                 if ($CandidateJar) { $sampleClasspath[2] = $CandidateJar }

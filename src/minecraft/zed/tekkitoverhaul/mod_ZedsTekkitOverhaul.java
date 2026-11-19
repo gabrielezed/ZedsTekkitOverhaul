@@ -96,6 +96,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds,
                 settings.electricJetpackWeather, settings.lunarAerialEncounters, settings.forestMagpies);
         DragDistributionIntegration.register();
+        zed.tekkitoverhaul.integration.inventory.FurnaceFuelTransfer.register();
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);
         HopperRegistry.register(this, settings);

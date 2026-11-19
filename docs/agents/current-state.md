@@ -6,6 +6,8 @@ The current candidate identifies itself as `0.4.0-alpha.1`. The opt-in site sieg
 
 Survival 0.3.0-alpha.4 established the recognition contract. Settlement Recognition can link corroborated parts across short courtyards and retains stable IDs from earlier saves. Protected Interior reports local geometry separately. [Implementation, acceptance and 0.4 handoff](survival-030-alpha4.md)
 
+The industrial follow-up observes supported IC2 1.97 machines, local copper wiring and successful machine GUI openings. A workshop can corroborate a site with its own equipment. Construction still defines site boundaries. [Industrial recognition and owner walkthrough](settlement-industrial-recognition.md)
+
 Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a wooden-entrance tactic for the Breacher. The fieldwork correction suspends vein mining and restores native extraction. Biome ecology favors ordinary Enderkin underground and gives surface magpies occasional one-item theft. The alpha.1 Fugl chicken hunt remains available. [Industrial Saboteur](saboteur-industrial.md) · [Mining, furnaces and entrances](survival-023-alpha2-fieldwork.md) · [Biome ecology](survival-023-implementation.md)
 
 | Owner | Current responsibility |

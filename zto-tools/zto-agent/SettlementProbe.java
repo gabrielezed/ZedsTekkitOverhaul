@@ -5,15 +5,32 @@ import buildcraft.factory.EntityMechanicalArm;
 import buildcraft.factory.TileQuarry;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.registry.FMLRegistry;
 import forge.ISaveEventHandler;
 import forge.MinecraftForge;
+import ic2.common.BlockCable;
+import ic2.common.BlockElectric;
+import ic2.common.BlockGenerator;
+import ic2.common.BlockMachine;
+import ic2.common.TileEntityCable;
+import ic2.common.TileEntityCompressor;
+import ic2.common.TileEntityElecFurnace;
+import ic2.common.TileEntityElectricBatBox;
+import ic2.common.TileEntityExtractor;
+import ic2.common.TileEntityGenerator;
+import ic2.common.TileEntityIronFurnace;
+import ic2.common.TileEntityMacerator;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Random;
+import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.settlement.SettlementRecognition;
 import zed.tekkitoverhaul.settlement.SettlementRecognition.Snapshot;
@@ -44,6 +61,10 @@ public class SettlementProbe implements ISaveEventHandler {
     public static void main(String[] args) {
         try {
             SettlementProbe probe = new SettlementProbe(new File(args[0]));
+            if (args.length == 2 && ("industrial".equals(args[1]) || "industrial-profile".equals(args[1]))) {
+                probe.industrial("industrial-profile".equals(args[1]));
+                System.exit(0);
+            }
             if (args.length == 2 && "cabin".equals(args[1])) {
                 probe.suspendedCabins();
                 System.exit(0);
@@ -79,6 +100,261 @@ public class SettlementProbe implements ISaveEventHandler {
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    private void industrial(boolean profileOnly) throws Exception {
+        // Native block constructors and save mappings with fixture-local IDs, off the gameplay bootstrap.
+        FMLRegistry.registerRegistry(new ClientRegistry());
+        int machine = new BlockMachine(250).bO, generator = new BlockGenerator(246).bO;
+        int electric = new BlockElectric(227).bO, cable = new BlockCable(228).bO;
+        ModLoader.registerTileEntity(TileEntityElecFurnace.class, "Electric Furnace");
+        ModLoader.registerTileEntity(TileEntityMacerator.class, "Macerator");
+        ModLoader.registerTileEntity(TileEntityExtractor.class, "Extractor");
+        ModLoader.registerTileEntity(TileEntityCompressor.class, "Compressor");
+        ModLoader.registerTileEntity(TileEntityGenerator.class, "Generator");
+        ModLoader.registerTileEntity(TileEntityElectricBatBox.class, "BatBox");
+        ModLoader.registerTileEntity(TileEntityIronFurnace.class, "Iron Furnace");
+        ModLoader.registerTileEntity(TileEntityCable.class, "Cable");
+        int[] ids = {generator, machine, machine, machine, machine, electric, machine};
+        int[] metadata = {0, 2, 3, 4, 5, 0, 1};
+        if (profileOnly) {
+            industrialProfiles(ids, metadata, cable);
+            return;
+        }
+        open("industrial-old-workshop", false);
+        prepare(X, Z);
+        int y = Y + 8, x = X + 3, z = Z + 3;
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) world.g(X + dx, y - 1, Z + dz, PLANK);
+        }
+        for (int i = 0; i < ids.length; i++) {
+            check(world.d(X + i, y, Z + 1, ids[i], metadata[i]), "native machine placement " + i, null);
+            if (i < 6) check(world.d(X + i, y, Z, cable, i % 2), "native copper cable placement " + i, null);
+        }
+        position(x, y, z);
+        walk();
+        ticks(110);
+        Snapshot before = here();
+        check(before.ic2Available && before.id == 0 && before.placed == 0 && before.placedMachines == 0
+                        && before.ic2.found == 6 && before.ic2.associated == 6 && before.machineTypes == 6
+                        && before.unsupportedIndustrial == 1 && before.cables == 6
+                        && before.clusters == 1 && before.connections >= 4 && before.peakReads == 169,
+                "current IC2 registry, geometry, identity, unsupported control and work budget", before);
+        expect(assess(x, y, z), State.EXPOSED, Evidence.NO, Evidence.UNKNOWN, "open industrial workshop");
+        player.a = new oy();
+        player.a.e = true;
+        int opens = utilityOpens;
+        check(!controller.a(player, world, null, X + 2, y, Z + 1, 1) && utilityOpens == opens,
+                "sneak does not open the IC2 GUI", here());
+        player.a.e = false;
+        useUtility(X + 2, y, Z + 1);
+        useUtility(X + 3, y, Z + 1);
+        ticks(110);
+        check(here().ic2.opened == 1 && here().id == 0, "native IC2 openings preserve cooldown", here());
+        useUtility(X + 3, y, Z + 1);
+        ticks(110);
+        Snapshot recognized = recognized("old open IC2 workshop", false);
+        int id = recognized.id;
+        check(recognized.ic2.opened == 2 && settlements.locate(world, x, y, z).site.id == id,
+                "two real IC2 container openings promote without vanilla utility or authorship", recognized);
+        // Same block and metadata with a different native tile must not reuse its old opening.
+        world.g(X + 3, y, Z + 1, 0);
+        world.d(X + 3, y, Z + 1, machine, 4);
+        ticks(110);
+        check(here().id == id && here().ic2.opened == 1 && here().ic2.outside == 1
+                        && here().boundary.equals(recognized.boundary), "replacement invalidates use and retains the same footprint", here());
+
+        for (int i = 0; i < 6; i++) ((TileEntityCable) world.b(X + i, y, Z)).color = (short) (i + 1);
+        ticks(110);
+        check(here().connections == 0, "incompatible adjacent cables do not connect", here());
+        for (int i = 0; i < 6; i++) ((TileEntityCable) world.b(X + i, y, Z)).color = 0;
+        for (int i = 6; i < 22; i++) world.d(X + i, y, Z, cable, 0);
+        ticks(110);
+        check(here().id == id && here().connections == 0 && here().limitedNetworks == 1
+                        && here().boundary.equals(recognized.boundary), "transmission cable cannot extend the site", here());
+        world.hideChunk((X >> 4) - 1, Z >> 4);
+        world.auditChunks = true;
+        ticks(110);
+        check("Terrain unavailable".equals(here().assessment) && world.chunkMisses == 0
+                        && settlements.resolve(world, id).coverage == Coverage.UNAVAILABLE,
+                "missing chunks stop industrial observation before a retrieval", here());
+        world.auditChunks = false;
+        world.hideChunk(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        save();
+        open("industrial-old-workshop", false);
+        prepare(X, Z);
+        position(x, y, z);
+        walk();
+        ticks(110);
+        check(here().id == id && here().boundary.equals(recognized.boundary) && here().ic2.associated == 6
+                        && here().ic2.opened == 0 && here().placedMachines == 0,
+                "reopen restores native machines and stable site identity with fresh use memory", here());
+
+        for (int dz = 2; dz <= 4; dz++) world.g(X - 1, y - 1, Z + dz, PLANK);
+        world.d(X - 1, y, Z + 3, machine, 2);
+        player.a = new oy();
+        ticks(110);
+        check(here().boundary.equals(recognized.boundary), "unused addition does not expand an inferred site", here());
+        useUtility(X - 1, y, Z + 3);
+        ticks(25);
+        useUtility(X + 3, y, Z + 1);
+        ticks(110);
+        check(here().id == id && settlements.resolve(world, id).envelope.minX == X - 1
+                        && settlements.resolve(world, id).coverage == Coverage.COMPLETE,
+                "used industrial addition extends actual connected construction under the same ID", here());
+
+        int outpost = X + 32;
+        prepare(outpost, Z);
+        position(outpost + 3, y, z);
+        world.d(outpost + 2, y, Z + 1, machine, 3);
+        player.a = new oy();
+        ticks(1);
+        useUtility(outpost + 2, y, Z + 1);
+        ticks(25);
+        useUtility(outpost + 2, y, Z + 1);
+        ticks(110);
+        check(here().ic2.found == 1 && here().ic2.associated == 0 && here().id == 0,
+                "isolated industrial machine has no construction membership", here());
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) world.g(outpost + dx, y - 1, Z + dz, PLANK);
+        }
+        world.d(outpost + 3, y, Z + 1, generator, 0);
+        world.d(outpost + 2, y, Z, cable, 0);
+        world.d(outpost + 3, y, Z, cable, 1);
+        walk();
+        ticks(110);
+        check(here().id > 0 && here().id != id && here().siteCount == 2 && here().connections == 1,
+                "independent outpost keeps a separate identity", here());
+        System.out.println("PASS native IC2 workshop, authentic openings, colored and long cables, growth, outpost and save/reopen");
+        industrialHouse(ids, metadata, cable);
+    }
+
+    private void industrialProfiles(int[] ids, int[] metadata, int cable) throws Exception {
+        open("industrial-profile", false);
+        prepare(X, Z);
+        int y = Y + 8;
+        position(X + 3, y, Z + 3);
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) world.g(X + dx, y - 1, Z + dz, PLANK);
+        }
+        for (int i = 0; i < 6; i++) {
+            world.d(X + i, y, Z + 1, ids[i], metadata[i]);
+            world.d(X + i, y, Z, cable, i % 2);
+            if (i == 1) industrialTiming("small workshop (two endpoints)");
+        }
+        industrialTiming("six-machine workshop");
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 5; dz < 7; dz++)
+                world.d(X + dx, y, Z + dz, dx % 2 == 0 ? ids[5] : ids[1], 2);
+        }
+        industrialTiming("mixed factory (20 machines)");
+        for (int dx = 0; dx < 7; dx++) {
+            for (int dz = 0; dz < 7; dz++) world.d(X + dx, y + 1, Z + dz, cable, 0);
+        }
+        industrialTiming("cable-heavy factory");
+        for (int dx = 0; dx < 33; dx++) world.d(X + dx, y + 2, Z, cable, 0);
+        world.d(X, y + 2, Z - 1, ids[0], metadata[0]);
+        world.d(X + 32, y + 2, Z + 1, ids[2], metadata[2]);
+        industrialTiming("long cable between areas");
+        world.hideChunk((X >> 4) - 1, Z >> 4);
+        industrialTiming("partly unavailable window");
+    }
+
+    private void industrialTiming(String label) {
+        SettlementProfile.Samples idle = new SettlementProfile.Samples(), sampled = new SettlementProfile.Samples();
+        SettlementProfile.Samples unavailable = new SettlementProfile.Samples();
+        long assessed = -1;
+        int misses = 0;
+        world.auditChunks = true;
+        for (int i = -3000; i < 3600; i++) {
+            territory.tick(player, false);
+            long start = System.nanoTime();
+            settlements.tick(player, false);
+            long elapsed = System.nanoTime() - start;
+            Snapshot snapshot = here();
+            check(snapshot.reads <= 169 && world.chunkMisses == 0, "bounded industrial profile", snapshot);
+            if (i >= 0) {
+                if (snapshot.reads > 0) sampled.add(elapsed);
+                else if (snapshot.assessedTick >= 0 && snapshot.assessedTick != assessed) {
+                    unavailable.add(elapsed);
+                    misses++;
+                } else idle.add(elapsed);
+            }
+            assessed = snapshot.assessedTick;
+        }
+        world.auditChunks = false;
+        idle.report(label + " industrial idle");
+        if (misses > 0) unavailable.report(label + " industrial unavailable check");
+        else sampled.report(label + " industrial sampled");
+    }
+
+    private void industrialHouse(int[] ids, int[] metadata, int cable) throws Exception {
+        game.p = new aaw(null, null) {
+            @Override public int[] a(String path) {
+                // IC2 compares native sprite pixels when a machine changes facing on placement.
+                try (InputStream stream = BlockMachine.class.getResourceAsStream(path)) {
+                    if (stream == null) throw new AssertionError("Missing native IC2 texture " + path);
+                    BufferedImage image = ImageIO.read(stream);
+                    return image.getRGB(0, 0, image.getWidth(), image.getHeight(), null, 0, image.getWidth());
+                } catch (IOException failure) {
+                    throw new AssertionError(failure);
+                }
+            }
+        };
+        open("industrial-inhabited-house", false);
+        prepare(X, Z);
+        int y = Y + 8;
+        position(X + 4, y, Z + 4);
+        for (int dx = 0; dx < 9; dx++) {
+            for (int dz = 0; dz < 7; dz++) {
+                world.g(X + dx, y - 2, Z + dz, 1);
+                place(PLANK, X + dx, y - 2, Z + dz, 1);
+                if (dx == 0 || dx == 8 || dz == 0 || dz == 6) {
+                    world.g(X + dx, y, Z + dz, PLANK);
+                    world.g(X + dx, y + 1, Z + dz, PLANK);
+                }
+                world.g(X + dx, y + 2, Z + dz, PLANK);
+            }
+        }
+        walk();
+        ticks(560);
+        Snapshot emptyHouse = recognized("house before industrial fitting", true);
+        for (int i = 0; i < 6; i++) {
+            check(controller.a(player, world, new aan(ids[i], 1, metadata[i]), X + i + 1, y - 1, Z + 2, 1),
+                    "place a native IC2 machine through the player controller", here());
+            world.d(X + i + 1, y, Z + 1, cable, 0);
+        }
+        position(X + 3, y, Z + 3);
+        player.a = new oy();
+        ticks(1);
+        useUtility(X + 1, y, Z + 2);
+        ticks(25);
+        useUtility(X + 6, y, Z + 2);
+        ticks(110);
+        Snapshot workshop = here();
+        check(workshop.id == emptyHouse.id && workshop.siteCount == 1 && workshop.boundary.equals(emptyHouse.boundary)
+                        && workshop.ic2.associated == 6 && workshop.placedMachines == 6 && workshop.ic2.opened == 2
+                        && workshop.connections >= 4 && assess(X + 3, y, Z + 3).overhead == Evidence.YES,
+                "fitting a recognized house preserves identity, geometry and overhead and reuses native IC2 GUI use", workshop);
+        System.out.println("PASS recognized house with six machines, tracked installation, Generator and BatBox GUI openings");
+
+        int openX = X + 32;
+        prepare(openX, Z);
+        position(openX + 2, y, Z + 2);
+        platform(openX, y, Z);
+        world.d(openX + 1, y, Z + 1, ids[1], metadata[1]);
+        world.d(openX + 1, y, Z, cable, 0);
+        world.d(openX + 2, y, Z, cable, 0);
+        walk();
+        ticks(550);
+        check(here().id == 0 && here().ic2.associated == 1 && here().uses == 0,
+                "a single machine cannot replace independent cover or use evidence", here());
+        world.d(openX + 2, y, Z + 1, ids[0], metadata[0]);
+        for (int i = 0; i < 220 && here().id == 0; i++) ticks(1);
+        check(here().id > 0 && here().id != emptyHouse.id && here().networkUsed && here().uses == 0
+                        && here().cover == 0 && here().connections == 1,
+                "local source and sink corroborate observed open construction and activity", here());
+        System.out.println("PASS local wiring corroborates an open observed workshop without a roof or a GUI opening");
     }
 
     void compound(boolean migrated) throws Exception {
@@ -956,6 +1232,7 @@ public class SettlementProbe implements ISaveEventHandler {
             @Override public void a(ajw statistic, int count) {}
         };
         game.h = player;
+        game.i = player;
         territory.bind(world);
         provenance.bind(world);
         provenance.bindPlayer(player);

@@ -41,7 +41,7 @@ try {
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
-            'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java') |
+            'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java','SettlementProfile.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }

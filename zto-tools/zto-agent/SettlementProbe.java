@@ -1,5 +1,6 @@
 import buildcraft.api.PowerFramework;
 import buildcraft.energy.PneumaticPowerFramework;
+import buildcraft.factory.EntityMechanicalArm;
 import buildcraft.factory.TileQuarry;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -42,6 +43,10 @@ public final class SettlementProbe implements ISaveEventHandler {
                 probe.surveyMutations();
                 System.exit(0);
             }
+            if (args.length == 2 && "settlement-profile".equals(args[1])) {
+                probe.profile();
+                System.exit(0);
+            }
             probe.suspendedCabins();
             probe.surveyMutations();
             probe.sites();
@@ -53,6 +58,192 @@ public final class SettlementProbe implements ISaveEventHandler {
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    private void profile() throws Exception {
+        int feet = 83;
+        lowCabin("profile-small-cabin", feet);
+        position(103, feet, 232);
+        walk();
+        measureTicks("cabin center", 103, feet, 232, false, false);
+        measureTicks("cabin entrance", 104, feet, 236, true, false);
+        measureTicks("cabin movement", 104, feet, 236, false, true);
+
+        open("profile-industrial", false);
+        prepare(X, Z);
+        for (int x = X - 6; x <= X + 6; x++) {
+            for (int z = Z - 6; z <= Z + 6; z++) {
+                for (int y = 80; y <= 88; y++) {
+                    if (Math.abs(x - X) > 2 || Math.abs(z - Z) > 2 || y < feet || y > feet + 1) {
+                        int block = y == feet && ((x + z) & 3) == 0 ? FURNACE
+                                : y == feet + 1 && ((x + z) & 3) == 1 ? 33 : PLANK;
+                        world.g(x, y, z, block);
+                    }
+                }
+            }
+        }
+        measureTicks("dense industrial workshop", X, feet, Z, false, false);
+        profileRemoteQuarry(feet);
+        WorldProvenance.Snapshot store = provenance.snapshot(world, X, feet, Z);
+        check(store.hooks == 7, "profile uses the three native mutation hooks", here());
+        profilePressure(feet);
+        SettlementProfile.provenance(root.toPath());
+    }
+
+    private void measureTicks(String label, int x, int y, int z, boolean recentered, boolean moving) {
+        position(x, y, z);
+        ticks(600);
+        nextSurvey();
+        int centers = 0, followUps = 0, cancelled = 0;
+        SettlementProfile.Samples idle = new SettlementProfile.Samples();
+        SettlementProfile.Samples slice = new SettlementProfile.Samples();
+        SettlementProfile.Samples finish = new SettlementProfile.Samples();
+        SettlementProfile.Samples shiftedSlice = new SettlementProfile.Samples();
+        SettlementProfile.Samples shiftedFinish = new SettlementProfile.Samples();
+        SettlementProfile.Samples cancel = new SettlementProfile.Samples();
+        Snapshot before = here();
+        boolean shifted = false;
+        int remaining = 3599;
+        while (remaining-- > 0) {
+            boolean leaving = moving && before.queued;
+            if (leaving) player.b(0, 0, 8);
+            territory.tick(player, false);
+            long start = System.nanoTime();
+            settlements.tick(player, false);
+            long elapsed = System.nanoTime() - start;
+            Snapshot step = here();
+            if (leaving) {
+                check(!step.queued && step.reads == 0, "movement cancels without an extra slice", step);
+                cancelled++;
+                cancel.add(elapsed);
+                position(x, y, z);
+            } else if (step.reads == 0) {
+                idle.add(elapsed);
+            } else {
+                check(step.reads == 169, "one survey slice per tick", step);
+                if (step.assessmentAge == 0) {
+                    if (shifted) {
+                        shiftedFinish.add(elapsed);
+                        followUps++;
+                        shifted = false;
+                    } else {
+                        finish.add(elapsed);
+                        centers++;
+                        shifted = step.queued;
+                    }
+                } else {
+                    (shifted ? shiftedSlice : slice).add(elapsed);
+                }
+            }
+            before = step;
+        }
+        check(moving ? cancelled == 36 && centers == 0 : centers == 36 && followUps == (recentered ? 36 : 0),
+                "repeatable survey workload for " + label, here());
+        idle.report(label + " idle");
+        slice.report(label + " initial slice");
+        finish.report(label + " initial final");
+        shiftedSlice.report(label + " recentered slice");
+        shiftedFinish.report(label + " recentered final");
+        cancel.report(label + " cancellation");
+    }
+
+    private void profileRemoteQuarry(int y) throws Exception {
+        int remoteX = X + 512;
+        prepare(remoteX, Z);
+        position(X, y, Z);
+        for (int i = 0; i < 12; i++) world.g(remoteX + i, y, Z, 1);
+        world.auditChunks = true;
+        world.remoteChunk = remoteX >> 4;
+        ticks(400);
+        check(world.remoteReads == 0 && world.chunkMisses == 0, "loaded remote terrain schedules no remote reads", here());
+        for (int i = 0; i < 120; i++) {
+            settlements.tick(null, false);
+            check(here().reads == 0 && !here().queued, "no player means no survey", here());
+        }
+        world.auditChunks = false;
+
+        PowerFramework.currentFramework = new PneumaticPowerFramework();
+        TileQuarry quarry = new TileQuarry();
+        quarry.i = world;
+        quarry.j = remoteX;
+        quarry.k = y + 1;
+        quarry.l = Z + 2;
+        quarry.arm = new EntityMechanicalArm(world, remoteX + 0.5, y + 1, Z + 0.5, 10, 5);
+        Field listener = EntityMechanicalArm.class.getDeclaredField("listener");
+        listener.setAccessible(true);
+        listener.set(quarry.arm, quarry);
+        Field digging = TileQuarry.class.getDeclaredField("isDigging");
+        digging.setAccessible(true);
+        digging.setBoolean(quarry, true);
+        int powerTicks = 0;
+        for (int i = 0; i < 12; i++) {
+            quarry.targetX = remoteX + i;
+            quarry.targetY = y + 1;
+            quarry.targetZ = Z;
+            quarry.arm.setTarget(remoteX + i + 0.5, y + 1, Z + 0.5);
+            quarry.inProcess = true;
+            for (int tick = 0; tick < 80 && quarry.inProcess; tick++) {
+                quarry.powerProvider.receiveEnergy(20);
+                quarry.n_();
+                powerTicks++;
+                world.auditChunks = true;
+                ticks(1);
+                world.auditChunks = false;
+            }
+            check(!quarry.inProcess && quarry.isActive() && world.a(remoteX + i, y, Z) == 0,
+                    "powered BuildCraft arm reached its target and excavated", here());
+        }
+        int removals = provenance.snapshot(world, remoteX, y, Z).quarryRemoval
+                + provenance.snapshot(world, remoteX + 8, y, Z).quarryRemoval;
+        check(removals == 12 && world.remoteReads == 0 && world.chunkMisses == 0,
+                "remote excavation delivered provenance without recognition loading or reading remote chunks", here());
+        System.out.printf("PASS remote load control 400 ticks, no observer 120 ticks, powered quarry %d ticks / %d removals, "
+                + "%d remote chunk accesses / %d chunk misses in recognition%n", powerTicks, removals,
+                world.remoteReads, world.chunkMisses);
+
+        SettlementProfile.mutations(world, player, remoteX, y, Z);
+    }
+
+    private void profilePressure(int y) {
+        for (int i = 0; i < 32; i++) prepare(X + i * 16, Z);
+        for (boolean dispersed : new boolean[] {false, true}) {
+            for (int count : new int[] {1, 8, 16, 32}) {
+                SettlementRecognition[] origins = new SettlementRecognition[count];
+                vq[] observers = new vq[count];
+                for (int i = 0; i < count; i++) {
+                    // Each replay owns its walk/use history and registry view. No writes or mutations.
+                    WorldProvenance replayProvenance = new WorldProvenance();
+                    replayProvenance.bind(world);
+                    origins[i] = new SettlementRecognition(territory, replayProvenance);
+                    origins[i].bind(world);
+                    observers[i] = new vq(game, world, new fc("Replay" + i, ""), 0);
+                    observers[i].c(X + 0.5 + (dispersed ? i * 16 : 0), y, Z + 0.5, 0, 0);
+                }
+                SettlementProfile.Samples idle = new SettlementProfile.Samples();
+                SettlementProfile.Samples slice = new SettlementProfile.Samples();
+                SettlementProfile.Samples finish = new SettlementProfile.Samples();
+                world.auditChunks = true;
+                world.remoteChunk = Integer.MAX_VALUE;
+                for (int tick = 0; tick < 4200; tick++) {
+                    long start = System.nanoTime();
+                    for (int i = 0; i < count; i++) origins[i].tick(observers[i], false);
+                    long elapsed = System.nanoTime() - start;
+                    int step = tick % 100;
+                    for (int i = 0; i < count; i++) {
+                        Snapshot state = origins[i].snapshot(world, (int) observers[i].o, y, Z);
+                        check(state.reads == (step < 9 ? 169 : 0) && state.siteCount == 0, "bounded isolated origin replay", state);
+                    }
+                    if (tick < 600) continue;
+                    (step == 8 ? finish : step < 8 ? slice : idle).add(elapsed);
+                }
+                world.auditChunks = false;
+                check(world.chunkMisses == 0, "scaling replay observes only loaded terrain", here());
+                String label = "scaling model / " + (dispersed ? "dispersed " : "overlapping ") + count;
+                idle.report(label + " idle frame");
+                slice.report(label + " slice frame");
+                finish.report(label + " final frame");
+            }
+        }
     }
 
     private void surveyMutations() throws Exception {
@@ -733,6 +924,8 @@ public final class SettlementProbe implements ISaveEventHandler {
 
     private static final class Fixture extends xd {
         private int hiddenX = Integer.MIN_VALUE, hiddenZ = Integer.MIN_VALUE;
+        boolean auditChunks;
+        int remoteChunk, remoteReads, chunkMisses;
 
         Fixture(aia save, String name, boolean structures) {
             super(save, name, new fj(32021L, 0, structures, false, vx.c));
@@ -748,6 +941,14 @@ public final class SettlementProbe implements ISaveEventHandler {
 
         @Override public boolean j(int x, int y, int z) {
             return ((x >> 4) != hiddenX || (z >> 4) != hiddenZ) && super.j(x, y, z);
+        }
+
+        @Override public ack d(int x, int z) {
+            if (auditChunks) {
+                if (x >= remoteChunk - 2) remoteReads++;
+                if (!super.j(x << 4, 0, z << 4)) chunkMisses++;
+            }
+            return super.d(x, z);
         }
     }
 }

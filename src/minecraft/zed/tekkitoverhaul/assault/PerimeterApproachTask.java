@@ -9,11 +9,11 @@ import net.minecraft.src.PathPoint;
 
 /** A transient task on a stock skeleton. Once released, only native tasks execute. */
 final class PerimeterApproachTask extends EntityAIBase {
+    private static final Field ACTIONS = actionField();
     private final EntitySkeleton mob;
     private SiteApproach approach;
     private final int length;
     private int next = 1;
-    private boolean released;
 
     private PerimeterApproachTask(EntitySkeleton mob, SiteApproach approach) {
         this.mob = mob;
@@ -22,26 +22,41 @@ final class PerimeterApproachTask extends EntityAIBase {
         setMutexBits(7);
     }
 
+    static boolean available() { return ACTIONS != null; }
+
     static PerimeterApproachTask attach(EntitySkeleton mob, SiteApproach approach) {
+        if (!available()) return null;
         try {
-            // MCP 6.2 and the pinned client 1.2.5 action-task field. Target tasks remain native.
+            EntityAITasks tasks = (EntityAITasks) ACTIONS.get(mob);
+            if (tasks == null) return null;
+            PerimeterApproachTask task = new PerimeterApproachTask(mob, approach);
+            tasks.addTask(0, task);
+            return task;
+        } catch (IllegalAccessException failure) {
+            return null;
+        }
+    }
+
+    private static Field actionField() {
+        try {
+            // MCP 6.2 and pinned client 1.2.5. Target tasks retain their native authority.
             String name = "acq".equals(EntityLiving.class.getName()) ? "bT" : "tasks";
             Field field = EntityLiving.class.getDeclaredField(name);
             if (field.getType() != EntityAITasks.class) return null;
             field.setAccessible(true);
-            PerimeterApproachTask task = new PerimeterApproachTask(mob, approach);
-            ((EntityAITasks) field.get(mob)).addTask(0, task);
-            return task;
-        } catch (ReflectiveOperationException failure) {
+            return field;
+        } catch (NoSuchFieldException failure) {
             return null;
         } catch (SecurityException failure) {
             return null;
         }
     }
 
-    @Override public boolean shouldExecute() { return !released; }
+    @Override public boolean shouldExecute() { return approach != null; }
 
     @Override public void updateTask() {
+        // The native scheduler selects tasks before running its update pass.
+        if (approach == null) return;
         mob.getNavigator().clearPathEntity();
         PathPoint point = approach.route[next];
         double dx = mob.posX - point.xCoord - 0.5, dz = mob.posZ - point.zCoord - 0.5;
@@ -58,8 +73,5 @@ final class PerimeterApproachTask extends EntityAIBase {
 
     int steps() { return next - 1; }
     boolean arrived() { return next == length; }
-    void release() {
-        released = true;
-        approach = null;
-    }
+    void release() { approach = null; }
 }

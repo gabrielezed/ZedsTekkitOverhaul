@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.assault;
 
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
+import zed.tekkitoverhaul.lunar.LunarPhase;
 
 final class SiteSiegePolicy {
     static final long COOLDOWN = 16L * LunarSnapshot.DAY;
@@ -10,6 +11,14 @@ final class SiteSiegePolicy {
     static boolean opportunity(long seed, long cycle) {
         // One fixed cycle residue per save. No independent clock or random state to reroll.
         return Math.floorMod(cycle, 3L) == Math.floorMod(seed ^ (seed >>> 32), 3L);
+    }
+
+    static long nextOpportunity(long seed, LunarSnapshot lunar) {
+        long first = lunar.cycleIndex;
+        if (lunar.dayInCycle > LunarPhase.FULL_MOON.id
+                || (lunar.isFullMoon() && lunar.timeOfDay >= LunarSnapshot.NIGHT_START)) first++;
+        while (!opportunity(seed, first)) first++;
+        return first;
     }
 
     static long cooldownUntil(long boundary) {

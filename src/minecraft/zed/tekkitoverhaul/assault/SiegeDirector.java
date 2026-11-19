@@ -92,7 +92,7 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
         return context != null && context == world && siteSiege != null
-                ? new SiteSiege.Snapshot(siteSiege, encounterKind(), activeCap) : null;
+                ? new SiteSiege.Snapshot(siteSiege, encounterKind(), activeCap, lunar == null ? null : lunar.snapshot()) : null;
     }
 
     private EncounterKind encounterKind() {
@@ -196,7 +196,7 @@ public final class SiegeDirector implements LunarService.Listener {
         LunarSnapshot boundary = pending;
         pending = null;
         if (paused) {
-            if (siteSiege != null && siteSiege.planning()) siteSiege.interrupt("PAUSED");
+            if (siteSiege != null && siteSiege.planning()) pending = boundary;
             if (diagnostics != null && boundary != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: paused");
             return;
         }
@@ -233,7 +233,8 @@ public final class SiegeDirector implements LunarService.Listener {
             reason = "NATURAL_FULL_MOON";
             target = player;
             difficulty = world.difficultySetting;
-            elapsed = observedDeaths = removed = unloaded = 0;
+            elapsed = (int) Math.min(AssaultWave.FIRST_START - 1, Math.max(0, world.getWorldTime() - boundary.rawTime));
+            observedDeaths = removed = unloaded = 0;
             waveIndex = -1;
             localHostiles = -1;
             peakActive = tracked.size() + aerialAllocation;

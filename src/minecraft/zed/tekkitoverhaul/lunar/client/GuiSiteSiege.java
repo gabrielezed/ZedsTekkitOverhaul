@@ -39,16 +39,17 @@ final class GuiSiteSiege extends GuiScreen {
             LunarSnapshot lunar = local.snapshot(world);
             row(0, "Major encounter " + view.kind + " | " + local.assaultEligibility(world).label);
             row(1, "Siege " + view.phase + " | " + view.eligibility);
-            row(2, "Lunar opportunity " + (view.opportunity ? "selected" : "not selected") + " | dusk "
-                    + (view.boundary == Long.MIN_VALUE ? "-" : view.boundary));
-            row(3, "Site " + (view.site == 0 ? "-" : view.site) + " | " + view.identity + " | " + view.coverage
+            row(2, "Next siege cycle " + number(view.nextOpportunityCycle) + " | last dusk " + number(view.boundary)
+                    + (view.opportunity ? " (eligible)" : ""));
+            String siteLabel = view.phase.equals("ACTIVE") || view.phase.equals("PLANNING") ? "Site " : "Last site ";
+            row(3, siteLabel + (view.site == 0 ? "-" : view.site) + " | " + view.identity + " | " + view.coverage
                     + (view.dormant ? " | dormant" : ""));
             row(4, "Dimension " + (view.siteSession == 0 ? "-" : view.dimension) + " | session " + view.siteSession);
             row(5, "Approach " + view.approach + " | age " + view.geometryAge);
             row(6, "Objective " + view.objective + " | " + view.steps + " steps | " + view.arrivals + " arrived");
             row(7, "Attackers " + view.active + " active / " + view.inserted + " inserted | " + view.remaining + " left");
             row(8, "Elapsed " + view.elapsed + " ticks | last outcome " + view.outcome);
-            row(9, "Rejected " + view.rejection);
+            row(9, "Last rejection " + view.rejection);
             row(10, "Cooldown " + cooldown(view.cooldownUntil, lunar));
             row(11, "Samples " + view.candidates + " lanes | " + view.columns + " columns | " + view.skyReads + " sky reads");
             row(12, "Peak " + view.peakColumns + " columns / " + view.peakSkyReads + " sky reads per sample");
@@ -61,6 +62,8 @@ final class GuiSiteSiege extends GuiScreen {
     private void row(int index, String value) {
         drawString(fontRenderer, fontRenderer.trimStringToWidth(value, width - 16), 8, 25 + index * 11, 0xDDDDDD);
     }
+
+    private static String number(long value) { return value == Long.MIN_VALUE ? "-" : Long.toString(value); }
 
     private static String cooldown(long until, LunarSnapshot lunar) {
         if (until == Long.MIN_VALUE || lunar == null || lunar.rawTime >= until) return "clear";

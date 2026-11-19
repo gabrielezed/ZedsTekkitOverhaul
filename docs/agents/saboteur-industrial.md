@@ -40,12 +40,12 @@ The headless suite is `zto-tools/test-zto-agent.ps1 -Pack`. The graphical `theft
 
 ### Alpha.2 candidate evidence
 
-Production commit `68521b4863b51b74650b303c1831eae55ecf23e6` on base `1433fb8c5eeaed4e4029d01e0507e6f017d6049a`. Tracked sources matched the candidate. Three pre-existing untracked owner documents set the build sidecar's dirty flag.
+Production commit `770f1aa1c214f7e53c7aac07c75a43e9283c0edd` on base `1433fb8c5eeaed4e4029d01e0507e6f017d6049a`. Tracked sources matched the candidate. Three pre-existing untracked owner documents set the build sidecar's dirty flag.
 
 | Artifact | SHA-256 |
 | --- | --- |
-| `ZedsTekkitOverhaul.jar` | `83f70e517cdd229acfd31ae21b347cdde873f0ae2f06903f45d09d6284d202ba` |
-| `ZTOAgent.jar` | `e417f4b4a0101de425be366ad14ece3faa4da1264b48dd642372a2b7bdf98089` |
+| `ZedsTekkitOverhaul.jar` | `23788e7f57c2ac33dcf11915c1ea0a11fae07d0fcfc42ec0917c66e54e78153e` |
+| `ZTOAgent.jar` | `dff82cffb2688cc847e7a21ecc9e2c161a5c97065ca3b1cfff156e6770ca67e4` |
 
 - **PASS, portable.** Configuration, agent documentation and lunar policy checks.
 - **PASS, build and staging.** JDK 8u504 and MCP 6.2 compiled and reobfuscated with development Forge 3.4.9.171. Streaming ZIP validation read 421 mod entries. Repeated installation in a copied Prism manifest kept one component and both JAR hashes matched the tested artifacts.

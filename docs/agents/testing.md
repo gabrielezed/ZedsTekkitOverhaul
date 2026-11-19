@@ -20,7 +20,7 @@ For 0.2.3-alpha.2, the same headless pack runner checks the native Enderkin subs
 
 Use `zto-tools/test-zto-agent.ps1 -AerialSample -PackJava java` for the repeated ordinary-only aerial sample. `-CandidateJar` selects an archived mod for that sample. The controlled pack suite separately checks failed formations, predator warnings and recovery, lunar allocation, and the magpie scavenging and egg lifecycle.
 
-Use `zto-tools/test-zto-agent.ps1 -Focus cabin` for the suspended cabin regression, `-Focus settlement` for the complete native recognition suite and `-Focus provenance` for block mutation and evidence persistence. The full `-Pack` suite includes recognition and provenance. [Survival 0.3 native scenarios and owner playtests](survival-030-implementation.md)
+Use `zto-tools/test-zto-agent.ps1 -Focus cabin` for the suspended cabin regression and `-Focus mutations` for interrupted surveys. Use `-Focus compound`, `-Focus protection` and `-Focus query` for multipart recognition and migration, local geometry, and the read-only contract. `-Focus settlement` runs the complete native recognition suite, and `-Focus provenance` checks block observations and evidence persistence. The full `-Pack` suite includes settlement, protection and provenance. [Pinned results and owner walkthrough](survival-030-alpha4.md)
 
 For territory, run `zto-tools/test-territory.ps1` after MCP compilation to use the legacy NBT classes. Run `zto-tools/test-alpha6-runtime.ps1 -Modes territory-legacy,territory-threat,territory-elevated,territory-both` with the reobfuscated JAR in the isolated staging copy. The quiet and elevated modes use authenticated HTTP to compare game-thread observations with Bridge replies. [Territorial evidence](survival-02-alpha2.md#verification)
 

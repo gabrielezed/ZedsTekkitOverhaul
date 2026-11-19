@@ -1,12 +1,15 @@
 # ZedsTekkitOverhaul changelog
 
-## 0.2.3-alpha.2 — Industrial Saboteur
+## 0.2.3-alpha.2 — Industrial survival and fieldwork
 
 - Let Saboteurs dismantle one exposed BuildCraft, Additional Pipes, IC2 or RedPower transport component on Normal and Hard.
 - Target exposed cable and tube installations during natural Enderkin selection. Block the approach or interrupt the dismantle to protect a line.
 - Recover the original transport component when the carrier dies or finishes escaping.
+- Hold the Vein Mining control while harvesting ore to work through a connected seam with a pickaxe or charged IC2 drill.
+- Give fuel priority when using Shift-click in a fuel-burning furnace.
+- Let Breachers force open wooden doors and fence gates on Normal and Hard.
 
-[Industrial coverage and playtest](docs/agents/saboteur-industrial.md)
+[Industrial coverage and playtest](docs/agents/saboteur-industrial.md) · [Mining, furnaces and entrances](docs/agents/survival-023-alpha2-fieldwork.md)
 
 ## 0.2.3-alpha.1 — Biome ecology prototype
 

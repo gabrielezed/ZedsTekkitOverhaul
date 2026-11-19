@@ -17,6 +17,13 @@ import java.util.Random;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.settlement.SettlementRecognition;
 import zed.tekkitoverhaul.settlement.SettlementRecognition.Snapshot;
+import zed.tekkitoverhaul.settlement.ProtectedInterior.Assessment;
+import zed.tekkitoverhaul.settlement.ProtectedInterior.Evidence;
+import zed.tekkitoverhaul.settlement.ProtectedInterior.State;
+import zed.tekkitoverhaul.settlement.SiteQueries;
+import zed.tekkitoverhaul.settlement.SiteQueries.Recognition;
+import zed.tekkitoverhaul.settlement.SiteSnapshot;
+import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 import zed.tekkitoverhaul.settlement.WorldProvenance;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
@@ -48,9 +55,21 @@ public final class SettlementProbe implements ISaveEventHandler {
                 probe.profile();
                 System.exit(0);
             }
+            if (args.length == 2 && ("compound".equals(args[1]) || "query".equals(args[1]))) {
+                probe.compound(false);
+                if ("compound".equals(args[1])) probe.compound(true);
+                System.exit(0);
+            }
+            if (args.length == 2 && "protection".equals(args[1])) {
+                probe.protection();
+                System.exit(0);
+            }
             probe.suspendedCabins();
             probe.surveyMutations();
             probe.sites();
+            probe.compound(false);
+            probe.compound(true);
+            probe.protection();
             probe.negatives();
             probe.village();
             probe.stress();
@@ -59,6 +78,352 @@ public final class SettlementProbe implements ISaveEventHandler {
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    private void compound(boolean migrated) throws Exception {
+        String name = migrated ? "compound-migrated" : "compound-new";
+        open(name, false);
+        prepare(X, Z);
+        room(X, Y, Z, true);
+        place(BENCH, X + 1, Y - 1, Z + 1, 1);
+        place(FURNACE, X + 2, Y - 1, Z + 1, 1);
+        position(X - 12, Y, Z + 2);
+        platform(X - 10, Y, Z);
+        place(BENCH, X - 7, Y - 1, Z + 1, 1);
+        place(FURNACE, X - 8, Y - 1, Z + 1, 1);
+        room(X + 10, Y, Z, false);
+        place(CHEST, X + 11, Y - 1, Z + 1, 1);
+        Path registry = new File(root, name + "/data/zto_settlement_sites.dat").toPath();
+        SiteQueries queries = settlements;
+        if (migrated) {
+            save();
+            ByteBuffer legacy = ByteBuffer.allocate(84).putInt(0x5A544F53).putInt(1).putShort((short) 2);
+            legacySite(legacy, 1, X, 31);
+            legacySite(legacy, 2, X + 10, 42);
+            Files.createDirectories(registry.getParent());
+            Files.write(registry, legacy.array());
+            open(name, false);
+            prepare(X, Z);
+            SiteSnapshot house = queries.resolve(world, 1), outpost = queries.resolve(world, 2);
+            check(house.lastConfirmed == 31 && outpost.lastConfirmed == 42
+                            && ((SiteSnapshot.Part) house.parts.get(0)).matchingPlacements == -1 && house.envelope.minX == X
+                            && outpost.envelope.minX == X + 10,
+                    "schema 1 identities, bounds and observations survive decode", here());
+        }
+
+        position(X + 2, Y, Z + 2);
+        walk();
+        ticks(560);
+        int houseId = recognized("compound house", true).id;
+        check(houseId == 1, "standalone house identity", here());
+        if (!migrated) {
+            Assessment interior = assess(X + 2, Y, Z + 2);
+            expect(interior, State.PROTECTED, Evidence.YES, Evidence.NO, "closed compound house");
+            Assessment closedEntrance = assess(X, Y, Z + 2);
+            check(closedEntrance.state == State.UNKNOWN && closedEntrance.reason.contains("standing"),
+                    "closed threshold lacks standing clearance", here());
+        }
+        useUtility(X + 1, Y, Z + 1);
+        ticks(25);
+        useUtility(X + 2, Y, Z + 1);
+        ticks(110);
+        check(here().uses == 2, "recognized source confirms both utility openings", here());
+        toggle(X, Y, Z + 2);
+        if (!migrated) {
+            expect(assess(X + 2, Y, Z + 2), State.EXPOSED, Evidence.YES, Evidence.YES, "opened compound doorway");
+            expect(assess(X, Y, Z + 2), State.EXPOSED, Evidence.YES, Evidence.YES, "open entrance");
+        }
+        for (int step = 0; step < 40; step++) {
+            player.b(-0.25, 0, 0);
+            ticks(1);
+        }
+        check(Math.floor(player.o) == X - 8, "native doorway and courtyard traversal", here());
+        walk();
+        useUtility(X - 7, Y, Z + 1);
+        ticks(25);
+        useUtility(X - 8, Y, Z + 1);
+        ticks(130);
+        SiteSnapshot compound = queries.resolve(world, houseId);
+        check(here().id == houseId && compound.parts.size() == 2 && compound.envelope.maxX - compound.envelope.minX > 13,
+                "two corroborated parts share the cabin ID across the courtyard", here());
+        check(!compound.contains(X - 3, Y, Z + 2)
+                        && queries.locate(world, X - 3, Y, Z + 2).state == Recognition.UNKNOWN
+                        && queries.nearby(world, X - 3, Y, Z + 2, 0).isEmpty()
+                        && queries.locate(world, X - 8, Y, Z + 2).site.id == houseId,
+                "envelope-only space supplies no membership", here());
+        if (!migrated) expect(assess(X - 3, Y, Z + 2), State.EXPOSED, Evidence.NO, Evidence.UNKNOWN, "courtyard");
+
+        position(X + 12, Y, Z + 2);
+        walk();
+        useUtility(X + 11, Y, Z + 1);
+        ticks(25);
+        useUtility(X + 11, Y, Z + 1);
+        ticks(550);
+        int outpostId = recognized("independent occupied outpost", true).id;
+        check(outpostId == 2 && queries.resolve(world, houseId).parts.size() == 2
+                        && queries.nearby(world, X, Y, Z, 24).size() == 2,
+                "comparable distance with independent use retains two identities", here());
+        position(X + 2, Y, Z + 2);
+        check(controller.b(X + 5, Y - 1, Z + 2, 1), "clear natural ground for the extension", here());
+        place(PLANK, X + 4, Y - 1, Z + 2, 5);
+        walk();
+        ticks(160);
+        check(queries.resolve(world, houseId).envelope.maxX == X + 5
+                        && compound.envelope.maxX == X + 4,
+                "extension preserves ID and the retained snapshot stays immutable", here());
+        save();
+        byte[] stored = Files.readAllBytes(registry);
+        check(ByteBuffer.wrap(stored).getInt(4) == 2 && stored.length == 153,
+                "two identities and three local parts persist in schema 2", here());
+        open(name, false);
+        prepare(X, Z);
+        check(queries.resolve(world, houseId).parts.size() == 2 && queries.resolve(world, outpostId).parts.size() == 1
+                        && queries.resolve(world, houseId).envelope.maxX == X + 5,
+                "compound and outpost preserve both IDs on reopen", here());
+
+        if (!migrated) {
+            queryLifecycle(queries, houseId, registry);
+            ambiguousBridge(queries, houseId, outpostId);
+        }
+        System.out.printf("PASS %s compound #%d and independent outpost #%d, three parts before contraction, %d bytes%n",
+                name, houseId, outpostId, stored.length);
+    }
+
+    private void ambiguousBridge(SiteQueries queries, int house, int outpost) {
+        position(X + 7, Y, Z + 2);
+        for (int x = X + 5; x < X + 10; x++) {
+            if (world.a(x, Y - 1, Z + 2) != 0)
+                check(controller.b(x, Y - 1, Z + 2, 1), "clear ground for a connecting bridge", here());
+            place(PLANK, x - 1, Y - 1, Z + 2, 5);
+        }
+        walk();
+        ticks(125);
+        check("Ambiguous".equals(here().state) && here().siteCount == 2
+                        && queries.locate(world, X + 7, Y, Z + 2).state == Recognition.AMBIGUOUS
+                        && queries.resolve(world, house).id == house && queries.resolve(world, outpost).id == outpost,
+                "bridged established sites remain ambiguous without merging", here());
+        System.out.println("PASS one observation spans two established identities without merging");
+    }
+
+    private void queryLifecycle(SiteQueries queries, int houseId, Path registry) throws Exception {
+        position(X + 96, Y, Z);
+        ticks(24200);
+        SiteSnapshot dormant = queries.resolve(world, houseId);
+        check(dormant.dormant && dormant.coverage == Coverage.STALE && dormant.parts.size() == 2,
+                "compound can be resolved as stale away from the observer", here());
+        world.hideChunk((X - 8) >> 4, Z >> 4);
+        SiteSnapshot incomplete = queries.resolve(world, houseId);
+        check(incomplete.id == houseId && ((SiteSnapshot.Part) incomplete.parts.get(1)).coverage == Coverage.UNAVAILABLE
+                        && queries.nearby(world, X - 8, Y, Z + 2, 0).isEmpty(),
+                "unavailable part retains confirmed geometry but is absent from loaded-area query", here());
+        Assessment missing = assess(X - 8, Y, Z + 2);
+        check(missing.state == State.UNKNOWN && missing.reason.equals("Terrain unavailable"), "unavailable protection", here());
+        world.hideChunk(Integer.MIN_VALUE, Integer.MIN_VALUE);
+
+        position(X + 2, Y, Z + 2);
+        walk();
+        ticks(140);
+        check(!queries.resolve(world, houseId).dormant, "return re-observes the same ID", here());
+        expect(assess(X + 2, Y, Z + 2), State.EXPOSED, Evidence.YES, Evidence.YES, "reopened compound interior");
+        toggle(X, Y, Z + 2);
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "compound after closing entrance");
+        check(queries.resolve(world, houseId).id == houseId, "changed entrance keeps the compound ID", here());
+        toggle(X, Y, Z + 2);
+        queryProfile(queries, houseId, registry);
+        check(controller.b(X + 5, Y - 1, Z + 2, 1), "native removal of modest extension", here());
+        ticks(135);
+        check(queries.resolve(world, houseId).envelope.maxX == X + 5, "narrowing waits for repeated confirmation", here());
+        ticks(210);
+        check(queries.resolve(world, houseId).envelope.maxX == X + 4, "repeated complete survey narrows part", here());
+
+        position(X - 8, Y, Z + 2);
+        check(controller.b(X - 7, Y, Z + 1, 1) && controller.b(X - 8, Y, Z + 1, 1), "remove annex utilities", here());
+        for (int x = X - 10; x <= X - 6; x++) {
+            for (int z = Z; z < Z + 5; z++) {
+                check(controller.b(x, Y - 1, z, 1), "native removal of annex floor", here());
+            }
+        }
+        position(X - 8, Y - 1, Z + 2);
+        ticks(160);
+        check(queries.resolve(world, houseId).parts.size() == 2, "annex held through early absence observations", here());
+        ticks(210);
+        check(queries.resolve(world, houseId).parts.size() == 1 && queries.resolve(world, houseId).envelope.minX == X,
+                "repeated complete observations remove annex and preserve site ID", here());
+        save();
+        check(Files.size(registry) == 114, "reduced footprint serialized", here());
+    }
+
+    private void queryProfile(SiteQueries queries, int id, Path registry) throws Exception {
+        SettlementProfile.Samples readTime = new SettlementProfile.Samples();
+        SettlementProfile.Samples dirty = new SettlementProfile.Samples();
+        int stalls = 0, peak = 0, completed = 0, waiting = 0, longestWait = 0;
+        world.auditChunks = true;
+        world.remoteChunk = Integer.MAX_VALUE;
+        for (int frame = -600; frame < 1800; frame++) {
+            ticks(1);
+            int order = Math.floorMod(frame, 3), x = order == 0 ? X + 2 : order == 1 ? X : X - 3;
+            long start = System.nanoTime();
+            SiteSnapshot snapshot = queries.resolve(world, id);
+            Assessment current = queries.protection(world, x, Y, Z + 2);
+            long elapsed = System.nanoTime() - start;
+            check(snapshot.id == id && here().reads + current.reads <= 169, "combined geometry budget", here());
+            if (current.reads != 0) check(queries.protection(world, x, Y, Z + 2) == current,
+                    "same point reuses immutable result for this tick", here());
+            check(queries.protection(world, x + 1, Y, Z + 2).reads == 0,
+                    "second point cannot spend the same slot", here());
+            if (frame < 0) continue;
+            readTime.add(elapsed);
+            if (current.reads == 0) {
+                stalls++;
+                longestWait = Math.max(longestWait, ++waiting);
+            } else {
+                completed++;
+                waiting = 0;
+            }
+            peak = Math.max(peak, here().reads + current.reads);
+        }
+        world.auditChunks = false;
+        check(world.chunkMisses == 0 && peak == 169 && completed + stalls == 1800 && longestWait <= 18,
+                "profile never requests an absent chunk", here());
+        for (int i = -4; i < 24; i++) {
+            ticks(100);
+            long start = System.nanoTime();
+            settlements.save(world);
+            if (i >= 0) dirty.add(System.nanoTime() - start);
+        }
+        readTime.report("alpha.4 compound resolve and protection");
+        dirty.report("alpha.4 compound registry dirty save");
+        System.out.printf("PASS combined peak %d reads, %d assessed / %d budget-deferred frames, longest wait %d ticks, "
+                        + "zero queued protection jobs; registry %d bytes%n",
+                peak, completed, stalls, longestWait, Files.size(registry));
+    }
+
+    private static void legacySite(ByteBuffer file, int id, int x, long clock) {
+        file.putInt(id).putInt(x).putInt(Y - 1).putInt(Z)
+                .putInt(x + 4).putInt(Y + 2).putInt(Z + 4).putLong(clock).put((byte) 1);
+    }
+
+    private void room(int x, int y, int z, boolean door) {
+        position(x - 2, y, z + 2);
+        platform(x, y, z);
+        for (int dx = 0; dx < 5; dx++) {
+            for (int dz = 0; dz < 5; dz++) {
+                if ((dx != 0 && dx != 4 && dz != 0 && dz != 4) || (dx == 0 && dz == 2)) continue;
+                place(PLANK, x + dx, y - 1, z + dz, 1);
+                place(PLANK, x + dx, y, z + dz, 1);
+            }
+        }
+        for (int dx = 0; dx < 5; dx++) {
+            for (int dz = 0; dz < 5; dz++) {
+                if (dx > 0) place(PLANK, x + dx - 1, y + 2, z + dz, 5);
+                else if (dz > 0) place(PLANK, x, y + 2, z + dz - 1, 3);
+                else place(PLANK, x, y + 1, z, 1);
+            }
+        }
+        if (door) {
+            player.u = -90;
+            place(324, x, y - 1, z + 2, 1);
+        }
+    }
+
+    private void toggle(int x, int y, int z) {
+        check(controller.a(player, world, null, x, y, z, 1), "native door or gate activation", here());
+    }
+
+    private Assessment assess(int x, int y, int z) {
+        for (int wait = 0; wait < 20; wait++) {
+            ticks(1);
+            Assessment value = settlements.protection(world, x, y, z);
+            if (!value.reason.contains("budget reserved")) return value;
+        }
+        throw new AssertionError("protection slot not available within a complete survey cycle");
+    }
+
+    private void expect(Assessment value, State state, Evidence overhead, Evidence route, String name) {
+        System.out.printf("PROTECTION %s %s, overhead=%s enclosure=%s route=%s reads=%d, %s%n",
+                name, value.state, value.overhead, value.enclosure, value.exteriorRoute, value.reads, value.reason);
+        check(value.state == state && value.overhead == overhead && value.exteriorRoute == route,
+                name + " protection outcome", here());
+    }
+
+    private void protection() throws Exception {
+        open("protection", false);
+        prepare(X, Z);
+        room(X, Y, Z, true);
+        position(X + 2, Y, Z + 2);
+        walk();
+        ticks(560);
+        int id = recognized("protection cabin", true).id;
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "closed low roof");
+        toggle(X, Y, Z + 2);
+        expect(assess(X + 2, Y, Z + 2), State.EXPOSED, Evidence.YES, Evidence.YES, "open wooden door");
+        toggle(X, Y, Z + 2);
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "reclosed door");
+        check(controller.b(X + 2, Y + 2, Z + 2, 1), "native roof opening", here());
+        expect(assess(X + 2, Y, Z + 2), State.EXPOSED, Evidence.NO, Evidence.UNKNOWN, "removed roof");
+        place(20, X + 1, Y + 2, Z + 2, 5);
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "glass roof");
+        check(controller.b(X + 2, Y + 2, Z + 2, 1), "remove glass roof", here());
+        place(44, X + 1, Y + 2, Z + 2, 5);
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "slab roof");
+        check(controller.b(X, Y, Z + 2, 1), "native door removal", here());
+        place(107, X, Y - 1, Z + 2, 1);
+        expect(assess(X + 2, Y, Z + 2), State.PROTECTED, Evidence.YES, Evidence.NO, "closed gate");
+        toggle(X, Y, Z + 2);
+        expect(assess(X + 2, Y, Z + 2), State.EXPOSED, Evidence.YES, Evidence.YES, "open gate");
+        ticks(120);
+        check(here().id == id, "protection changes preserve recognition", here());
+
+        int cave = X + 14;
+        for (int x = cave - 2; x <= cave + 2; x++) {
+            for (int z = Z - 2; z <= Z + 2; z++) {
+                world.g(x, Y + 2, z, 1);
+                if (Math.abs(x - cave) == 2 || Math.abs(z - Z) == 2) {
+                    world.g(x, Y, z, 1);
+                    world.g(x, Y + 1, z, 1);
+                }
+            }
+        }
+        expect(assess(cave, Y, Z), State.PROTECTED, Evidence.YES, Evidence.NO, "natural cave");
+        check(settlements.locate(world, cave, Y, Z).state == Recognition.UNKNOWN, "cave supplies no site", here());
+        for (int x = cave - 2; x <= cave + 2; x++) {
+            world.g(x, Y, Z - 2, 0);
+            world.g(x, Y + 1, Z - 2, 0);
+        }
+        expect(assess(cave, Y, Z), State.EXPOSED, Evidence.YES, Evidence.YES, "covered open-sided shelter");
+        place(65, cave + 2, Y + 1, Z, 4);
+        world.g(cave + 1, Y + 2, Z, 0);
+        expect(assess(cave + 1, Y + 1, Z), State.EXPOSED, Evidence.NO, Evidence.UNKNOWN, "vertical ladder opening");
+
+        for (int x = X - 31; x <= X - 19; x++) for (int z = Z - 6; z <= Z + 6; z++) world.g(x, Y + 2, z, 1);
+        Assessment budget = assess(X - 25, Y, Z);
+        check(budget.state == State.UNKNOWN && budget.reads == 169 && budget.reason.contains("budget"),
+                "dense roof exhausts a bounded search without guessing", here());
+        SettlementProfile.Samples dense = new SettlementProfile.Samples();
+        for (int i = -48; i < 144; i++) {
+            do { ticks(1); } while (here().reads != 0);
+            long start = System.nanoTime();
+            Assessment sampled = settlements.protection(world, X - 25, Y, Z);
+            long elapsed = System.nanoTime() - start;
+            check(sampled.reads == 169 && sampled.state == State.UNKNOWN, "dense read ceiling", here());
+            if (i >= 0) dense.add(elapsed);
+        }
+        dense.report("alpha.4 dense covered area protection");
+        ajg nativeCandidate = new ajg(world);
+        nativeCandidate.c(X + 2.5, Y, Z + 2.5, 0, 0);
+        Class<?>[] before = spawnSelections(nativeCandidate);
+        assess(X + 2, Y, Z + 2);
+        check(Arrays.equals(before, spawnSelections(nativeCandidate)), "protection queries do not change ordinary spawn selection", here());
+        System.out.println("PASS physical protection, explicit budget, natural cave, native door/gate, and stable spawn selection");
+    }
+
+    private Class<?>[] spawnSelections(ajg candidate) {
+        world.r = new Random(6240);
+        Class<?>[] results = new Class<?>[64];
+        for (int i = 0; i < results.length; i++) {
+            results[i] = zed.tekkitoverhaul.survival.tactical.EnderkinEcology.select(candidate, 0).getClass();
+        }
+        return results;
     }
 
     private void profile() throws Exception {
@@ -395,6 +760,11 @@ public final class SettlementProbe implements ISaveEventHandler {
         check(storage.capacity == 1024 && storage.sections < storage.capacity && storage.placed < suspended.placed,
                 "storage usage and local section history have their own scale", suspended);
         showSurvey("entrance recentered", suspended);
+        nextSurvey();
+        ticks(8);
+        check(here().id == suspended.id && "Partial footprint".equals(here().assessment) && here().queued,
+                "owner regression: recognized cabin retains ID while the entrance footprint is partial", here());
+        ticks(9);
         for (int[] point : new int[][] {{105, 234}, {103, 232}}) {
             position(point[0], feet, point[1]);
             ticks(130);
@@ -683,7 +1053,7 @@ public final class SettlementProbe implements ISaveEventHandler {
 
         save();
         Path registry = new File(root, "settlement-sites/data/zto_settlement_sites.dat").toPath();
-        check(Files.size(registry) == 158, "four bounded records serialized", here());
+        check(Files.size(registry) == 218, "four bounded schema 2 records serialized", here());
         open("settlement-sites", false);
         prepare(X, Z);
         position(X + 2, Y, Z + 2);
@@ -695,6 +1065,8 @@ public final class SettlementProbe implements ISaveEventHandler {
         check(here().id == cabin.id && here().siteCount == 4, "re-observation does not duplicate an ID", here());
 
         corrupt(registry, new byte[] {1, 2, 3}, "UNREADABLE");
+        corrupt(registry, ByteBuffer.allocate(23).putInt(0x5A544F53).putInt(2).putShort((short) 1)
+                .putInt(1).putLong(8).put((byte) 9).array(), "UNREADABLE");
         corrupt(registry, ByteBuffer.allocate(8).putInt(0x5A544F53).putInt(999).array(), "UNSUPPORTED_SCHEMA");
         System.out.println("PASS four site identities, re-observation, native save/reopen, malformed and future files");
     }

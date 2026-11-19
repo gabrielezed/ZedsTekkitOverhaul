@@ -4,7 +4,8 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
-    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile')][string]$Focus
+    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
+        'compound','protection','query')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,7 +58,7 @@ try {
                 if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
                 return
             }
-            if ($Focus -in 'mutations','settlement-profile') {
+            if ($Focus -in 'mutations','settlement-profile','compound','protection','query') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName $Focus
                 if ($LASTEXITCODE) { throw "Native settlement $Focus probe failed." }
                 return

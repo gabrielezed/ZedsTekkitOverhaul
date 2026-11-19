@@ -130,7 +130,9 @@ public final class BiomeEcologyProbe {
         check(bird != null, "magpie inserted by native world");
         Field random = nn.class.getDeclaredField("U");
         random.setAccessible(true);
-        random.set(bird, new Random(73123L));
+        random.set(bird, new Random(73123L) {
+            @Override public int nextInt(int bound) { return bound == 5 ? 4 : super.nextInt(bound); }
+        });
         bird.c(297.5, 4, 288.5, 0, 0);
         fq seed = new fq(world, bird.o + 0.4, 4.1, bird.q, new aan(295, 3, 0));
         check(world.a(seed), "dropped seed stack inserted");
@@ -188,6 +190,7 @@ public final class BiomeEcologyProbe {
             @Override public int nextInt(int bound) {
                 if (bound == 10) return roll;
                 if (bound == 111) return 55;
+                if (bound == 5) return 4;
                 return super.nextInt(bound);
             }
         });

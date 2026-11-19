@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.survival.aerial.client;
 import java.util.Map;
 import net.minecraft.src.Entity;
 import net.minecraft.src.EntityLiving;
+import net.minecraft.src.ItemStack;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.ModelBase;
 import net.minecraft.src.ModelRenderer;
@@ -26,6 +27,28 @@ public final class RenderMagpie extends RenderLiving {
             super.renderModel(bird, stride, swing, age, yaw, pitch, scale);
         } finally {
             GL11.glPopAttrib();
+        }
+    }
+
+    @Override
+    protected void renderEquippedItems(EntityLiving entity, float partialTick) {
+        ItemStack item = ((EntityMagpie) entity).carriedItem();
+        if (item == null) return;
+        MagpieModel model = (MagpieModel) mainModel;
+        GL11.glPushMatrix();
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT);
+        try {
+            model.body.postRender(0.0625F);
+            model.head.postRender(0.0625F);
+            GL11.glTranslatef(0, 0.016F, -0.25F);
+            GL11.glRotatef(90, 0, 1, 0);
+            GL11.glScalef(0.115F, 0.115F, 0.115F);
+            // Center the native equipped-item quad on the beak tip.
+            GL11.glTranslatef(0.24F, -0.57F, -0.24F);
+            renderManager.itemRenderer.renderItem(entity, item, 0);
+        } finally {
+            GL11.glPopAttrib();
+            GL11.glPopMatrix();
         }
     }
 

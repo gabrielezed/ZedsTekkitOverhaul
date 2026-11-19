@@ -21,7 +21,7 @@ public final class ZtoConfig {
     public final int lunarDebugKey, survivalDebugHudKey, survivalDebugLogCapacity;
     public final boolean lunarVerboseLogging, survivalDebugHud;
     public final int advancedCraftingTable, foundry, alchemicalConverter, skirmisherEgg, breacherEgg, saboteurEgg;
-    public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg;
+    public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg, magpieEgg;
     public final Integer hopper;
     public final int buildcraftOilBucketItemId;
     public final String emcProfile;
@@ -80,6 +80,7 @@ public final class ZtoConfig {
         thiefEgg = values.item("thiefEgg", 22008);
         aerialPredatorEgg = values.item("aerialPredatorEgg", 22009);
         skelebirdEgg = values.item("skelebirdEgg", 22010);
+        magpieEgg = values.item("magpieEgg", 22011);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);
         }

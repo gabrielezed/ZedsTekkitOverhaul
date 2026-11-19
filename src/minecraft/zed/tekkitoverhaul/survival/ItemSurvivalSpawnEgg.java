@@ -37,7 +37,7 @@ public class ItemSurvivalSpawnEgg extends Item {
     @Override
     public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side) {
         if (world.isRemote) return true;
-        if (world.difficultySetting == 0 || stack.stackSize < 1) return false;
+        if (world.difficultySetting == 0 || stack.stackSize < 1 || !world.blockExists(x, y, z)) return false;
         int clicked = world.getBlockId(x, y, z);
         x += Facing.offsetsXForSide[side];
         y += Facing.offsetsYForSide[side];

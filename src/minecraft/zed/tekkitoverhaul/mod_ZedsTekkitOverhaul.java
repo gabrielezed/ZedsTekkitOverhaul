@@ -102,6 +102,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         TacticalHostiles.registerEggs(settings);
         AerialPredators.registerEgg(settings.aerialPredatorEgg);
         AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
+        AerialPredators.registerMagpieEgg(settings.magpieEgg);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }

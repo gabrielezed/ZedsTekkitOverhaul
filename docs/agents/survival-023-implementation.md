@@ -73,6 +73,18 @@ Numpad 1 opens the Debug Hub. Biome Ecology displays the player's loaded biome I
 
 The weights, habitat and hunt cadence are reversible prototype defaults. Dropped-item carrying, player-inventory theft, active perch selection, specialized calls, regional changes to aerial species prevalence, alternate prey and EE2 crafting remain open.
 
+## Ordinary aerial encounters
+
+The local Survival tick samples terrain once a second. Ordinary checks require 30 seconds of open ground exposure or a qualified open flight band. Rolls are at least 15 seconds apart. A successful admission reserves the existing shared saved cooldown. Both source switches, lunar allocation and the existing encounter and hostile caps retain their authority.
+
+Quiet Normal ground now rolls 18/1,000 by day and 65/1,000 by night, up from 13 and 45. Ground groups remain solitary. A ground admission hunts on 46% of daytime rolls and 67% at night. Air admission odds rise by 20% in low air and 25% in exposed or high flight. Low air stays solitary. Exposed Normal flocks draw either two or three Fugls, with three favored at higher clearance and activity. Hard gets more multi-bird rolls and retains formations of up to five. Easy remains mostly solitary. A failed full placement can retry a formation one member smaller within the existing 16-site ceiling.
+
+Nocturnal Skelebird ground selection starts at Territorial Activity 12 with 8% on Normal and 16% on Hard. Quiet Normal ground remains Fugl. Air selection at zero activity is 8%, 28% and 39% on Easy, Normal and Hard, with the existing difficulty-based activity bonuses and Skelebird group limits.
+
+Open **Numpad 1 → Aerial Predators** for the exposure requirement, next possible ordinary check, latest ordinary attempt and the actual birds inserted out of the requested formation. The same screen labels active ordinary and lunar encounters independently.
+
+For an egg-free check, use a disposable Survival save outside full moon, with ordinary encounters enabled and lunar aerial encounters disabled. Spend at least 30 seconds away from roofs, water and canopy on a plain. Watch for solo birds after dusk and read the last check and shared cooldown in the Debug Hub. On another run, hold open flight more than 36 blocks above surrounding terrain until the High Sky band appears. Compare quiet Normal with established Hard, then land under a roof after a warning to check retreat.
+
 ## Verification
 
 - Portable checks passed for configuration, lunar calendar, assault and patrol schedules, outdoor approaches, and current documentation.

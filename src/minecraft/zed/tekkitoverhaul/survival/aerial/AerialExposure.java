@@ -63,6 +63,14 @@ final class AerialExposure {
                 : band == Band.LOW_AIR || band == Band.EXPOSED || band == Band.HIGH_SKY;
     }
 
+    String requirement() {
+        if (ready()) return "Open exposure ready";
+        if (band == Band.GROUND) return "Open ground exposure " + groundSeconds + "/30s";
+        if (band == Band.BUILDING && height >= 7)
+            return "Open flight exposure " + (int) exposure + "/32";
+        return restriction;
+    }
+
     private void covered(String reason) {
         groundSeconds = 0;
         height = -1;

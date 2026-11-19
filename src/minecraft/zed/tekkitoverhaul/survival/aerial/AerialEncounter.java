@@ -11,17 +11,19 @@ final class AerialEncounter {
     static final int HUNT_LIMIT = 660;
     private static final int ATTACK_GAP = 64;
     final EntityPlayer player;
-    final boolean airborne, hunting;
+    final boolean airborne, hunting, ordinary;
     final double approachX, approachZ;
     private final List<EntityAerialPredator> members = new ArrayList<EntityAerialPredator>(5);
     private EntityAerialPredator attacker;
     private int gap, age;
     private boolean ended;
 
-    AerialEncounter(EntityPlayer player, boolean airborne, boolean hunting, double approachX, double approachZ) {
+    AerialEncounter(EntityPlayer player, boolean airborne, boolean hunting, boolean ordinary,
+                    double approachX, double approachZ) {
         this.player = player;
         this.airborne = airborne;
         this.hunting = hunting;
+        this.ordinary = ordinary;
         this.approachX = approachX;
         this.approachZ = approachZ;
     }

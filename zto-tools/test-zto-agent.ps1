@@ -1,7 +1,9 @@
 param(
     [string[]]$Java = @('java'),
     [string]$PackJava,
-    [switch]$Pack
+    [switch]$Pack,
+    [switch]$AerialSample,
+    [string]$CandidateJar
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,8 +22,9 @@ try {
         & $runtime '-Xverify:all' "-javaagent:$agent" -cp $out.FullName zed.tekkitoverhaul.agent.AgentProbe archive $overlay
         if ($LASTEXITCODE) { throw "Standalone agent probe failed for $runtime" }
     }
-    if ($Pack) {
+    if ($Pack -or $AerialSample) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
+        if ($CandidateJar) { $CandidateJar = (Resolve-Path -LiteralPath $CandidateJar).Path }
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
@@ -39,6 +42,13 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($AerialSample) {
+                $sampleClasspath = $headless.Clone()
+                if ($CandidateJar) { $sampleClasspath[2] = $CandidateJar }
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($sampleClasspath -join ';') AerialEcologyProbe $out.FullName sample
+                if ($LASTEXITCODE) { throw 'Ordinary aerial balance sample failed.' }
+            }
+            if (!$Pack) { return }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($classpath + $mods.FullName) -join ';') zed.tekkitoverhaul.agent.AgentProbe pack
             if ($LASTEXITCODE) { throw 'Pack ABI agent probe failed.' }
             $reduced = @($mods | Where-Object Name -in 'buildcraft-client-A-core-2.2.14.zip','industrialcraft-2-client_1.97.jar')

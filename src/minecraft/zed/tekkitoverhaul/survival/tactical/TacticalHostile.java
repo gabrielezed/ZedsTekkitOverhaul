@@ -8,6 +8,7 @@ import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.Shoreline;
 
 /** Shared local-world lifecycle and bounded access to legacy navigation. */
 public abstract class TacticalHostile extends EntityMob {
@@ -26,6 +27,7 @@ public abstract class TacticalHostile extends EntityMob {
         setSize(width, height);
         texture = "/zed/textures/" + skin + ".png";
         tasks.addTask(0, new EntityAISwimming(this));
+        getNavigator().setAvoidsWater(true);
     }
 
     @Override
@@ -108,6 +110,23 @@ public abstract class TacticalHostile extends EntityMob {
                 sx + PATH_CACHE_RADIUS, 0, sz + PATH_CACHE_RADIUS)) return null;
         return worldObj.getEntityPathToXYZ(this, MathHelper.floor_double(x), MathHelper.floor_double(y),
                 MathHelper.floor_double(z), PATH_RANGE, true, false, true, false);
+    }
+
+    @Override
+    public final void moveEntityWithHeading(float strafe, float forward) {
+        if (!worldObj.isRemote && onGround && !isInWater() && !getNavigator().noPath()
+                && (strafe != 0 || forward != 0)) {
+            double bearing = Math.toRadians(rotationYaw) + Math.atan2(-strafe, forward);
+            double dx = motionX - Math.sin(bearing) * 0.45D;
+            double dz = motionZ + Math.cos(bearing) * 0.45D;
+            if (!Shoreline.mayStep(this, dx, dz)) {
+                getNavigator().clearPathEntity();
+                if (hurtTime == 0) motionX = motionZ = 0;
+                super.moveEntityWithHeading(0, 0);
+                return;
+            }
+        }
+        super.moveEntityWithHeading(strafe, forward);
     }
 
     protected final boolean reaches(PathEntity path, double x, double y, double z) {

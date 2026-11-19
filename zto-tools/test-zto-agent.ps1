@@ -31,7 +31,7 @@ try {
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
-            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java') |
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp (($headless + $buildCraft + $industrialCraft) -join ';') -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -60,6 +60,8 @@ try {
             if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') MagpieScavengeProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Magpie scavenging and egg probe failed.' }
+            & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') WaterBehaviorProbe $out.FullName
+            if ($LASTEXITCODE) { throw 'Mob shoreline and drowning probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp (($headless + $buildCraft) -join ';') EnderkinBehaviorProbe $out.FullName
             if ($LASTEXITCODE) { throw 'Enderkin behavior probe failed.' }
             & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') ThiefBehaviorProbe $out.FullName

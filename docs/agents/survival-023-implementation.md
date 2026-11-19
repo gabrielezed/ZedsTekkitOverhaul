@@ -140,3 +140,11 @@ The rolls accounted for every eligible miss in the repeated sample. In the ridge
 ### Scavenging and egg verification
 
 The pinned pack probe exercises single and split native stacks with identifying NBT, disappearing items, ground and leaf releases, carrying across save/reload, rejected release and death retry, and both distance and age retirement. Forced natural matches and misses check that only successful insertions roll, that escape and Looting III death each return one ingot, and that untouched gold can expire. The egg fixture checks the registry collision diagnostic, localization, the native Creative catalog used by the NEI creative scan, safe and blocked use, consumption and scavenging after hatch. The in-game beak alignment, readability in flight, and NEI search panel remain owner checks.
+
+### Shorelines and drowning
+
+Magpies check the footing below a planned step and keep dry landing terrain under short flights. Fugl and Skelebird abandon wet targets and reject water in the actual flight corridor, including after commitment. Enderkin use the water-avoiding navigator and reject a voluntary step onto a wet drop. Dry bridges and exposure above open water still allow movement.
+
+Small birds use a correctly sized contact box for the native water physics and lose powered movement when submerged. The native air supply and drowning damage apply to the three birds and the five Enderkin roles. Nearby birds that remain submerged can drown even when their ambient retirement timer would otherwise end first. A drowning magpie can release its beak stack into the water through native item physics. The headless pack probe checks a shoreline drop, a wet flight corridor, shallow flow below the head, and a sealed pool. For an owner check, watch an ordinary approach at a low bank and compare it with an already submerged bird in an enclosed pool.
+
+In the pinned pack, all eight mobs took their first drowning damage at tick 320 and eventually died in the sealed pool. A magpie in shallow flowing water kept its full air supply and health for 340 ticks. The submerged scavenger returned exactly one carried seed.

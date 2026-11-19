@@ -9,9 +9,11 @@ import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
+import net.minecraft.src.Material;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.Shoreline;
 
 /** Small forest wildlife with short flights and no combat target. */
 public final class EntityMagpie extends EntityLiving {
@@ -74,7 +76,8 @@ public final class EntityMagpie extends EntityLiving {
 
     @Override
     protected void updateEntityActionState() {
-        if (++lifeTicks >= MAX_AGE) {
+        if (lifeTicks < MAX_AGE) ++lifeTicks;
+        if (lifeTicks >= MAX_AGE && !isInWater()) {
             setDead();
             return;
         }
@@ -82,7 +85,7 @@ public final class EntityMagpie extends EntityLiving {
         despawnEntity();
         if (isDead) return;
 
-        if (flightTicks > 0 || step != null || !onGround) {
+        if (isInWater() || flightTicks > 0 || step != null || !onGround) {
             lookAt(null);
             return;
         }
@@ -300,7 +303,11 @@ public final class EntityMagpie extends EntityLiving {
         if (worldObj.isRemote || releasing || ticksExisted < retryReleaseAt) return false;
         retryReleaseAt = ticksExisted + 10;
         EntityItem drop = new EntityItem(worldObj, posX, boundingBox.minY + 0.34, posZ, carried.copy());
-        if (!AerialTerrain.clear(this, drop.boundingBox)) return false;
+        AxisAlignedBB room = drop.boundingBox;
+        // A submerged retirement or death can hand the stack back to native item physics.
+        if (!AerialTerrain.clear(this, room) && !(isInWater() && room.minY >= 0 && room.maxY < worldObj.getHeight()
+                && AerialTerrain.loaded(worldObj, room) && worldObj.getCollidingBoundingBoxes(this, room).isEmpty()
+                && !worldObj.isMaterialInBB(room, Material.lava))) return false;
         drop.motionX = drop.motionZ = 0;
         drop.motionY = 0.03;
         drop.delayBeforeCanPickup = 10;
@@ -352,7 +359,8 @@ public final class EntityMagpie extends EntityLiving {
 
     private boolean clearAhead(float heading, double distance) {
         double angle = Math.toRadians(heading);
-        return AerialTerrain.clear(this, boundingBox.addCoord(-Math.sin(angle) * distance, 0, Math.cos(angle) * distance));
+        double dx = -Math.sin(angle) * distance, dz = Math.cos(angle) * distance;
+        return AerialTerrain.clear(this, boundingBox.addCoord(dx, 0, dz)) && Shoreline.mayStep(this, dx, dz);
     }
 
     private void redirect() {
@@ -446,7 +454,7 @@ public final class EntityMagpie extends EntityLiving {
     @Override
     public boolean attackEntityFrom(DamageSource source, int damage) {
         boolean hit = super.attackEntityFrom(source, damage);
-        if (hit && getHealth() > 0) {
+        if (hit && getHealth() > 0 && source != DamageSource.drown) {
             if (wildGold) escapedWithGold = true;
             if (source.getEntity() != null) face(posX - source.getEntity().posX, posZ - source.getEntity().posZ);
             startled = true;
@@ -455,10 +463,18 @@ public final class EntityMagpie extends EntityLiving {
     }
 
     @Override
+    public boolean handleWaterMovement() { return Shoreline.birdWaterContact(this); }
+
+    @Override
     public void moveEntityWithHeading(float strafe, float forward) {
         lastGait = gait;
         lastStride = stride;
         stride = 0;
+        if (isInWater()) {
+            step = null;
+            flightTicks = 0;
+            pose(Pose.WATCH);
+        }
         if (step != null) {
             double along = step.forward(stepTick + 1) - step.forward(stepTick);
             double dy = step.height(stepTick + 1) - step.height(stepTick);
@@ -479,7 +495,8 @@ public final class EntityMagpie extends EntityLiving {
             double dx = -Math.sin(angle) * 0.23, dz = Math.cos(angle) * 0.23;
             double dy = flightTicks > 22 ? 0.18 : flightTicks > 12 ? 0.025 : -0.15;
             AxisAlignedBB path = boundingBox.addCoord(dx, dy, dz);
-            if (AerialTerrain.clear(this, path)) {
+            if (AerialTerrain.clear(this, path)
+                    && Shoreline.mayLand(worldObj, boundingBox.getOffsetBoundingBox(dx, dy, dz))) {
                 moveEntity(dx, dy, dz);
                 fallDistance = 0;
                 motionX = dx;

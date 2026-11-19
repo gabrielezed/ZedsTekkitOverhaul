@@ -8,9 +8,11 @@ import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.Material;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.survival.Shoreline;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 
 /** A single predator with server-owned steering, commitment and contact. */
@@ -130,13 +132,18 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
 
     @Override
     protected void updateEntityActionState() {
-        if (worldObj.difficultySetting == 0 || (natural && --wildTicks <= 0)) {
+        // A nearby submerged bird stays present for native drowning, including after leaving its encounter.
+        if (worldObj.difficultySetting == 0 || (natural && !isInWater() && --wildTicks <= 0)) {
             setDead();
             return;
         }
         ++entityAge;
         despawnEntity();
         if (isDead) return;
+        if (isInWater()) {
+            if (target != null || encounter != null) disengage("entered water");
+            return;
+        }
         ++stateTicks;
 
         if (target != null) {
@@ -291,6 +298,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
 
     private double targetClearance(EntityLiving subject) {
         double height = AerialTerrain.skyHeight(subject);
+        if (height >= 0 && (subject.isInWater() || subject.isInsideOfMaterial(Material.water))) return -1;
         if ((slashingPass() || subject instanceof EntityChicken) && height >= 0 && worldObj.getPrecipitationHeight(
                 MathHelper.floor_double(subject.posX), MathHelper.floor_double(subject.posZ))
                 > subject.boundingBox.minY + subject.height * 0.5) return -1;
@@ -662,8 +670,16 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     @Override
+    public boolean handleWaterMovement() { return Shoreline.birdWaterContact(this); }
+
+    @Override
     public void moveEntityWithHeading(float strafe, float forward) {
         if (worldObj.isRemote || isDead) return;
+        if (isInWater() && getHealth() > 0) {
+            motionY = Math.min(0, motionY) - 0.02D;
+            super.moveEntityWithHeading(0, 0);
+            return;
+        }
         if (getHealth() <= 0) {
             motionX *= 0.91;
             motionY = Math.max(-0.85, motionY - 0.085);
@@ -671,12 +687,22 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         }
         boolean diving = flight == Flight.DIVE && getHealth() > 0;
         double fromX = posX, fromY = centerY(), fromZ = posZ;
-        if (!AerialTerrain.loaded(worldObj, boundingBox.addCoord(motionX, motionY, motionZ))) {
+        AxisAlignedBB path = boundingBox.addCoord(motionX, motionY, motionZ);
+        if (!AerialTerrain.loaded(worldObj, path)) {
             lastFailure = "unloaded boundary";
             motionX = motionY = motionZ = 0;
             rotationYaw += 11;
             cruiseTicks = 0;
             if (target != null) disengage("unloaded boundary");
+            return;
+        }
+        // The native block collision pass does not stop a dive or drift at a liquid boundary.
+        if (getHealth() > 0 && (diving || hurtTime == 0)
+                && worldObj.isMaterialInBB(path.contract(0.001D, 0.001D, 0.001D), Material.water)) {
+            if (diving) recover();
+            lastFailure = "water in flight path";
+            motionX = motionZ = 0;
+            motionY = clearance(0, 0.22D, 0, 1) ? 0.22D : 0;
             return;
         }
         moveEntity(motionX, motionY, motionZ);

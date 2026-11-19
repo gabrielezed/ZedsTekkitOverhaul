@@ -1,6 +1,8 @@
-# Survival 0.3.0-alpha.3 implementation
+# Survival 0.3 implementation
 
 The prototype runs in local singleplayer Overworlds. It recognizes a maintained place without requiring a claim block. The [owner specification](survival-030-spec.md) defines the full milestone and [Project Vision](../../PROJECT_VISION.md#9-attività-territoriale-provenienza-dei-blocchi-e-insediamenti) keeps territorial pressure, recognition, and shelter assessment under their own authorities.
+
+The [alpha.4 implementation and handoff](survival-030-alpha4.md) describe current compound recognition, registry schema 2, Protected Interior and the query contract. This page records the alpha.3 baseline and its acceptance results.
 
 ## Provenance and use
 

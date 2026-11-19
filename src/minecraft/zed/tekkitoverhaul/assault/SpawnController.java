@@ -36,8 +36,12 @@ final class SpawnController {
     }
 
     int localHostiles(World world, EntityPlayer player) {
+        return localHostiles(world, player.boundingBox.expand(32, 24, 32));
+    }
+
+    static int localHostiles(World world, AxisAlignedBB area) {
         int alive = 0;
-        for (Object entity : world.getEntitiesWithinAABB(IMob.class, player.boundingBox.expand(32, 24, 32))) {
+        for (Object entity : world.getEntitiesWithinAABB(IMob.class, area)) {
             if (((Entity) entity).isEntityAlive()) alive++;
         }
         return alive;
@@ -86,13 +90,8 @@ final class SpawnController {
         if (world.getClosestPlayer(x + 0.5, y, z + 0.5, INNER_RADIUS) != null) return reject("PLAYER_TOO_CLOSE");
         EntityMob mob = create(world, skeleton, role);
         mob.setLocationAndAngles(x + 0.5, y, z + 0.5, random.nextFloat() * 360, 0);
-        AxisAlignedBB box = mob.boundingBox;
-        if (!world.checkIfAABBIsClear(box) || !world.getEntitiesWithinAABB(EntityLiving.class, box).isEmpty()) {
-            return reject("OCCUPIED");
-        }
-        if (!world.getCollidingBoundingBoxes(mob, box).isEmpty() || world.isAnyLiquid(box)) {
-            return reject("COLLISION_OR_LIQUID");
-        }
+        String collision = placementCollision(world, mob);
+        if (collision != null) return reject(collision);
         if (role != null) {
             TacticalHostile tactical = (TacticalHostile) mob;
             if (!tactical.canEngageEncounterPlayer(player)) return reject("OUTSIDE_TACTICAL_RANGE");
@@ -120,6 +119,14 @@ final class SpawnController {
         if (role != null) ((TacticalHostile) mob).engageEncounterPlayer(player);
         outdoorLight = exception;
         return mob;
+    }
+
+    static String placementCollision(World world, EntityMob mob) {
+        AxisAlignedBB box = mob.boundingBox;
+        if (!world.checkIfAABBIsClear(box) || !world.getEntitiesWithinAABB(EntityLiving.class, box).isEmpty())
+            return "OCCUPIED";
+        return !world.getCollidingBoundingBoxes(mob, box).isEmpty() || world.isAnyLiquid(box)
+                ? "COLLISION_OR_LIQUID" : null;
     }
 
     private static EntityMob create(World world, boolean skeleton, EnderkinRole role) {

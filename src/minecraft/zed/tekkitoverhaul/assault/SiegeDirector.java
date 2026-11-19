@@ -20,9 +20,11 @@ import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.territory.ThreatAssessment;
+import zed.tekkitoverhaul.settlement.SiteQueries;
 
-/** Local player-vicinity encounters. All methods run on the owning simulation thread. */
+/** Arbitrates one major encounter at natural dusk. All methods run on the owning simulation thread. */
 public final class SiegeDirector implements LunarService.Listener {
+    public enum EncounterKind { NONE, PLAYER_ASSAULT, SITE_SIEGE }
     public enum State { IDLE, ACTIVE, RESOLVED, ABORTED }
     public enum Eligibility {
         UNAVAILABLE("Unavailable"), ACTIVE("Encounter active"), PEACEFUL("Peaceful difficulty"),
@@ -49,6 +51,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private final List<Spawn> evidence = new ArrayList<Spawn>();
     private final List<TrackedMob> tracked = new ArrayList<TrackedMob>();
     private AssaultWave[] waves = AssaultWave.plan(0);
+    private SiteSiege siteSiege;
     private World world;
     private LunarService lunar;
     private AssaultDiagnostics diagnostics;
@@ -83,11 +86,28 @@ public final class SiegeDirector implements LunarService.Listener {
         patrol = new LunarPatrol(patrolEnabled, outdoorPressure, experimentalEnderkin);
     }
 
+    public void attachSites(boolean siteSieges, SiteQueries sites) {
+        siteSiege = new SiteSiege(siteSieges, sites);
+    }
+
+    public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
+        return context != null && context == world && siteSiege != null
+                ? new SiteSiege.Snapshot(siteSiege, encounterKind(), activeCap) : null;
+    }
+
+    private EncounterKind encounterKind() {
+        return siteActive() ? EncounterKind.SITE_SIEGE
+                : state == State.ACTIVE ? EncounterKind.PLAYER_ASSAULT : EncounterKind.NONE;
+    }
+
+    private boolean siteActive() { return siteSiege != null && siteSiege.active(); }
+
     public void bind(World incoming, LunarService service) {
         if (world != null) {
             String cause = incoming != null && world.worldProvider.worldType != incoming.worldProvider.worldType
                     ? "DIMENSION_CHANGED" : "WORLD_UNLOADED";
             patrol.interrupt(world.getWorldTime(), cause, diagnostics);
+            if (siteSiege != null) siteSiege.interrupt(cause);
         }
         if (diagnostics != null) {
             if (state == State.ACTIVE) diagnostics.assault(world.getWorldTime(), "Interrupted by world change");
@@ -97,6 +117,7 @@ public final class SiegeDirector implements LunarService.Listener {
         lunar = service;
         patrol.reset();
         storage = null;
+        if (siteSiege != null) siteSiege.bind(world, null);
         pending = null;
         target = null;
         selectedBudget = budget;
@@ -124,7 +145,8 @@ public final class SiegeDirector implements LunarService.Listener {
         if (storage.interrupted) {
             state = State.ABORTED;
             reason = "INTERRUPTED_ON_REOPEN";
-            storage.close();
+            if ("OPEN".equals(storage.siteOutcome)) storage.closeSite(reason);
+            else storage.close();
             if (diagnostics != null) diagnostics.assault(world.getWorldTime(), "Interrupted on reopen");
         } else if (storage.consumed != Long.MIN_VALUE) {
             state = State.RESOLVED;
@@ -132,6 +154,7 @@ public final class SiegeDirector implements LunarService.Listener {
         } else {
             reason = "WAITING_FOR_FULL_MOON";
         }
+        if (siteSiege != null) siteSiege.bind(world, storage);
         lunar.subscribe(this);
     }
 
@@ -145,19 +168,23 @@ public final class SiegeDirector implements LunarService.Listener {
         if (storage == null) return;
         if (event.kind == LunarEvent.Kind.RESYNC) {
             pending = null;
+            if (siteSiege != null) siteSiege.interrupt("LUNAR_" + event.cause.name());
             if (state == State.ACTIVE) end(State.ABORTED, event.cause.name());
             if (diagnostics != null && AssaultSchedule.WINDOW.matches(event.after)) {
                 diagnostics.assault(event.after.rawTime, "No assault boundary: " + event.cause
                         + " | consumed " + storage.consumed + " | starts " + starts);
             }
-        } else if (event.kind == LunarEvent.Kind.NIGHT_ENDED && state == State.ACTIVE) {
-            end(State.RESOLVED, "NIGHT_ENDED");
-        } else if (state != State.ACTIVE && AssaultSchedule.canStart(event, storage.consumed)) {
+        } else if (event.kind == LunarEvent.Kind.NIGHT_ENDED) {
+            pending = null;
+            if (siteSiege != null) siteSiege.interrupt("NIGHT_ENDED");
+            if (state == State.ACTIVE) end(State.RESOLVED, "NIGHT_ENDED");
+        } else if (state != State.ACTIVE && !siteActive() && pending == null
+                && AssaultSchedule.canStart(event, storage.consumed)) {
             pending = event.after;
         } else if (diagnostics != null && event.kind == LunarEvent.Kind.NIGHT_STARTED
                 && AssaultSchedule.WINDOW.matches(event.after)) {
             String rejection = event.cause != LunarEvent.Cause.NATURAL ? event.cause.name()
-                    : state == State.ACTIVE ? "ACTIVE" : "CONSUMED";
+                    : state == State.ACTIVE || siteActive() || pending != null ? "ACTIVE" : "CONSUMED";
             diagnostics.assault(event.after.rawTime, "Eligibility rejected: " + rejection
                     + " | consumed " + storage.consumed + " | starts " + starts);
         }
@@ -169,14 +196,31 @@ public final class SiegeDirector implements LunarService.Listener {
         LunarSnapshot boundary = pending;
         pending = null;
         if (paused) {
+            if (siteSiege != null && siteSiege.planning()) siteSiege.interrupt("PAUSED");
             if (diagnostics != null && boundary != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: paused");
+            return;
+        }
+        if (siteActive()) {
+            siteSiege.tick(player, lunar.snapshot(), activeCap);
             return;
         }
         if (boundary != null) {
             if (world.difficultySetting <= 0 || !available(world, player)) {
                 reason = world.difficultySetting <= 0 ? "PEACEFUL" : "PLAYER_UNAVAILABLE";
+                if (siteSiege != null) siteSiege.interrupt(reason);
                 if (diagnostics != null) diagnostics.assault(boundary.rawTime, "Eligibility rejected: " + AssaultDiagnostics.label(reason));
                 return;
+            }
+            if (siteSiege != null) {
+                SiteSiege.Admission decision = siteSiege.admit(player, boundary);
+                if (decision == SiteSiege.Admission.WAIT) {
+                    pending = boundary;
+                    return;
+                }
+                if (decision == SiteSiege.Admission.COMMITTED) {
+                    if (diagnostics != null) diagnostics.assault(world.getWorldTime(), "Site siege admitted");
+                    return;
+                }
             }
             territorialAdaptation = territory != null;
             admissionThreat = territory == null ? null : territory.assess(world, player);
@@ -366,7 +410,7 @@ public final class SiegeDirector implements LunarService.Listener {
     /** Current start conditions, independent of the recorded outcome of the previous encounter. */
     public Eligibility eligibility(World context, EntityPlayer player) {
         if (context == null || context != world || storage == null) return Eligibility.UNAVAILABLE;
-        if (state == State.ACTIVE) return Eligibility.ACTIVE;
+        if (state == State.ACTIVE || siteActive() || (siteSiege != null && siteSiege.planning())) return Eligibility.ACTIVE;
         if (world.difficultySetting <= 0) return Eligibility.PEACEFUL;
         if (!available(world, player)) return Eligibility.PLAYER;
         LunarSnapshot view = lunar.snapshot();

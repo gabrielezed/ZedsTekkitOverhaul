@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.4.0-alpha.1 — Site-targeted siege candidate
+
+- Adds opt-in full-moon site sieges with persistent site identity, exterior skeleton approaches and bounded resolution.
+- Preserves the shared major encounter boundary and saves a two-cycle site cooldown.
+- Adds a Site Siege monitor to the Debug Hub. This candidate awaits owner gameplay acceptance.
+
 ## 0.3.0-alpha.4 — Compound settlements and Protected Interior
 
 - Link corroborated work areas across small open courtyards while preserving stable site IDs and known three-dimensional parts.

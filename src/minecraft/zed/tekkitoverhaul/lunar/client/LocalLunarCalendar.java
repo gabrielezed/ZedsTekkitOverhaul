@@ -23,6 +23,7 @@ import net.minecraft.src.forge.MinecraftForge;
 import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.assault.AssaultDiagnostics;
 import zed.tekkitoverhaul.assault.SiegeDirector;
+import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarPhase;
@@ -65,7 +66,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private String storageStatus = "No active local save";
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
-                         boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
+                         boolean siteSieges, boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
                          int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
                          boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds,
                          boolean electricJetpackWeather, boolean lunarAerialEncounters, boolean forestMagpies) {
@@ -73,6 +74,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         owner = Thread.currentThread();
         this.verbose = verbose;
         this.assault = assault;
+        assault.attachSites(siteSieges, settlements);
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
@@ -127,6 +129,11 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
 
     public SiegeDirector.Snapshot assaultSnapshot(World context) {
         return context != null && context == game.theWorld ? assault.snapshot(context) : null;
+    }
+
+    public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
+        return Thread.currentThread() == owner && context != null && context == world && context == game.theWorld
+                ? assault.siteSiegeSnapshot(context) : null;
     }
 
     public TerritorialActivityService.Snapshot territorialSnapshot(World context) {
@@ -196,7 +203,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         forestWildlife.bind(active);
         if (sameSave) {
             if (calendar != null) {
-                assault.bind(null, null);
+                assault.bind(active, null);
                 if (survivalDiagnostics != null) survivalDiagnostics.record(active.getWorldTime(), "WORLD",
                         "Entered dimension " + active.worldProvider.worldType);
                 active.setItemData(LunarWorldState.KEY, state);

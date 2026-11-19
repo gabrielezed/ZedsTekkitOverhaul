@@ -100,7 +100,7 @@ public final class SettlementProbe implements ISaveEventHandler {
 
     private void measureTicks(String label, int x, int y, int z, boolean recentered, boolean moving) {
         position(x, y, z);
-        ticks(600);
+        ticks(3000);
         nextSurvey();
         int centers = 0, followUps = 0, cancelled = 0;
         SettlementProfile.Samples idle = new SettlementProfile.Samples();

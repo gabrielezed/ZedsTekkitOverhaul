@@ -21,7 +21,7 @@ final class SettlementProfile {
         Method sample = method(type, "sample", xd.class, WorldProvenance.class);
         Method finish = method(type, "finish");
         Samples component = new Samples();
-        for (int pass = -64; pass < 144; pass++) {
+        for (int pass = -512; pass < 144; pass++) {
             start.invoke(survey, x, y, z);
             for (int layer = 0; layer < 9; layer++) {
                 if (!Boolean.TRUE.equals(sample.invoke(survey, world, provenance)))

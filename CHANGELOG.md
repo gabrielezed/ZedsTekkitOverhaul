@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.3.0-alpha.4 — Compound settlements and Protected Interior
+
+- Link corroborated work areas across small open courtyards while preserving stable site IDs and known three-dimensional parts.
+- Assess local overhead cover and routes independently of settlement status.
+- Provide read-only site and protection queries for the future SITE_SIEGE director, and migrate existing site records.
+
 ## 0.3.0-alpha.3 — Suspended cabins
 
 - Recenter clipped cabin surveys and use cover from walked columns on the same floor.

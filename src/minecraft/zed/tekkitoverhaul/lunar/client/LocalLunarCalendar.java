@@ -34,6 +34,7 @@ import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 import zed.tekkitoverhaul.settlement.WorldProvenance;
 import zed.tekkitoverhaul.settlement.SettlementRecognition;
+import zed.tekkitoverhaul.settlement.SiteQueries;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 
 /** Owns the one active single-player save session. */
@@ -309,6 +310,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     SettlementRecognition.Snapshot settlementSnapshot(World context, int x, int y, int z) {
         return settlements.snapshot(context, x, y, z);
     }
+
+    SiteQueries siteQueries() { return settlements; }
 
     public void onWorldSave(World world) {
         provenance.save(world);

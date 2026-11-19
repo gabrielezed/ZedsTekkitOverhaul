@@ -2,7 +2,7 @@ package zed.tekkitoverhaul.settlement;
 
 import net.minecraft.src.Block;
 import net.minecraft.src.World;
-import zed.tekkitoverhaul.settlement.SiteRegistry.Bounds;
+import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 
 /** One local survey, one loaded slice per update, then one bounded component pass. */
 final class SiteSurvey {
@@ -73,6 +73,23 @@ final class SiteSurvey {
 
     Bounds extent() {
         return new Bounds(x - RADIUS, minY, z - RADIUS, x + RADIUS, minY + LAYERS - 1, z + RADIUS);
+    }
+
+    boolean completelyCovers(Bounds box) {
+        return box.minX > x - RADIUS && box.maxX < x + RADIUS && box.minZ > z - RADIUS && box.maxZ < z + RADIUS
+                && box.minY > minY && box.maxY < minY + LAYERS - 1;
+    }
+
+    boolean constructionRemains(Bounds box) {
+        for (int py = box.minY; py <= box.maxY; py++) {
+            for (int pz = box.minZ; pz <= box.maxZ; pz++) {
+                int index = (py - minY) * SLICE + (pz - z + RADIUS) * WIDTH + box.minX - x + RADIUS;
+                for (int px = box.minX; px <= box.maxX; px++) {
+                    if ((blocks[index++] & CONSTRUCTION) != 0) return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Check each intersecting chunk before a block read. A partial survey yields uncertainty. */

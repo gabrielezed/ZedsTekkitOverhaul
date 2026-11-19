@@ -9,6 +9,8 @@ import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.settlement.WorldProvenance;
 import zed.tekkitoverhaul.settlement.SettlementRecognition;
 import zed.tekkitoverhaul.settlement.SettlementRecognition.UtilitySnapshot;
+import zed.tekkitoverhaul.settlement.ProtectedInterior.Assessment;
+import zed.tekkitoverhaul.settlement.SiteSnapshot;
 
 final class GuiSettlementRecognition extends GuiScreen {
     private final LocalLunarCalendar local;
@@ -16,8 +18,10 @@ final class GuiSettlementRecognition extends GuiScreen {
     private final GuiScreen parent;
     private WorldProvenance.Snapshot provenance;
     private SettlementRecognition.Snapshot site;
-    private int x, y, z, ticks, row;
-    private boolean technical;
+    private SiteSnapshot footprint;
+    private Assessment protection;
+    private int x, y, z, ticks, row, page;
+    private static final String[] NEXT_PAGE = {"Survey & Storage", "Protection", "Assessment"};
 
     GuiSettlementRecognition(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -29,14 +33,14 @@ final class GuiSettlementRecognition extends GuiScreen {
     public void initGui() {
         controlList.add(new GuiButton(0, width / 2 - 106, height - 25, 100, 20, "Debug Hub"));
         controlList.add(new GuiButton(1, width / 2 + 6, height - 25, 100, 20,
-                technical ? "Assessment" : "Survey & Storage"));
+                NEXT_PAGE[page]));
         refresh();
     }
 
     @Override
     public void updateScreen() {
         if (mc.theWorld != world || world.isRemote) mc.displayGuiScreen(null);
-        else if (++ticks >= 10) refresh();
+        else if (++ticks >= 10 || (page == 2 && protection != null && protection.reads == 0)) refresh();
     }
 
     private void refresh() {
@@ -45,6 +49,8 @@ final class GuiSettlementRecognition extends GuiScreen {
         if (player == null) {
             provenance = null;
             site = null;
+            footprint = null;
+            protection = null;
             return;
         }
         x = MathHelper.floor_double(player.posX);
@@ -52,14 +58,17 @@ final class GuiSettlementRecognition extends GuiScreen {
         z = MathHelper.floor_double(player.posZ);
         provenance = local.provenanceSnapshot(world, x, y, z);
         site = local.settlementSnapshot(world, x, y, z);
+        footprint = site == null || site.id == 0 ? null : local.siteQueries().resolve(world, site.id);
+        protection = page == 2 ? local.siteQueries().protection(world, x, y, z) : null;
     }
 
     @Override
     protected void actionPerformed(GuiButton button) {
         if (button.id == 0) mc.displayGuiScreen(parent);
         else {
-            technical = !technical;
-            button.displayString = technical ? "Assessment" : "Survey & Storage";
+            page = (page + 1) % NEXT_PAGE.length;
+            button.displayString = NEXT_PAGE[page];
+            refresh();
         }
     }
 
@@ -85,7 +94,8 @@ final class GuiSettlementRecognition extends GuiScreen {
             line((site.queued ? "Pending survey | Latest: " : "Survey: ") + site.assessment
                     + (site.assessmentAge < 0 ? "" : " (" + site.assessmentAge + " ticks ago)"));
             row += 5;
-            if (technical) drawTechnical();
+            if (page == 1) drawTechnical();
+            else if (page == 2) drawProtection();
             else drawAssessment();
         }
         super.drawScreen(mouseX, mouseY, partialTick);
@@ -94,8 +104,9 @@ final class GuiSettlementRecognition extends GuiScreen {
     private void drawAssessment() {
         line("Position " + x + ", " + y + ", " + z + " | Dimension " + provenance.dimension);
         if (site.id > 0) {
-            line("Site bounds " + site.boundary);
-            line("Last confirmed site observation: tick " + site.observedTick);
+            line("Site envelope " + site.boundary);
+            line(site.knownParts + " known parts | " + (footprint == null ? "Unavailable" : footprint.coverage)
+                    + " | Last confirmed tick " + site.observedTick);
         }
         line("Selected component " + site.component);
         line("Connected construction: " + metric(site.placed) + " matching | " + metric(site.inferred) + " inferred");
@@ -106,6 +117,23 @@ final class GuiSettlementRecognition extends GuiScreen {
         utility("Furnace", site.furnace);
         utility("Chest", site.chest);
         if (!site.useHook) line("Openings unavailable: use hook inactive");
+    }
+
+    private void drawProtection() {
+        line("Local Protection at " + x + ", " + y + ", " + z);
+        if (protection == null) {
+            line("UNKNOWN | Awaiting local geometry");
+            return;
+        }
+        line(protection.state + " | " + protection.reason);
+        line("Overhead cover: " + protection.overhead);
+        line("Enclosure: " + protection.enclosure);
+        line("Passable exterior route: " + protection.exteriorRoute);
+        line("Local geometry reads: " + protection.reads);
+        if (footprint != null) {
+            line("Site #" + footprint.id + " | Footprint " + footprint.coverage + " | " + footprint.parts.size() + " known parts");
+            line(footprint.contains(x, y, z) ? "Within a known part" : "Outside the known parts");
+        }
     }
 
     private void drawTechnical() {

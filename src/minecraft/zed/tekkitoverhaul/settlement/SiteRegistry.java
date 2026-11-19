@@ -1,5 +1,7 @@
 package zed.tekkitoverhaul.settlement;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -8,13 +10,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 
-/** Append-only identities for the local Overworld. No eviction or ID reuse in alpha.2. */
+/** Append-only identities with bounded local parts. */
 final class SiteRegistry {
-    static final int CAPACITY = 256;
-    private static final int MAGIC = 0x5A544F53, VERSION = 1, HEADER = 10, ROW = 37;
+    static final int CAPACITY = 256, PART_LIMIT = 8;
+    private static final int MAGIC = 0x5A544F53, VERSION = 2, HEADER = 10, SITE_ROW = 13, PART_ROW = 39;
+    static final int MAX_FILE = HEADER + CAPACITY * (SITE_ROW + PART_LIMIT * PART_ROW);
     private final Path path;
-    private final List<Site> sites = new ArrayList<Site>();
+    final List<Site> sites = new ArrayList<Site>();
     String status = "READY";
     private boolean dirty;
 
@@ -34,80 +38,179 @@ final class SiteRegistry {
 
     int size() { return sites.size(); }
 
+    Site byId(int id) { return id > 0 && id <= size() ? sites.get(id - 1) : null; }
+
     boolean writable() { return "READY".equals(status) || "WRITE_FAILED".equals(status); }
 
-    Site containing(int x, int y, int z) {
-        for (Site site : sites) if (site.bounds.contains(x, y, z, 0)) return site;
-        return null;
-    }
-
-    Site matching(Bounds bounds) {
-        Site best = null;
-        int overlap = 0;
+    Match match(Bounds bounds, int x, int y, int z) {
+        Match match = new Match();
         for (Site site : sites) {
-            int shared = site.bounds.overlap(bounds);
-            if (shared <= overlap || shared * 3 < Math.min(bounds.volume(), site.bounds.volume())) continue;
-            best = site;
-            overlap = shared;
+            if (!site.bounds.contains(x, y, z) && (bounds == null || site.bounds.overlap(bounds) == 0)) continue;
+            for (Part part : site.parts) {
+                if (!part.bounds.contains(x, y, z) && !substantial(part.bounds, bounds)) continue;
+                if (match.site != null && match.site != site) {
+                    match.ambiguous = true;
+                    return match;
+                }
+                int overlap = bounds == null ? 0 : part.bounds.overlap(bounds);
+                if (match.part == null || overlap > match.overlap) {
+                    match.part = part;
+                    match.overlap = overlap;
+                }
+                match.site = site;
+            }
         }
-        return best;
+        return match;
     }
 
-    Site promote(Bounds bounds, long clock, boolean observed) {
+    private static boolean substantial(Bounds a, Bounds b) {
+        return b != null && a.overlap(b) * 3 >= Math.min(a.volume(), b.volume());
+    }
+
+    Site containing(int x, int y, int z) {
+        Match match = match(null, x, y, z);
+        return match.ambiguous ? null : match.site;
+    }
+
+    Site promote(Bounds bounds, long clock, int manual, int inferred, int uses) {
         if (!writable() || size() == CAPACITY) return null;
-        Site site = new Site(size() + 1, bounds, clock, observed);
+        Site site = new Site(size() + 1, clock);
         sites.add(site);
+        add(site, new Part(bounds, clock, manual >= 8, manual, inferred, uses));
         dirty = true;
         return site;
     }
 
-    void reobserve(Site site, long clock, boolean observed) {
-        long next = Math.max(site.lastSeen, clock);
-        if (next == site.lastSeen && (!observed || site.observed)) return;
-        site.lastSeen = next;
-        site.observed |= observed;
+    Part attach(Site site, Bounds bounds, long clock, int manual, int inferred, int uses) {
+        if (!writable() || site.parts.size() == PART_LIMIT || intersectsOther(bounds, null)) return null;
+        Part part = new Part(bounds, clock, manual >= 8, manual, inferred, uses);
+        add(site, part);
+        dirty = true;
+        return part;
+    }
+
+    void reobserve(Site site, Part part, long clock, int manual, int inferred, int uses) {
+        long next = Math.max(part.lastSeen, clock);
+        if (next == part.lastSeen && part.manual == manual && part.inferred == inferred && part.uses == uses) return;
+        part.lastSeen = next;
+        part.observed |= manual >= 8;
+        part.manual = manual;
+        part.inferred = inferred;
+        part.uses = uses;
+        site.lastSeen = Math.max(site.lastSeen, next);
+        site.observed |= part.observed;
         dirty = true;
     }
 
-    boolean expand(Site site, Bounds surveyed) {
-        Bounds old = site.bounds;
+    boolean expand(Site site, Part part, Bounds surveyed) {
+        Bounds old = part.bounds;
         if (old.overlap(surveyed) * 3 < old.volume() * 2) return false;
-        Bounds union = new Bounds(Math.min(old.minX, surveyed.minX), Math.min(old.minY, surveyed.minY),
-                Math.min(old.minZ, surveyed.minZ), Math.max(old.maxX, surveyed.maxX),
-                Math.max(old.maxY, surveyed.maxY), Math.max(old.maxZ, surveyed.maxZ));
-        if (!union.valid() || union.volume() == old.volume()) return false;
-        for (Site other : sites) if (other != site && other.bounds.overlap(union) > 0) return false;
-        site.bounds = union;
+        Bounds union = old.union(surveyed);
+        if (!union.valid() || union.volume() == old.volume() || intersectsOther(union, part)) return false;
+        part.bounds = union;
+        part.resetContraction();
+        refreshEnvelope(site);
         dirty = true;
         return true;
+    }
+
+    boolean contract(Site site, Part part, Bounds smaller) {
+        boolean repeated = part.contractions > 0 && (smaller == null ? part.smaller == null
+                : part.smaller != null && smaller.covers(part.smaller) && part.smaller.covers(smaller));
+        part.smaller = smaller;
+        part.contractions = repeated ? part.contractions + 1 : 1;
+        if (part.contractions < 3 || (smaller == null && site.parts.size() == 1)) return false;
+        if (smaller == null) site.parts.remove(part);
+        else {
+            part.bounds = smaller;
+            part.resetContraction();
+        }
+        refreshEnvelope(site);
+        dirty = true;
+        return true;
+    }
+
+    private boolean intersectsOther(Bounds surveyed, Part own) {
+        for (Site site : sites) {
+            if (site.bounds.overlap(surveyed) == 0) continue;
+            for (Part part : site.parts) {
+                if (part != own && part.bounds.overlap(surveyed) > 0) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void add(Site site, Part part) {
+        site.parts.add(part);
+        site.bounds = site.bounds == null ? part.bounds : site.bounds.union(part.bounds);
+        site.lastSeen = Math.max(site.lastSeen, part.lastSeen);
+        site.observed |= part.observed;
+    }
+
+    private static void refreshEnvelope(Site site) {
+        site.bounds = site.parts.get(0).bounds;
+        site.observed = false;
+        for (Part part : site.parts) {
+            site.bounds = site.bounds.union(part.bounds);
+            site.observed |= part.observed;
+        }
     }
 
     private void read() throws IOException {
         long length = Files.size(path);
         if (length < 8) throw invalid();
-        DataInputStream input = new DataInputStream(Files.newInputStream(path));
-        try {
+        try (DataInputStream input = new DataInputStream(new BufferedInputStream(Files.newInputStream(path)))) {
             if (input.readInt() != MAGIC) throw invalid();
-            if (input.readInt() != VERSION) {
+            int version = input.readInt();
+            if (version != 1 && version != VERSION) {
                 status = "UNSUPPORTED_SCHEMA";
                 throw invalid();
             }
             int count = input.readUnsignedShort();
-            if (count > CAPACITY || length != HEADER + count * ROW) throw invalid();
-            for (int i = 1; i <= count; i++) {
-                int id = input.readInt();
-                Bounds bounds = new Bounds(input.readInt(), input.readInt(), input.readInt(),
-                        input.readInt(), input.readInt(), input.readInt());
-                long seen = input.readLong();
-                int evidence = input.readUnsignedByte();
-                if (id != i || !bounds.valid() || seen < 0 || evidence > 1) throw invalid();
-                if (matching(bounds) != null) throw invalid();
-                sites.add(new Site(id, bounds, seen, evidence == 1));
+            if (count > CAPACITY || length > MAX_FILE || (version == 1 && length != HEADER + count * 37)) throw invalid();
+            for (int id = 1; id <= count; id++) {
+                if (input.readInt() != id) throw invalid();
+                Site site;
+                if (version == 1) {
+                    Part part = readPart(input, false);
+                    site = new Site(id, part.lastSeen);
+                    add(site, part);
+                } else {
+                    long clock = input.readLong();
+                    int parts = input.readUnsignedByte();
+                    if (clock < 0 || parts < 1 || parts > PART_LIMIT) throw invalid();
+                    site = new Site(id, clock);
+                    for (int i = 0; i < parts; i++) {
+                        Part part = readPart(input, true);
+                        if (part.lastSeen > clock) throw invalid();
+                        for (Part known : site.parts) if (known.bounds.overlap(part.bounds) > 0) throw invalid();
+                        add(site, part);
+                    }
+                }
+                for (Site existing : sites) {
+                    if (existing.bounds.overlap(site.bounds) == 0) continue;
+                    for (Part part : site.parts) for (Part known : existing.parts)
+                        if (substantial(known.bounds, part.bounds)) throw invalid();
+                }
+                sites.add(site);
             }
             if (input.read() != -1) throw invalid();
-        } finally {
-            input.close();
+            dirty = version == 1;
         }
+    }
+
+    private static Part readPart(DataInputStream input, boolean extended) throws IOException {
+        Bounds bounds = new Bounds(input.readInt(), input.readInt(), input.readInt(),
+                input.readInt(), input.readInt(), input.readInt());
+        long seen = input.readLong();
+        int evidence = input.readUnsignedByte();
+        int manual = extended ? input.readShort() : -1;
+        int inferred = extended ? input.readShort() : -1;
+        int uses = extended ? input.readShort() : -1;
+        if (!bounds.valid() || seen < 0 || evidence > 1 || manual < -1 || inferred < -1
+                || manual + inferred > SiteSurvey.VOLUME || uses < -1 || uses > 16
+                || (manual == -1) != (inferred == -1) || (manual == -1) != (uses == -1)) throw invalid();
+        return new Part(bounds, seen, evidence == 1, manual, inferred, uses);
     }
 
     void save() {
@@ -116,25 +219,29 @@ final class SiteRegistry {
         try {
             Files.createDirectories(path.getParent());
             temporary = Files.createTempFile(path.getParent(), "zto_sites_", ".tmp");
-            DataOutputStream output = new DataOutputStream(Files.newOutputStream(temporary));
-            try {
+            try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(temporary)))) {
                 output.writeInt(MAGIC);
                 output.writeInt(VERSION);
                 output.writeShort(size());
                 for (Site site : sites) {
-                    Bounds box = site.bounds;
                     output.writeInt(site.id);
-                    output.writeInt(box.minX);
-                    output.writeInt(box.minY);
-                    output.writeInt(box.minZ);
-                    output.writeInt(box.maxX);
-                    output.writeInt(box.maxY);
-                    output.writeInt(box.maxZ);
                     output.writeLong(site.lastSeen);
-                    output.writeBoolean(site.observed);
+                    output.writeByte(site.parts.size());
+                    for (Part part : site.parts) {
+                        Bounds box = part.bounds;
+                        output.writeInt(box.minX);
+                        output.writeInt(box.minY);
+                        output.writeInt(box.minZ);
+                        output.writeInt(box.maxX);
+                        output.writeInt(box.maxY);
+                        output.writeInt(box.maxZ);
+                        output.writeLong(part.lastSeen);
+                        output.writeBoolean(part.observed);
+                        output.writeShort(part.manual);
+                        output.writeShort(part.inferred);
+                        output.writeShort(part.uses);
+                    }
                 }
-            } finally {
-                output.close();
             }
             Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             dirty = false;
@@ -151,57 +258,46 @@ final class SiteRegistry {
 
     private static IOException invalid() { return new IOException("Invalid settlement registry"); }
 
+    static final class Match {
+        Site site;
+        Part part;
+        int overlap;
+        boolean ambiguous;
+    }
+
     static final class Site {
         final int id;
+        final List<Part> parts = new ArrayList<Part>();
         Bounds bounds;
         long lastSeen;
         boolean observed;
 
-        Site(int id, Bounds bounds, long lastSeen, boolean observed) {
+        Site(int id, long lastSeen) {
             this.id = id;
-            this.bounds = bounds;
             this.lastSeen = lastSeen;
-            this.observed = observed;
         }
     }
 
-    static final class Bounds {
-        final int minX, minY, minZ, maxX, maxY, maxZ;
+    static final class Part {
+        Bounds bounds, smaller;
+        long lastSeen;
+        boolean observed;
+        int manual, inferred, uses, contractions;
+        long checkedAt = -1, session = -1;
+        SiteSnapshot.Coverage coverage = SiteSnapshot.Coverage.PARTIAL;
 
-        Bounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-            this.minX = minX;
-            this.minY = minY;
-            this.minZ = minZ;
-            this.maxX = maxX;
-            this.maxY = maxY;
-            this.maxZ = maxZ;
+        Part(Bounds bounds, long lastSeen, boolean observed, int manual, int inferred, int uses) {
+            this.bounds = bounds;
+            this.lastSeen = lastSeen;
+            this.observed = observed;
+            this.manual = manual;
+            this.inferred = inferred;
+            this.uses = uses;
         }
 
-        boolean valid() {
-            return ProvenanceStore.valid(minX, minY, minZ) && ProvenanceStore.valid(maxX, maxY, maxZ)
-                    && maxX >= minX && maxY >= minY && maxZ >= minZ
-                    && maxX - minX < 13 && maxY - minY < 9 && maxZ - minZ < 13;
-        }
-
-        boolean contains(int x, int y, int z, int margin) {
-            return x >= minX - margin && x <= maxX + margin && y >= minY - margin && y <= maxY + margin
-                    && z >= minZ - margin && z <= maxZ + margin;
-        }
-
-        int volume() { return (maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1); }
-
-        int overlap(Bounds other) {
-            return span(minX, maxX, other.minX, other.maxX) * span(minY, maxY, other.minY, other.maxY)
-                    * span(minZ, maxZ, other.minZ, other.maxZ);
-        }
-
-        private static int span(int min, int max, int otherMin, int otherMax) {
-            return Math.max(0, Math.min(max, otherMax) - Math.max(min, otherMin) + 1);
-        }
-
-        @Override
-        public String toString() {
-            return "(" + minX + ", " + minY + ", " + minZ + ") to (" + maxX + ", " + maxY + ", " + maxZ + ")";
+        void resetContraction() {
+            contractions = 0;
+            smaller = null;
         }
     }
 }

@@ -2,11 +2,11 @@
 ## SITE_SIEGE & Fortress Warfare
 
 **Document type:** Major Gameplay and Technical Design Specification  
-**Status:** Design Draft — Pending Owner Approval  
+**Status:** Strategic direction and alpha.1 boundary approved. Later phases require separate authorization. Gameplay values remain provisional until owner playtesting.
+
 **Target:** Minecraft Java 1.2.5 / Tekkit Classic 3.1.2  
 **Prerequisite milestone:** Survival 0.3 — Settlement Recognition  
 **Strategic milestone:** Survival 0.4 — SITE_SIEGE & Fortress Warfare  
-**Suggested path:** `docs/agents/survival-040-site-siege-spec.md`
 
 ---
 
@@ -16,7 +16,7 @@ Survival 0.4.0 introduces strategic hostile attacks against persistent player-es
 
 The world already understands ordinary hostile spawning, Territorial Activity, lunar encounters, Enderkin roles, aerial predators, and local environmental threats.
 
-Survival 0.3 will establish the missing foundation: the ability to recognize meaningful player-built locations.
+Survival 0.3 established recognition of meaningful player-built locations through [0.3.0-alpha.4](survival-030-alpha4.md). Its implemented site and protection contract governs alpha.1 consumption.
 
 Survival 0.4 must turn that recognition into a new form of gameplay.
 
@@ -185,7 +185,7 @@ Do not implement SITE_SIEGE as a PLAYER_ASSAULT with a different display name.
 
 **Survival 0.3 is a hard architectural dependency.**
 
-The siege system must consume authoritative settlement snapshots.
+The siege system consumes immutable observations through `SiteQueries` on the owning world thread. `SiteSnapshot` carries a save-local ID, session, dimension, known parts, envelope, last-confirmed time, coverage and dormancy. Discovery can start near the player. The admitted save-local site ID stays fixed as the player moves. Siege logic leaves recognition, promotion, historical IDs and provenance evidence under settlement authority.
 
 ## 5.1 Site eligibility
 
@@ -210,19 +210,19 @@ Candidate inputs include:
 
 Low-confidence or historically ambiguous sites should not automatically receive destructive tactical encounters.
 
-If confidence is insufficient, reject or defer the siege.
+Assess identity confidence separately from geometric confidence for each action. A recognized PARTIAL site can support a non-destructive siege when relevant loaded exterior geometry is independently verified. Partial coverage grants no permission to spawn in unknown space, traverse an unknown corridor or breach a structure. Historical geometry establishes neither live geometry nor physical access. Defer or reject unsafe actions when evidence is STALE, UNAVAILABLE or UNKNOWN.
 
 Do not treat absence of provenance as evidence that the site is natural.
 
 ## 5.3 Site footprint
 
-Use the approximate site boundaries established by Settlement Recognition.
+Use known parts and the approximate aggregate envelope from Settlement Recognition. Gaps between parts establish neither occupation, protection nor traversal. Alpha.1 excludes insertion inside the horizontal envelope including courtyards, with a conservative exterior margin.
 
 Do not replace them with an arbitrary circular region centered on the player.
 
 ## 5.4 Protected interiors
 
-Use the independent Protected Interior assessment when selecting legal approaches.
+`ProtectedInterior` reports PROTECTED, EXPOSED or UNKNOWN for local standing-height geometry. An exposed courtyard can still be part of the compound. Insertion also requires loaded terrain, valid ground, actor collision checks, verified route evidence and exterior context. Recognition shares its bounded read budget with protection. Defer UNKNOWN observations without forcing repeated synchronous scans.
 
 Do not interpret an entire settlement as either universally protected or universally exposed.
 
@@ -255,15 +255,9 @@ The siege director is responsible for encounter admission and lifecycle.
 
 Do not introduce a second lunar calendar.
 
-## 6.2 Initial scheduling proposal
+## 6.2 Initial scheduling policy
 
-Begin with rare SITE_SIEGE eligibility during selected dangerous lunar windows.
-
-The full moon is a natural candidate for the first implementation.
-
-Do not automatically create a SITE_SIEGE on every full moon.
-
-Not all recognized settlements should be attacked at the same time.
+Evaluate the existing natural full-moon night event using the calendar’s eight-day cycle. A deterministic, reproducible rarity decision provisionally permits one in three opportunities, subject to site cooldown and feasibility. A disposable-world fixture may override rarity while preserving the admission boundary.
 
 ## 6.3 No constant escalation
 
@@ -277,17 +271,11 @@ Establish a meaningful site-level cooldown after a siege.
 
 A recently defended site should not immediately receive another full strategic attack.
 
-Cooldowns must persist across save/reload.
+A committed siege starts a persistent site cooldown of at least two eight-day lunar cycles. Save/reload preserves the cooldown and the consumed boundary.
 
 ## 6.5 Encounter arbitration
 
-SITE_SIEGE must coexist with PLAYER_ASSAULT, patrols, ordinary spawning, and aerial ecology.
-
-Prevent accidental uncontrolled overlap.
-
-At initial implementation, prefer a clear policy that prevents two major concurrent event authorities from committing separate hostile budgets to the same local area.
-
-The exact coexistence policy requires validation.
+A single major encounter decision evaluates eligibility, rarity and feasibility before allocating the existing event to SITE_SIEGE. If no siege commits, preserve established PLAYER_ASSAULT eligibility. A committed siege owns that boundary even if it later aborts. Patrols and ordinary ecology retain their existing authorities.
 
 ## 6.6 Event timing and replay
 
@@ -301,11 +289,7 @@ A site's identity persists when the player leaves.
 
 However, **site persistence does not imply that the siege must continue physically simulating while the location is unloaded**.
 
-For the first singleplayer implementation, prefer suspending or terminating active simulation when the relevant world context becomes unavailable.
-
-Do not destroy an unattended base through simulated offscreen attacks.
-
-The exact away-from-site policy must be explicitly tested and approved.
+When the player leaves the required simulation area or the relevant world context becomes invalid, stop insertion and terminate encounter authority with a recorded outcome. Preserve admission and cooldown. World unload and interrupted reload follow the same conservative policy. Never force-load, retarget or change structures offscreen. A later phase may consider suspension.
 
 ---
 
@@ -1163,22 +1147,13 @@ Implement the milestone in several substantial iterations.
 
 ## 0.4.0-alpha.1 — First True Site Siege
 
-**Goal:** Prove the complete vertical slice.
+### 0.4.0-alpha.1 — Approved Initial Implementation Decisions
 
-Deliver:
+The sole objective is `PERIMETER_APPROACH`. A small group of existing non-destructive hostiles inserts into verified loaded terrain outside the envelope and physically walks toward reachable site frontage. Solid obstacles and entrances affect route feasibility. The frontage remains site-anchored when the player moves. Ordinary nearby combat may take over after observable approach progress. Missing routes trigger bounded failure, retreat or resolution.
 
-- SITE_SIEGE event identity.
-- Target selection by stable recognized site ID.
-- A bounded scheduling and admission path.
-- Exterior approach planning.
-- A small group of existing enemies.
-- Basic combat pressure.
-- Resolution.
-- Persistence and diagnostics.
+Keep a finite group allocation, deadline and retry allowance. Resolve on elimination, exhausted allocation, loss of route, deadline, player absence, world or dimension invalidation, Peaceful, unavailable site identity or geometry, interrupted reload, or lunar cancellation and resynchronization as applicable. Release ordinary mobs to their native lifecycle on resolution, stop reinforcement and drop encounter references. Reopen interrupted saves without restarting the encounter.
 
-The siege must remain site-targeted even if the player moves.
-
-Do not introduce complex tactical roles before the base encounter works.
+Alpha.1 adds no structural damage, block breaking, machinery sabotage, resource mutation, siege-exclusive creatures, compulsory defenses, or ownership mechanics. Later alpha plans and open owner decisions remain proposals. Range, rarity and encounter pressure require owner playtesting.
 
 ## 0.4.0-alpha.2 — Tactical Objectives
 
@@ -1398,6 +1373,8 @@ The milestone must verify:
 15. Correct coexistence with natural Enderkin spawning.
 16. Correct coexistence with lunar event authority.
 17. Stable performance in large modded factories.
+
+Keep the existing recognition and protection cap of 169 block/metadata reads per service interval. Alpha.1 uses a separate measurable planner budget for bounded candidates, route observations and retries, tracks observation age and revalidates before action. Report work and rejection reasons. Access live world data only on the owning simulation thread. Limit simultaneous groups and avoid per-tick global site scans.
 
 Use the pinned Minecraft 1.2.5 / Tekkit Classic 3.1.2 runtime and relevant legacy build tooling.
 

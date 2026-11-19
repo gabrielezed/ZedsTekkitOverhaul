@@ -6,7 +6,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 
 | Key | Default | Supported values and effect |
 | --- | --- | --- |
-| `playerAssault` | true | Full-moon player assaults |
+| `playerAssault` | true | Enables major full-moon encounter admission |
+| `experimentalSiteSieges` | false | Allows an eligible site siege to take the same major admission. Requires `playerAssault`. |
 | `lunarPatrols` | true | First-quarter and waxing-gibbous patrols |
 | `lunarOutdoorLightPressure` | true | Allow the limited artificial-light exception for open lunar encounters. Set false to use ordinary light checks. |
 | `experimentalEnderkinEncounters` | false | Set true to allow opt-in substitutions. Set false for ordinary lunar composition. Creative spawn eggs work either way. |

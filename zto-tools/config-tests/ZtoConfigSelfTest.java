@@ -21,7 +21,7 @@ public final class ZtoConfigSelfTest {
         check(defaults.naturalAerialEncounters && defaults.electricJetpackWeather && defaults.lunarAerialEncounters
                 && defaults.aerialEncounterCooldownSeconds == 180,
                 "natural aerial ecology defaults and cooldown");
-        check(defaults.playerAssault && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
+        check(defaults.playerAssault && !defaults.experimentalSiteSieges && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
                 && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters
                 && !defaults.experimentalTerritorialThreat, "survival flags");
         check(defaults.assaultSpawnBudget == 15 && defaults.assaultWaveInterval == 900

@@ -91,6 +91,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 new SiegeDirector(settings.playerAssault, settings.assaultSpawnBudget, settings.assaultWaveInterval,
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
                         settings.lunarOutdoorLightPressure, settings.experimentalEnderkinEncounters),
+                settings.experimentalSiteSieges,
                 settings.survivalDebugHud, settings.survivalDebugHudKey, settings.survivalDebugLogCapacity,
                 settings.experimentalTerritorialThreat, settings.territorialHostileCapBonusPercent,
                 settings.naturalEnderkinSpawning, settings.naturalAerialEncounters, settings.aerialEncounterCooldownSeconds,

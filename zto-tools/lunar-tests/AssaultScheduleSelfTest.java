@@ -17,7 +17,26 @@ public final class AssaultScheduleSelfTest {
         test.run();
         test.patrols();
         patrolRetryWindow();
+        siteSiegePolicy();
         System.out.println("Assault and patrol schedule checks passed");
+    }
+
+    private static void siteSiegePolicy() {
+        for (long seed : new long[] {0, 1, -1, Long.MIN_VALUE, Long.MAX_VALUE, 32021}) {
+            for (long cycle = -12; cycle < 12; cycle++) {
+                int count = 0;
+                for (int offset = 0; offset < 3; offset++) {
+                    if (SiteSiegePolicy.opportunity(seed, cycle + offset)) count++;
+                }
+                check(count == 1, "Rarity should select exactly one eligible cycle in three");
+                check(SiteSiegePolicy.opportunity(seed, cycle) == SiteSiegePolicy.opportunity(seed, cycle + 3),
+                        "Opportunity rerolled for the same cycle residue");
+            }
+        }
+        check(SiteSiegePolicy.cooldownUntil(FULL) == FULL + 16L * LunarSnapshot.DAY,
+                "Site cooldown should cover two complete lunar cycles");
+        check(SiteSiegePolicy.cooldownUntil(Long.MAX_VALUE - 1) == Long.MAX_VALUE,
+                "Cooldown overflow must fail conservatively");
     }
 
     private static void patrolRetryWindow() {

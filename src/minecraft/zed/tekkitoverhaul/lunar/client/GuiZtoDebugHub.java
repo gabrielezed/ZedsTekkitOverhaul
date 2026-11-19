@@ -20,14 +20,15 @@ final class GuiZtoDebugHub extends GuiScreen {
         GuiButton lunar = new GuiButton(0, left, top, "Lunar Cycle");
         lunar.enabled = local.service(world) != null;
         controlList.add(lunar);
-        GuiButton survival = new GuiButton(1, left, top + 24, "Survival & Assault");
+        GuiButton survival = new GuiButton(1, left, top + 21, "Survival & Assault");
         survival.enabled = local.survivalDiagnostics(world) != null;
         controlList.add(survival);
-        controlList.add(new GuiButton(2, left, top + 48, "Territorial Threat Monitor"));
-        controlList.add(new GuiButton(4, left, top + 72, "Aerial Predators"));
-        controlList.add(new GuiButton(5, left, top + 96, "Electric Jetpack Weather"));
-        controlList.add(new GuiButton(6, left, top + 120, "Biome Ecology"));
-        controlList.add(new GuiButton(7, left, top + 144, "Settlement Recognition"));
+        controlList.add(new GuiButton(2, left, top + 42, "Territorial Threat Monitor"));
+        controlList.add(new GuiButton(4, left, top + 63, "Aerial Predators"));
+        controlList.add(new GuiButton(5, left, top + 84, "Electric Jetpack Weather"));
+        controlList.add(new GuiButton(6, left, top + 105, "Biome Ecology"));
+        controlList.add(new GuiButton(7, left, top + 126, "Settlement Recognition"));
+        controlList.add(new GuiButton(8, left, top + 147, "Site Siege"));
         controlList.add(new GuiButton(3, left, top + 171, "Back to Game"));
     }
 
@@ -41,6 +42,7 @@ final class GuiZtoDebugHub extends GuiScreen {
             case 5: mc.displayGuiScreen(new GuiJetpackWeather(this)); break;
             case 6: mc.displayGuiScreen(new GuiBiomeEcology(local, world, this)); break;
             case 7: mc.displayGuiScreen(new GuiSettlementRecognition(local, world, this)); break;
+            case 8: mc.displayGuiScreen(new GuiSiteSiege(local, world, this)); break;
             case 3: mc.displayGuiScreen(null); break;
             default: break;
         }

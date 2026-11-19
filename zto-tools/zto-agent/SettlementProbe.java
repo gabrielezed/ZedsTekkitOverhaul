@@ -45,16 +45,17 @@ import zed.tekkitoverhaul.settlement.WorldProvenance;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Exercises native placement, movement, utility activation and Save & Quit persistence without a window. */
-public final class SettlementProbe implements ISaveEventHandler {
-    private static final int X = 320, Y = 4, Z = 320, PLANK = 5, BENCH = 58, CHEST = 54, FURNACE = 61;
+public class SettlementProbe implements ISaveEventHandler {
+    static final int X = 320, Y = 4, Z = 320;
+    private static final int PLANK = 5, BENCH = 58, CHEST = 54, FURNACE = 61;
     private final File root;
     private final Minecraft game;
     private final aes controller;
     private final WorldProvenance provenance = new WorldProvenance();
     private final TerritorialActivityService territory = new TerritorialActivityService();
-    private final SettlementRecognition settlements = new SettlementRecognition(territory, provenance);
-    private Fixture world;
-    private vq player;
+    final SettlementRecognition settlements = new SettlementRecognition(territory, provenance);
+    Fixture world;
+    vq player;
     private int utilityOpens;
 
     public static void main(String[] args) {
@@ -356,7 +357,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         System.out.println("PASS local wiring corroborates an open observed workshop without a roof or a GUI opening");
     }
 
-    private void compound(boolean migrated) throws Exception {
+    void compound(boolean migrated) throws Exception {
         String name = migrated ? "compound-migrated" : "compound-new";
         open(name, false);
         prepare(X, Z);
@@ -439,6 +440,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         check(outpostId == 2 && queries.resolve(world, houseId).parts.size() == 2
                         && queries.nearby(world, X, Y, Z, 24).size() == 2,
                 "comparable distance with independent use retains two identities", here());
+        onCompoundReady(houseId, outpostId);
         position(X + 2, Y, Z + 2);
         check(controller.b(X + 5, Y - 1, Z + 2, 1), "clear natural ground for the extension", here());
         place(PLANK, X + 4, Y - 1, Z + 2, 5);
@@ -464,6 +466,8 @@ public final class SettlementProbe implements ISaveEventHandler {
         System.out.printf("PASS %s compound #%d and independent outpost #%d, three parts before contraction, %d bytes%n",
                 name, houseId, outpostId, stored.length);
     }
+
+    void onCompoundReady(int houseId, int outpostId) throws Exception {}
 
     private void ambiguousBridge(SiteQueries queries, int house, int outpost) {
         position(X + 7, Y, Z + 2);
@@ -579,7 +583,7 @@ public final class SettlementProbe implements ISaveEventHandler {
                 .putInt(x + 4).putInt(Y + 2).putInt(Z + 4).putLong(clock).put((byte) 1);
     }
 
-    private void room(int x, int y, int z, boolean door) {
+    void room(int x, int y, int z, boolean door) {
         position(x - 2, y, z + 2);
         platform(x, y, z);
         for (int dx = 0; dx < 5; dx++) {
@@ -602,7 +606,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         }
     }
 
-    private void toggle(int x, int y, int z) {
+    void toggle(int x, int y, int z) {
         check(controller.a(player, world, null, x, y, z, 1), "native door or gate activation", here());
     }
 
@@ -731,7 +735,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         SettlementProfile.provenance(root.toPath());
     }
 
-    private void industrialWorkshop(int centerX, int feet, int centerZ) {
+    void industrialWorkshop(int centerX, int feet, int centerZ) {
         for (int x = centerX - 6; x <= centerX + 6; x++) {
             for (int z = centerZ - 6; z <= centerZ + 6; z++) {
                 for (int y = feet - 3; y <= feet + 5; y++) {
@@ -1189,7 +1193,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         walk();
     }
 
-    private SettlementProbe(File root) throws Exception {
+    SettlementProbe(File root) throws Exception {
         this.root = root;
         Class.forName("pb"); // Match a local world starting the vanilla block registry before FML.
         FMLCommonHandler.instance().beginLoading(FMLClientHandler.instance());
@@ -1211,7 +1215,7 @@ public final class SettlementProbe implements ISaveEventHandler {
         MinecraftForge.registerSaveHandler(this);
     }
 
-    private void open(String name, boolean structures) throws Exception {
+    void open(String name, boolean structures) throws Exception {
         territory.bind(null);
         provenance.bind(null);
         settlements.bind(null);
@@ -1557,22 +1561,22 @@ public final class SettlementProbe implements ISaveEventHandler {
                 "native placement at " + x + "," + y + "," + z + "/" + side, null);
     }
 
-    private void useUtility(int x, int y, int z) {
+    void useUtility(int x, int y, int z) {
         int before = utilityOpens;
         check(controller.a(player, world, null, x, y, z, 1) && utilityOpens == before + 1,
                 "normal utility activation handed off a container", here());
         player.ar = player.aq;
     }
 
-    private void prepare(int x, int z) {
+    void prepare(int x, int z) {
         int cx = x >> 4, cz = z >> 4;
         for (int dx = -3; dx <= 3; dx++)
             for (int dz = -3; dz <= 3; dz++) world.d(cx + dx, cz + dz);
     }
 
-    private void position(int x, int y, int z) { player.c(x + 0.5, y, z + 0.5, 0, 0); }
+    void position(int x, int y, int z) { player.c(x + 0.5, y, z + 0.5, 0, 0); }
 
-    private void walk() {
+    void walk() {
         for (int segment = 0; segment < 4; segment++) {
             double dx = segment == 0 ? 0.25 : segment == 2 ? -0.25 : 0;
             double dz = segment == 1 ? 0.25 : segment == 3 ? -0.25 : 0;
@@ -1583,31 +1587,31 @@ public final class SettlementProbe implements ISaveEventHandler {
         }
     }
 
-    private void ticks(int number) {
+    void ticks(int number) {
         for (int i = 0; i < number; i++) {
             territory.tick(player, false);
             settlements.tick(player, false);
         }
     }
 
-    private Snapshot here() {
+    Snapshot here() {
         return settlements.snapshot(world, (int) Math.floor(player.o),
                 (int) Math.floor(player.y.b), (int) Math.floor(player.q));
     }
 
-    private Snapshot recognized(String name, boolean observed) {
+    Snapshot recognized(String name, boolean observed) {
         Snapshot snapshot = here();
         check(snapshot.id > 0 && snapshot.confidence.startsWith(observed ? "Observed" : "Inferred"), name, snapshot);
         System.out.printf("PASS %s #%d at %s%n", name, snapshot.id, snapshot.boundary);
         return snapshot;
     }
 
-    private void save() throws Exception {
+    void save() throws Exception {
         world.a(true, (rw) null);
         ce.a.a();
     }
 
-    private static void check(boolean expected, String message, Snapshot details) {
+    static void check(boolean expected, String message, Snapshot details) {
         if (expected) return;
         throw new AssertionError(message + (details == null ? "" : " | " + details.state + " " + details.reason
                 + " | placed=" + details.placed + " inferred=" + details.inferred + " cover=" + details.cover
@@ -1625,10 +1629,10 @@ public final class SettlementProbe implements ISaveEventHandler {
     @Override public void onChunkSaveData(xd context, ack chunk, ady data) {}
     @Override public void onChunkLoadData(xd context, ack chunk, ady data) {}
 
-    private static final class Fixture extends xd {
+    static final class Fixture extends xd {
         private int hiddenX = Integer.MIN_VALUE, hiddenZ = Integer.MIN_VALUE;
-        boolean auditChunks;
-        int remoteChunk, remoteReads, chunkMisses;
+        boolean auditChunks, auditBlocks;
+        int remoteChunk, remoteReads, chunkMisses, blockReads, metadataReads;
 
         Fixture(aia save, String name, boolean structures) {
             super(save, name, new fj(32021L, 0, structures, false, vx.c));
@@ -1644,6 +1648,16 @@ public final class SettlementProbe implements ISaveEventHandler {
 
         @Override public boolean j(int x, int y, int z) {
             return ((x >> 4) != hiddenX || (z >> 4) != hiddenZ) && super.j(x, y, z);
+        }
+
+        @Override public int a(int x, int y, int z) {
+            if (auditBlocks) blockReads++;
+            return super.a(x, y, z);
+        }
+
+        @Override public int e(int x, int y, int z) {
+            if (auditBlocks) metadataReads++;
+            return super.e(x, y, z);
         }
 
         @Override public ack d(int x, int z) {

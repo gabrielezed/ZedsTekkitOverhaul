@@ -723,6 +723,21 @@ public final class SettlementProbe implements ISaveEventHandler {
             ticks(3700);
             position(X, Y, Z);
         }
+        int pitX = X + 20, pitZ = Z + 2, surface = Y - 1;
+        position(pitX - 1, Y, pitZ);
+        for (int x = pitX; x < pitX + 3; x++) {
+            for (int z = pitZ; z < pitZ + 3; z++) {
+                check(controller.b(x, surface, z, 1), "native shallow excavation", here());
+            }
+        }
+        position(pitX, surface, pitZ);
+        walk();
+        ticks(600);
+        check(here().siteCount == 0 && here().activity >= 2
+                        && provenance.snapshot(world, pitX, surface, pitZ).manualRemoval == 9,
+                "active excavation records all nine removals without recognizing a site", here());
+        System.out.println("PASS manual excavation has activity and nine removals without a site");
+        position(X, Y, Z);
         for (int z = Z; z < Z + 8; z++) {
             for (int y = Y; y < Y + 3; y++) place(PLANK, X + 3, y - 1, z, 1);
         }

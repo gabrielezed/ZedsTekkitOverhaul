@@ -34,6 +34,7 @@ public final class ZTOAgent {
 
     private static volatile WeakReference<ObjDoubleConsumer<Object>> jetpack = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> jetpackGuard = new WeakReference<>(null);
+    private static volatile WeakReference<BiConsumer<Object[], int[]>> provenance = new WeakReference<>(null);
 
     private ZTOAgent() {}
 
@@ -61,7 +62,8 @@ public final class ZTOAgent {
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
         if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
-                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)) return null;
+                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
+                && ProvenanceHook.find(name) == null) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -73,6 +75,8 @@ public final class ZTOAgent {
         for (byte part : MessageDigest.getInstance("SHA-256").digest(bytes))
             hex.append(Integer.toHexString((part & 255) | 256).substring(1));
         String hash = hex.toString();
+        ProvenanceHook mutation = ProvenanceHook.find(name);
+        if (mutation != null && mutation.hash.equals(hash)) return mutation.patch(bytes);
         if (JetpackHook.TARGET.equals(name) && JetpackHook.SHA256.equals(hash)) return JetpackHook.patch(bytes);
         if (NaturalSpawnHook.TARGET.equals(name) && NaturalSpawnHook.SHA256.equals(hash))
             return NaturalSpawnHook.patch(bytes);
@@ -91,6 +95,26 @@ public final class ZTOAgent {
     private static synchronized boolean installed(ClassLoader loader, String name) {
         Map<String, Boolean> hooks = STATUS.get(loader);
         return hooks != null && Boolean.TRUE.equals(hooks.get(name));
+    }
+
+    public static void registerProvenance(BiConsumer<Object[], int[]> callback) {
+        provenance = new WeakReference<>(callback);
+    }
+
+    public static int provenanceHooks(ClassLoader loader) {
+        int active = 0;
+        if (provenance.get() != null) {
+            for (ProvenanceHook hook : ProvenanceHook.values()) {
+                if (installed(loader, hook.target)) active |= 1 << hook.ordinal();
+            }
+        }
+        return active;
+    }
+
+    public static void observeMutation(boolean success, Object world, Object actor, int x, int y, int z,
+                                       int block, int source) {
+        BiConsumer<Object[], int[]> callback = provenance.get();
+        if (success && callback != null) callback.accept(new Object[] {world, actor}, new int[] {x, y, z, block, source});
     }
 
     public static void registerJetpack(ObjDoubleConsumer<Object> callback, Predicate<Object> guard) {

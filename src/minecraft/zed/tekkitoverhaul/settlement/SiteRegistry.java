@@ -15,6 +15,7 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 /** Append-only identities with bounded local parts. */
 final class SiteRegistry {
     static final int CAPACITY = 256, PART_LIMIT = 8;
+    private static final int ENVELOPE_WIDTH = 64, ENVELOPE_HEIGHT = 24;
     private static final int MAGIC = 0x5A544F53, VERSION = 2, HEADER = 10, SITE_ROW = 13, PART_ROW = 39;
     static final int MAX_FILE = HEADER + CAPACITY * (SITE_ROW + PART_LIMIT * PART_ROW);
     private final Path path;
@@ -67,11 +68,6 @@ final class SiteRegistry {
         return b != null && a.overlap(b) * 3 >= Math.min(a.volume(), b.volume());
     }
 
-    Site containing(int x, int y, int z) {
-        Match match = match(null, x, y, z);
-        return match.ambiguous ? null : match.site;
-    }
-
     Site promote(Bounds bounds, long clock, int manual, int inferred, int uses) {
         if (!writable() || size() == CAPACITY) return null;
         Site site = new Site(size() + 1, clock);
@@ -82,7 +78,8 @@ final class SiteRegistry {
     }
 
     Part attach(Site site, Bounds bounds, long clock, int manual, int inferred, int uses) {
-        if (!writable() || site.parts.size() == PART_LIMIT || intersectsOther(bounds, null)) return null;
+        if (!writable() || site.parts.size() == PART_LIMIT || !validEnvelope(site.bounds.union(bounds))
+                || intersectsOther(bounds, null)) return null;
         Part part = new Part(bounds, clock, manual >= 8, manual, inferred, uses);
         add(site, part);
         dirty = true;
@@ -106,7 +103,8 @@ final class SiteRegistry {
         Bounds old = part.bounds;
         if (old.overlap(surveyed) * 3 < old.volume() * 2) return false;
         Bounds union = old.union(surveyed);
-        if (!union.valid() || union.volume() == old.volume() || intersectsOther(union, part)) return false;
+        if (!union.valid() || union.volume() == old.volume() || !validEnvelope(site.bounds.union(union))
+                || intersectsOther(union, part)) return false;
         part.bounds = union;
         part.resetContraction();
         refreshEnvelope(site);
@@ -138,6 +136,11 @@ final class SiteRegistry {
             }
         }
         return false;
+    }
+
+    private static boolean validEnvelope(Bounds bounds) {
+        return bounds.maxX - bounds.minX < ENVELOPE_WIDTH && bounds.maxZ - bounds.minZ < ENVELOPE_WIDTH
+                && bounds.maxY - bounds.minY < ENVELOPE_HEIGHT;
     }
 
     private static void add(Site site, Part part) {
@@ -188,6 +191,7 @@ final class SiteRegistry {
                         add(site, part);
                     }
                 }
+                if (!validEnvelope(site.bounds)) throw invalid();
                 for (Site existing : sites) {
                     if (existing.bounds.overlap(site.bounds) == 0) continue;
                     for (Part part : site.parts) for (Part known : existing.parts)

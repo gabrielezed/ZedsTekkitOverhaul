@@ -188,7 +188,7 @@ public final class ProtectedInterior {
             shape = AIR;
         } else if (id == 65) {
             shape = LADDER;
-        } else if (id == 85 || id == 113 || id == 101 || id == 102) {
+        } else if (id == 85 || id == 113) {
             shape = WALL;
         } else {
             Block block = id > 0 && id < Block.blocksList.length ? Block.blocksList[id] : null;

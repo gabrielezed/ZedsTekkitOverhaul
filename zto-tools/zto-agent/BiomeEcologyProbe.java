@@ -25,6 +25,7 @@ import zed.tekkitoverhaul.survival.tactical.EntityThief;
 /** Exercises the pack's native biome layers, chunk biome bytes, substitution and magpie ticks. */
 public final class BiomeEcologyProbe {
     private static final int[] BIOMES = {4, 1, 2, 6, 3, 5, 12, 21, 7, 16, 0, 14, 15};
+    private static final int MIN_NATIVE_SURFACE = 1000, MIN_NATIVE_CAVE = 500, MAX_NATIVE_PASSES = 3600;
 
     public static void main(String[] args) throws Exception {
         auditBiomes();
@@ -146,7 +147,9 @@ public final class BiomeEcologyProbe {
         };
         try {
             ZTOAgent.registerNaturalSpawnReplacement(observation);
-            for (int pass = 0; pass < 1800; ++pass) {
+            int pass = 0;
+            for (; pass < MAX_NATIVE_PASSES && (eligible[0] < MIN_NATIVE_SURFACE || eligible[1] < MIN_NATIVE_CAVE);
+                    ++pass) {
                 vf.a(world, true, false);
                 for (Object entity : world.b) if (entity instanceof zed.tekkitoverhaul.survival.tactical.TacticalHostile)
                     ++inserted[cave((acq) entity) ? 1 : 0];
@@ -154,9 +157,13 @@ public final class BiomeEcologyProbe {
                 world.n();
             }
             double surface = inserted[0] / (double) eligible[0], cave = inserted[1] / (double) eligible[1];
-            System.out.printf("Native eligible surface %d, selected %d, inserted %d (%.2f%%); cave %d, selected %d, inserted %d (%.2f%%)%n",
-                    eligible[0], selected[0], inserted[0], surface * 100, eligible[1], selected[1], inserted[1], cave * 100);
-            check(eligible[0] >= 1000 && eligible[1] >= 500 && cave > surface * 2 && cave < 0.18,
+            System.out.printf("Native eligible surface %d, selected %d, inserted %d (%.2f%%); cave %d, selected %d, "
+                            + "inserted %d (%.2f%%) after %d/%d passes%n",
+                    eligible[0], selected[0], inserted[0], surface * 100, eligible[1], selected[1], inserted[1],
+                    cave * 100, pass, MAX_NATIVE_PASSES);
+            check(eligible[0] >= MIN_NATIVE_SURFACE && eligible[1] >= MIN_NATIVE_CAVE,
+                    "native spawn fixture reached its two habitat quotas within the pass limit");
+            check(cave > surface * 2 && cave < 0.18,
                     "native eligible cave slots have substantially more successful substitutions");
         } finally {
             ZTOAgent.registerNaturalSpawnReplacement(null);

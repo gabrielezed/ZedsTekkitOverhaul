@@ -4,7 +4,8 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
-    [ValidateSet('furnace','mining','breacher')][string]$Focus
+    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
+        'compound','protection','query')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,7 @@ try {
     if ($Pack -or $AerialSample -or $Focus) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
         if ($CandidateJar) { $CandidateJar = (Resolve-Path -LiteralPath $CandidateJar).Path }
+        if ($CandidateJar -and !$AerialSample) { $candidate = $CandidateJar }
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
@@ -40,7 +42,7 @@ try {
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
-            'FurnaceFuelProbe.java','NativeMiningProbe.java') |
+            'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java','SettlementProfile.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -51,6 +53,31 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Focus -eq 'biome') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') BiomeEcologyProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
+                return
+            }
+            if ($Focus -in 'mutations','settlement-profile','compound','protection','query') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName $Focus
+                if ($LASTEXITCODE) { throw "Native settlement $Focus probe failed." }
+                return
+            }
+            if ($Focus -eq 'cabin') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName cabin
+                if ($LASTEXITCODE) { throw 'Native suspended cabin probe failed.' }
+                return
+            }
+            if ($Pack -or $Focus -eq 'settlement') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Native settlement recognition probe failed.' }
+                if ($Focus -eq 'settlement') { return }
+            }
+            if ($Pack -or $Focus -eq 'provenance') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath ProvenanceProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Native provenance probe failed.' }
+                if ($Focus -eq 'provenance') { return }
+            }
             if ($Pack -or $Focus -eq 'mining') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath NativeMiningProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Native mining probe failed.' }

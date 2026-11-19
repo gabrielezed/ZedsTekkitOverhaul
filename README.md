@@ -2,6 +2,14 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
+## Survival 0.3.0-alpha.4 · Settlements and shelter
+
+- **Settlement Recognition.** Construction, movement and utility use can establish a persistent site. Connected evidence can link a house and workshop across a short courtyard while keeping a nearby independent outpost separate. Existing site IDs carry forward from alpha.3 saves.
+- **Protected Interior.** A separate local assessment shows overhead cover, enclosure and a route to exposed ground. Opening a door can change protection while the site keeps its identity. Terrain, lighting and the existing encounter rules still govern spawning.
+- **Debug Hub.** In singleplayer, press **Numpad 1 → Settlement Recognition**. Cycle through **Assessment**, **Survey & Storage** and **Protection** to inspect the site, survey coverage and local geometry.
+
+[Playtest walkthrough](docs/agents/survival-030-alpha4.md#owner-walkthrough) · [Implementation, verification and SITE_SIEGE handoff](docs/agents/survival-030-alpha4.md) · [Changelog](CHANGELOG.md)
+
 ## Survival 0.2.3-alpha.2 · Biome ecology and industrial survival
 
 | Fugl | Skelebird (Skelerakk) | Magpie |
@@ -48,7 +56,7 @@ Use **Tekkit Classic 3.1.2** and **Java 8**. Close Prism and Minecraft, then ins
 .\zto-tools\install-zto-prism.ps1 -Instance "$env:APPDATA\PrismLauncher\instances\Tekkit Dev"
 ```
 
-The installer adds `ZedsTekkitOverhaul.jar` to the instance and registers `ZTOAgent.jar` as a managed Prism component. The agent enables territorial ordinary spawning, natural Enderkin substitutions, custom moon rendering, inventory gestures, and supported direct industrial hooks. [Installation and staging](docs/deploy-prism.md)
+The installer adds `ZedsTekkitOverhaul.jar` to the instance and registers `ZTOAgent.jar` as a managed Prism component. The agent enables settlement placement, removal and utility observations, territorial spawning, natural Enderkin substitutions, custom moon rendering, inventory gestures, and supported direct industrial hooks. [Installation and staging](docs/deploy-prism.md)
 
 Edit `minecraft/config/ZedsTekkitOverhaul.cfg` with Minecraft closed to tune territorial pressure, ordinary Enderkin spawning, and lunar encounters. [Settings and migration](docs/agents/configuration.md)
 

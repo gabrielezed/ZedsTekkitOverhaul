@@ -159,7 +159,8 @@ final class SiteRegistry {
     private void read() throws IOException {
         long length = Files.size(path);
         if (length < 8) throw invalid();
-        try (DataInputStream input = new DataInputStream(new BufferedInputStream(Files.newInputStream(path)))) {
+        DataInputStream input = new DataInputStream(new BufferedInputStream(Files.newInputStream(path)));
+        try {
             if (input.readInt() != MAGIC) throw invalid();
             int version = input.readInt();
             if (version != 1 && version != VERSION) {
@@ -196,6 +197,8 @@ final class SiteRegistry {
             }
             if (input.read() != -1) throw invalid();
             dirty = version == 1;
+        } finally {
+            input.close();
         }
     }
 
@@ -219,7 +222,8 @@ final class SiteRegistry {
         try {
             Files.createDirectories(path.getParent());
             temporary = Files.createTempFile(path.getParent(), "zto_sites_", ".tmp");
-            try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(temporary)))) {
+            DataOutputStream output = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(temporary)));
+            try {
                 output.writeInt(MAGIC);
                 output.writeInt(VERSION);
                 output.writeShort(size());
@@ -242,6 +246,8 @@ final class SiteRegistry {
                         output.writeShort(part.uses);
                     }
                 }
+            } finally {
+                output.close();
             }
             Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             dirty = false;

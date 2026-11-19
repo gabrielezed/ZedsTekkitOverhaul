@@ -119,6 +119,9 @@ public final class SettlementRecognition {
             survey.active = false;
             Decision unavailable = new Decision(survey, tick, null, -1, -1);
             unavailable.reason = survey.changed ? "Terrain changed" : "Terrain unavailable";
+            // A doorway can be outside the stored bounds even when the last window matched the site.
+            if (latest != null && resultX == survey.focusX && resultY == survey.focusY && resultZ == survey.focusZ)
+                unavailable.site = latest.site;
             publish(unavailable);
             return;
         }

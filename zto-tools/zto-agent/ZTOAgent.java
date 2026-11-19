@@ -76,7 +76,10 @@ public final class ZTOAgent {
             hex.append(Integer.toHexString((part & 255) | 256).substring(1));
         String hash = hex.toString();
         ProvenanceHook mutation = ProvenanceHook.find(name);
-        if (mutation != null && mutation.hash.equals(hash)) return mutation.patch(bytes);
+        if (mutation != null && mutation.hash.equals(hash)) {
+            byte[] observed = mutation.patch(bytes);
+            return mutation == ProvenanceHook.REMOVE ? FurnaceTransferHook.patch(observed) : observed;
+        }
         if (JetpackHook.TARGET.equals(name) && JetpackHook.SHA256.equals(hash)) return JetpackHook.patch(bytes);
         if (NaturalSpawnHook.TARGET.equals(name) && NaturalSpawnHook.SHA256.equals(hash))
             return NaturalSpawnHook.patch(bytes);

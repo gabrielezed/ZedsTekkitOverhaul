@@ -16,7 +16,7 @@ The Saboteur runtime suite covers `exercise`, `restart` and `stress` modes. Both
 
 Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct industrial hooks without a graphical process. It also compares ordinary hostile populations in matched quiet and occupied Tekkit worlds. The [compatibility manifest](compatibility-acceptance.md) tracks live gesture, rendering and throughput checks separately.
 
-For the 0.2.3 prototype, the same headless pack runner checks the default biome generator, matched natural Enderkin candidate distributions, magpie behavior and Fugl chicken hunts. See the [biome ecology implementation and playtest](survival-023-implementation.md).
+For 0.2.3-alpha.2, the same headless pack runner checks the native Enderkin substitution sample and population limits, magpie habitat and player-item recovery, and Fugl chicken hunts. `-Focus mining` exercises the restored local Survival controller with a stone pickaxe and both IC2 drills. See the [biome ecology implementation and playtest](survival-023-implementation.md).
 
 Use `zto-tools/test-zto-agent.ps1 -AerialSample -PackJava java` for the repeated ordinary-only aerial sample. `-CandidateJar` selects an archived mod for that sample. The controlled pack suite separately checks failed formations, predator warnings and recovery, lunar allocation, and the magpie scavenging and egg lifecycle.
 

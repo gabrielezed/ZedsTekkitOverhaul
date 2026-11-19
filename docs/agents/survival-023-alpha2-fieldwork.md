@@ -4,7 +4,7 @@
 
 This candidate leaves attack and harvesting with the pinned local Survival controller. The previous Vein Mining control is no longer registered. An old binding in local options has no effect. Ordinary mining uses the equipped tool's normal wear, EU and drop rules. There is no queued work or saved gesture state to migrate.
 
-The earlier headless timing measurements exercised controller methods and synthetic key state. They did not validate a physical gesture. The pinned `aes.b(IIII)Z` hook called ZTO before `onBlockStartBreak` and again on a successful return, after native removal, tool cost and harvesting. The patch also gated both attack entry points and that harvest method at entry. The queue called the harvest method directly instead of going through the client ray target, click callback and native damage animation. Its five-block player-to-origin check plus six-block seam radius could reach well past the four-block native controller reach. An empty or cancelled queue cleared the action while leaving the latch active until both inputs were no longer held. Native hit effects and swings remained tied to the cursor despite mining a different block. Holding attack while using an item could also feed the queue outside the normal click path. The one native wear and drop path seen in the old fixture is compatible with these input failures.
+The earlier headless timing measurements exercised controller methods and synthetic key state. They did not validate a physical gesture. The pinned `aes.b(IIII)Z` hook called ZTO before `onBlockStartBreak` and again on a successful return, after native removal, tool cost and harvesting. The patch also gated both attack entry points and that harvest method at entry. The queue called the harvest method directly instead of going through the client ray target, click callback and native damage animation. Its five-block player-to-origin check plus six-block seam radius could reach well past the four-block native controller reach. An empty or cancelled queue cleared the action while leaving the latch active until an input was released or focus was lost. Native hit effects and swings remained tied to the cursor despite mining a different block. Holding attack while using an item could also feed the queue outside the normal click path. The one native wear and drop path seen in the old fixture is compatible with these input failures.
 
 A future opt-in gesture needs to establish native targeting, permissions, cancellation and controller progress with physical input before it can return. This candidate removes the registration, queue and agent interception together. Test the restored baseline in a disposable Survival world by repeatedly mining and releasing attack with a stone pickaxe and charged IC2 drills, including while the former grave binding is held. Check that only the targeted block breaks, the very next target responds normally, and drops, durability and EU match ordinary mining. Repeat after opening inventory and switching tools.
 
@@ -38,6 +38,25 @@ In the native tick probe, the Breacher acquired the player without a preassigned
 3. **Wooden entrance.** Place a wooden door in a narrow passage and use a Breacher egg. Switch to Survival on Normal and wait across the closed door. Watch the two-handed warning, opening and pursuit. Try interrupting with a hit and repeat with an iron door.
 
 Run the individual pack fixtures with `zto-tools/test-zto-agent.ps1 -Focus mining`, `-Focus furnace` and `-Focus breacher`. The full pack suite also exercises the industrial Saboteur, Tank, native Enderkin spawning, IC2 jetpack and the inventory hooks. For graphical use the [input-isolation rules](testing.md#background-client-launch).
+
+## Corrected alpha.2 candidate
+
+| Evidence | Result |
+| --- | --- |
+| **PASS** — MCP build and packaging | MCP 6.2, JDK 8 and development Forge 3.4.9.171 compiled and reobfuscated. All 424 mod entries passed streaming validation. |
+| **PASS** — native Survival mining | Release interrupted a partial hit. Holding attack on the exhausted target left adjacent ore intact. Manually targeting all six coal blocks yielded six drops with each tool and left adjacent stone and isolated ore. Stone pickaxe spent 6 durability, Mining Drill 300 EU and Diamond Drill 480 EU. |
+| **PASS** — pack regressions | `zto-tools/test-zto-agent.ps1 -Pack` passed on Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and pack Java 8u51. The pinned probes covered all six fuel-burning furnace families and native bucket return, Breacher wooden door and gate, industrial Saboteur, native spawning and territory, aerial ecology, lunar authority and the existing agent hooks. See [ecology and theft measurements](survival-023-implementation.md#alpha2-correction-verification). |
+| **PASS** — portable checks | Configuration, lunar schedules and roles, crafting transactions, inventory drag slot policy and documentation links. |
+| **PASS** — Tekkit Dev deploy | The installed mod and the existing Prism-managed agent match the candidate SHA-256 values below. |
+| **NOT RUN** — graphical and owner playtest | Physical input, NEI and Inventory Tweaks on screen, rendered poses, wildlife feel and fairness. Vein-gesture cases are suspended with the gesture. |
+
+| Artifact | Identity |
+| --- | --- |
+| Tested source | `7467ef414a22712bdffdcdcfc558a52104da4dd0` |
+| Mod SHA-256 | `1deafe34633b83acb0820f9faccbe77c7af2198b390d8cff4b86223da4e51d52` |
+| Agent SHA-256 | `f5216604ce3eb89bdc0d5719d0a7dd3bbab2604ea7fdec011aebb842f85b0890` |
+
+The sidecars report the existing untracked owner files. Tracked production sources matched the tested commit.
 
 ## Previous combined candidate
 

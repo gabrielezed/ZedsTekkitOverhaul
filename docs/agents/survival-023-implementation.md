@@ -140,7 +140,22 @@ Each paired cell reads baseline → candidate. Groups list actual inserted sizes
 
 The rolls accounted for every eligible miss in the repeated sample. In the ridge fixture, the large remaining losses were before acquisition and launch. With tuning alone, 55 of 76 hunts committed there. Alternate lanes increased that to 73 of 76 while preserving zero admissions under glass. In the open night-air sample, established Hard had 126 Skelebird groups on 254 admissions, up from 80 on 197, and five-bird Fugl formations increased from 94 to 110. Established ground observed 14 of 167 Normal and 29 of 171 Hard Skelebird encounters. A separate controlled formation fixture blocked all eight three-bird attempts, then observed two actual insertions on the ninth site. Controlled fixtures also exercise cap rejection, unavailable space, warning cancellation, a later flock member's pass, and protected jetpack behavior.
 
-## Verification
+## Alpha.2 correction verification
+
+The pinned pack's native hostile pass ran 1,800 times at matched Normal difficulty and zero activity in a marked disposable Forest world. A stone canopy created a covered floor while leaving surface opportunities in the same world. The callback counted only eligible Zombie, Skeleton, Creeper and Enderman candidates at the native insertion site. Population was cleared between passes for this sample. A lit area beneath the canopy never reached the substitution callback.
+
+| Habitat | Eligible native slots | Enderkin inserted | Substitution rate |
+| --- | ---: | ---: | ---: |
+| Surface | 5,557 | 222 | 3.99% |
+| Cave | 561 | 67 | 11.94% |
+
+The separate population fixture kept entities in the world with ordinary ecology enabled. The quiet world stopped at 82 hostiles with a vanilla threshold of 79 and the native pass overshoot. The elevated world stopped at its effective Territorial Activity cap of 134. These measurements establish substitution per eligible opportunity and the active population limits in the fixture. They do not estimate encounters per play hour. Geometry controls also covered a deep mine, high mountain tunnel, open ravine, exposed ledge, a constructed floor and roof, both mushroom biomes and a non-Overworld provider.
+
+The forest fixture admitted a bird on exposed grass and zero birds at the same site with the player deep beneath it. Native entity save/load kept the origin flag, a bounded hop took one bird back toward exposure, and a trapped natural bird retired while the deliberate control stayed. The egg could also place a bird beneath deep cover. A forced successful theft roll let the probe observe a warning, then check walking away, changing the target stack and Creative protection. One plain feather moved from a three-item backpack stack into the beak. The seed in the hotbar, tagged seed and diamonds stayed in inventory. Native save/unload/load kept ownership and a spent opportunity, and one native drop and pickup restored the starting inventory count. The natural gold, scavenging, retry and death behaviors passed in the same pack suite.
+
+Host graphical play was **NOT RUN**. Use the owner checks above for readability, interruption and how often theft is noticed during normal exploration. Build and deploy identity are recorded in the [fieldwork notes](survival-023-alpha2-fieldwork.md#corrected-alpha2-candidate).
+
+## Earlier verification
 
 - Portable checks passed for configuration, lunar calendar, assault and patrol schedules, outdoor approaches, and current documentation.
 - MCP 6.2 with JDK 8 compiled and reobfuscated the client. The staging build passed streaming validation of all 412 entries. The gameplay source is commit 3c730e695535e9d4197421ed6e66d963a281250b. The build sidecar reports a dirty workspace because documentation and test changes and unrelated local files were present at build time. Mod SHA-256 is 4c8472ffae33e2473ea9944503da396aebcdd8cd1fa7bf85f9ef41eeca1902d2. Agent SHA-256 is 35e8fc1ec25c552afd401890d4d444e63227d9ca1abfd1ffb5ddebf026613060.

@@ -386,6 +386,12 @@ public final class SettlementProbe implements ISaveEventHandler {
         }
         expect(assess(cave, Y, Z), State.PROTECTED, Evidence.YES, Evidence.NO, "natural cave");
         check(settlements.locate(world, cave, Y, Z).state == Recognition.UNKNOWN, "cave supplies no site", here());
+        world.g(cave, Y + 2, Z, 96);
+        Assessment unsupported = assess(cave, Y, Z);
+        check(world.a(cave, Y + 2, Z) == 96 && unsupported.state == State.UNKNOWN
+                        && unsupported.reason.equals("Ambiguous collision geometry"),
+                "unsupported trapdoor clearance yields explicit uncertainty", here());
+        world.g(cave, Y + 2, Z, 1);
         for (int x = cave - 2; x <= cave + 2; x++) {
             world.g(x, Y, Z - 2, 0);
             world.g(x, Y + 1, Z - 2, 0);

@@ -92,6 +92,15 @@ One-row encounter NBT serialization measured 1.5 / 3.0 / 8.5 / 37.5 µs over 512
 
 **Recommendation — READY FOR OWNER PLAYTEST.** Keep the PR Draft. The fixture supports bounded counterplay, stable targeting and recovery on the pinned runtime. Visual movement, perceived fairness, readability and live integration remain owner checks.
 
+## Industrial recognition integration
+
+PR #44 landed on main at `c4cf30e`. Integration commit `e32c1f1` brings its IC2 recognition into the site siege candidate. The combined runner exercises both native site siege and IC2 settlement fixtures in one pinned pack run with separate disposable saves.
+
+- **PASS** — Configuration, lunar scheduling and replay, outdoor approach, Territorial Activity and threat, assault composition, and documentation checks.
+- **PASS** — MCP 6.2 client build, reobfuscation and streaming verification of 469 archive entries. The staged mod SHA-256 is `01b798b2a67bcd3a93696be18ded831255a6d93b70eb58fb5d7024ca350b1d9e`. The agent SHA-256 is `8f7a49041724b76eed134d7716b3b88c2d8603c28b080a020722681924e6114f`.
+- **PASS** — Full `test-zto-agent.ps1 -Pack` with Tekkit Classic 3.1.2 and Java 8u51. The suite covered siege admission, exterior movement and obstruction, persistence, and the new IC2 recognition and stable site identity checks.
+- **NOT RUN** — Live client compatibility, graphical layout and owner gameplay. PR #43 remains a draft pending these checks.
+
 ## Owner walkthrough
 
 1. Use a disposable Tekkit Dev copy with the staged review artifact. Set `experimentalSiteSieges=true` and `playerAssault=true` in `minecraft/config/ZedsTekkitOverhaul.cfg` with Minecraft closed. Start in Survival in the Overworld on Normal or Hard. Use flat ground and keep the exterior staging lane dark. A supported lane leads straight to the center of a wall or two blocks to either side. Leave at least 14 level blocks outside the house face and keep yourself at least 12 blocks from the insertion end during preflight.

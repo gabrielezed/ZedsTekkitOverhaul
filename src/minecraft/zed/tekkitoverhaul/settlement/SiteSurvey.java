@@ -18,7 +18,7 @@ final class SiteSurvey {
     private final int[] queue = new int[VOLUME];
     int x, y, z, minY, layer, reads, focusX, focusY, focusZ;
     boolean followUp;
-    boolean active;
+    boolean active, changed;
 
     void start(int x, int y, int z) {
         focusX = x;
@@ -34,7 +34,13 @@ final class SiteSurvey {
         this.z = z;
         minY = Math.max(0, Math.min(256 - LAYERS, y - 2));
         layer = 0;
+        changed = false;
         active = true;
+    }
+
+    void observeMutation(int px, int py, int pz) {
+        if (active && py >= minY && py < minY + layer
+                && Math.abs(px - x) <= RADIUS && Math.abs(pz - z) <= RADIUS) changed = true;
     }
 
     boolean near(int px, int py, int pz, int horizontal, int vertical) {

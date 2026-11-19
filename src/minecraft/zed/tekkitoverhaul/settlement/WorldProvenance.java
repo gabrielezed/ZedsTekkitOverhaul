@@ -23,6 +23,11 @@ public final class WorldProvenance {
     private Path path;
     private ProvenanceStore store;
     private Method hooks;
+    private SiteSurvey survey;
+
+    void trackSurvey(SiteSurvey survey) {
+        this.survey = survey;
+    }
 
     public void register() {
         try {
@@ -69,20 +74,26 @@ public final class WorldProvenance {
 
     private void observe(Object[] context, int[] change) {
         if (Thread.currentThread() != owner || world == null || context[0] != world
-                || world.worldProvider.worldType != 0 || store == null
-                || !("READY".equals(store.status) || "WRITE_FAILED".equals(store.status))) return;
+                || world.worldProvider.worldType != 0) return;
+        boolean writable = store != null && ("READY".equals(store.status) || "WRITE_FAILED".equals(store.status));
+        if (!writable && (survey == null || !survey.active)) return;
         int x = change[0], y = change[1], z = change[2], block = change[3], source = change[4];
         if (source != QUARRY && (player == null || context[1] != player || !player.isEntityAlive()
                 || player.capabilities.isCreativeMode)) return;
         if (!ProvenanceStore.valid(x, y, z) || !world.blockExists(x, y, z)) return;
         int current = world.getBlockId(x, y, z);
+        short observation;
         if (source == PLACE && current == block && block > 0 && block <= 4095) {
-            store.record(x, y, z, (short) block);
+            observation = (short) block;
         } else if (source == REMOVE && current != block) {
-            store.record(x, y, z, ProvenanceStore.MANUAL_REMOVAL);
+            observation = ProvenanceStore.MANUAL_REMOVAL;
         } else if (source == QUARRY && block > 0 && current == 0) {
-            store.record(x, y, z, ProvenanceStore.QUARRY_REMOVAL);
+            observation = ProvenanceStore.QUARRY_REMOVAL;
+        } else {
+            return;
         }
+        if (survey != null) survey.observeMutation(x, y, z);
+        if (writable) store.record(x, y, z, observation);
     }
 
     public Snapshot snapshot(World context, int x, int y, int z) {

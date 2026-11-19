@@ -38,7 +38,12 @@ public final class SettlementProbe implements ISaveEventHandler {
                 probe.suspendedCabins();
                 System.exit(0);
             }
+            if (args.length == 2 && "mutations".equals(args[1])) {
+                probe.surveyMutations();
+                System.exit(0);
+            }
             probe.suspendedCabins();
+            probe.surveyMutations();
             probe.sites();
             probe.negatives();
             probe.village();
@@ -48,6 +53,94 @@ public final class SettlementProbe implements ISaveEventHandler {
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    private void surveyMutations() throws Exception {
+        int feet = 83;
+        lowCabin("mutate-initial-roof", feet);
+        position(103, feet, 232);
+        ticks(500); // Corroborate activity without satisfying the four-column requirement.
+        walk(); // Tick 509 classifies before the walk reaches its fourth distinct column.
+        check(here().id == 0 && here().activity >= 2 && here().cover == 9,
+                "ready to promote on the next survey except for the roof edit", here());
+        ticks(89); // Tick 605. The low roof (fifth sampled layer) is already cached.
+        check(here().queued && here().reads == 169, "roof layer sampled", here());
+        for (int x = 100; x <= 106; x++) {
+            for (int z = 229; z <= 235; z++) {
+                check(controller.b(x, feet + 2, z, 1), "native roof removal between slices", here());
+            }
+        }
+        ticks(4);
+        showSurvey("removed sampled roof", here());
+        check(here().id == 0 && "Terrain changed".equals(here().assessment) && here().reads == 0,
+                "stale roof cannot promote and the changed cycle stops reading", here());
+        ticks(100);
+        check(here().id == 0 && here().cover == 0 && "Complete".equals(here().assessment),
+                "normal cadence refreshes the roofless cabin", here());
+
+        lowCabin("mutate-follow-up", feet);
+        position(103, feet, 232);
+        walk();
+        ticks(550);
+        Snapshot known = recognized("cabin before interrupted follow-up", true);
+        position(104, feet, 236);
+        place(PLANK, 106, feet - 1, 232, 5);
+        nextSurvey();
+        ticks(8);
+        check(here().queued && "Partial footprint".equals(here().assessment), "entered recentered window", here());
+        ticks(3);
+        check(controller.b(102, feet, 230, 1), "native linked furnace removal after follow-up sampled it", here());
+        check(controller.b(103, feet - 1, 232, 1), "native floor support removal after follow-up sampled it", here());
+        place(PLANK, 102, feet - 1, 232, 5);
+        ticks(6);
+        Snapshot changed = here();
+        showSurvey("changed recentered evidence", changed);
+        check(changed.id == known.id && changed.boundary.equals(known.boundary)
+                        && changed.observedTick == known.observedTick && !changed.queued
+                        && "Terrain changed".equals(changed.assessment),
+                "changed follow-up cannot expand or re-observe an existing identity", changed);
+
+        nextSurvey();
+        ticks(2); // The entrance window has sampled loaded chunks north and south of Z=240.
+        world.hideChunk(6, 15);
+        ticks(1);
+        Snapshot unavailable = here();
+        showSurvey("neighbor became unavailable", unavailable);
+        check(unavailable.id == known.id && unavailable.boundary.equals(known.boundary)
+                        && unavailable.observedTick == known.observedTick && unavailable.reads == 0
+                        && unavailable.sampledLayers == 3 && "Terrain unavailable".equals(unavailable.assessment)
+                        && !world.j(104, feet, 240),
+                "unavailable neighbor invalidates the current survey and retains known identity", unavailable);
+        world.hideChunk(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        nextSurvey();
+        ticks(17);
+        Snapshot refreshed = here();
+        check(refreshed.id == known.id && refreshed.boundary.endsWith("(107, 85, 235)")
+                        && refreshed.furnace.found == 0 && "Complete".equals(refreshed.assessment),
+                "valid refresh can expand the same identity without the removed utility", refreshed);
+
+        position(103, feet, 232);
+        for (int cycle = 0; cycle < 3; cycle++) {
+            nextSurvey();
+            ticks(1); // First two layers include the support at Y=82.
+            check(controller.b(103, feet - 1, 232, 1), "native repeated support removal", here());
+            place(PLANK, 102, feet - 1, 232, 5);
+            ticks(1);
+            check("Terrain changed".equals(here().assessment), "same-ID replacement invalidates sampled support", here());
+            for (int i = 0; i < 97; i++) {
+                ticks(1);
+                check(here().reads == 0 && !here().queued, "invalidations cannot bypass the cycle deadline", here());
+            }
+        }
+        System.out.println("PASS survey mutations stop stale promotion, expansion and re-observation within the original read budget");
+    }
+
+    private void nextSurvey() {
+        for (int i = 0; i < 100; i++) {
+            ticks(1);
+            if (here().queued && here().reads == 169) return;
+        }
+        throw new AssertionError("survey did not start by its next deadline");
     }
 
     private void suspendedCabins() throws Exception {
@@ -639,11 +732,22 @@ public final class SettlementProbe implements ISaveEventHandler {
     @Override public void onChunkLoadData(xd context, ack chunk, ady data) {}
 
     private static final class Fixture extends xd {
+        private int hiddenX = Integer.MIN_VALUE, hiddenZ = Integer.MIN_VALUE;
+
         Fixture(aia save, String name, boolean structures) {
             super(save, name, new fj(32021L, 0, structures, false, vx.c));
         }
 
         @Override public void a(nn entity, String sound, float gain, float pitch) {}
         @Override public void a(double x, double y, double z, String sound, float gain, float pitch) {}
+
+        void hideChunk(int x, int z) {
+            hiddenX = x;
+            hiddenZ = z;
+        }
+
+        @Override public boolean j(int x, int y, int z) {
+            return ((x >> 4) != hiddenX || (z >> 4) != hiddenZ) && super.j(x, y, z);
+        }
     }
 }

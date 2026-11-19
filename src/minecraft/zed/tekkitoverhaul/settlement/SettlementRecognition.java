@@ -39,6 +39,7 @@ public final class SettlementRecognition {
     public SettlementRecognition(TerritorialActivityService territory, WorldProvenance provenance) {
         this.territory = territory;
         this.provenance = provenance;
+        provenance.trackSurvey(survey);
     }
 
     public void register() {
@@ -113,10 +114,11 @@ public final class SettlementRecognition {
             survey.start(x, y, z);
             delay = INTERVAL;
         }
-        if (!survey.sample(world, provenance)) {
+        // Keep the original cycle deadline after an edit. A busy build cannot force extra slices.
+        if (survey.changed || !survey.sample(world, provenance)) {
             survey.active = false;
             Decision unavailable = new Decision(survey, tick, null, -1, -1);
-            unavailable.reason = "Terrain unavailable";
+            unavailable.reason = survey.changed ? "Terrain changed" : "Terrain unavailable";
             publish(unavailable);
             return;
         }
@@ -320,7 +322,7 @@ public final class SettlementRecognition {
             reason = decision == null ? "Awaiting local survey" : decision.reason;
             boundary = box == null ? "-" : box.toString();
             component = evidence == null || evidence.bounds == null ? "-" : evidence.bounds.toString();
-            assessment = decision == null ? "Awaiting survey" : evidence == null ? "Terrain unavailable"
+            assessment = decision == null ? "Awaiting survey" : evidence == null ? decision.reason
                     : evidence.faces != 0 ? "Partial footprint" : "Complete";
             extent = decision == null ? "-" : decision.extent.toString();
             anchorX = decision == null ? 0 : decision.anchorX;

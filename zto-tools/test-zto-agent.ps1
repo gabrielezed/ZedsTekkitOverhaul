@@ -4,7 +4,7 @@ param(
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
-    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin')][string]$Focus
+    [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -26,6 +26,7 @@ try {
     if ($Pack -or $AerialSample -or $Focus) {
         $candidate = Join-Path $root 'dist-zto/ZedsTekkitOverhaul.jar'
         if ($CandidateJar) { $CandidateJar = (Resolve-Path -LiteralPath $CandidateJar).Path }
+        if ($CandidateJar -and !$AerialSample) { $candidate = $CandidateJar }
         $headless = @($out.FullName, $overlay, $candidate, $agent, (Join-Path $root 'jars/bin/lwjgl.jar'))
         $buildCraft = @('buildcraft-client-A-core-2.2.14.zip','buildcraft-client-B-transport-2.2.14.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
@@ -51,6 +52,16 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Focus -eq 'biome') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') BiomeEcologyProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }
+                return
+            }
+            if ($Focus -in 'mutations','settlement-profile') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName $Focus
+                if ($LASTEXITCODE) { throw "Native settlement $Focus probe failed." }
+                return
+            }
             if ($Focus -eq 'cabin') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName cabin
                 if ($LASTEXITCODE) { throw 'Native suspended cabin probe failed.' }

@@ -48,7 +48,8 @@ Run the individual pack fixtures with `zto-tools/test-zto-agent.ps1 -Focus minin
 | **PASS** — pack regressions | `zto-tools/test-zto-agent.ps1 -Pack` passed on Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and pack Java 8u51. The pinned probes covered all six fuel-burning furnace families and native bucket return, Breacher wooden door and gate, industrial Saboteur, native spawning and territory, aerial ecology, lunar authority and the existing agent hooks. See [ecology and theft measurements](survival-023-implementation.md#alpha2-correction-verification). |
 | **PASS** — portable checks | Configuration, lunar schedules and roles, crafting transactions, inventory drag slot policy and documentation links. |
 | **PASS** — Tekkit Dev deploy | The installed mod and the existing Prism-managed agent match the candidate SHA-256 values below. |
-| **NOT RUN** — graphical and owner playtest | Physical input, NEI and Inventory Tweaks on screen, rendered poses, wildlife feel and fairness. Vein-gesture cases are suspended with the gesture. |
+| **Owner observation** — Tekkit Dev | The owner liked the Breacher and Saboteur encounters and confirmed that the furnaces worked in their playtest. |
+| **NOT RUN** — other graphical checks | Physical mining input, NEI and Inventory Tweaks on screen, and wildlife movement and theft fairness remain unverified. Vein-gesture cases are suspended with the gesture. |
 
 | Artifact | Identity |
 | --- | --- |

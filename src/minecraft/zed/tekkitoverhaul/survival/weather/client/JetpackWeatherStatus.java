@@ -13,8 +13,12 @@ public final class JetpackWeatherStatus {
         JetpackWeather gear = JetpackWeather.LOCAL;
         if (!(screen instanceof GuiInventory) || !gear.equipped() || !gear.available()) return;
         JetpackWeather.Phase phase = gear.phase();
-        int color = phase == JetpackWeather.Phase.FAULT ? 0xFF9373 : 0xE4EBCB;
+        int color = phase == JetpackWeather.Phase.FAULT || phase == JetpackWeather.Phase.IMMERSED ? 0xFF9373 : 0xE4EBCB;
         String state = phase == JetpackWeather.Phase.DRY ? "Stable" : phase.name().toLowerCase(Locale.ROOT);
+        if (phase == JetpackWeather.Phase.IMMERSED) state = "wet, water protection";
+        if (phase == JetpackWeather.Phase.RESTARTING) {
+            state = "wet, restarting " + ((gear.remaining() + 1) / 2) / 10.0 + "s";
+        }
         screen.drawCenteredString(minecraft.fontRenderer, "Electric Jetpack   " + state,
                 screen.width / 2, screen.height / 2 + 88, color);
     }

@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.lunar.client;
 import java.io.File;
 import java.util.EnumSet;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ITickHandler;
@@ -10,6 +11,7 @@ import cpw.mods.fml.common.TickType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.src.BaseMod;
 import net.minecraft.src.Chunk;
+import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ISaveHandler;
 import net.minecraft.src.KeyBinding;
 import net.minecraft.src.ModLoader;
@@ -73,7 +75,9 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                 territory, naturalSpawning);
         assault.attachAerialEcology(aerialEcology);
         forestWildlife = new ForestWildlife(forestMagpies);
-        JetpackWeather.LOCAL.configure(electricJetpackWeather);
+        JetpackWeather.LOCAL.configure(electricJetpackWeather, new Supplier<EntityPlayer>() {
+            @Override public EntityPlayer get() { return game.thePlayer; }
+        });
         hubKey = new KeyBinding("Open ZTO Debug Hub", Keyboard.KEY_NUMPAD1);
         ModLoader.registerKey(mod, hubKey, false);
         if (keyCode > 0 && keyCode < 256 && keyCode != hubKey.keyCode) {

@@ -82,6 +82,10 @@ public final class AgentProbe {
             rejectFingerprint(hook.name, bytes(loader.getResourceAsStream(hook.name + ".class")), hook, false);
             loaded++;
         }
+        byte[] jetpack = bytes(loader.getResourceAsStream(JetpackHook.TARGET + ".class"));
+        check(ZTOAgent.patchKnownClass(JetpackHook.TARGET, jetpack, null, false, false) != null,
+                "pinned IC2 jetpack guard and observer");
+        rejectFingerprint(JetpackHook.TARGET, jetpack, null, false);
         rejectFingerprint("l", renderer, null, true);
         check(ZTOAgent.mouseActive(gui) && ZTOAgent.moonStatus(loader).contains("hook active"),
                 "independent module state");

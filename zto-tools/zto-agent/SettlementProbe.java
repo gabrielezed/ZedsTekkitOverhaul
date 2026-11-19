@@ -81,7 +81,7 @@ public class SettlementProbe implements ISaveEventHandler {
         System.exit(0);
     }
 
-    private void compound(boolean migrated) throws Exception {
+    void compound(boolean migrated) throws Exception {
         String name = migrated ? "compound-migrated" : "compound-new";
         open(name, false);
         prepare(X, Z);
@@ -164,6 +164,7 @@ public class SettlementProbe implements ISaveEventHandler {
         check(outpostId == 2 && queries.resolve(world, houseId).parts.size() == 2
                         && queries.nearby(world, X, Y, Z, 24).size() == 2,
                 "comparable distance with independent use retains two identities", here());
+        onCompoundReady(houseId, outpostId);
         position(X + 2, Y, Z + 2);
         check(controller.b(X + 5, Y - 1, Z + 2, 1), "clear natural ground for the extension", here());
         place(PLANK, X + 4, Y - 1, Z + 2, 5);
@@ -189,6 +190,8 @@ public class SettlementProbe implements ISaveEventHandler {
         System.out.printf("PASS %s compound #%d and independent outpost #%d, three parts before contraction, %d bytes%n",
                 name, houseId, outpostId, stored.length);
     }
+
+    void onCompoundReady(int houseId, int outpostId) throws Exception {}
 
     private void ambiguousBridge(SiteQueries queries, int house, int outpost) {
         position(X + 7, Y, Z + 2);
@@ -456,7 +459,7 @@ public class SettlementProbe implements ISaveEventHandler {
         SettlementProfile.provenance(root.toPath());
     }
 
-    private void industrialWorkshop(int centerX, int feet, int centerZ) {
+    void industrialWorkshop(int centerX, int feet, int centerZ) {
         for (int x = centerX - 6; x <= centerX + 6; x++) {
             for (int z = centerZ - 6; z <= centerZ + 6; z++) {
                 for (int y = feet - 3; y <= feet + 5; y++) {
@@ -1281,7 +1284,7 @@ public class SettlementProbe implements ISaveEventHandler {
                 "native placement at " + x + "," + y + "," + z + "/" + side, null);
     }
 
-    private void useUtility(int x, int y, int z) {
+    void useUtility(int x, int y, int z) {
         int before = utilityOpens;
         check(controller.a(player, world, null, x, y, z, 1) && utilityOpens == before + 1,
                 "normal utility activation handed off a container", here());
@@ -1351,8 +1354,8 @@ public class SettlementProbe implements ISaveEventHandler {
 
     static final class Fixture extends xd {
         private int hiddenX = Integer.MIN_VALUE, hiddenZ = Integer.MIN_VALUE;
-        boolean auditChunks;
-        int remoteChunk, remoteReads, chunkMisses;
+        boolean auditChunks, auditBlocks;
+        int remoteChunk, remoteReads, chunkMisses, blockReads, metadataReads;
 
         Fixture(aia save, String name, boolean structures) {
             super(save, name, new fj(32021L, 0, structures, false, vx.c));
@@ -1368,6 +1371,16 @@ public class SettlementProbe implements ISaveEventHandler {
 
         @Override public boolean j(int x, int y, int z) {
             return ((x >> 4) != hiddenX || (z >> 4) != hiddenZ) && super.j(x, y, z);
+        }
+
+        @Override public int a(int x, int y, int z) {
+            if (auditBlocks) blockReads++;
+            return super.a(x, y, z);
+        }
+
+        @Override public int e(int x, int y, int z) {
+            if (auditBlocks) metadataReads++;
+            return super.e(x, y, z);
         }
 
         @Override public ack d(int x, int z) {

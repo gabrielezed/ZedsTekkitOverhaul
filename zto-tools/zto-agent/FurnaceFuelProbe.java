@@ -6,8 +6,10 @@ import ee.ContainerRMFurnace;
 import ee.EEItem;
 import ee.TileDMFurnace;
 import ee.TileRMFurnace;
+import eloraam.base.BlockAppliance;
 import eloraam.base.ContainerAlloyFurnace;
 import eloraam.base.TileAlloyFurnace;
+import eloraam.core.CraftLib;
 import eloraam.machine.ContainerBlueFurnace;
 import eloraam.machine.TileBlueFurnace;
 import ic2.common.ContainerIronFurnace;
@@ -49,7 +51,12 @@ public final class FurnaceFuelProbe {
         TileEntityIronFurnace iron = new TileEntityIronFurnace();
         dd ironContainer = new ContainerIronFurnace(player, iron);
         family(controller, player, ironContainer, 1, 263, 0);
-        family(controller, player, new ContainerAlloyFurnace(player.ap, new TileAlloyFurnace()), 9, 17, 0);
+        RedPowerBase.blockAppliance = new BlockAppliance(137);
+        RedPowerBase.blockAppliance.addTileEntityMapping(0, TileAlloyFurnace.class);
+        world.g(291, 4, 288, 137);
+        TileAlloyFurnace alloy = (TileAlloyFurnace) world.b(291, 4, 288);
+        dd alloyContainer = new ContainerAlloyFurnace(player.ap, alloy);
+        family(controller, player, alloyContainer, 9, 17, 0);
         TileBlastFurnace blast = new TileBlastFurnace();
         blast.setMaster(true);
         family(controller, player, new ContainerBlastFurnace(player.ap, blast), 1, 263, 1);
@@ -90,6 +97,16 @@ public final class FurnaceFuelProbe {
         check(count(slot(ironContainer, 1), 327, 0) == 1, "matched IC2 fuel predicate for lava");
         iron.n_();
         check(iron.fuel > 0 && count(slot(ironContainer, 1), 325, 0) == 1, "IC2 native burn returns an empty bucket");
+        CraftLib.addAlloyResult(new aan(265, 1, 0), new aan(15, 1, 0));
+        player.ar = alloyContainer;
+        slot(alloyContainer, 0).d(new aan(15, 1, 0));
+        slot(alloyContainer, 9).d((aan) null);
+        int alloySource = playerSlot(player, alloyContainer, false);
+        slot(alloyContainer, alloySource).d(new aan(327, 1, 0));
+        controller.a(alloyContainer.f, alloySource, 0, true, player);
+        check(count(slot(alloyContainer, 9), 327, 0) == 1, "RedPower accepts the lava in its real fuel slot");
+        alloy.n_();
+        check(alloy.burntime > 0 && count(slot(alloyContainer, 9), 325, 0) == 1, "RedPower native burn returns an empty bucket");
 
         dd blue = new ContainerBlueFurnace(player.ap, new TileBlueFurnace());
         player.ar = blue;
@@ -97,7 +114,7 @@ public final class FurnaceFuelProbe {
         slot(blue, playerSlot).d(new aan(263, 1, 0));
         controller.a(blue.f, playerSlot, 0, true, player);
         check(count(slot(blue, 0), 263, 0) == 1, "powered furnace keeps its normal material routing");
-        System.out.println("PASS six fuel-burning containers, exact limits, dual-use logs, vanilla lava consumption, IC2 bucket return, output and BluePower control");
+        System.out.println("PASS six fuel-burning containers, exact limits, dual-use logs, vanilla lava consumption, native IC2 and RedPower bucket returns, output and BluePower control");
     }
 
     private static void family(aes controller, yw player, dd container, int index, int id, int damage) {

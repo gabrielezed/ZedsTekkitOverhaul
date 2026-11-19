@@ -43,7 +43,7 @@ The existing ZTOAgent now observes the pinned local base controller window-click
 | EE2 Dark Matter Furnace | 0 | Native tile burn-time probe |
 | EE2 Red Matter Furnace | 0 | Native tile burn-time probe on a copy to preserve a Klein Star's charge |
 
-The probe exercises coal, charcoal, sticks, dual-use logs and lava. It covers empty, partial, full and incompatible fuel slots, ingredient input, an output quick move and the Blulectric control. Vanilla 1.2.5 consumes its lava bucket. The IC2 Iron Furnace returns the empty bucket through its native tick. The existing mouse dispatcher still owns NEI passthrough, the craft and inventory drag policies and armor quick equip.
+The probe exercises coal, charcoal, sticks, dual-use logs and lava. It covers empty, partial, full and incompatible fuel slots, ingredient input, an output quick move and the Blulectric control. Vanilla 1.2.5 consumes its lava bucket. The IC2 Iron Furnace and RedPower Alloy Furnace return the empty bucket through their native ticks. The existing mouse dispatcher still owns NEI passthrough, the craft and inventory drag policies and armor quick equip.
 
 ## Wooden entrances
 

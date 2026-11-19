@@ -136,6 +136,8 @@ public final class SiteSiegeProbe extends SettlementProbe {
                         && director.siteSiegeSnapshot(world).active == 0 && director.snapshot(world).starts == 0,
                 "leaving releases siege authority and cannot start a second encounter", here());
         System.out.println("PASS sealed frontage, unchanged wooden door and player absence " + siegeDetails(sealed));
+        terminalTransitions(director, house);
+
 
         open("siege-partial", false);
         prepare(X, Z);
@@ -221,6 +223,42 @@ public final class SiteSiegeProbe extends SettlementProbe {
                         && director.snapshot(world).starts == 1,
                 "malformed siege data fails closed and preserves player assault eligibility", here());
         System.out.println("PASS legacy major NBT and malformed optional siege data");
+    }
+
+    private void terminalTransitions(SiegeDirector director, int house) throws Exception {
+        position(X + 2, Y, Z + 2);
+        String[] causes = {"PEACEFUL", "ATTACKERS_GONE", "LUNAR_TIME_SKIP", "WORLD_UNLOADED"};
+        for (int i = 0; i < causes.length; i++) {
+            director.bind(null, null);
+            long dusk = siegeDusk(3 * (i + 1));
+            LunarCalendar calendar = siegeCalendar(20 + i, dusk - 1, Long.MIN_VALUE);
+            director = siegeDirector(true, calendar);
+            long next = waitForSiege(director, calendar, dusk);
+            check(director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.SITE_SIEGE,
+                    "fresh natural boundary admits after cooldown: " + siegeDetails(director.siteSiegeSnapshot(world)),
+                    here());
+            if (i == 0) {
+                world.q = 0;
+                siegeTicks(director, calendar, next, 1);
+            } else if (i == 1) {
+                for (Object entity : world.b) if (entity instanceof xr) ((xr) entity).A();
+                siegeTicks(director, calendar, next, 1);
+            } else if (i == 2) {
+                siegeTicks(director, calendar, next + 30, 1);
+            } else {
+                director.bind(null, null);
+                save();
+                open("siege-sealed", false);
+                prepare(X, Z);
+                position(X + 2, Y, Z + 2);
+                director = siegeDirector(true, siegeCalendar(30, next, dusk));
+            }
+            SiteSiege.Snapshot terminal = director.siteSiegeSnapshot(world);
+            check(terminal.site == house && terminal.active == 0 && causes[i].equals(terminal.outcome)
+                            && director.snapshot(world).starts == 0,
+                    "terminal transition " + causes[i] + " with no new encounter: " + siegeDetails(terminal), here());
+        }
+        System.out.println("PASS Peaceful, elimination, lunar resync and world detach preserve terminal outcomes");
     }
 
     private long siegeDusk(int cycles) {

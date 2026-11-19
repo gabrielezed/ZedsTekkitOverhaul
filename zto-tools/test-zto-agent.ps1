@@ -5,7 +5,7 @@ param(
     [switch]$AerialSample,
     [string]$CandidateJar,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
-        'compound','protection','query')][string]$Focus
+        'compound','protection','query','site-siege')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +44,8 @@ try {
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
             'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java','SettlementProfile.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
+        $siteSiegeSuite = $Focus -eq 'site-siege' -or ($Pack -and !$CandidateJar)
+        if ($siteSiegeSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
@@ -62,6 +64,11 @@ try {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName $Focus
                 if ($LASTEXITCODE) { throw "Native settlement $Focus probe failed." }
                 return
+            }
+            if ($siteSiegeSuite) {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Native site siege probe failed.' }
+                if ($Focus -eq 'site-siege') { return }
             }
             if ($Focus -eq 'cabin') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName cabin

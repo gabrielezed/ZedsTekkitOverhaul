@@ -2,7 +2,9 @@
 
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The current build identifies itself as `0.3.0-alpha.4`. Settlement Recognition can link corroborated parts across short courtyards and retains stable IDs from earlier saves. Protected Interior reports local geometry separately. [Implementation, acceptance and 0.4 handoff](survival-030-alpha4.md)
+The current candidate identifies itself as `0.4.0-alpha.1`. The opt-in site siege can use a natural full-moon boundary to direct a small group toward recognized site frontage. [Architecture and playtest](survival-040-alpha1.md)
+
+Survival 0.3.0-alpha.4 established the recognition contract. Settlement Recognition can link corroborated parts across short courtyards and retains stable IDs from earlier saves. Protected Interior reports local geometry separately. [Implementation, acceptance and 0.4 handoff](survival-030-alpha4.md)
 
 Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a wooden-entrance tactic for the Breacher. The fieldwork correction suspends vein mining and restores native extraction. Biome ecology favors ordinary Enderkin underground and gives surface magpies occasional one-item theft. The alpha.1 Fugl chicken hunt remains available. [Industrial Saboteur](saboteur-industrial.md) · [Mining, furnaces and entrances](survival-023-alpha2-fieldwork.md) · [Biome ecology](survival-023-implementation.md)
 
@@ -10,7 +12,7 @@ Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a w
 | --- | --- |
 | `mod_ZedsTekkitOverhaul`, `config` | Bootstrap and typed startup settings. Edit `minecraft/config/ZedsTekkitOverhaul.cfg`. [Configuration](configuration.md) |
 | `lunar`, `lunar.client` | Eight-day calendar, natural events, alignment, replay watermark, save and dimension lifecycle. [Lunar contract](lunar-cycle-implementation.md) |
-| `assault` | Full-moon PLAYER_ASSAULT with frozen regional wave and vanilla slot plans, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Lunar placement](survival-021-implementation.md#lunar-placement-on-irregular-terrain) |
+| `assault` | Shared major admission with experimental SITE_SIEGE, full-moon PLAYER_ASSAULT with frozen regional wave and vanilla slot plans, first-quarter and waxing-gibbous patrols, bounded outdoor placement. [Lunar placement](survival-021-implementation.md#lunar-placement-on-irregular-terrain) |
 | `territory` | Qualified activity sampling, bounded Overworld save data, lazy decay and biome-aware local threat. Ordinary hostile caps can rise with blended activity. `assault` can use one frozen assessment at natural admission. [0.2.1 implementation](survival-021-implementation.md) |
 | `settlement` | Manual and Quarry provenance, loaded construction surveys, site registry and independent local protection. Recognition reads Territorial Activity. [0.3 implementation](survival-030-implementation.md) |
 | `survival`, `equipment` | Local bed anchors, equipped mobs and five Enderkin roles. Ordinary Enderkin substitutions default to on with the matching agent. Lunar substitutions are opt-in. All five Creative eggs remain available. [Enderkin ecology](survival-021-implementation.md#ordinary-enderkin-ecology) |

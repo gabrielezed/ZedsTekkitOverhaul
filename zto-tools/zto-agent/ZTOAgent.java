@@ -24,8 +24,6 @@ public final class ZTOAgent {
     private static boolean started;
     private static volatile WeakReference<Predicate<Object>> mouse = new WeakReference<>(null);
     private static volatile WeakReference<BiPredicate<Object, int[]>> furnaceFuel = new WeakReference<>(null);
-    private static volatile WeakReference<BiConsumer<Object, int[]>> veinHarvest = new WeakReference<>(null);
-    private static volatile WeakReference<Predicate<Object>> veinInput = new WeakReference<>(null);
     private static volatile WeakReference<ToIntBiFunction<Object, Integer>> moon = new WeakReference<>(null);
     private static volatile WeakReference<Predicate<Object>> industry = new WeakReference<>(null);
     private static volatile WeakReference<BiConsumer<Object, Boolean>> spawnStart = new WeakReference<>(null);
@@ -63,8 +61,7 @@ public final class ZTOAgent {
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
         if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
-                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
-                && !VeinHarvestHook.TARGET.equals(name)) return null;
+                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -82,8 +79,6 @@ public final class ZTOAgent {
         if (inventory && InventoryHook.SHA256.equals(hash)) return InventoryHook.patch(bytes);
         if (FurnaceTransferHook.TARGET.equals(name) && FurnaceTransferHook.SHA256.equals(hash))
             return FurnaceTransferHook.patch(bytes);
-        if (VeinHarvestHook.TARGET.equals(name) && VeinHarvestHook.SHA256.equals(hash))
-            return VeinHarvestHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
         throw new IllegalArgumentException("unsupported class fingerprint");
@@ -129,20 +124,6 @@ public final class ZTOAgent {
         return callback != null && callback.test(player, new int[] {window, slot});
     }
 
-    public static void registerVeinMining(BiConsumer<Object, int[]> harvest, Predicate<Object> input) {
-        veinHarvest = new WeakReference<>(harvest);
-        veinInput = new WeakReference<>(input);
-    }
-
-    public static void veinHarvest(Object controller, int x, int y, int z, boolean success) {
-        BiConsumer<Object, int[]> callback = veinHarvest.get();
-        if (callback != null) callback.accept(controller, new int[] {x, y, z, success ? 1 : 0});
-    }
-
-    public static boolean veinOwnsMiningInput(Object controller) {
-        Predicate<Object> callback = veinInput.get();
-        return callback != null && callback.test(controller);
-    }
     public static void registerMoon(ToIntBiFunction<Object, Integer> callback) { moon = new WeakReference<>(callback); }
     public static void registerIndustry(Predicate<Object> callback) { industry = new WeakReference<>(callback); }
 

@@ -97,7 +97,6 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 settings.electricJetpackWeather, settings.lunarAerialEncounters, settings.forestMagpies);
         DragDistributionIntegration.register();
         zed.tekkitoverhaul.integration.inventory.FurnaceFuelTransfer.register();
-        new zed.tekkitoverhaul.survival.mining.VeinMining().register(this);
         ee2Fuels.onModsLoaded();
         AlchemicalPowerRegistry.register(settings);
         HopperRegistry.register(this, settings);

@@ -1,34 +1,12 @@
 # Survival 0.2.3-alpha.2 fieldwork and entrances
 
-## Vein mining
+## Vein mining suspended
 
-Hold **Vein Mining (hold)** in Controls, bound to the grave key by default, and finish breaking an ore block with ordinary Survival attack input. Keep both inputs down to continue. Release either input before starting another gesture. The local Survival controller performs the starter and each additional harvest. Its ordinary permission checks, Forge harvest and drop paths, durability, and IC2 energy use remain the authority.
+This candidate leaves attack and harvesting with the pinned local Survival controller. The previous Vein Mining control is no longer registered. An old binding in local options has no effect. Ordinary mining uses the equipped tool's normal wear, EU and drop rules. There is no queued work or saved gesture state to migrate.
 
-Each gesture follows matching face neighbors from successful harvests. It includes at most 24 blocks including the starter, within six Manhattan blocks of the first block. The player stays within five blocks of the starter. A tool swap, depleted or broken tool, insufficient food, movement out of range, a changed or unloaded frontier, a GUI, death, or a world change ends the attempt. The gesture has no saved state. Ordinary mining can resume after releasing the modifier.
+The earlier headless timing measurements exercised controller methods and synthetic key state. They did not validate a physical gesture. The pinned `aes.b(IIII)Z` hook called ZTO before `onBlockStartBreak` and again on a successful return, after native removal, tool cost and harvesting. The patch also gated both attack entry points and that harvest method at entry. The queue called the harvest method directly instead of going through the client ray target, click callback and native damage animation. Its five-block player-to-origin check plus six-block seam radius could reach well past the four-block native controller reach. An empty or cancelled queue cleared the action while leaving the latch active until both inputs were no longer held. Native hit effects and swings remained tied to the cursor despite mining a different block. Holding attack while using an item could also feed the queue outside the normal click path. The one native wear and drop path seen in the old fixture is compatible with these input failures.
 
-Native block strength accumulates per tick and includes tool, hardness and environmental or potion modifiers. Manual picks add two ticks between extra blocks and 1.2 exhaustion per extra block. The food guard permits work at six food points or above. The two installed IC2 drills use their native timing and charge costs of 50 EU and 80 EU per block. Native exhaustion applies to all tools. The drill guard checks available item charge before each extra harvest.
-
-| Registry | Ore variants |
-| --- | --- |
-| Vanilla | Coal, iron, gold, diamond, lapis and both redstone ore states. The lit redstone state follows the same seam identity and harvests through its own native block. |
-| IC2 1.97 | Copper, tin and uranium from `Ic2Items`. The pinned profile uses block IDs 249, 248 and 247. |
-| RedPower World 2.0pr5b2 | Ruby, green sapphire, sapphire, silver, tin, copper, tungsten and nikolite from the configured ore block, ID 140 in Tekkit Dev. The native metadata keeps these eight seams distinct. |
-
-The tool allowlist includes the five vanilla pickaxes, the three native RedPower gem pickaxes and the two IC2 drills. EE2 area tools, Nether Ores and the storage-block registries retain their ordinary paths. The bounded harvest action gives conventional mining a convenience cost and preserves the Project Vision's advantage for rechargeable equipment.
-
-### Six-block coal comparison
-
-The headless Tekkit fixture holds player position, uses native ground mining, and drives the same connected layout for each tool. The ordinary test includes native inter-block delay and retargeting. The vein tests receive an ordinary starter and use the production gesture for the other five blocks.
-
-| Method | Blocks | Ticks | Tool cost | Food | Saturation |
-| --- | ---: | ---: | --- | --- | --- |
-| Ordinary stone pickaxe | 6 | 169 | 6 durability | 20 → 20 | 0 → 0 |
-| Vein stone pickaxe | 6 | 146 | 6 durability | 20 → 19 | 0 → 0 |
-| Vein stone pickaxe with saturation | 6 | 145 | 6 durability | 20 → 20 | 2 → 1 |
-| IC2 Mining Drill | 6 | 71 | 300 EU | 20 → 20 | 0 → 0 |
-| IC2 Diamond Drill | 6 | 35 | 480 EU | 20 → 20 | 0 → 0 |
-
-All six coal drops were counted once per sample. Diagonal and disconnected ore survived. The focused probe also covers releasing attack, replacing the tool, the low-food and low-charge cutoffs, an opened GUI, range, an unloaded frontier, radius and count caps and native ore identity.
+A future opt-in gesture needs to establish native targeting, permissions, cancellation and controller progress with physical input before it can return. This candidate removes the registration, queue and agent interception together. Test the restored baseline in a disposable Survival world by repeatedly mining and releasing attack with a stone pickaxe and charged IC2 drills, including while the former grave binding is held. Check that only the targeted block breaks, the very next target responds normally, and drops, durability and EU match ordinary mining. Repeat after opening inventory and switching tools.
 
 ## Furnace quick moves
 
@@ -55,13 +33,13 @@ In the native tick probe, the Breacher acquired the player without a preassigned
 
 ## Owner playtests
 
-1. **Coal seam.** In a disposable Survival world, hold the vein control and mine the first coal block, then release attack before the next beat. Compare a full stone-pick gesture with zero saturation and the same seam using a charged Mining Drill. Watch food, wear and EU.
+1. **Ordinary mining.** Use the restored baseline checklist above.
 2. **Furnace.** Shift-click logs into a fuel-burning furnace with a partially filled log fuel slot. Check the remainder in the player inventory and place a log into the recipe input by hand. Repeat with coal and two different fuels.
 3. **Wooden entrance.** Place a wooden door in a narrow passage and use a Breacher egg. Switch to Survival on Normal and wait across the closed door. Watch the two-handed warning, opening and pursuit. Try interrupting with a hit and repeat with an iron door.
 
 Run the individual pack fixtures with `zto-tools/test-zto-agent.ps1 -Focus mining`, `-Focus furnace` and `-Focus breacher`. The full pack suite also exercises the industrial Saboteur, Tank, native Enderkin spawning, IC2 jetpack and the inventory hooks. For graphical use the [input-isolation rules](testing.md#background-client-launch).
 
-## Combined candidate
+## Previous combined candidate
 
 Production source `f4120f33cc00f53ee0230c09b080259b432d6573`. The sidecars flag the worktree as dirty because it contains untracked owner notes. The tracked production sources matched the build commit.
 

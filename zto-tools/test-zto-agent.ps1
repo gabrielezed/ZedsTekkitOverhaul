@@ -40,7 +40,7 @@ try {
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
             'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
-            'FurnaceFuelProbe.java','VeinMiningProbe.java') |
+            'FurnaceFuelProbe.java','NativeMiningProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -52,8 +52,8 @@ try {
         Push-Location $out.FullName
         try {
             if ($Pack -or $Focus -eq 'mining') {
-                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath VeinMiningProbe $out.FullName
-                if ($LASTEXITCODE) { throw 'Vein mining probe failed.' }
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath NativeMiningProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Native mining probe failed.' }
                 if ($Focus -eq 'mining') { return }
             }
             if ($Focus -eq 'breacher') {

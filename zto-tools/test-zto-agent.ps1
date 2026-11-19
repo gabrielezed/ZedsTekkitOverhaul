@@ -32,14 +32,15 @@ try {
         $industrialCraft = Join-Path $game 'mods/industrialcraft-2-client_1.97.jar'
         $transports = @('buildcraft-client-B-energy-2.2.14.zip','buildcraft-client-B-factory-2.2.14.zip',
             'buildcraft-client-DA-additionalpipes-2.1.3.zip','RedPowerCore-2.0pr5b2.zip',
-            'RedPowerMachine-2.0pr5b2.zip','RedPowerWiring-2.0pr5b2.zip','RedPowerControl-2.0pr5b2.zip') |
+            'RedPowerMachine-2.0pr5b2.zip','RedPowerWiring-2.0pr5b2.zip','RedPowerControl-2.0pr5b2.zip','RedPowerWorld-2.0pr5b2.zip') |
             ForEach-Object { Join-Path $game "mods/$_" }
         $industrialClasspath = ($headless + $buildCraft + $industrialCraft + $transports) -join ';'
         $furnaces = @('EE2ClientV1.4.6.5.jar','Railcraft_Client_5.3.3.zip') | ForEach-Object { Join-Path $game "mods/$_" }
         $furnaceClasspath = "$industrialClasspath;$($furnaces -join ';')"
         $headlessSources = @('NaturalSpawnProbe.java','BiomeEcologyProbe.java','MagpieScavengeProbe.java','EnderkinBehaviorProbe.java','ThiefBehaviorProbe.java',
             'IndustrialTheftProbe.java','SurvivalIntegrationProbe.java','AerialPredatorProbe.java','AerialEcologyProbe.java',
-            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java','FurnaceFuelProbe.java') |
+            'JetpackWeatherProbe.java','LunarAerialProbe.java','SurvivalOverlayProbe.java','WaterBehaviorProbe.java',
+            'FurnaceFuelProbe.java','VeinMiningProbe.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         & javac -source 8 -target 8 -cp $furnaceClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
@@ -50,6 +51,16 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Pack -or $Focus -eq 'mining') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath VeinMiningProbe $out.FullName
+                if ($LASTEXITCODE) { throw 'Vein mining probe failed.' }
+                if ($Focus -eq 'mining') { return }
+            }
+            if ($Focus -eq 'breacher') {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') SurvivalIntegrationProbe $out.FullName --breacher
+                if ($LASTEXITCODE) { throw 'Breacher door probe failed.' }
+                return
+            }
             if ($Pack -or $Focus -eq 'furnace') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $furnaceClasspath FurnaceFuelProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Furnace fuel transfer probe failed.' }

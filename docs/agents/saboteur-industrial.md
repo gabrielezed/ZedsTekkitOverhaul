@@ -38,6 +38,22 @@ The RedPower recovery path takes ownership only of the single matching item emit
 
 The headless suite is `zto-tools/test-zto-agent.ps1 -Pack`. The graphical `theft-cable` fixture exercises the cue, cover cancellation and escape recovery in a fully initialized client. Run it with `-WithAgent` under the [guest input-isolation rules](testing.md#background-client-launch).
 
+### Alpha.2 candidate evidence
+
+Production commit `68521b4863b51b74650b303c1831eae55ecf23e6` on base `1433fb8c5eeaed4e4029d01e0507e6f017d6049a`. Tracked sources matched the candidate. Three pre-existing untracked owner documents set the build sidecar's dirty flag.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `ZedsTekkitOverhaul.jar` | `83f70e517cdd229acfd31ae21b347cdde873f0ae2f06903f45d09d6284d202ba` |
+| `ZTOAgent.jar` | `e417f4b4a0101de425be366ad14ece3faa4da1264b48dd642372a2b7bdf98089` |
+
+- **PASS, portable.** Configuration, agent documentation and lunar policy checks.
+- **PASS, build and staging.** JDK 8u504 and MCP 6.2 compiled and reobfuscated with development Forge 3.4.9.171. Streaming ZIP validation read 421 mod entries. Repeated installation in a copied Prism manifest kept one component and both JAR hashes matched the tested artifacts.
+- **PASS, native transport.** Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The headless fixture used pinned implementations and registered the tested components at the installed IDs. The production actor and native item placement were used across 15 BuildCraft variants, five Additional Pipes variants, 13 IC2 cable variants, and ten RedPower transport classes, including three wiring jackets and the full insulated and bundled color ranges.
+- **PASS, native transfers and counterplay.** Five BuildCraft items reached their original chest after windup cancellation. Two water runs accounted for 20 mB each. Two 100-unit power offers delivered 98 units each after native pipe loss. The parallel IC2 route carried EU after the short branch was removed and the exact replacement carried EU again. RedPower conserved five plus three pneumatic items and restored red alloy signal after reconnection. Covers, neighboring multipart faces, target replacement, the unloaded boundary, hit interruption and competing actors passed. BuildCraft Hopper output resumed after its existing temporary lease.
+- **PASS, persistence and natural selection.** Anvil reopened both a pending attempt and an actor carrying a component. Legacy pipe cargo released once. An absent item registry entry kept the saved stack attached. The same industrial selection roll admitted a Saboteur for an exposed cable and preserved the zombie behind a wall. A controlled native tick run of the selected actor began winding up at tick 3, removed the cable at tick 38 and released one item at tick 139. Full and reduced pack linkage, all nine pinned direct hook classes, the natural Enderkin suite and the alpha.1 biome, magpie and aerial regressions passed.
+- **BLOCKED, graphical automation.** `test-saboteur-runtime.ps1 -Mode theft-cable -WithAgent` stopped before launch with `INPUT_ISOLATION_UNVERIFIED`. The graphical fixture compiled against the pack ABI. Cue readability, manual balance and the live direct-interruption fixtures remain pending.
+
 ## Temporary interruption
 
 In Tekkit Classic 3.1.2 the mod JAR provides the actor and native transfer gates. The managed Prism deployment adds the single ZTOAgent for direct industrial gates, using the same startup component as mouse gestures and moon rendering. [Installation](../deploy-prism.md)

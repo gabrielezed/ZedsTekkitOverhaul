@@ -224,7 +224,7 @@ public final class SettlementRecognition implements SiteQueries {
                 else {
                     result.opened[use.type]++;
                     result.uses++;
-                    if (use.epoch == routeEpoch) {
+                    if (use.epoch == routeEpoch && tick - use.when <= LINK_TIME) {
                         if (result.firstUse == null || use.when < result.firstUse.when) result.firstUse = use;
                         result.localOpenings++;
                     }
@@ -434,7 +434,8 @@ public final class SettlementRecognition implements SiteQueries {
 
     private SiteSnapshot describe(Site site) {
         long clock = territory.observationClock(world);
-        boolean dormant = stale(clock, site.lastSeen);
+        boolean staleSite = stale(clock, site.lastSeen);
+        boolean dormant = clock >= site.lastSeen && staleSite;
         int unavailable = 0, complete = 0;
         List<SiteSnapshot.Part> parts = new ArrayList<SiteSnapshot.Part>(site.parts.size());
         for (Part part : site.parts) {
@@ -451,7 +452,7 @@ public final class SettlementRecognition implements SiteQueries {
             }
             parts.add(new SiteSnapshot.Part(part, coverage));
         }
-        Coverage overall = unavailable == parts.size() ? Coverage.UNAVAILABLE : dormant ? Coverage.STALE
+        Coverage overall = unavailable == parts.size() ? Coverage.UNAVAILABLE : staleSite ? Coverage.STALE
                 : complete == parts.size() ? Coverage.COMPLETE : Coverage.PARTIAL;
         return new SiteSnapshot(worldSession, world.worldProvider.worldType, site, parts, overall, dormant);
     }

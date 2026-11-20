@@ -1237,6 +1237,7 @@ public class SettlementProbe implements ISaveEventHandler {
         game.s = null;
         player = new vq(game, world, new fc("SettlementProbe", ""), 0) {
             @Override public void a(ajw statistic, int count) {}
+            @Override public void b(String message) {}
         };
         player.a = new oy();
         game.h = player;
@@ -1642,6 +1643,37 @@ public class SettlementProbe implements ISaveEventHandler {
         private int hiddenX = Integer.MIN_VALUE, hiddenZ = Integer.MIN_VALUE;
         boolean auditChunks, auditBlocks;
         int remoteChunk, remoteReads, chunkMisses, blockReads, metadataReads;
+
+        boolean measurePaths;
+        long pathNanos, peakPathNanos;
+        int pathCalls;
+
+        @Override public vu a(nn entity, int x, int y, int z, float range,
+                             boolean open, boolean breakDoors, boolean avoidWater, boolean swim) {
+            long start = measurePaths ? System.nanoTime() : 0;
+            try {
+                return super.a(entity, x, y, z, range, open, breakDoors, avoidWater, swim);
+            } finally {
+                if (measurePaths) pathSample(start);
+            }
+        }
+
+        @Override public vu a(nn entity, nn target, float range,
+                             boolean open, boolean breakDoors, boolean avoidWater, boolean swim) {
+            long start = measurePaths ? System.nanoTime() : 0;
+            try {
+                return super.a(entity, target, range, open, breakDoors, avoidWater, swim);
+            } finally {
+                if (measurePaths) pathSample(start);
+            }
+        }
+
+        private void pathSample(long start) {
+            long elapsed = System.nanoTime() - start;
+            pathNanos += elapsed;
+            peakPathNanos = Math.max(peakPathNanos, elapsed);
+            pathCalls++;
+        }
 
         Fixture(aia save, String name, boolean structures) {
             super(save, name, new fj(32021L, 0, structures, false, vx.c));

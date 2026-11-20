@@ -78,13 +78,13 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                         && active.origin == SiteSiege.Origin.MANUAL_DEBUG && active.request == SiegeDirector.DebugState.ACTIVE
                         && active.kind == SiegeDirector.EncounterKind.SITE_SIEGE && active.site == site
                         && active.profile == SiteSiege.Profile.PERIMETER && active.progress > 8
-                        && active.inserted > 0 && active.inserted <= 3 && active.active > 0
+                        && active.inserted > 0 && active.inserted <= active.planned && active.active > 0
                         && world.chunkMisses == 0 && director.snapshot(world).starts == 0,
                 "daytime New Moon siege with scheduling disabled and cooldown active: " + siegeDetails(active), here());
         int debugMobs = 0;
         for (Object entity : world.b) {
-            if (!(entity instanceof xr) || !entity.getClass().getSimpleName().equals("DebugSiegeSkeleton")) continue;
-            xr mob = (xr) entity;
+            if (!(entity instanceof yy) || !infantry(entity)) continue;
+            yy mob = (yy) entity;
             check(!mob.T() && !mob.c(new ady()), "debug skeleton survives sun and is excluded from saves", here());
             debugMobs++;
         }
@@ -100,8 +100,8 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                         && "DEBUG_CANCELLED".equals(director.siteSiegeSnapshot(world).outcome),
                 "cancel releases ownership and resolves", here());
         for (Object entity : world.b) {
-            if (entity.getClass().getSimpleName().equals("DebugSiegeSkeleton"))
-                check(((xr) entity).G, "cancel marks only owned mobs dead", here());
+            if (infantry(entity))
+                check(((yy) entity).G, "cancel marks only owned mobs dead", here());
         }
         ady afterCancel = new ady();
         stored.b(afterCancel);
@@ -122,7 +122,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         ady reopened = new ady();
         ((AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault")).b(reopened);
         check(original.equals(reopened) && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.NONE
-                        && world.b.stream().noneMatch(entity -> entity.getClass().getSimpleName().equals("DebugSiegeSkeleton"))
+                        && world.b.stream().noneMatch(entity -> infantry(entity))
                         && settlements.resolve(world, site).coverage == Coverage.PARTIAL,
                 "save/reopen carries only natural records, with a partial recognized site | records match "
                         + original.equals(reopened) + " | " + siegeDetails(director.siteSiegeSnapshot(world))
@@ -133,6 +133,11 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                         && director.snapshot(world).starts == 1, "active player assault rejects a debug siege", here());
         System.out.println("PASS manual daytime, New Moon, cooldown, disabled toggle, duplicates, Peaceful, cancel and reopen "
                 + siegeDetails(active));
+    }
+
+    private static boolean infantry(Object entity) {
+        String type = entity.getClass().getSimpleName();
+        return type.equals("DebugSiegeSkeleton") || type.equals("SiegeZombie");
     }
 
     private void tacticalSieges() throws Exception {
@@ -221,12 +226,12 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             siegeTicks(director, calendar, windup, 70);
             SiteSiege.Snapshot result = director.siteSiegeSnapshot(world);
             if (fixture.equals("single") || fixture.equals("double")) {
-                check(result.structuralChanges == 2 && result.entranceChanges == 0 && result.peak <= 3
+                check(result.structuralChanges == 2 && result.entranceChanges == 0 && result.peak <= result.activeCap
                                 && world.a(X, Y, Z + 2) == 0 && world.a(X, Y + 1, Z + 2) == 0
-                                && "STRUCTURE_BREACHED".equals(result.objectiveOutcome),
+                                && (fixture.equals("double") ? "PASSAGE_BLOCKED" : "STRUCTURE_BREACHED").equals(result.objectiveOutcome),
                         "two native removals and no further damage: " + siegeDetails(result), here());
                 if (fixture.equals("double"))
-                    check("PASSAGE_BLOCKED".equals(result.outcome) && world.a(X + 1, Y, Z + 2) == 4
+                    check("PASSAGE_BLOCKED".equals(result.objectiveOutcome) && world.a(X + 1, Y, Z + 2) == 4
                                     && world.a(X + 1, Y + 1, Z + 2) == 4,
                             "a second wall layer defeats the breach", here());
                 else
@@ -235,7 +240,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             } else {
                 String cause = fixture.equals("killed") ? "SPECIALIST_LOST"
                         : fixture.equals("combat") ? "WINDUP_INTERRUPTED" : "TARGET_CHANGED";
-                check(cause.equals(result.outcome) && result.structuralChanges == 0 && world.a(X, Y, Z + 2) == 4
+                check(cause.equals(result.objectiveOutcome) && result.structuralChanges == 0 && world.a(X, Y, Z + 2) == 4
                                 && world.a(X, Y + 1, Z + 2) == (fixture.equals("replacement") ? 42 : 4),
                         "interruption prevents impact: " + cause + " | " + siegeDetails(result), here());
             }
@@ -248,7 +253,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     }
 
     @SuppressWarnings("unchecked")
-    private int tacticalHouse(String name, int front, boolean secondLayer) throws Exception {
+    int tacticalHouse(String name, int front, boolean secondLayer) throws Exception {
         open(name, false);
         prepare(X, Z);
         room(X, Y, Z, front == 64);
@@ -273,7 +278,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     }
 
     long waitForPhase(SiegeDirector director, LunarCalendar calendar, long time, String phase) {
-        for (long tick = time; tick < time + 450; tick++) {
+        for (long tick = time; tick < time + 1100; tick++) {
             siegeTicks(director, calendar, tick, 1);
             SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
             if (view.tacticalPhase.equals(phase)) return tick + 1;

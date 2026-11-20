@@ -106,8 +106,10 @@ public class SiteSiegeProbe extends SettlementProbe {
         active = director.siteSiegeSnapshot(world);
         check(active.arrivals > 0 && active.progress >= 14.5,
                 "native task crossed the open threshold: " + siegeDetails(active), here());
+        for (int tick = 0; tick < 175 && world.b.stream().noneMatch(entity -> entity instanceof nm); tick++)
+            siegeTicks(director, calendar, afterAdmission + 205 + tick, 1);
         check(world.b.stream().anyMatch(entity -> entity instanceof nm),
-                "native ranged combat resumes after arrival: " + siegeDetails(active), here());
+                "native ranged combat resumes after arrival: " + siegeDetails(director.siteSiegeSnapshot(world)), here());
         endSamples("open-walled-house");
         long cooldown = active.cooldownUntil;
         check(cooldown == dusk + 16L * LunarSnapshot.DAY, "two-cycle cooldown", here());

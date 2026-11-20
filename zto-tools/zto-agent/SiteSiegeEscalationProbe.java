@@ -26,6 +26,7 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
             probe.manualMaximum(true);
             probe.narrowTankLane();
             probe.reinforcementPopulation();
+            probe.unloadedCombatCache();
         } catch (Throwable failure) {
             failure.printStackTrace();
             System.exit(1);
@@ -98,7 +99,7 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
                 EntitySkirmisher skirmisher = live(EntitySkirmisher.class);
                 if (tank != null && tank.o >= X - 5 && !heavySwing)
                     player.c(tank.o + 2.5D, Y, tank.q + 0.25D, 0, 0);
-                else if (skirmisher != null && view.elapsed >= 160 && view.elapsed < 250 && !pulse)
+                else if (skirmisher != null && skirmisher.o >= X - 7 && !pulse)
                     player.c(skirmisher.o + 1.0D, Y, skirmisher.q + 8.5D, 0, 0);
                 else position(X + 2, Y, Z + 2);
             }
@@ -195,8 +196,13 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
             check("DEBUG_CANCELLED".equals(director.siteSiegeSnapshot(world).outcome)
                             && director.siteSiegeSnapshot(world).active == 0, "manual cancellation ends ownership", here());
         }
-        check(ThiefTrail.inspect(world, player) == null && ThiefTrail.inspect(world, player) == null,
-                "native recovery clears the trail once", here());
+        uh trail = ThiefTrail.inspect(world, player);
+        if (reopen && trail != null) {
+            // Follow the saved compass point and stand on the exterior surface before recovery.
+            position(trail.a, Y, trail.c);
+            trail = ThiefTrail.inspect(world, player);
+        }
+        check(trail == null && ThiefTrail.inspect(world, player) == null, "native recovery clears the trail once", here());
         int recovered = 0;
         for (Object entity : world.b) {
             if (entity instanceof fq) {
@@ -232,6 +238,25 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
                 "wide clearance prevents the Tank but allows native infantry reinforcements: " + siegeDetails(view), here());
         director.bind(null, null);
         System.out.println("PASS narrow Tank approach rejected | " + siegeDetails(view));
+    }
+
+    private void unloadedCombatCache() throws Exception {
+        tacticalHouse("force-unloaded-combat-cache", 64, false);
+        toggle(X, Y, Z + 2);
+        territory(false, 0);
+        long time = 6000;
+        LunarCalendar calendar = siegeCalendar(104, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        world.hideChunk((X + 32) >> 4, Z >> 4);
+        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
+        siegeTicks(director, calendar, time, 300);
+        SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
+        check(view.progress > 13 && view.arrivals > 0 && world.chunkMisses == 0
+                        && view.failures.keySet().stream().anyMatch(reason -> reason.toString().contains("COMBAT_CACHE_UNLOADED")),
+                "loaded approach still moves while a native path cache is unavailable: " + siegeDetails(view), here());
+        world.hideChunk(Integer.MIN_VALUE, Integer.MIN_VALUE);
+        director.bind(null, null);
+        System.out.println("PASS missing native combat cache defers pathfinding without loading chunks");
     }
 
     private void reinforcementPopulation() throws Exception {

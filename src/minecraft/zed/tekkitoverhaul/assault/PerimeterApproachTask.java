@@ -4,27 +4,28 @@ import java.lang.reflect.Field;
 import net.minecraft.src.EntityAIBase;
 import net.minecraft.src.EntityAITasks;
 import net.minecraft.src.EntityLiving;
-import net.minecraft.src.EntitySkeleton;
+import net.minecraft.src.EntityMob;
 import net.minecraft.src.PathPoint;
+import zed.tekkitoverhaul.survival.tactical.EntityTank;
 
-/** A transient task on a stock skeleton. Once released, only native tasks execute. */
+/** A transient native action task with a finite, prevalidated set of waypoints. */
 final class PerimeterApproachTask extends EntityAIBase {
     private static final Field ACTIONS = actionField();
-    private final EntitySkeleton mob;
-    private SiteApproach approach;
-    private final int length;
+    private final EntityMob mob;
+    private PathPoint[] route;
+    private boolean engaged = true, hold;
     private int next = 1;
 
-    private PerimeterApproachTask(EntitySkeleton mob, SiteApproach approach) {
+    private PerimeterApproachTask(EntityMob mob, SiteApproach approach) {
         this.mob = mob;
-        this.approach = approach;
-        length = approach.route.length;
+        route = approach.route;
+        hold = approach.barrier != null;
         setMutexBits(7);
     }
 
     static boolean available() { return ACTIONS != null; }
 
-    static PerimeterApproachTask attach(EntitySkeleton mob, SiteApproach approach) {
+    static PerimeterApproachTask attach(EntityMob mob, SiteApproach approach) {
         if (!available()) return null;
         try {
             EntityAITasks tasks = (EntityAITasks) ACTIONS.get(mob);
@@ -52,26 +53,38 @@ final class PerimeterApproachTask extends EntityAIBase {
         }
     }
 
-    @Override public boolean shouldExecute() { return approach != null; }
+    @Override public boolean shouldExecute() { return engaged; }
 
     @Override public void updateTask() {
         // The native scheduler selects tasks before running its update pass.
-        if (approach == null) return;
+        if (!engaged) return;
         mob.getNavigator().clearPathEntity();
-        PathPoint point = approach.route[next];
+        if (arrived()) return;
+        PathPoint point = route[next];
         double dx = mob.posX - point.xCoord - 0.5, dz = mob.posZ - point.zCoord - 0.5;
         if (dx * dx + dz * dz < 0.16 && Math.abs(mob.boundingBox.minY - point.yCoord) < 0.75) {
             next++;
             if (arrived()) {
-                release();
+                if (!hold) release();
                 return;
             }
-            point = approach.route[next];
+            point = route[next];
         }
-        mob.getMoveHelper().setMoveTo(point.xCoord + 0.5, point.yCoord, point.zCoord + 0.5, 0.25F);
+        mob.getMoveHelper().setMoveTo(point.xCoord + 0.5, point.yCoord, point.zCoord + 0.5,
+                mob instanceof EntityTank ? 0.18F : 0.25F);
     }
 
     int steps() { return next - 1; }
-    boolean arrived() { return next == length; }
-    void release() { approach = null; }
+    boolean arrived() { return next == route.length; }
+    PathPoint[] waypoints() { return route; }
+
+    void advance(PathPoint[] passage) {
+        PathPoint[] extended = new PathPoint[route.length + passage.length];
+        System.arraycopy(route, 0, extended, 0, route.length);
+        System.arraycopy(passage, 0, extended, route.length, passage.length);
+        route = extended;
+        hold = false;
+    }
+
+    void release() { engaged = false; }
 }

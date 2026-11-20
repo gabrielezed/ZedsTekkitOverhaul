@@ -21,7 +21,8 @@ public final class ZtoConfigSelfTest {
         check(defaults.naturalAerialEncounters && defaults.electricJetpackWeather && defaults.lunarAerialEncounters
                 && defaults.aerialEncounterCooldownSeconds == 180,
                 "natural aerial ecology defaults and cooldown");
-        check(defaults.playerAssault && !defaults.experimentalSiteSieges && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
+        check(defaults.playerAssault && !defaults.experimentalSiteSieges && !defaults.siteSiegeStructuralBreaching
+                && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
                 && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters
                 && !defaults.experimentalTerritorialThreat, "survival flags");
         check(defaults.assaultSpawnBudget == 15 && defaults.assaultWaveInterval == 900
@@ -48,6 +49,12 @@ public final class ZtoConfigSelfTest {
         check(Arrays.equals(generated, Files.readAllBytes(canonical)), "no rewrite");
         check(ZtoConfigLoader.load(fresh, true, LOG).hopper == 3030, "adding Hopper assets");
         check(ZtoConfigLoader.load(fresh, false, LOG).hopper == 3030, "retain Hopper ID without assets");
+
+        Path breachTest = Files.createDirectory(root.resolve("structural-breach-opt-in"));
+        write(breachTest, ZtoConfigLoader.FILE_NAME, "siteSiegeStructuralBreaching=true\n");
+        ZtoConfig optedIn = ZtoConfigLoader.load(breachTest, false, LOG);
+        check(optedIn.siteSiegeStructuralBreaching && !optedIn.experimentalSiteSieges,
+                "damage and natural admission are independent opt-ins");
 
         Path older = Files.createDirectory(root.resolve("legacy"));
         String forge = "# Original comment\nblock {\nfoundry=3074\nunknown=17\n}\n";

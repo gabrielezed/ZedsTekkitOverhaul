@@ -12,10 +12,12 @@ import ee.BlockEEDevice;
 import ee.TileCollector;
 import eloraam.machine.TileDeploy;
 import ic2.common.BlockMachine;
+import ic2.common.BlockCable;
 import ic2.common.BlockRubLeaves;
 import ic2.common.BlockRubWood;
 import ic2.common.Ic2Items;
 import ic2.common.TileEntityIronFurnace;
+import ic2.common.TileEntityCable;
 import ic2.common.TileEntityMacerator;
 import ic2.common.WorldGenRubTree;
 import java.io.File;
@@ -121,6 +123,31 @@ public final class ModdedSettlementProbe extends SettlementProbe {
         install(world, x + 2, y, z + 1, HOPPER, 0, TileHopper.class);
         install(world, x + 1, y, z + 1, EE2, 0, TileCollector.class);
         install(world, x, y, z + 1, IC2, 1, TileEntityIronFurnace.class);
+    }
+
+    static int[][] entranceEquipment(SettlementProbe probe, int x, int y, int z) {
+        xd world = probe.world;
+        int cable = new BlockCable(228).bO;
+        ModLoader.registerTileEntity(TileEntityCable.class, "Cable");
+        int[][] cells = {
+            {x, y, z - 1}, {x - 1, y, z - 1}, {x + 1, y, z - 1}, {x + 1, y, z + 1},
+            {x + 2, y, z + 1}, {x + 2, y, z - 1}, {x + 1, y, z + 2}
+        };
+        install(world, x, y, z - 1, cable, 0, TileEntityCable.class);
+        probe.place(pipeItem.bQ, x - 1, y - 1, z - 1, 1);
+        check(world.b(x - 1, y, z - 1) instanceof TileGenericPipe, "native BuildCraft pipe", null);
+        install(world, x + 1, y, z - 1, IC2, 3, TileEntityMacerator.class);
+        ((TileEntityMacerator) world.b(x + 1, y, z - 1)).energy = 137;
+        install(world, x + 1, y, z + 1, TANK, 0, TileTank.class);
+        TileTank tank = (TileTank) world.b(x + 1, y, z + 1);
+        tank.liquidId = 9;
+        tank.stored = 3750;
+        install(world, x + 2, y, z + 1, HOPPER, 0, TileHopper.class);
+        world.g(x + 2, y, z - 1, 54);
+        ((io) world.b(x + 2, y, z - 1)).a(0, new aan(265, 11, 0));
+        ((io) world.b(x + 2, y, z + 1)).a(0, new aan(263, 9, 0));
+        install(world, x + 1, y, z + 2, DEVICE, 8, FixtureController.class);
+        return cells;
     }
 
     private static void install(xd world, int x, int y, int z, int id, int meta, Class<? extends kw> type) {

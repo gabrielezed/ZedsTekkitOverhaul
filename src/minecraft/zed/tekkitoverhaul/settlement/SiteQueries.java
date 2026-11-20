@@ -9,6 +9,8 @@ public interface SiteQueries {
     List<SiteSnapshot> nearby(World world, int x, int y, int z, int radius);
     Point locate(World world, int x, int y, int z);
     ProtectedInterior.Assessment protection(World world, int x, int y, int z);
+    /** True only outside every recorded horizontal envelope, including gaps between known parts. */
+    boolean insertionExterior(World world, int x, int z, int margin);
 
     enum Recognition { RECOGNIZED, CANDIDATE, AMBIGUOUS, UNKNOWN }
 

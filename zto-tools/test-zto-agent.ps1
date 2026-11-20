@@ -63,8 +63,18 @@ try {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSettlementProbe.java'
             $compileClasspath = $moddedClasspath
         }
-        if ($mixedSiegeSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSiteSiegeProbe.java' }
-        if ($partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java' }
+        if ($mixedSiegeSuite) {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/TacticalSiteSiegeProbe.java'
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSiteSiegeProbe.java'
+        }
+        $partialMain = 'PartialSettlementProbe'
+        if ($partialSuite) {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java'
+            if (!$CandidateJar) {
+                $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ManualPartialSiteSiegeProbe.java'
+                $partialMain = 'ManualPartialSiteSiegeProbe'
+            }
+        }
         & javac -source 8 -target 8 -cp $compileClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
@@ -96,6 +106,8 @@ try {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeProbe $siegeWorlds.FullName
                 if ($LASTEXITCODE) { throw 'Native site siege probe failed.' }
                 if ($mixedSiegeSuite) {
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath TacticalSiteSiegeProbe $siegeWorlds.FullName
+                    if ($LASTEXITCODE) { throw 'Native tactical site siege probe failed.' }
                     & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath ModdedSiteSiegeProbe $siegeWorlds.FullName
                     if ($LASTEXITCODE) { throw 'Native mixed-mod site siege probe failed.' }
                 }
@@ -109,7 +121,7 @@ try {
                 if ($Focus -in 'modded','modded-profile') { return }
             }
             if ($partialSuite) {
-                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath PartialSettlementProbe $out.FullName $Focus
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath $partialMain $out.FullName $Focus
                 if ($LASTEXITCODE) { throw 'Native partial settlement probe failed.' }
                 if ($Focus -in 'partial','partial-baseline') { return }
             }

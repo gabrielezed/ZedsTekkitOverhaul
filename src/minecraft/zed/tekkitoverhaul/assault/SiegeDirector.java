@@ -59,6 +59,7 @@ public final class SiegeDirector implements LunarService.Listener {
     private DebugState debugState = DebugState.READY;
     private String debugReason = "NONE";
     private World world;
+    private Thread owner;
     private LunarService lunar;
     private AssaultDiagnostics diagnostics;
     private AssaultWorldState storage;
@@ -93,18 +94,22 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void attachSites(boolean siteSieges, SiteQueries sites) {
-        siteSiege = new SiteSiege(siteSieges, sites);
+        attachSites(siteSieges, false, sites);
+    }
+
+    public void attachSites(boolean siteSieges, boolean structuralBreaching, SiteQueries sites) {
+        siteSiege = new SiteSiege(siteSieges, structuralBreaching, sites);
     }
 
     public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
         return context != null && context == world && siteSiege != null
                 ? new SiteSiege.Snapshot(siteSiege, encounterKind(), activeCap, lunar == null ? null : lunar.snapshot(),
-                        debugState, debugReason, debugBlock() == null, debugCancelable() && !debugCancel) : null;
+                        debugState, debugReason, debugBlock(), debugCancelable() && !debugCancel) : null;
     }
 
     /** Queues one command on the local owner thread. Only tick may plan or mutate the world. */
     public void requestTestSiege(World context, EntityPlayer player, SiteSiege.Profile profile) {
-        if (context == null || context != world || siteSiege == null || profile == null) return;
+        if (Thread.currentThread() != owner || context == null || context != world || siteSiege == null || profile == null) return;
         String block = debugBlock();
         if (block != null) {
             debugReason = block;
@@ -118,7 +123,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void cancelTestSiege(World context) {
-        if (context != null && context == world && debugCancelable()) debugCancel = true;
+        if (Thread.currentThread() == owner && context != null && context == world && debugCancelable()) debugCancel = true;
     }
 
     private String debugBlock() {
@@ -209,6 +214,7 @@ public final class SiegeDirector implements LunarService.Listener {
         }
         if (lunar != null) lunar.unsubscribe(this);
         world = incoming;
+        owner = world == null ? null : Thread.currentThread();
         lunar = service;
         patrol.reset();
         storage = null;

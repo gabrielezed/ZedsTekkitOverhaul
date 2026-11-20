@@ -543,6 +543,16 @@ public final class SettlementRecognition implements SiteQueries {
         return site == null ? null : describe(site);
     }
 
+    @Override public boolean insertionExterior(World context, int x, int z, int margin) {
+        if (!available(context) || !registry.writable() || margin < 0 || margin > MAX_QUERY_RADIUS) return false;
+        for (Site site : registry.sites) {
+            Bounds b = site.bounds;
+            if (x >= b.minX - margin && x <= b.maxX + margin && z >= b.minZ - margin && z <= b.maxZ + margin)
+                return false;
+        }
+        return true;
+    }
+
     /** Up to sixteen recognized sites in ID order. At least one intersecting part must be loaded. */
     @Override public List<SiteSnapshot> nearby(World context, int x, int y, int z, int radius) {
         if (!available(context) || !ProvenanceStore.valid(x, y, z) || radius < 0 || radius > MAX_QUERY_RADIUS)

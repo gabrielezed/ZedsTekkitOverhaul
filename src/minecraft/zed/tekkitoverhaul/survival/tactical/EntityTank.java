@@ -123,7 +123,18 @@ public final class EntityTank extends TacticalHostile {
     }
 
     private void start(Attack next) {
-        double angle = Math.atan2(target.posZ - posZ, target.posX - posX);
+        startFacing(next, target.posX, target.posZ);
+    }
+
+    public void signalSiteWindup(double x, double z) { startFacing(Attack.BREACH, x, z); }
+
+    public void endSiteWindup(boolean hit) {
+        if (hit) worldObj.playSoundAtEntity(this, "step.stone", 0.9F, 0.55F);
+        resetTactics();
+    }
+
+    private void startFacing(Attack next, double x, double z) {
+        double angle = Math.atan2(z - posZ, x - posX);
         forwardX = Math.cos(angle);
         forwardZ = Math.sin(angle);
         attack = next;
@@ -131,6 +142,10 @@ public final class EntityTank extends TacticalHostile {
         attackStart = ticksExisted;
         holdFacing();
         worldObj.playSoundAtEntity(this, "mob.endermen.portal", 0.40F, 0.55F);
+    }
+
+    @Override protected void updateAttackPose() {
+        if (holdingSiteSiege() && attack == Attack.BREACH) holdFacing();
     }
 
     private void holdFacing() {

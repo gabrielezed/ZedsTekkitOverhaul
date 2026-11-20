@@ -4,6 +4,7 @@ import net.minecraft.src.EntityAISwimming;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
@@ -21,6 +22,7 @@ public abstract class TacticalHostile extends EntityMob {
     private int unseenTicks;
     private int swingTicks;
     private int previousSwingTicks;
+    private boolean siteSiegeControlled;
 
     protected TacticalHostile(World world, float width, float height, String skin) {
         super(world);
@@ -48,6 +50,14 @@ public abstract class TacticalHostile extends EntityMob {
         if (canEngageEncounterPlayer(player)) target = player;
     }
 
+    /** The encounter owns navigation and physical actions while this transient role is assigned. */
+    public final void claimSiteSiege() { siteSiegeControlled = true; }
+    protected final boolean holdingSiteSiege() { return siteSiegeControlled; }
+
+    @Override public boolean addEntityID(NBTTagCompound tag) {
+        return !siteSiegeControlled && super.addEntityID(tag);
+    }
+
     @Override
     protected final boolean isAIEnabled() {
         return true;
@@ -58,7 +68,7 @@ public abstract class TacticalHostile extends EntityMob {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
-        if (independentTactics()) {
+        if (siteSiegeControlled || independentTactics()) {
             super.updateAITasks();
             updateAttackPose();
             return;

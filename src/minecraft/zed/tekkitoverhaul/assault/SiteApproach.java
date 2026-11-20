@@ -11,16 +11,19 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 
 /** Samples cardinal, standing-height approaches. Each call has a fixed column and sky budget. */
 final class SiteApproach {
+    enum Objective { PRESSURE_PERIMETER, LIMITED_BREACH, PRESSURE_ENTRANCE, APPROACH_ENTRANCE }
     static final int MARGIN = 2, MAX_COLUMNS = 28, MAX_SKY_READS = 255;
     private static final int DEPTH = 14;
     private static final int[] DX = {-1, 1, 0, 0}, DZ = {0, 0, -1, 1};
 
     final PathPoint[] route;
-    final boolean entrance;
+    final Objective objective;
+    final SiegeBarrier barrier;
 
-    private SiteApproach(List<PathPoint> route, boolean entrance) {
+    private SiteApproach(List<PathPoint> route, Objective objective, SiegeBarrier barrier) {
         this.route = route.toArray(new PathPoint[route.size()]);
-        this.entrance = entrance;
+        this.objective = objective;
+        this.barrier = barrier;
     }
 
     PathPoint start() { return route[0]; }
@@ -34,11 +37,12 @@ final class SiteApproach {
     static final class Sampler {
         final World world;
         int columns, skyReads, heightReads;
-        String rejection;
+        int breachChecks;
+        String rejection, breachRejection;
 
         Sampler(World world) { this.world = world; }
 
-        SiteApproach plan(Bounds part, Bounds envelope, int option) {
+        SiteApproach plan(Bounds part, Bounds envelope, int option, SiteSiege.Profile profile, boolean destructive) {
             int direction = option % 4, offset = option / 4;
             int dx = DX[direction], dz = DZ[direction];
             int x = dx < 0 ? part.minX : dx > 0 ? part.maxX : lane(part.minX, part.maxX, offset);
@@ -63,14 +67,51 @@ final class SiteApproach {
                 int px = x + dx * i, pz = z + dz * i;
                 if (!standing(px, y, pz)) {
                     if ("APPROACH_UNLOADED".equals(rejection) || route.size() < 7 || i > 4) return null;
-                    return new SiteApproach(route, false);
+                    if (i == 0 && profile != SiteSiege.Profile.PERIMETER) {
+                        SiteApproach tactic = specialist(route, x, y, z, dx, dz, destructive);
+                        if (tactic != null) return tactic;
+                    }
+                    return new SiteApproach(route, Objective.PRESSURE_PERIMETER, null);
                 }
                 route.add(new PathPoint(px, y, pz));
             }
             // An open doorway can lead one step into this part. The spawn remains outside the compound.
-            boolean entrance = standing(x - dx, y, z - dz);
-            if (entrance) route.add(new PathPoint(x - dx, y, z - dz));
-            return new SiteApproach(route, entrance);
+            boolean crosses = standing(x - dx, y, z - dz);
+            if (crosses) route.add(new PathPoint(x - dx, y, z - dz));
+            int id = world.getBlockId(x, y, z);
+            boolean entrance = crosses && (id == Block.doorWood.blockID || id == Block.doorSteel.blockID
+                    || id == Block.fenceGate.blockID || framed(x, y, z, dx, dz));
+            return new SiteApproach(route, entrance ? Objective.APPROACH_ENTRANCE : Objective.PRESSURE_PERIMETER, null);
+        }
+
+        private boolean framed(int x, int y, int z, int dx, int dz) {
+            return world.isBlockNormalCube(x - dz, y, z - dx) && world.isBlockNormalCube(x + dz, y, z + dx);
+        }
+
+        private SiteApproach specialist(List<PathPoint> route, int x, int y, int z, int dx, int dz,
+                                        boolean destructive) {
+            breachChecks++;
+            SiegeBarrier entrance = SiegeBarrier.entrance(world, x, y, z, dx, dz);
+            if (entrance != null) {
+                if (world.difficultySetting < 2) breachRejection = "ENTRANCE_REQUIRES_NORMAL";
+                else if (standing(x - dx, y, z - dz)) return new SiteApproach(route, Objective.PRESSURE_ENTRANCE, entrance);
+                else breachRejection = rejection;
+                return null;
+            }
+            SiegeBarrier barrier = SiegeBarrier.structure(world, x, y, z, dx, dz);
+            if (barrier == null) return null;
+            if (!destructive) breachRejection = "STRUCTURAL_BREACH_DISABLED";
+            else if (world.difficultySetting < 3) breachRejection = "STRUCTURAL_BREACH_REQUIRES_HARD";
+            else {
+                List<PathPoint> staging = route.subList(0, route.size() - 1);
+                for (PathPoint point : staging) {
+                    if (standing(point, true)) continue;
+                    breachRejection = rejection;
+                    return null;
+                }
+                return new SiteApproach(staging, Objective.LIMITED_BREACH, barrier);
+            }
+            return null;
         }
 
         private static int lane(int min, int max, int offset) {
@@ -79,23 +120,50 @@ final class SiteApproach {
         }
 
         boolean validate(SiteApproach approach) {
+            boolean wide = approach.objective == Objective.LIMITED_BREACH;
             for (PathPoint point : approach.route) {
-                if (!standing(point.xCoord, point.yCoord, point.zCoord)) return false;
+                if (!standing(point, wide)) return false;
+            }
+            return true;
+        }
+
+        /** A clipped site needs additional verified escape space beyond its insertion. */
+        boolean localExterior(SiteApproach approach) {
+            PathPoint start = approach.start(), next = approach.route[1];
+            int dx = start.xCoord - next.xCoord, dz = start.zCoord - next.zCoord;
+            for (int i = 1; i <= 4; i++) {
+                if (!standing(start.xCoord + dx * i, start.yCoord, start.zCoord + dz * i)) return false;
+            }
+            return standing(start.xCoord - dz, start.yCoord, start.zCoord + dx)
+                    && standing(start.xCoord + dz, start.yCoord, start.zCoord - dx);
+        }
+
+        boolean standing(PathPoint point, boolean wide) {
+            int x = point.xCoord, y = point.yCoord, z = point.zCoord;
+            if (!wide) return standing(x, y, z);
+            if (y > 252 || !sampleColumn(x, y, z)) {
+                if (y > 252) rejection = "TANK_CLEARANCE";
+                return false;
+            }
+            // The Tank spans a 3 x 3 footprint and four body cells at lane centers.
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (!world.isBlockSolidOnSide(x + dx, y - 1, z + dz, 1)) {
+                        rejection = "TANK_CLEARANCE";
+                        return false;
+                    }
+                    for (int dy = 0; dy < 4; dy++) {
+                        if (world.getBlockId(x + dx, y + dy, z + dz) == 0) continue;
+                        rejection = "TANK_CLEARANCE";
+                        return false;
+                    }
+                }
             }
             return true;
         }
 
         boolean standing(int x, int y, int z) {
-            if (columns >= MAX_COLUMNS) {
-                rejection = "PLANNER_BUDGET";
-                return false;
-            }
-            columns++;
-            if (y < 1 || y > 253 || x < -29999997 || x > 29999997 || z < -29999997 || z > 29999997
-                    || !world.checkChunksExist(x - 2, y - 1, z - 2, x + 2, y + 1, z + 2)) {
-                rejection = "APPROACH_UNLOADED";
-                return false;
-            }
+            if (!sampleColumn(x, y, z)) return false;
             if (!world.isBlockSolidOnSide(x, y - 1, z, 1)
                     || !clear(x, y, z, y) || !clear(x, y + 1, z, y)) {
                 rejection = "ROUTE_OBSTRUCTED";
@@ -104,9 +172,25 @@ final class SiteApproach {
             return true;
         }
 
+        private boolean sampleColumn(int x, int y, int z) {
+            if (columns >= MAX_COLUMNS) {
+                rejection = "PLANNER_BUDGET";
+                return false;
+            }
+            columns++;
+            if (y < 1 || y > 253 || x < -29999997 || x > 29999997 || z < -29999997 || z > 29999997
+                    || !world.blockExists(x, y, z)
+                    || !world.checkChunksExist(x - 2, y - 1, z - 2, x + 2, y + 1, z + 2)) {
+                rejection = "APPROACH_UNLOADED";
+                return false;
+            }
+            return true;
+        }
+
         private boolean clear(int x, int y, int z, int feet) {
             int id = world.getBlockId(x, y, z);
             if (id == 0) return true;
+            if (id == Block.fenceGate.blockID) return (world.getBlockMetadata(x, y, z) & 4) != 0;
             if (id != Block.doorWood.blockID && id != Block.doorSteel.blockID) return false;
             ArrayList<AxisAlignedBB> collisions = new ArrayList<AxisAlignedBB>();
             AxisAlignedBB body = AxisAlignedBB.getBoundingBox(x + 0.19, feet, z + 0.19,

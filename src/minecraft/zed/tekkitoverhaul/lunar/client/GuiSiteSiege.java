@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.lunar.client;
 import net.minecraft.src.GuiButton;
 import net.minecraft.src.GuiScreen;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.assault.SiegeDirector.DebugState;
 import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 
@@ -77,17 +78,23 @@ final class GuiSiteSiege extends GuiScreen {
             row(6, "Peak " + view.peakColumns + " columns / " + view.peakSkyReads + " sky reads");
             row(7, "Protection " + view.protectionReads + " reads | insertion tries " + view.attempts);
             row(8, "Planner " + view.planningNanos / 1000 + " us total | " + view.peakPlanningNanos / 1000 + " us peak");
+            row(9, "Target " + view.objectiveTarget + " | specialist " + view.specialist);
+            row(10, "Breach checks " + view.breachChecks + " | opened " + view.entranceChanges + " | removed " + view.structuralChanges);
         } else {
-            row(0, "Request " + view.request + " | " + view.requestReason);
-            row(1, "Origin " + view.origin + " | encounter " + view.kind);
+            String reason = "NONE".equals(view.requestReason) ? view.callBlock : view.requestReason;
+            row(0, "Request " + view.request + (reason == null ? "" : " | " + reason));
+            SiteSiege.Origin origin = view.request == DebugState.REQUESTED ? SiteSiege.Origin.MANUAL_DEBUG : view.origin;
+            row(1, "Origin " + origin + " | encounter " + view.kind);
             row(2, "Site " + (view.site == 0 ? "-" : view.site) + " | " + view.coverage
                     + (view.dormant ? " | dormant" : ""));
-            row(3, "Siege " + view.phase + " | " + view.eligibility);
+            row(3, "Siege " + view.tacticalPhase + " | " + view.eligibility);
             row(4, "Objective " + view.objective + " | profile " + view.profile);
             row(5, "Approach " + view.approach);
             row(6, "Attackers " + view.active + " active / " + view.inserted + " inserted | " + view.remaining + " left");
             row(7, "Last rejection " + view.rejection);
             row(8, "Last resolution " + view.outcome);
+            row(9, "Objective outcome " + view.objectiveOutcome);
+            row(10, "Structural breaching " + (view.destructive ? "enabled by config" : "disabled by config"));
         }
         super.drawScreen(mouseX, mouseY, partialTick);
     }

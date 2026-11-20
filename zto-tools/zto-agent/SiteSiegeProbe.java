@@ -28,7 +28,6 @@ public class SiteSiegeProbe extends SettlementProbe {
     public static void main(String[] args) {
         try {
             SiteSiegeProbe probe = new SiteSiegeProbe(new File(args[0]));
-            probe.manualSiege();
             probe.siteSiege();
             probe.compound(false);
             probe.industrialFallback();
@@ -40,115 +39,6 @@ public class SiteSiegeProbe extends SettlementProbe {
             System.exit(1);
         }
         System.exit(0);
-    }
-
-    private void manualSiege() throws Exception {
-        open("siege-debug-no-site", false);
-        prepare(X, Z);
-        position(X + 2, Y, Z + 2);
-        world.d.add(player);
-        long day = 6000;
-        LunarCalendar calendar = siegeCalendar(60, day, Long.MIN_VALUE);
-        SiegeDirector director = siegeDirector(false, calendar);
-        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
-        siegeTicks(director, calendar, day, 1);
-        check("NO_RECOGNIZED_SITE".equals(director.siteSiegeSnapshot(world).requestReason)
-                        && world.b.isEmpty(), "no recognized site rejects without spawning", here());
-
-        director.bind(null, null);
-        open("siege-debug", false);
-        prepare(X, Z);
-        room(X, Y, Z, true);
-        position(X + 2, Y, Z + 2);
-        walk();
-        ticks(560);
-        int site = recognized("manual siege house", true).id;
-        toggle(X, Y, Z + 2);
-        world.d.add(player);
-        calendar = siegeCalendar(60, day, Long.MIN_VALUE);
-        director = siegeDirector(false, calendar);
-        world.q = 0;
-        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
-        siegeTicks(director, calendar, day + 1, 1);
-        check("PEACEFUL".equals(director.siteSiegeSnapshot(world).requestReason), "Peaceful rejection", here());
-        world.q = 3;
-        AssaultWorldState stored = (AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault");
-        Method siteStart = AssaultWorldState.class.getDeclaredMethod("startSite", int.class, long.class);
-        Method siteClose = AssaultWorldState.class.getDeclaredMethod("closeSite", String.class);
-        siteStart.setAccessible(true);
-        siteClose.setAccessible(true);
-        siteStart.invoke(stored, site, day - 1000);
-        siteClose.invoke(stored, "FIXTURE_COOLDOWN");
-        ady original = new ady();
-        stored.b(original);
-        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
-        check(director.siteSiegeSnapshot(world).request == SiegeDirector.DebugState.REQUESTED
-                        && director.siteSiegeSnapshot(world).inserted == 0, "button only queues", here());
-        director.requestTestSiege(world, player, SiteSiege.Profile.BREACH);
-        check("REQUEST_PENDING".equals(director.siteSiegeSnapshot(world).requestReason), "duplicate click is rejected", here());
-        world.auditChunks = true;
-        beginSamples();
-        siegeTicks(director, calendar, day + 2, 185);
-        SiteSiege.Snapshot active = director.siteSiegeSnapshot(world);
-        check(world.w() == day + 186 && calendar.view().snapshot().phase.name().equals("NEW_MOON")
-                        && active.origin == SiteSiege.Origin.MANUAL_DEBUG && active.request == SiegeDirector.DebugState.ACTIVE
-                        && active.kind == SiegeDirector.EncounterKind.SITE_SIEGE && active.site == site
-                        && active.profile == SiteSiege.Profile.PERIMETER && active.progress > 8
-                        && active.inserted > 0 && active.inserted <= 3 && active.active > 0
-                        && world.chunkMisses == 0 && director.snapshot(world).starts == 0,
-                "daytime New Moon siege with scheduling disabled and cooldown active: " + siegeDetails(active), here());
-        int debugMobs = 0;
-        for (Object entity : world.b) {
-            if (!(entity instanceof xr) || !entity.getClass().getSimpleName().equals("DebugSiegeSkeleton")) continue;
-            xr mob = (xr) entity;
-            check(!mob.T() && !mob.c(new ady()), "debug skeleton survives sun and is excluded from saves", here());
-            debugMobs++;
-        }
-        check(debugMobs == active.active, "actual owned hostile accounting", here());
-        endSamples("manual-daytime");
-
-        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
-        check("SITE_SIEGE_ACTIVE".equals(director.siteSiegeSnapshot(world).requestReason), "repeat during active siege", here());
-        director.cancelTestSiege(world);
-        siegeTicks(director, calendar, day + 187, 5);
-        check(director.siteSiegeSnapshot(world).request == SiegeDirector.DebugState.CANCELLED
-                        && director.siteSiegeSnapshot(world).active == 0
-                        && "DEBUG_CANCELLED".equals(director.siteSiegeSnapshot(world).outcome),
-                "cancel releases ownership and resolves", here());
-        for (Object entity : world.b) {
-            if (entity.getClass().getSimpleName().equals("DebugSiegeSkeleton"))
-                check(((xr) entity).G, "cancel marks only owned mobs dead", here());
-        }
-        ady afterCancel = new ady();
-        stored.b(afterCancel);
-        check(original.equals(afterCancel), "cancel leaves the natural saved state identical", here());
-
-        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
-        siegeTicks(director, calendar, day + 192, 35);
-        check(director.siteSiegeSnapshot(world).inserted > 0, "restart after cancel", here());
-        save();
-        director.bind(null, null);
-        open("siege-debug", false);
-        prepare(X, Z);
-        position(X + 2, Y, Z + 2);
-        world.d.add(player);
-        long dusk = siegeDusk(0);
-        calendar = siegeCalendar(61, dusk - 1, Long.MIN_VALUE);
-        director = siegeDirector(false, calendar);
-        ady reopened = new ady();
-        ((AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault")).b(reopened);
-        check(original.equals(reopened) && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.NONE
-                        && world.b.stream().noneMatch(entity -> entity.getClass().getSimpleName().equals("DebugSiegeSkeleton"))
-                        && settlements.resolve(world, site).coverage == Coverage.PARTIAL,
-                "save/reopen carries only natural records, with a partial recognized site | records match "
-                        + original.equals(reopened) + " | " + siegeDetails(director.siteSiegeSnapshot(world))
-                        + " | coverage " + settlements.resolve(world, site).coverage, here());
-        siegeTicks(director, calendar, dusk, 1);
-        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
-        check("PLAYER_ASSAULT_ACTIVE".equals(director.siteSiegeSnapshot(world).requestReason)
-                        && director.snapshot(world).starts == 1, "active player assault rejects a debug siege", here());
-        System.out.println("PASS manual daytime, New Moon, cooldown, disabled toggle, duplicates, Peaceful, cancel and reopen "
-                + siegeDetails(active));
     }
 
     @SuppressWarnings("unchecked")
@@ -195,7 +85,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         long afterAdmission = waitForSiege(director, calendar, dusk);
         SiteSiege.Snapshot active = director.siteSiegeSnapshot(world);
         check(active.kind == SiegeDirector.EncounterKind.SITE_SIEGE && active.site == house && active.inserted > 0
-                        && director.snapshot(world).starts == 0 && "OPENING".equals(active.objective),
+                        && director.snapshot(world).starts == 0 && "APPROACH_ENTRANCE".equals(active.objective),
                 "open entrance admits a committed siege instead of assault: " + siegeDetails(active), here());
         String fixedApproach = active.approach;
         String[] start = fixedApproach.split(" > ")[0].split(",");
@@ -254,7 +144,9 @@ public class SiteSiegeProbe extends SettlementProbe {
 
         open("siege-sealed", false);
         prepare(X, Z);
-        room(X, Y, Z, true);
+        room(X, Y, Z, false);
+        world.g(X, Y, Z + 2, 4);
+        world.g(X, Y + 1, Z + 2, 4);
         position(X + 2, Y, Z + 2);
         walk();
         ticks(560);
@@ -267,16 +159,16 @@ public class SiteSiegeProbe extends SettlementProbe {
         afterAdmission = waitForSiege(director, calendar, dusk);
         siegeTicks(director, calendar, afterAdmission, 120);
         SiteSiege.Snapshot sealed = director.siteSiegeSnapshot(world);
-        check(house == sealed.site && "FRONTAGE".equals(sealed.objective) && sealed.progress >= 4
-                        && (world.e(X, Y, Z + 2) & 4) == 0,
-                "sealed entry preserves an exterior frontage: " + siegeDetails(sealed), here());
+        check(house == sealed.site && "PRESSURE_PERIMETER".equals(sealed.objective) && sealed.progress >= 4
+                        && world.a(X, Y, Z + 2) == 4,
+                "sealed wall preserves an exterior frontage: " + siegeDetails(sealed), here());
         position(X + 80, Y, Z + 2);
         siegeTicks(director, calendar, afterAdmission + 120, 1);
         check("PLAYER_ABSENT".equals(director.siteSiegeSnapshot(world).outcome)
                         && director.siteSiegeSnapshot(world).active == 0 && director.snapshot(world).starts == 0,
                 "leaving releases siege authority and cannot start a second encounter", here());
         endSamples("sealed");
-        System.out.println("PASS sealed frontage, unchanged wooden door and player absence " + siegeDetails(sealed));
+        System.out.println("PASS sealed frontage, unchanged cobblestone and player absence " + siegeDetails(sealed));
         terminalTransitions(director, house);
 
 
@@ -321,7 +213,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         director = siegeDirector(true, calendar);
         afterAdmission = waitForSiege(director, calendar, dusk);
         active = director.siteSiegeSnapshot(world);
-        check(active.site == house && "PARTIAL".equals(active.coverage) && "OPENING".equals(active.objective)
+        check(active.site == house && "PARTIAL".equals(active.coverage) && "APPROACH_ENTRANCE".equals(active.objective)
                         && active.kind == SiegeDirector.EncounterKind.SITE_SIEGE,
                 "partial recognized site admits locally verified route: " + siegeDetails(active), here());
         siegeTicks(director, calendar, afterAdmission, 35);
@@ -613,15 +505,15 @@ public class SiteSiegeProbe extends SettlementProbe {
         throw new AssertionError("admission deadline: " + siegeDetails(director.siteSiegeSnapshot(world)));
     }
 
-    private void siegeTicks(SiegeDirector director, LunarCalendar calendar, long from, int count) {
+    void siegeTicks(SiegeDirector director, LunarCalendar calendar, long from, int count) {
         for (long time = from; time < from + count; time++) {
             world.a(time);
             world.q();
             long entityStarted = System.nanoTime();
             int moved = 0;
             for (Object entity : new ArrayList<Object>(world.b)) {
-                if (entity instanceof xr) {
-                    xr mob = (xr) entity;
+                if (entity instanceof yy) {
+                    yy mob = (yy) entity;
                     double x = mob.o, z = mob.q;
                     world.f(mob);
                     if (measured) peakStep = Math.max(peakStep, Math.hypot(mob.o - x, mob.q - z));
@@ -676,7 +568,7 @@ public class SiteSiegeProbe extends SettlementProbe {
                 nbt.report("one-row encounter NBT"), (System.nanoTime() - start) / 1000.0);
     }
 
-    private void beginSamples() {
+    void beginSamples() {
         measured = true;
         lastPlannerNanos = peakPlannerTick = peakPlannerNanos = 0;
         firstMeasuredTick = Long.MIN_VALUE;
@@ -684,11 +576,11 @@ public class SiteSiegeProbe extends SettlementProbe {
         peakStep = 0;
     }
 
-    private void endSamples(String name) {
+    void endSamples(String name) {
         measured = false;
         System.out.println("PROFILE " + name + " | " + planner.report("planner") + " peak offset=" + peakPlannerTick
                 + " | " + recognition.report("territory+recognition")
-                + " | " + movement.report("native skeleton tick")
+                + " | " + movement.report("native hostile tick")
                 + " | " + activeTicks.report("active director tick")
                 + String.format(Locale.ROOT, " | peak block/meta calls %d/%d | mobs %d | step %.3f blocks",
                         peakBlockReads, peakMetadataReads, peakMobs, peakStep));

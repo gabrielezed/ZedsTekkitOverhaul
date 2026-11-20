@@ -346,6 +346,10 @@ public final class SiteSiege {
             finish("DEADLINE");
             return;
         }
+        if (approach.barrier != null && tacticalPhase != TacticalPhase.ENGAGING && !approach.barrier.loaded(world)) {
+            finish("TARGET_UNLOADED");
+            return;
+        }
         if (elapsed % 5 == 0 && !refreshSite()) return;
         refreshAttackers();
         if (!active()) return;
@@ -522,10 +526,6 @@ public final class SiteSiege {
             EntityMob mob = specialist.mob;
             if (tacticalPhase != TacticalPhase.APPROACHING && mob.getHealth() < windupHealth) {
                 finish("WINDUP_INTERRUPTED");
-                return;
-            }
-            if (!barrier.loaded(world)) {
-                finish("TARGET_UNLOADED");
                 return;
             }
             sampler.breachChecks++;

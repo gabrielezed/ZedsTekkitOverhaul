@@ -70,7 +70,7 @@ try {
         $partialMain = 'PartialSettlementProbe'
         if ($partialSuite) {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java'
-            if (!$CandidateJar) {
+            if (!$CandidateJar -and $Focus -ne 'partial-baseline') {
                 $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ManualPartialSiteSiegeProbe.java'
                 $partialMain = 'ManualPartialSiteSiegeProbe'
             }

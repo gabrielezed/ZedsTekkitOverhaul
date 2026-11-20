@@ -53,7 +53,7 @@ public final class EntityThief extends TacticalHostile {
             }
             nextTheft = ticksExisted + 45;
         }
-        if (visible && distanceSq <= 36 && ticksExisted >= nextBlink && (hurtTime > 0 || attackTime >= 12)) {
+        if (!holdingSiteSiege() && visible && distanceSq <= 36 && ticksExisted >= nextBlink && (hurtTime > 0 || attackTime >= 12)) {
             double away = Math.atan2(posZ - target.posZ, posX - target.posX);
             if (EnderkinBlink.shift(this, away + ((entityId & 1) == 0 ? 0.9D : -0.9D), 3.4D, 4, 1.5F)) {
                 nextBlink = ticksExisted + 70;

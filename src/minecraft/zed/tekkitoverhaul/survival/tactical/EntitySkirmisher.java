@@ -45,6 +45,8 @@ public final class EntitySkirmisher extends TacticalHostile {
         aimPose = aim > 0 ? Math.min(1, aimPose + 0.10F) : Math.max(0, aimPose - 0.18F);
     }
 
+    @Override protected double siteCombatRadius() { return 12.0D; }
+
     @Override
     protected int unseenLimit() { return 100; }
 
@@ -68,7 +70,7 @@ public final class EntitySkirmisher extends TacticalHostile {
             aim = AIM_TICKS;
             return;
         }
-        if (ticksExisted < nextMove) return;
+        if (holdingSiteSiege() || ticksExisted < nextMove) return;
         nextMove = ticksExisted + MOVE_INTERVAL;
         if (visible && distanceSq < RANGE_SQ && ticksExisted >= nextBlink) {
             double outward = Math.atan2(posZ - target.posZ, posX - target.posX);

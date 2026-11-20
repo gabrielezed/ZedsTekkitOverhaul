@@ -85,7 +85,7 @@ public final class EntityBreacher extends TacticalHostile {
         double y = target.boundingBox.minY;
         PathEntity path = plan(target.posX, y, target.posZ);
         boolean route = reaches(path, target.posX, y, target.posZ);
-        if (worldObj.difficultySetting >= 2) {
+        if (!holdingSiteSiege() && worldObj.difficultySetting >= 2) {
             Entrance barrier = entranceBetween(target);
             if (barrier != null && (!route || usesClosedEntrance(path, barrier))) {
                 if (ticksExisted >= retryAt && onGround && barrier.inReach(this)) {
@@ -103,7 +103,7 @@ public final class EntityBreacher extends TacticalHostile {
             }
         }
         boolean stalled = ticksExisted - lastProgress >= 2 * ROUTE_INTERVAL;
-        if (visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
+        if (!holdingSiteSiege() && visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
             double[] landing = EnderkinBlink.elevatedLanding(this, target, 2.6D, 3);
             boolean advanced = landing != null;
             if (advanced) EnderkinBlink.move(this, landing[0], landing[1], landing[2], 6, 0.92F);

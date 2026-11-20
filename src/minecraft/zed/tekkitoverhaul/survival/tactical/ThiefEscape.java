@@ -56,7 +56,7 @@ final class ThiefEscape {
         if (pursuer != null) away = Math.atan2(thief.posZ - pursuer.posZ, thief.posX - pursuer.posX);
         int side = ((now / 48 + thief.entityId + stalled) & 1) == 0 ? 1 : -1;
 
-        if ((stalled >= 2 || rangeSq < 8 * 8) && now >= nextBlink) {
+        if (!thief.holdingSiteSiege() && (stalled >= 2 || rangeSq < 8 * 8) && now >= nextBlink) {
             boolean moved = EnderkinBlink.shift(thief, away + side * 0.58D, 3.75D, 7, 1.40F)
                     || EnderkinBlink.shift(thief, away - side * 0.82D, 3.3D, 7, 1.40F);
             nextBlink = now + (moved ? 62 : 16);

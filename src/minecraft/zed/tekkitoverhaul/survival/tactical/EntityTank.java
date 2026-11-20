@@ -85,7 +85,7 @@ public final class EntityTank extends TacticalHostile {
             disengage();
             return;
         }
-        if (onGround && stalled >= 3 * ROUTE_INTERVAL) {
+        if (!holdingSiteSiege() && onGround && stalled >= 3 * ROUTE_INTERVAL) {
             if (canBreach() && (!fullRoute || getNavigator().noPath())) {
                 barrier = TankBarrier.find(this, target);
                 if (barrier != null) {

@@ -137,8 +137,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                 ? assault.siteSiegeSnapshot(context) : null;
     }
 
-    void requestTestSiege(World context, SiteSiege.Profile profile) {
-        if (ownsDebugWorld(context)) assault.requestTestSiege(context, game.thePlayer, profile);
+    void requestTestSiege(World context, SiteSiege.Profile profile, SiteSiege.Intensity intensity) {
+        if (ownsDebugWorld(context)) assault.requestTestSiege(context, game.thePlayer, profile, intensity);
     }
 
     void cancelTestSiege(World context) {

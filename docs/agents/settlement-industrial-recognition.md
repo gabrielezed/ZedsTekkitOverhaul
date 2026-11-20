@@ -10,6 +10,8 @@ The existing ItemBlock and removal hooks remain the source of manual observation
 
 ## Pinned adapter
 
+The [generic settlement evidence contract](settlement-generic-modded-evidence.md) now governs equipment observation and qualification across mods. This adapter supplies IC2 endpoint roles, container identity and compatible short copper paths. Generic evidence remains available when an IC2 variant falls outside its exact subset.
+
 The adapter discovers current numeric IDs by exact IC2 block class in the loaded registry and checks the pinned client mod entry point's SHA-256. It caches reflection for IC2-specific fields and methods and uses metadata plus exact native tile class to verify a block. The lookup reads existing entries in the loaded chunk tile map. The normal world tile getter can create missing tiles and is unsuitable for an observation.
 
 | Native family | Registration default | Supported metadata and exact tile suffix |
@@ -19,7 +21,7 @@ The adapter discovers current numeric IDs by exact IC2 block class in the loaded
 | BlockElectric | 227 | 0 ElectricBatBox, 1 ElectricMFE, 2 ElectricMFSU |
 | BlockCable | 228 | 0 insulated copper, 1 bare copper, both TileEntityCable |
 
-Supported cable tiles need matching cable type, valid color and no foam. BlockMachine2, machine casings, transformers, other generator variants, foam, other conductor types, detector and splitter cables are outside this subset. Missing tiles, mismatched classes and unavailable IC2 builds cannot supply machine or network evidence. Future compatibility work can add independently verified adapters for BuildCraft, RedPower and other equipment. Each mod needs its own native semantics.
+Supported cable tiles need matching cable type, valid color and no foam. BlockMachine2, machine casings, transformers, other generator variants, foam, other conductor types, detector and splitter cables are outside this subset. The verified wiring calculation requires matching loaded tiles. The generic classifier can still count supported native capabilities on these blocks.
 
 ## Evidence and thresholds
 
@@ -33,7 +35,7 @@ The survey can resume within a layer. Each update spends at most 169 reads on bl
 
 ## Debug Hub
 
-Open Numpad 1 → Settlement Recognition, then cycle to **Industry**. Compare machines found, machines linked to the structural component, recent openings, types and matching placements. The page shows unlinked equipment, unsupported blocks, local source-to-sink pairs, clusters, clipped or oversized cable groups and openings discarded as expired, unlinked or changed. The common survey header reports missing terrain and clipped construction. A local wiring decision is explicitly marked when wiring supplies the required corroboration.
+Open Numpad 1 → Settlement Recognition, then cycle to **IC2 Wiring**. Compare machines found, machines linked to the structural component, recent openings, types and matching placements. The page shows unlinked equipment, blocks outside the IC2 profile, local source-to-sink pairs and clipped or oversized cable groups. The **Industry** page shows the cross-mod evidence. The common survey header reports missing terrain and clipped construction. A local wiring decision is explicitly marked when wiring supplies the required corroboration.
 
 ## Native evidence and performance
 
@@ -74,4 +76,4 @@ All after-run industrial idle medians were 0.1 µs. Peak work stayed at 169 coun
 
 ## Survival 0.4 handoff
 
-PR #43 resolves current parts through SiteQueries and samples terrain collision independently for its exterior approach. The industrial observations are internal to recognition and its debug snapshot. A newly recognized IC2 workshop can enter ordinary site discovery on the same terms as a house. Natural full-moon scheduling, the opt-in setting, cooldown, player presence, darkness and a valid exterior approach still govern admission. Keep the foundation PR open for owner review. After the owner approves and merges it, bring PR #43 onto the updated main branch and rerun its full acceptance suite.
+SITE_SIEGE resolves current parts through SiteQueries and samples terrain collision independently for its exterior approach. Industrial observations stay in recognition and its debug snapshot. Recognized workshops enter ordinary site discovery on the same terms as a house. Natural full-moon scheduling, the opt-in setting, cooldown, player presence, darkness and a valid exterior approach govern admission. [Mixed-mod runtime coverage](settlement-generic-modded-evidence.md)

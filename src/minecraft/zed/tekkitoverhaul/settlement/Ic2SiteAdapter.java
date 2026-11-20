@@ -5,8 +5,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.security.MessageDigest;
 import net.minecraft.src.Block;
-import net.minecraft.src.Chunk;
-import net.minecraft.src.ChunkPosition;
 import net.minecraft.src.TileEntity;
 
 /** Read-only adapter for the pinned IC2 1.97 client. Block IDs come from the live registry. */
@@ -61,7 +59,7 @@ final class Ic2SiteAdapter {
             facing = tiles[STORAGE].getMethod("getFacing");
             available = true;
         } catch (Exception unavailable) {
-            // Keep the family IDs so known industrial blocks stay outside the structural flood fill.
+            // Leave generic observation available even when the runtime cannot be enriched.
         } catch (LinkageError unavailable) {
             // Optional classes may be incomplete.
         }
@@ -135,9 +133,4 @@ final class Ic2SiteAdapter {
         }
     }
 
-    /** The native world getter can create a missing tile. Inspect the loaded map directly. */
-    static TileEntity loadedTile(Chunk chunk, int x, int y, int z) {
-        TileEntity tile = (TileEntity) chunk.chunkTileEntityMap.get(new ChunkPosition(x & 15, y, z & 15));
-        return tile != null && !tile.isInvalid() ? tile : null;
-    }
 }

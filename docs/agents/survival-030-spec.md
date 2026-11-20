@@ -292,6 +292,8 @@ This is supporting evidence, not a universal requirement.
 
 Do not require any particular machine, crafting block or storage container.
 
+The current implementation uses the same native evidence path across the Tekkit block registry. Matching placement can establish unfamiliar construction. Loaded tiles, nonempty native inventory capacity and successful local activations can corroborate a work area. Optional mod knowledge can verify a specific relationship such as compatible IC2 wiring. Every equipment relationship stays local to the surveyed construction. The recognition result supplies neither shelter geometry nor a measure of industrial wealth. [Implemented evidence contract](settlement-generic-modded-evidence.md)
+
 ## 5.5 Settlement Candidate
 
 A bounded spatial hypothesis that a particular area may represent a player-established site.

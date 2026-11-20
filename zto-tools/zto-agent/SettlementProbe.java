@@ -222,6 +222,7 @@ public class SettlementProbe implements ISaveEventHandler {
         world.d(outpost + 2, y, Z, cable, 0);
         world.d(outpost + 3, y, Z, cable, 1);
         walk();
+        useUtility(outpost + 3, y, Z + 1);
         ticks(110);
         check(here().id > 0 && here().id != id && here().siteCount == 2 && here().connections == 1,
                 "independent outpost keeps a separate identity", here());
@@ -261,6 +262,10 @@ public class SettlementProbe implements ISaveEventHandler {
     }
 
     private void industrialTiming(String label) {
+        recognitionTiming(label + " IC2");
+    }
+
+    void recognitionTiming(String label) {
         SettlementProfile.Samples idle = new SettlementProfile.Samples(), sampled = new SettlementProfile.Samples();
         SettlementProfile.Samples unavailable = new SettlementProfile.Samples();
         long assessed = -1;
@@ -272,7 +277,7 @@ public class SettlementProbe implements ISaveEventHandler {
             settlements.tick(player, false);
             long elapsed = System.nanoTime() - start;
             Snapshot snapshot = here();
-            check(snapshot.reads <= 169 && world.chunkMisses == 0, "bounded industrial profile", snapshot);
+            check(snapshot.reads <= 169 && world.chunkMisses == 0, "bounded recognition profile", snapshot);
             if (i >= 0) {
                 if (snapshot.reads > 0) sampled.add(elapsed);
                 else if (snapshot.assessedTick >= 0 && snapshot.assessedTick != assessed) {
@@ -283,9 +288,9 @@ public class SettlementProbe implements ISaveEventHandler {
             assessed = snapshot.assessedTick;
         }
         world.auditChunks = false;
-        idle.report(label + " industrial idle");
-        if (misses > 0) unavailable.report(label + " industrial unavailable check");
-        else sampled.report(label + " industrial sampled");
+        idle.report(label + " idle");
+        if (misses > 0) unavailable.report(label + " unavailable check");
+        else sampled.report(label + " sampled");
     }
 
     private void industrialHouse(int[] ids, int[] metadata, int cable) throws Exception {
@@ -1200,8 +1205,9 @@ public class SettlementProbe implements ISaveEventHandler {
         game = new Minecraft(null, null, null, 320, 240, false) {
             @Override public void a(ja error) { throw new AssertionError(error); }
             @Override public void a(vp screen) {
-                if (!(screen instanceof gb)) throw new AssertionError("Expected a utility container");
-                h.ar = ((gb) screen).d; // Native GuiContainer handoff with no LWJGL window.
+                if (screen == null) throw new AssertionError("Expected a utility screen");
+                s = screen;
+                if (screen instanceof gb) h.ar = ((gb) screen).d; // Native handoff with no LWJGL window.
                 utilityOpens++;
             }
         };
@@ -1228,9 +1234,11 @@ public class SettlementProbe implements ISaveEventHandler {
     private void bind(Fixture incoming) {
         world = incoming;
         game.f = world;
+        game.s = null;
         player = new vq(game, world, new fc("SettlementProbe", ""), 0) {
             @Override public void a(ajw statistic, int count) {}
         };
+        player.a = new oy();
         game.h = player;
         game.i = player;
         territory.bind(world);
@@ -1556,7 +1564,7 @@ public class SettlementProbe implements ISaveEventHandler {
         }
     }
 
-    private void place(int block, int x, int y, int z, int side) {
+    void place(int block, int x, int y, int z, int side) {
         check(controller.a(player, world, new aan(block, 1, 0), x, y, z, side),
                 "native placement at " + x + "," + y + "," + z + "/" + side, null);
     }
@@ -1564,8 +1572,9 @@ public class SettlementProbe implements ISaveEventHandler {
     void useUtility(int x, int y, int z) {
         int before = utilityOpens;
         check(controller.a(player, world, null, x, y, z, 1) && utilityOpens == before + 1,
-                "normal utility activation handed off a container", here());
+                "normal utility activation opened a screen", here());
         player.ar = player.aq;
+        game.s = null;
     }
 
     void prepare(int x, int z) {
@@ -1663,7 +1672,7 @@ public class SettlementProbe implements ISaveEventHandler {
         @Override public ack d(int x, int z) {
             if (auditChunks) {
                 if (x >= remoteChunk - 2) remoteReads++;
-                if (!super.j(x << 4, 0, z << 4)) chunkMisses++;
+                if (!j(x << 4, 0, z << 4)) chunkMisses++;
             }
             return super.d(x, z);
         }

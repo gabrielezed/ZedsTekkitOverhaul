@@ -456,6 +456,7 @@ public final class SiteSiege {
     private static String unavailable(SiteSnapshot site) {
         if (site == null || site.id <= 0 || site.dimension != 0) return "SITE_UNAVAILABLE";
         if (site.dormant) return "SITE_DORMANT";
+        if (site.perimeterUnresolved) return "SITE_FOOTPRINT_UNRESOLVED";
         return usable(site.coverage) ? null : "SITE_" + site.coverage;
     }
 

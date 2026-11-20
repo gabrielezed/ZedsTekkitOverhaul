@@ -4,14 +4,18 @@ import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.World;
 
-/** An encounter-owned skeleton. Its visible brightness and native combat remain intact. */
+/** An encounter-owned skeleton with an optional daytime test exemption. Its visible brightness and native combat remain intact. */
 final class DebugSiegeSkeleton extends EntitySkeleton {
+    private final boolean daylightTest;
     private boolean checkingSun;
 
-    DebugSiegeSkeleton(World world) { super(world); }
+    DebugSiegeSkeleton(World world, boolean daylightTest) {
+        super(world);
+        this.daylightTest = daylightTest;
+    }
 
     @Override public void onLivingUpdate() {
-        checkingSun = true;
+        checkingSun = daylightTest;
         try {
             super.onLivingUpdate();
         } finally {

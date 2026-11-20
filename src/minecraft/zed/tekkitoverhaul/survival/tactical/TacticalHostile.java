@@ -58,8 +58,6 @@ public abstract class TacticalHostile extends EntityMob {
     }
 
     /** The encounter owns navigation and physical actions while this transient role is assigned. */
-    public final void claimSiteSiege() { siteSiegeControlled = true; }
-
     public final void claimSiteSiege(EntityPlayer defender, PathPoint staging) {
         siteSiegeControlled = true;
         siteDefender = defender;

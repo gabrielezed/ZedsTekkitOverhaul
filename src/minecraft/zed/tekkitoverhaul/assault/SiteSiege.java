@@ -3,18 +3,22 @@ package zed.tekkitoverhaul.assault;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
-import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.EnumCreatureType;
 import net.minecraft.src.EnumSkyBlock;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.SpawnerAnimals;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.assault.SiteSiegeForcePlan.Role;
+import zed.tekkitoverhaul.assault.SiteSiegeForcePlan.Wave;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.ProtectedInterior;
 import zed.tekkitoverhaul.settlement.SettlementRecognition;
@@ -23,8 +27,12 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
+import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.EntityTank;
+import zed.tekkitoverhaul.survival.tactical.EntityThief;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
+import zed.tekkitoverhaul.territory.TerritorialActivityService;
+import zed.tekkitoverhaul.territory.ThreatAssessment;
 
 /** Owns one bounded site objective. The director owns the lunar boundary and the major encounter decision. */
 public final class SiteSiege {
@@ -36,9 +44,15 @@ public final class SiteSiege {
 
     enum Admission { WAIT, FALLBACK, COMMITTED }
     private static final int OPTIONS = 12, MAX_PARTS = 2, PLANNING_TICKS = 40;
-    private static final int GROUP = 3, SPAWN_INTERVAL = 20, MAX_INSERTION_ATTEMPTS = 7;
-    private static final int DEADLINE = 600, STALL = 120, PRESENCE = 48;
-    private static final int LIGHT_WAIT = 900, MAX_LIGHT_ROLLS = 20;
+    private static final int STALL = 140, PRESENCE = 48, LIGHT_WAIT = 900;
+    private static final int WARNING = 8;
+    private static final int[] OFFSETS = { 0, -2, 2, -4, 4 };
+    private SiteSiegeForcePlan force;
+    private Intensity requestedIntensity;
+    private int waveIndex, combatStart, admittedTicks, defeated, withdrawn, abandoned, routeCursor, maxLifetime;
+    private long peakTickNanos, retiredPathNanos, peakPathNanos;
+    private final Map<Role, Integer> insertedRoles = new EnumMap<Role, Integer>(Role.class);
+    private final Map<String, Integer> failures = new LinkedHashMap<String, Integer>();
     private final boolean enabled, destructive;
     private final SiteQueries sites;
     private final List<Attacker> attackers = new ArrayList<Attacker>();
@@ -47,14 +61,13 @@ public final class SiteSiege {
     private AssaultWorldState storage;
     private SiteSnapshot selected;
     private SiteSnapshot observed;
-    private SiteApproach approach;
+    private SiteApproach approach, openedApproach;
     private final List<SiteApproach> frontages = new ArrayList<SiteApproach>();
     private Bounds part;
     private EntityPlayer observer;
     private long boundary = Long.MIN_VALUE, lunarSession;
     private int optionsTried, frames, attempts, inserted, peak, elapsed, arrivals, steps, peakColumns, peakSkyReads;
-    private int lastVerified, lightRolls;
-    private long nextCheck;
+    private int lastVerified;
     private long columns, skyReads, heightReads, protectionReads, planningNanos, peakPlanningNanos;
     private double progress;
     private String phase = "IDLE", status, rejection = "NONE", outcome = "NONE";
@@ -63,7 +76,7 @@ public final class SiteSiege {
     private Profile profile = Profile.AUTO;
     private TacticalPhase tacticalPhase = TacticalPhase.IDLE;
     private Attacker specialist;
-    private int impactTick, windupHealth, breachChecks, structuralChanges, entranceChanges;
+    private int impactTick, windupHealth, firstContact, breachChecks, structuralChanges, entranceChanges;
     private String objectiveOutcome = "NONE", tacticalRejection = "NO_ELIGIBLE_BREACH";
     private String insertionFailure;
     private boolean triedSpecialist;
@@ -103,31 +116,33 @@ public final class SiteSiege {
     boolean active() { return "ACTIVE".equals(phase); }
     boolean planning() { return "PLANNING".equals(phase); }
 
-    Admission admit(EntityPlayer player, LunarSnapshot event) {
+    Admission admit(EntityPlayer player, LunarSnapshot event, TerritorialActivityService territory, int cap) {
         if (!enabled) return Admission.FALLBACK;
         if (!planning()) {
-            beginPlanning(player, Origin.NATURAL, Profile.AUTO, event.rawTime, event.sessionId);
+            beginPlanning(player, Origin.NATURAL, Profile.AUTO, Intensity.NATURAL, event.rawTime, event.sessionId);
             opportunity = SiteSiegePolicy.opportunity(world.getSeed(), event.cycleIndex);
             if (!opportunity) return fallback("RARITY");
             discoverSites(player);
             if (candidates.isEmpty()) return fallback("NO_ELIGIBLE_SITE");
         }
         if (world.getWorldTime() - boundary >= AssaultWave.FIRST_START - 1) return fallback("PLANNING_DEADLINE");
-        return plan(player);
+        return plan(player, territory, cap);
     }
 
-    Admission admitManual(EntityPlayer player, Profile requested) {
+    Admission admitManual(EntityPlayer player, Profile requested, Intensity intensity,
+                          TerritorialActivityService territory, int cap) {
         if (!planning()) {
-            beginPlanning(player, Origin.MANUAL_DEBUG, requested, world.getWorldTime(), 0);
+            beginPlanning(player, Origin.MANUAL_DEBUG, requested, intensity, world.getWorldTime(), 0);
             discoverSites(player);
             if (candidates.isEmpty()) return fallback("NO_RECOGNIZED_SITE");
             if (selected.perimeterUnresolved && profile == Profile.BREACH) return fallback("SITE_FOOTPRINT_UNRESOLVED");
         }
         if (observer != player || !SiegeDirector.available(world, player)) return fallback("PLAYER_UNAVAILABLE");
-        return plan(player);
+        return plan(player, territory, cap);
     }
 
-    private void beginPlanning(EntityPlayer player, Origin source, Profile requested, long time, long session) {
+    private void beginPlanning(EntityPlayer player, Origin source, Profile requested, Intensity intensity,
+                               long time, long session) {
         resetPlan();
         resetCounters();
         selected = observed = null;
@@ -135,6 +150,7 @@ public final class SiteSiege {
         part = null;
         origin = source;
         profile = requested;
+        requestedIntensity = intensity;
         boundary = time;
         lunarSession = session;
         observer = player;
@@ -151,7 +167,7 @@ public final class SiteSiege {
         accountTime(start);
     }
 
-    private Admission plan(EntityPlayer player) {
+    private Admission plan(EntityPlayer player, TerritorialActivityService territory, int cap) {
         long start = System.nanoTime();
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
@@ -161,7 +177,8 @@ public final class SiteSiege {
             if (approach == null) return plansExhausted() ? noApproach() : Admission.WAIT;
             // A second sample is always required, with a fresh budget, before the first insertion.
             if (sampler.columns != 0) return Admission.WAIT;
-            EntityMob mob = validateInsertion(player, sampler);
+            Role scout = approach.barrier != null && approach.barrier.structural() ? Role.TANK : Role.ZOMBIE;
+            EntityMob mob = validateInsertion(player, sampler, approach, scout, true);
             if (mob == null) {
                 if ("PROTECTION_DEFERRED".equals(rejection)) return Admission.WAIT;
                 if (insertionFailure == null) insertionFailure = rejection;
@@ -172,13 +189,20 @@ public final class SiteSiege {
             if (!manual()) {
                 String blocked = storage.siegeEligibility(selected.id, boundary);
                 if (blocked != null) return fallback(blocked);
-                storage.startSite(selected.id, boundary);
             }
+            int x = part.minX + (part.maxX - part.minX) / 2;
+            int z = part.minZ + (part.maxZ - part.minZ) / 2;
+            ThreatAssessment threat = territory == null ? null : territory.assessSite(world, x, part.minY, z);
+            force = new SiteSiegeForcePlan(selected.id, world.difficultySetting, threat, requestedIntensity, cap,
+                    approach, world.getSeed() ^ boundary);
+            if (!manual()) storage.startSite(force.siteId, boundary);
             observer = player;
             phase = "ACTIVE";
             tacticalPhase = TacticalPhase.APPROACHING;
             destination = approach.goal();
-            status = manual() ? "ADMITTED" : "WAITING_FOR_DARKNESS";
+            status = manual() ? "WARNING" : "WAITING_FOR_DARKNESS";
+            world.playSoundEffect(approach.goal().xCoord + 0.5, approach.goal().yCoord,
+                    approach.goal().zCoord + 0.5, "ambient.cave.cave", 0.55F, 0.85F);
             resetPlan();
             return Admission.COMMITTED;
         } finally {
@@ -266,19 +290,20 @@ public final class SiteSiege {
         }
     }
 
-    private EntityMob validateInsertion(EntityPlayer player, SiteApproach.Sampler sampler) {
-        PathPoint start = approach.start();
+    private EntityMob validateInsertion(EntityPlayer player, SiteApproach.Sampler sampler,
+                                        SiteApproach lane, Role role, boolean admission) {
+        PathPoint start = lane.start();
         observed = sites.resolve(world, selected.id);
         if (currentPart() == null) return null;
         if (!nearSite(player)) return reject("PLAYER_ABSENT");
         if (!sites.insertionExterior(world, start.xCoord, start.zCoord, SiteApproach.MARGIN))
             return reject("INSIDE_SITE_EXCLUSION");
-        if (!sampler.validate(approach) || !sampler.openSky(start)) return reject(sampler.rejection);
-        if (observed.perimeterUnresolved && (approach.barrier != null || !sampler.localExterior(approach)))
-            return reject(approach.barrier == null ? sampler.rejection : "SITE_FOOTPRINT_UNRESOLVED");
-        if (inserted == 0 && approach.barrier != null) {
+        if (!sampler.validate(lane, role == Role.TANK) || !sampler.openSky(start)) return reject(sampler.rejection);
+        if (observed.perimeterUnresolved && (lane.barrier != null || !sampler.localExterior(lane)))
+            return reject(lane.barrier == null ? sampler.rejection : "SITE_FOOTPRINT_UNRESOLVED");
+        if (lane.barrier != null && (admission || isObjectiveRole(role))) {
             sampler.breachChecks++;
-            if (!approach.barrier.unchanged(world)) return reject("TARGET_CHANGED");
+            if (!lane.barrier.unchanged(world)) return reject("TARGET_CHANGED");
         }
         lastVerified = elapsed;
         ProtectedInterior.Assessment protection = sites.protection(world, start.xCoord, start.yCoord, start.zCoord);
@@ -294,8 +319,8 @@ public final class SiteSiege {
             return reject("POPULATION_CAP");
         if (!SpawnerAnimals.canCreatureTypeSpawnAtLocation(EnumCreatureType.monster, world,
                 start.xCoord, start.yCoord, start.zCoord)) return reject("UNSUITABLE_GROUND");
-        EntityMob mob = createAttacker();
-        if (mob instanceof TacticalHostile
+        EntityMob mob = createAttacker(role);
+        if ((role == Role.THIEF || role == Role.TANK || role == Role.BREACHER)
                 && !world.getEntitiesWithinAABB(mob.getClass(), area).isEmpty()) return reject("SPECIALIST_POPULATION");
 
         mob.setLocationAndAngles(x, y, z, 0, 0);
@@ -306,174 +331,203 @@ public final class SiteSiege {
         return mob;
     }
 
-    private EntityMob createAttacker() {
-        if (inserted == 0 && approach.barrier != null) {
-            TacticalHostile mob = approach.barrier.structural() ? new EntityTank(world) : new EntityBreacher(world);
-            mob.claimSiteSiege();
-            return mob;
+    private EntityMob createAttacker(Role role) {
+        switch (role) {
+            case SKELETON: return new DebugSiegeSkeleton(world, manual());
+            case ZOMBIE: return new SiegeZombie(world, manual());
+            case BREACHER: return new EntityBreacher(world);
+            case TANK: return new EntityTank(world);
+            case SKIRMISHER: return new EntitySkirmisher(world);
+            case THIEF: return new EntityThief(world);
+            default: throw new IllegalArgumentException("Unassigned site siege role " + role);
         }
-        return manual() ? new DebugSiegeSkeleton(world) : new EntitySkeleton(world);
     }
 
     private static boolean nativeSpawn(EntityMob mob) {
         return mob instanceof TacticalHostile ? ((TacticalHostile) mob).canSpawnForEncounter() : mob.getCanSpawnHere();
     }
 
-    void tick(EntityPlayer player, LunarSnapshot now, int activeCap) {
+    void tick(EntityPlayer player, LunarSnapshot now) {
+        long start = System.nanoTime();
+        try {
+            tickForce(player, now);
+        } finally {
+            peakTickNanos = Math.max(peakTickNanos, System.nanoTime() - start);
+        }
+    }
+
+    private void tickForce(EntityPlayer player, LunarSnapshot now) {
+        admittedTicks++;
         if (!manual() && (now == null || now.sessionId != lunarSession || !AssaultSchedule.WINDOW.matches(now))) {
             finish("LUNAR_CONTEXT_LOST");
             return;
         }
-        if (world.difficultySetting <= 0) {
-            finish("PEACEFUL");
+        if (world.difficultySetting != force.difficulty) {
+            finish(world.difficultySetting <= 0 ? "PEACEFUL" : "DIFFICULTY_CHANGED");
             return;
         }
         if (!SiegeDirector.available(world, player) || player != observer || !nearSite(player)) {
             finish("PLAYER_ABSENT");
             return;
         }
-        if (attempts == 0) {
-            long time = world.getWorldTime();
-            if (time % 5 == 0 && !refreshSite()) return;
-            if (manual() && ++elapsed >= PLANNING_TICKS) {
-                finish("FIRST_INSERTION_TIMEOUT");
-                return;
-            }
-            beginApproach(player, time);
-            return;
-        }
-        elapsed++;
-        if (elapsed >= DEADLINE) {
-            finish("DEADLINE");
-            return;
-        }
-        if (approach.barrier != null && tacticalPhase != TacticalPhase.ENGAGING && !approach.barrier.loaded(world)) {
+        if (approach.barrier != null && objectivePending() && !approach.barrier.loaded(world)) {
             finish("TARGET_UNLOADED");
             return;
         }
-        if (elapsed % 5 == 0 && !refreshSite()) return;
+        if (admittedTicks % 5 == 0 && !refreshSite()) return;
+        if (combatStart < 0) {
+            if (admittedTicks < WARNING || (!manual() && world.skylightSubtracted < 11 && admittedTicks < LIGHT_WAIT))
+                return;
+            combatStart = admittedTicks;
+            status = approach.objective.name();
+        }
+        elapsed = admittedTicks - combatStart;
         refreshAttackers();
+        if (elapsed >= force.deadline) {
+            finish("DEADLINE");
+            return;
+        }
+        if (specialist != null && objectivePending()) executeObjective();
         if (!active()) return;
-        boolean reinforcing = tacticalPhase == TacticalPhase.APPROACHING
-                && elapsed % SPAWN_INTERVAL == 0 && attempts < MAX_INSERTION_ATTEMPTS
-                && inserted < Math.min(GROUP, activeCap) && attackers.size() < activeCap;
-        if (!reinforcing && elapsed % 5 == 0 && !observeRoute()) return;
-        if (specialist != null && tacticalPhase != TacticalPhase.ENGAGING) executeObjective();
-        if (!active()) return;
-        if (approach.barrier == null && arrivals > 0 && tacticalPhase == TacticalPhase.APPROACHING) {
+
+        if (approach.barrier == null && arrivals > 0 && objectivePending()) {
             tacticalPhase = TacticalPhase.ENGAGING;
             objectiveOutcome = "DESTINATION_REACHED";
         }
-        if (inserted > 0 && attackers.isEmpty()) {
-            finish("ATTACKERS_GONE");
-        } else if (reinforcing && tacticalPhase == TacticalPhase.APPROACHING) {
-            reinforce(player);
-        } else if (attackers.isEmpty() && attempts >= MAX_INSERTION_ATTEMPTS) {
-            finish("ALLOCATION_EXHAUSTED");
-        } else if (elapsed >= 240 && arrivals == inserted && inserted > 0) {
-            finish("FRONTAGE_REACHED");
+        if (waveIndex + 1 < force.waves.length && elapsed >= force.waves[waveIndex + 1].start) waveIndex++;
+        Wave wave = force.waves[waveIndex];
+        if (elapsed < wave.end && wave.remaining() > 0
+                && (elapsed - wave.start) % SiteSiegeForcePlan.RETRY_INTERVAL == 0) {
+            if (attackers.size() >= force.activeCap) {
+                wave.capDeferrals++;
+                count(failures, "ACTIVE_CAP");
+            } else reinforce(player, wave);
+        } else if (!attackers.isEmpty()) {
+            observeRoute();
         }
+        if (!active()) return;
+        boolean finalWave = waveIndex == force.waves.length - 1;
+        if (attackers.isEmpty() && finalWave && (elapsed >= wave.end || wave.remaining() == 0))
+            finish(inserted == 0 ? "DEPLOYMENT_FAILED" : defeated == inserted ? "ATTACKERS_GONE" : "WAVES_COMPLETE");
+    }
+
+    private boolean objectivePending() {
+        return tacticalPhase == TacticalPhase.APPROACHING || tacticalPhase == TacticalPhase.BREACHING
+                || tacticalPhase == TacticalPhase.PRESSURING;
+    }
+
+    private boolean isObjectiveRole(Role role) {
+        return approach.barrier != null && role == (approach.barrier.structural() ? Role.TANK : Role.BREACHER);
     }
 
     private boolean refreshSite() {
-        observed = sites.resolve(world, selected.id);
+        observed = sites.resolve(world, force.siteId);
         if (currentPart() != null) return true;
         finish(rejection);
         return false;
     }
 
-    private void beginApproach(EntityPlayer player, long time) {
-        if (!manual() && time - boundary >= LIGHT_WAIT + 100) {
-            finish("FIRST_INSERTION_TIMEOUT");
-            return;
-        }
-        if (!manual() && time < nextCheck) return;
-        if (!manual() && world.skylightSubtracted < 11 && time - boundary < LIGHT_WAIT) {
-            nextCheck = time + 20;
-            return;
-        }
-        status = "WAITING_FOR_NATIVE_SPAWN";
+    private void observeRoute() {
+        Attacker attacker = attackers.get(routeCursor++ % attackers.size());
+        if (attacker.task.arrived()) return;
         long start = System.nanoTime();
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
-            EntityMob mob = validateInsertion(player, sampler);
-            if (mob == null) {
-                if (!"PROTECTION_DEFERRED".equals(rejection)) finish(rejection);
+            int index = attacker.task.steps() + 1;
+            PathPoint[] route = attacker.task.waypoints();
+            for (int i = Math.max(0, index - 1); i < Math.min(index + 2, route.length); i++) {
+                if (sampler.standing(route[i], attacker.role == Role.TANK)) continue;
+                count(failures, sampler.rejection);
+                withdraw(attacker, "ROUTE_LOST");
+                attackers.remove(attacker);
                 return;
             }
-            if (!manual() && !nativeSpawn(mob)) {
+            lastVerified = elapsed;
+        } finally {
+            account(sampler, start);
+        }
+    }
+
+    private SiteApproach laneFor(Role role, int slot, int attempt) {
+        if (isObjectiveRole(role)) return approach;
+        int offset = OFFSETS[(slot + attempt) % OFFSETS.length];
+        if (role == Role.TANK) return approach.staging(offset, 5);
+        if (role == Role.SKIRMISHER)
+            return approach.staging(offset == 0 ? 3 : offset, 6);
+        if (role == Role.THIEF) return approach.staging(offset == 0 ? -3 : offset, 3);
+        if (approach.barrier != null && objectivePending())
+            return approach.staging(offset == 0 && attempt == 0 ? 2 : offset, 2);
+        if (attempt % 2 == 0) {
+            if (openedApproach != null) return openedApproach;
+            if (approach.barrier == null) return approach;
+        }
+        return approach.staging(OFFSETS[(slot + attempt / 2) % OFFSETS.length], 2);
+    }
+
+    private void reinforce(EntityPlayer player, Wave wave) {
+        int slot = wave.nextSlot(force.activeCap - attackers.size());
+        if (slot < 0) return;
+        Role role = wave.roles[slot];
+        boolean objectiveRole = isObjectiveRole(role);
+        if (objectiveRole && !objectivePending()) {
+            wave.placementFailures[slot] = SiteSiegeForcePlan.ATTEMPTS_PER_SLOT;
+            count(failures, role + "/OBJECTIVE_CLOSED");
+            return;
+        }
+        long start = System.nanoTime();
+        SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
+        try {
+            int retry = wave.attempts[slot]++;
+            attempts++;
+            wave.tried++;
+            SiteApproach lane = laneFor(role, slot, retry);
+            EntityMob mob = validateInsertion(player, sampler, lane, role, false);
+            if (mob != null && !manual() && !nativeSpawn(mob)) {
+                count(failures, role + "/VANILLA_SPAWN_RULE");
                 rejection = "VANILLA_SPAWN_RULE";
-                if (++lightRolls >= MAX_LIGHT_ROLLS) finish("FIRST_INSERTION_EXHAUSTED");
-                else nextCheck = time + 4;
                 return;
             }
-            PerimeterApproachTask task = PerimeterApproachTask.attach(mob, approach);
+            if (mob == null) {
+                if ("POPULATION_CAP".equals(rejection)) wave.capDeferrals++;
+                else if (!"PROTECTION_DEFERRED".equals(rejection)) wave.placementFailures[slot]++;
+                count(failures, role + "/" + rejection);
+                if (objectiveRole && "TARGET_CHANGED".equals(rejection)) {
+                    PathPoint[] open = approach.barrier.structural() ? null : passage(sampler, false);
+                    if (open == null) endObjective("TARGET_CHANGED");
+                    else completePassage(open, "ENTRANCE_ALREADY_OPEN");
+                }
+                return;
+            }
+            PerimeterApproachTask task = PerimeterApproachTask.attach(mob, lane, objectiveRole);
             if (task == null) {
+                count(failures, role + "/NATIVE_TASK_UNAVAILABLE");
                 finish("NATIVE_TASK_UNAVAILABLE");
                 return;
             }
-            attempts++;
-            status = approach.objective.name();
-            insert(mob, task);
-            if (inserted == 0 && manual()) finish(rejection);
-        } finally {
-            account(sampler, start);
-        }
-    }
-
-    private boolean observeRoute() {
-        long start = System.nanoTime();
-        SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
-        try {
-            for (Attacker attacker : attackers) {
-                if (attacker.task.arrived() || !attacker.mob.isEntityAlive()) continue;
-                int index = attacker.task.steps() + 1;
-                PathPoint[] route = attacker.task.waypoints();
-                for (int i = Math.max(0, index - 1); i < Math.min(index + 2, route.length); i++) {
-                    if (!sampler.standing(route[i], attacker.mob instanceof EntityTank)) {
-                        rejection = sampler.rejection;
-                        finish("ROUTE_LOST");
-                        return false;
-                    }
-                }
+            if (mob instanceof TacticalHostile) {
+                ((TacticalHostile) mob).claimSiteSiege(player, lane.goal());
+            } else {
+                PathPoint goal = lane.goal();
+                mob.setHomeArea(goal.xCoord, goal.yCoord, goal.zCoord, 10);
             }
-            if (sampler.columns > 0) lastVerified = elapsed;
-            return true;
-        } finally {
-            account(sampler, start);
-        }
-    }
-
-    private void reinforce(EntityPlayer player) {
-        long start = System.nanoTime();
-        SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
-        try {
-            attempts++;
-            EntityMob mob = validateInsertion(player, sampler);
-            if (mob == null) return;
-            if (!manual() && !nativeSpawn(mob)) {
-                rejection = "VANILLA_SPAWN_RULE";
+            if (!world.spawnEntityInWorld(mob)) {
+                task.release();
+                rejection = "INSERTION_REJECTED";
+                wave.placementFailures[slot]++;
+                count(failures, role + "/" + rejection);
                 return;
             }
-            PerimeterApproachTask task = PerimeterApproachTask.attach(mob, approach);
-            if (task != null) insert(mob, task);
-            else rejection = "NATIVE_TASK_UNAVAILABLE";
+            wave.inserted[slot] = true;
+            wave.deployed++;
+            Attacker attacker = new Attacker(mob, task, lane, role, elapsed);
+            attackers.add(attacker);
+            if (objectiveRole) specialist = attacker;
+            inserted++;
+            count(insertedRoles, role);
+            peak = Math.max(peak, attackers.size());
         } finally {
             account(sampler, start);
         }
-    }
-
-    private void insert(EntityMob mob, PerimeterApproachTask task) {
-        if (!world.spawnEntityInWorld(mob)) {
-            task.release();
-            rejection = "INSERTION_REJECTED";
-            return;
-        }
-        Attacker attacker = new Attacker(mob, task, elapsed);
-        attackers.add(attacker);
-        if (mob instanceof TacticalHostile) specialist = attacker;
-        inserted++;
-        peak = Math.max(peak, attackers.size());
     }
 
     private void refreshAttackers() {
@@ -482,62 +536,74 @@ public final class SiteSiege {
             Attacker attacker = iterator.next();
             EntityMob mob = attacker.mob;
             int x = MathHelper.floor_double(mob.posX), z = MathHelper.floor_double(mob.posZ);
-            if (!mob.isEntityAlive() || mob.worldObj != world || !world.blockExists(x, 64, z)
-                    || !world.getEntitiesWithinAABB(EntityMob.class, mob.boundingBox).contains(mob)) {
-                release(attacker);
+            boolean alive = mob.isEntityAlive();
+            boolean loaded = alive && mob.worldObj == world && world.blockExists(x, 64, z)
+                    && (elapsed % 5 != 0 || world.getEntitiesWithinAABB(EntityMob.class, mob.boundingBox).contains(mob));
+            if (!loaded || elapsed - attacker.insertedAt >= SiteSiegeForcePlan.LIFETIME) {
+                if (!alive && mob.getHealth() <= 0) defeated++;
+                withdraw(attacker, loaded ? "ATTACKER_WITHDREW" : "SPECIALIST_LOST");
                 iterator.remove();
-                if (attacker == specialist) {
-                    specialist = null;
-                    if (tacticalPhase != TacticalPhase.ENGAGING) {
-                        finish("SPECIALIST_LOST");
-                        return;
-                    }
-                }
                 continue;
             }
-            PathPoint first = approach.start(), goal = approach.goal();
+            PathPoint first = attacker.lane.start(), goal = attacker.lane.goal();
             double dx = mob.posX - first.xCoord - 0.5, dz = mob.posZ - first.zCoord - 0.5;
             double length = Math.abs(goal.xCoord - first.xCoord) + Math.abs(goal.zCoord - first.zCoord);
             double advance = (dx * (goal.xCoord - first.xCoord) + dz * (goal.zCoord - first.zCoord)) / length;
-            if (attacker.task.arrived() && destination == goal) advance = Math.min(advance, length);
-            progress = Math.max(progress, advance);
+            progress = Math.max(progress, Math.min(advance, length));
             int walked = attacker.task.steps();
             steps = Math.max(steps, walked);
             if (walked > attacker.steps) {
                 attacker.lastProgress = elapsed;
                 attacker.steps = walked;
             } else if (!attacker.task.arrived() && elapsed - attacker.lastProgress >= STALL) {
-                finish("APPROACH_STALLED");
-                return;
+                withdraw(attacker, "APPROACH_STALLED");
+                iterator.remove();
+                continue;
             }
-            if (attacker.task.arrived() && !attacker.counted
-                    && (approach.barrier == null || tacticalPhase == TacticalPhase.ENGAGING)) {
+            if (attacker.task.arrived() && !attacker.counted) {
                 attacker.counted = true;
                 arrivals++;
+                if (attacker != specialist && mob instanceof TacticalHostile) ((TacticalHostile) mob).beginSiteCombat();
             }
         }
     }
 
+    private void withdraw(Attacker attacker, String cause) {
+        if (attacker.mob.getHealth() > 0) withdrawn++;
+        if (attacker == specialist) {
+            if (objectivePending()) endObjective(cause);
+            specialist = null;
+        }
+        release(attacker);
+    }
+
+    private static <K> void count(Map<K, Integer> counts, K key) {
+        Integer previous = counts.get(key);
+        counts.put(key, previous == null ? 1 : previous + 1);
+    }
+
     private void executeObjective() {
         if (!specialist.task.arrived()) return;
+        if (firstContact < 0) firstContact = elapsed;
         long start = System.nanoTime();
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
             SiegeBarrier barrier = approach.barrier;
             EntityMob mob = specialist.mob;
             if (tacticalPhase != TacticalPhase.APPROACHING && mob.getHealth() < windupHealth) {
-                finish("WINDUP_INTERRUPTED");
+                endObjective("WINDUP_INTERRUPTED");
                 return;
             }
             sampler.breachChecks++;
             if (!barrier.unchanged(world)) {
                 if (!barrier.structural() && passage(sampler, false) != null)
                     advanceObjective(sampler, "ENTRANCE_ALREADY_OPEN");
-                else finish("TARGET_CHANGED");
+                else endObjective("TARGET_CHANGED");
                 return;
             }
             if (!barrier.inReach(mob, 0) || !sampler.standing(approach.goal(), mob instanceof EntityTank)) {
-                finish("TARGET_OUT_OF_REACH");
+                if (tacticalPhase != TacticalPhase.APPROACHING || elapsed - firstContact >= 24)
+                    endObjective("TARGET_OUT_OF_REACH");
                 return;
             }
             if (tacticalPhase == TacticalPhase.APPROACHING) {
@@ -557,11 +623,11 @@ public final class SiteSiege {
             }
             if (elapsed < impactTick || !refreshSite()) return;
             if (!barrier.structural() && !sampler.standing(barrier.inside, false)) {
-                finish("PASSAGE_BLOCKED");
+                endObjective("PASSAGE_BLOCKED");
                 return;
             }
             sampler.breachChecks++;
-            int changed = barrier.impact(mob);
+            int changed = barrier.structural() && structuralChanges >= force.structuralBudget ? 0 : barrier.impact(mob);
             if (mob instanceof EntityTank) {
                 structuralChanges += changed;
                 ((EntityTank) mob).endSiteWindup(changed > 0);
@@ -569,7 +635,7 @@ public final class SiteSiege {
                 entranceChanges += changed;
                 if (changed > 0) ((EntityBreacher) mob).signalSiteImpact();
             }
-            if (changed == 0) finish("IMPACT_REJECTED");
+            if (changed == 0) endObjective("IMPACT_REJECTED");
             else advanceObjective(sampler, barrier.structural() ? "STRUCTURE_BREACHED" : "ENTRANCE_OPENED");
         } finally {
             account(sampler, start);
@@ -591,19 +657,38 @@ public final class SiteSiege {
     }
 
     private void advanceObjective(SiteApproach.Sampler sampler, String reason) {
-        tacticalPhase = TacticalPhase.ENGAGING;
-        objectiveOutcome = reason;
         PathPoint[] narrow = passage(sampler, false);
         if (narrow == null) {
-            finish("PASSAGE_BLOCKED");
+            endObjective("PASSAGE_BLOCKED");
             return;
         }
+        completePassage(narrow, reason);
+        PathPoint[] route = specialist.role == Role.TANK ? passage(sampler, true) : narrow;
+        if (route == null) {
+            specialist.task.release();
+            ((TacticalHostile) specialist.mob).beginSiteCombat();
+        } else {
+            specialist.task.advance(route);
+            specialist.counted = false;
+        }
+        specialist = null;
+    }
+
+    private void completePassage(PathPoint[] passage, String reason) {
+        openedApproach = approach.opened(passage);
         destination = approach.barrier.inside;
-        PathPoint[] wide = approach.barrier.structural() ? passage(sampler, true) : null;
-        for (Attacker attacker : attackers) {
-            PathPoint[] route = attacker.mob instanceof EntityTank ? wide : narrow;
-            if (route == null) attacker.task.release();
-            else attacker.task.advance(route);
+        tacticalPhase = TacticalPhase.ENGAGING;
+        objectiveOutcome = reason;
+    }
+
+    private void endObjective(String reason) {
+        objectiveOutcome = reason;
+        tacticalPhase = TacticalPhase.ENGAGING;
+        if (specialist != null) {
+            TacticalHostile mob = (TacticalHostile) specialist.mob;
+            if (mob instanceof EntityTank) ((EntityTank) mob).endSiteWindup(false);
+            specialist.task.release();
+            mob.beginSiteCombat();
         }
     }
 
@@ -613,10 +698,15 @@ public final class SiteSiege {
     }
 
     private void finish(String cause) {
-        for (Attacker attacker : attackers) release(attacker);
+        if (force != null) abandoned = force.total - inserted;
+        for (Attacker attacker : attackers) {
+            if (attacker.mob.getHealth() <= 0) defeated++;
+            else withdrawn++;
+            release(attacker);
+        }
         attackers.clear();
         specialist = null;
-        boolean reached = "FRONTAGE_REACHED".equals(cause);
+        boolean reached = "WAVES_COMPLETE".equals(cause) || "ATTACKERS_GONE".equals(cause);
         tacticalPhase = reached ? TacticalPhase.RESOLVED : TacticalPhase.ABORTED;
         if ("NONE".equals(objectiveOutcome)) objectiveOutcome = cause;
         observer = null;
@@ -628,7 +718,13 @@ public final class SiteSiege {
 
     private void release(Attacker attacker) {
         attacker.task.release();
-        if ((manual() || attacker.mob instanceof TacticalHostile) && attacker.mob.isEntityAlive()) attacker.mob.setDead();
+        maxLifetime = Math.max(maxLifetime, elapsed - attacker.insertedAt);
+        if (attacker.mob instanceof TacticalHostile) {
+            TacticalHostile mob = (TacticalHostile) attacker.mob;
+            retiredPathNanos += mob.sitePathNanos();
+            peakPathNanos = Math.max(peakPathNanos, mob.peakSitePathNanos());
+        }
+        if (attacker.mob.isEntityAlive()) attacker.mob.setDead();
     }
 
     private Admission fallback(String cause) {
@@ -650,13 +746,19 @@ public final class SiteSiege {
     private void resetCounters() {
         optionsTried = frames = attempts = inserted = peak = elapsed = arrivals = steps = peakColumns = peakSkyReads = 0;
         lastVerified = -1;
-        lightRolls = 0;
-        nextCheck = Long.MIN_VALUE;
+        force = null;
+        openedApproach = null;
+        combatStart = waveIndex = -1;
+        admittedTicks = defeated = withdrawn = abandoned = routeCursor = maxLifetime = 0;
+        peakTickNanos = retiredPathNanos = peakPathNanos = 0;
+        insertedRoles.clear();
+        failures.clear();
         columns = heightReads = skyReads = protectionReads = planningNanos = peakPlanningNanos = 0;
         progress = 0;
         destination = null;
         specialist = null;
         breachChecks = structuralChanges = entranceChanges = 0;
+        firstContact = -1;
         triedSpecialist = false;
         objectiveOutcome = "NONE";
         tacticalRejection = "NO_ELIGIBLE_BREACH";
@@ -737,13 +839,18 @@ public final class SiteSiege {
     private static final class Attacker {
         final EntityMob mob;
         final PerimeterApproachTask task;
+        final SiteApproach lane;
+        final Role role;
+        final int insertedAt;
         int steps, lastProgress;
         boolean counted;
 
-        Attacker(EntityMob mob, PerimeterApproachTask task, int elapsed) {
+        Attacker(EntityMob mob, PerimeterApproachTask task, SiteApproach lane, Role role, int elapsed) {
             this.mob = mob;
             this.task = task;
-            lastProgress = elapsed;
+            this.lane = lane;
+            this.role = role;
+            insertedAt = lastProgress = elapsed;
         }
     }
 
@@ -757,7 +864,14 @@ public final class SiteSiege {
         public final String eligibility, phase, rejection, outcome, coverage, approach, objective, identity;
         public final String tacticalPhase, objectiveOutcome, specialist, objectiveTarget;
         public final boolean opportunity, dormant, destructive;
-        public final int breachChecks, structuralChanges, entranceChanges;
+        public final int breachChecks, structuralChanges, entranceChanges, structuralBudget;
+        public final Intensity intensity;
+        public final boolean overridden;
+        public final int threat, difficulty, planned, activeCap, waves, wave, defeated, withdrawn, deferred, abandoned;
+        public final int duration, deadline, peakLifetime;
+        public final long pathNanos, peakPathNanos, peakTickNanos;
+        public final List<String> allocations, deployment;
+        public final Map<String, Integer> plannedRoles, insertedRoles, activeRoles, failures;
         public final int site, dimension, active, inserted, peak, attempts, remaining, elapsed, steps, arrivals;
         public final int candidates, peakColumns, peakSkyReads, geometryAge;
         public final long boundary, nextOpportunityCycle, cooldownUntil, observation, siteSession;
@@ -765,7 +879,7 @@ public final class SiteSiege {
         public final long planningNanos, peakPlanningNanos;
         public final double progress;
 
-        Snapshot(SiteSiege siege, SiegeDirector.EncounterKind kind, int activeCap, LunarSnapshot lunar,
+        Snapshot(SiteSiege siege, SiegeDirector.EncounterKind kind, LunarSnapshot lunar,
                  SiegeDirector.DebugState request, String requestReason, String callBlock, boolean cancelAvailable) {
             this.kind = kind;
             this.request = request;
@@ -787,7 +901,7 @@ public final class SiteSiege {
             dormant = siteView != null && siteView.dormant;
             identity = siteView == null ? "UNAVAILABLE" : "RECOGNIZED";
             observation = siteView == null ? Long.MIN_VALUE : siteView.lastConfirmed;
-            SiteApproach lane = siege.approach;
+            SiteApproach lane = siege.force == null ? siege.approach : siege.force.objective;
             approach = lane == null ? "NONE" : point(lane.start()) + " > "
                     + point(siege.destination == null ? lane.goal() : siege.destination);
             objective = lane == null ? "NONE" : lane.objective.name();
@@ -810,8 +924,61 @@ public final class SiteSiege {
             inserted = siege.inserted;
             peak = siege.peak;
             attempts = siege.attempts;
-            remaining = siege.active() && siege.tacticalPhase == TacticalPhase.APPROACHING && attempts < MAX_INSERTION_ATTEMPTS
-                    ? Math.max(0, Math.min(GROUP, activeCap) - inserted) : 0;
+            SiteSiegeForcePlan plan = siege.force;
+            threat = plan == null || plan.threat == null ? -1 : plan.threat.threat;
+            difficulty = plan == null ? 0 : plan.difficulty;
+            intensity = plan == null ? Intensity.NATURAL : plan.intensity;
+            overridden = plan != null && plan.overridden;
+            planned = plan == null ? 0 : plan.total;
+            activeCap = plan == null ? 0 : plan.activeCap;
+            structuralBudget = plan == null ? 0 : plan.structuralBudget;
+            waves = plan == null ? 0 : plan.waves.length;
+            wave = siege.waveIndex + 1;
+            int pending = 0, reserve = 0;
+            List<String> rosters = new ArrayList<String>(), results = new ArrayList<String>();
+            Map<String, Integer> plannedByRole = new LinkedHashMap<String, Integer>();
+            for (int i = 0; i < waves; i++) {
+                Wave allocation = plan.waves[i];
+                rosters.add(allocation.toString());
+                results.add(allocation.deployed + "/" + allocation.roles.length + " inserted | " + allocation.tried
+                        + " tries | " + allocation.capDeferrals + " cap delays");
+                for (Role role : allocation.roles) count(plannedByRole, role.name());
+                if (!siege.active()) continue;
+                if (i >= wave) reserve += allocation.remaining();
+                else if (i == wave - 1 && siege.elapsed < allocation.end) pending = allocation.remaining();
+            }
+            remaining = reserve;
+            deferred = pending;
+            defeated = siege.defeated;
+            withdrawn = siege.withdrawn;
+            abandoned = siege.active() ? planned - inserted - reserve - pending : siege.abandoned;
+            duration = siege.admittedTicks;
+            deadline = plan == null ? 0 : plan.deadline;
+            Map<String, Integer> insertedByRole = new LinkedHashMap<String, Integer>();
+            for (Map.Entry<Role, Integer> role : siege.insertedRoles.entrySet())
+                insertedByRole.put(role.getKey().name(), role.getValue());
+            Map<String, Integer> activeByRole = new LinkedHashMap<String, Integer>();
+            long pathTime = siege.retiredPathNanos, peakPath = siege.peakPathNanos;
+            int longest = siege.maxLifetime;
+            for (Attacker attacker : siege.attackers) {
+                count(activeByRole, attacker.role.name());
+                longest = Math.max(longest, siege.elapsed - attacker.insertedAt);
+                if (attacker.mob instanceof TacticalHostile) {
+                    TacticalHostile mob = (TacticalHostile) attacker.mob;
+                    pathTime += mob.sitePathNanos();
+                    peakPath = Math.max(peakPath, mob.peakSitePathNanos());
+                }
+            }
+            peakLifetime = longest;
+            pathNanos = pathTime;
+            peakPathNanos = peakPath;
+            peakTickNanos = siege.peakTickNanos;
+            allocations = Collections.unmodifiableList(rosters);
+            deployment = Collections.unmodifiableList(results);
+            plannedRoles = Collections.unmodifiableMap(plannedByRole);
+            insertedRoles = Collections.unmodifiableMap(insertedByRole);
+            activeRoles = Collections.unmodifiableMap(activeByRole);
+            failures = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(siege.failures));
             elapsed = siege.elapsed;
             steps = siege.steps;
             arrivals = siege.arrivals;

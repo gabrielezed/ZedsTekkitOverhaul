@@ -16,21 +16,21 @@ final class PerimeterApproachTask extends EntityAIBase {
     private boolean engaged = true, hold;
     private int next = 1;
 
-    private PerimeterApproachTask(EntityMob mob, SiteApproach approach) {
+    private PerimeterApproachTask(EntityMob mob, SiteApproach approach, boolean hold) {
         this.mob = mob;
         route = approach.route;
-        hold = approach.barrier != null;
+        this.hold = hold;
         setMutexBits(7);
     }
 
     static boolean available() { return ACTIONS != null; }
 
-    static PerimeterApproachTask attach(EntityMob mob, SiteApproach approach) {
+    static PerimeterApproachTask attach(EntityMob mob, SiteApproach approach, boolean hold) {
         if (!available()) return null;
         try {
             EntityAITasks tasks = (EntityAITasks) ACTIONS.get(mob);
             if (tasks == null) return null;
-            PerimeterApproachTask task = new PerimeterApproachTask(mob, approach);
+            PerimeterApproachTask task = new PerimeterApproachTask(mob, approach, hold);
             tasks.addTask(0, task);
             return task;
         } catch (IllegalAccessException failure) {
@@ -59,10 +59,15 @@ final class PerimeterApproachTask extends EntityAIBase {
         // The native scheduler selects tasks before running its update pass.
         if (!engaged) return;
         mob.getNavigator().clearPathEntity();
-        if (arrived()) return;
+        if (arrived()) {
+            if (hold) {
+                PathPoint goal = route[route.length - 1];
+                if (horizontalDistanceSq(goal) >= 0.16) move(goal);
+            }
+            return;
+        }
         PathPoint point = route[next];
-        double dx = mob.posX - point.xCoord - 0.5, dz = mob.posZ - point.zCoord - 0.5;
-        if (dx * dx + dz * dz < 0.16 && Math.abs(mob.boundingBox.minY - point.yCoord) < 0.75) {
+        if (horizontalDistanceSq(point) < 0.16 && Math.abs(mob.boundingBox.minY - point.yCoord) < 0.75) {
             next++;
             if (arrived()) {
                 if (!hold) release();
@@ -70,6 +75,15 @@ final class PerimeterApproachTask extends EntityAIBase {
             }
             point = route[next];
         }
+        move(point);
+    }
+
+    private double horizontalDistanceSq(PathPoint point) {
+        double dx = mob.posX - point.xCoord - 0.5, dz = mob.posZ - point.zCoord - 0.5;
+        return dx * dx + dz * dz;
+    }
+
+    private void move(PathPoint point) {
         mob.getMoveHelper().setMoveTo(point.xCoord + 0.5, point.yCoord, point.zCoord + 0.5,
                 mob instanceof EntityTank ? 0.18F : 0.25F);
     }

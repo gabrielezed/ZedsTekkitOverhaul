@@ -29,6 +29,27 @@ final class SiteApproach {
     PathPoint start() { return route[0]; }
     PathPoint goal() { return route[route.length - 1]; }
 
+    /** Standoff routes share the frontage axis but stop outside the engagement lane. */
+    SiteApproach staging(int lateral, int setback) {
+        PathPoint first = start(), second = route[1];
+        int dx = (second.zCoord - first.zCoord) * lateral;
+        int dz = (first.xCoord - second.xCoord) * lateral;
+        int length = Math.max(3, route.length - setback);
+        List<PathPoint> staging = new ArrayList<PathPoint>(length);
+        for (int i = 0; i < length; i++) {
+            PathPoint point = route[i];
+            staging.add(new PathPoint(point.xCoord + dx, point.yCoord, point.zCoord + dz));
+        }
+        return new SiteApproach(staging, Objective.PRESSURE_PERIMETER, null);
+    }
+
+    SiteApproach opened(PathPoint[] passage) {
+        List<PathPoint> combined = new ArrayList<PathPoint>(route.length + passage.length);
+        for (PathPoint point : route) combined.add(point);
+        for (PathPoint point : passage) combined.add(point);
+        return new SiteApproach(combined, Objective.APPROACH_ENTRANCE, null);
+    }
+
     static boolean exterior(Bounds b, int x, int z) {
         return x < b.minX - MARGIN || x > b.maxX + MARGIN
                 || z < b.minZ - MARGIN || z > b.maxZ + MARGIN;
@@ -119,8 +140,7 @@ final class SiteApproach {
             return offset == 0 ? middle : offset == 1 ? Math.max(min, middle - 2) : Math.min(max, middle + 2);
         }
 
-        boolean validate(SiteApproach approach) {
-            boolean wide = approach.objective == Objective.LIMITED_BREACH;
+        boolean validate(SiteApproach approach, boolean wide) {
             for (PathPoint point : approach.route) {
                 if (!standing(point, wide)) return false;
             }

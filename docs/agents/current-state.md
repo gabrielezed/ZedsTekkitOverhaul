@@ -2,7 +2,7 @@
 
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The current candidate identifies itself as `0.4.0-alpha.2`. Natural site sieges and the local Debug Hub use the same site-based tactics. A group approaches an opening or frontage, or assigns one specialist to a verified obstacle. The monitor can call and cancel a test siege in daylight. [Architecture and owner walkthrough](survival-040-alpha2.md)
+The current candidate identifies itself as `0.4.0-alpha.2`. Natural site sieges and the local Debug Hub use the same site-based tactics. A force scales with threat at the selected site and admission difficulty. Infantry and Enderkin deploy in bounded waves around one verified site objective. The monitor can call and cancel a test siege in daylight with a separate intensity override. [Architecture and owner walkthrough](survival-040-alpha2.md)
 
 Survival 0.3.0-alpha.4 established the recognition contract. Settlement Recognition can link corroborated parts across short courtyards and retains stable IDs from earlier saves. Protected Interior reports local geometry separately. [Implementation, acceptance and 0.4 handoff](survival-030-alpha4.md)
 

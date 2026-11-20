@@ -1163,13 +1163,17 @@ Alpha.1 adds no structural damage, block breaking, machinery sabotage, resource 
 
 ## 0.4.0-alpha.2 — Approved Tactical Objectives and Manual Testing
 
-One site-bound group owns one objective. A level exterior lane can lead to an open entrance, accessible frontage, one closed vanilla wooden door or fence gate, or one verified structural obstruction. Prefer open access in AUTO, followed by eligible entrance pressure and opt-in structural pressure, then frontage. PERIMETER limits selection to open access and frontage. BREACH requires a verified specialist target and respects the same structural opt-in as natural admission.
+One site-directed encounter owns the force and its primary objective. A level exterior lane can lead to an open entrance, accessible frontage, one closed vanilla wooden door or fence gate, or one verified structural obstruction. AUTO prefers open access, eligible entrance pressure, opt-in structural pressure, then frontage. PERIMETER limits selection to open access and frontage. BREACH requires a verified specialist target and respects the structural opt-in.
 
-Keep the alpha.1 allocation of up to three attackers and seven insertion attempts. Use at most one Breacher or Tank in that allocation. Use the existing entrance transition and Tank material/drop rules. Allow one bounded, interruptible windup at the designated obstruction. A successful impact can open one entrance or remove up to two eligible vanilla structural blocks. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Use loaded, dimension-appropriate collision checks and preserve native movement. A surviving wall may end the objective at the exterior.
+The owner approved moving foundational combined roles and staged reinforcements into alpha.2 after a Hard, maximum-threat Survival playtest yielded roughly three Skeletons. Site identity, admission difficulty, threat at the selected part, objective and deterministic role allocations are frozen together. The bounded intensity bands are Low below 16, Moderate from 16, High from 24 and Maximum from 45 out of 50. Industrial equipment, EMC and footprint size contribute no multiplier. Provisional plans include Normal Low at 6 total / 4 active / 2 waves, Hard Moderate at 10 / 6 / 3, and Hard Maximum at 18 / up to 9 / 3, with the configured active limit and local population cap enforced. Easy reduces allocation and specialist pressure.
+
+Vanguard, main body and heavy reserve have independent deployment windows. Successful insertions deplete their role slots. Terrain, spawning and the active cap can delay or prevent deployment, and removing the vanguard leaves the reserves eligible. The plan tracks attempts, actual roles, eliminations, withdrawals and undeployed slots. Native Zombies and Skeletons supply infantry. Skirmishers use exterior firing positions and visible defenders. Breachers approach a verified closed entrance. A Tank can deploy late on wide ground and uses its regular sweep against exposed defenders. Occasional single Thieves use visible, physical opportunities and existing recovery. The roster can represent Saboteurs for the future industrial phase.
+
+Specialists retain a site-directed approach and bounded combat. The existing telegraphed objective permits one entrance opening or one opt-in Tank impact with at most two eligible vanilla structural removals. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Counterplay can stop a windup or leave a second barrier intact while reserves continue the encounter. Attackers and waves have finite lifetimes. Reopening a save preserves natural cooldown and Thief recovery without replaying the force.
 
 A clipped footprint can admit a manual perimeter test when the insertion is outside the recorded envelope and the approach has additional verified, loaded clearance outside the insertion. Native specialist targets require a resolved perimeter. Natural admission continues to defer clipped perimeters.
 
-The monitor displays Call Site Siege, Cancel Test Siege, profile selection, origin, request state, site ID and coverage, approach, objective phase, attacker accounting and reasons. Manual tests retain the same recognized site identity across attempts. Disabling the experimental natural toggle still permits manual admission. The owner tests through the normal Debug Hub without changing world time. Keep the release Draft pending graphical and gameplay acceptance.
+The monitor displays Call Site Siege, Cancel Test Siege, independent profile and intensity selectors, origin, frozen threat and difficulty, wave rosters, inserted and active roles, reserves, objective progress, damage and failure counts. NATURAL uses assessed difficulty and site threat. LOW, MODERATE, HIGH and MAXIMUM override intensity only for the queued manual request. Manual tests retain the same recognized site identity across attempts. Disabling the experimental natural toggle still permits manual admission. The owner tests through the normal Debug Hub without changing world time. Keep the release Draft pending graphical and gameplay acceptance.
 
 ## 0.4.0-alpha.3 — Industrial Infiltration
 
@@ -1192,7 +1196,7 @@ Do not expand third-party support beyond verified safe integrations without a se
 
 Deliver:
 
-- Bounded combinations of existing mob roles.
+- Extend the foundational alpha.2 ground force with mature coordination.
 - Optional limited aerial pressure.
 - Better approach selection.
 - Tactical progression.

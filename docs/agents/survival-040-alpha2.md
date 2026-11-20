@@ -40,7 +40,7 @@ The current planner uses straight, level, cardinal lanes and samples three offse
 
 ## Owner walkthrough
 
-1. Launch the isolated **Tekkit Dev** instance and open a copy of the Survival save. Use Normal or Hard and stay in Survival. The daytime test uses the world's current clock.
+1. Install the candidate mod and matching agent into the isolated **Tekkit Dev** instance with Prism closed. Launch it and open a copy of the Survival save. Use Normal or Hard and stay in Survival. The daytime test uses the world's current clock. [Prism installation](../deploy-prism.md)
 2. Stand inside a recognized part or within 24 blocks of a recognized part. Confirm its positive site ID under **Numpad 1 → Settlement Recognition**. Leave a level exterior lane with about 14 blocks of clear approach and stand at least 12 blocks from its insertion end.
 3. Open **Numpad 1 → Site Siege**. Click the profile selector to choose **PERIMETER** and click **Call Site Siege**. Check for `REQUESTED → PLANNING → ADMITTED → ACTIVE`, origin `MANUAL_DEBUG`, the selected site and coverage, an exterior insertion and its destination. `ADMITTED` reserves the encounter. `ACTIVE` confirms a native insertion.
 4. Return from the Hub and watch the group move. With a closed entrance, look for `PRESSURE_PERIMETER` at exterior frontage. Call again with the entrance open and look for `APPROACH_ENTRANCE` and an arrival on the inside. Use **Cancel Test Siege** to end the preceding attempt when needed. Expect `CANCELLED`, `DEBUG_CANCELLED` and zero active attackers.
@@ -64,5 +64,26 @@ After `REJECTED`, correct the reported condition and call again. Terminal result
 ## Verification
 
 Use `zto-tools/test-zto-agent.ps1 -Focus site-siege` for the native local command queue, tactical fixtures, mixed equipment and natural regressions. Use `-Focus partial` for the owner-scale clipped case. The full `-Pack` run includes both. All automated native fixtures use marked disposable saves, pinned Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The MCP build uses Forge 3.4.9.171 with MCP 6.2 and JDK 8.
+
+Clean build `e5934af1a683403e4ba11afa4eec867d4a6a19b3` compiled and reobfuscated through MCP. The pack test used the verified 478-entry mod archive with SHA-256 `270c3c4c3036453056b1a6eeffe72bdcc303f5dac9ee6829f1f93fe5b5b05d0c` and agent SHA-256 `7e3cbb494a77110a70490d08bf0af59ba43885160e7e0ffa6d4a0941dacbee06`.
+
+The complete headless `-Pack` run passed, including the installed and reduced classpaths, the natural assault and patrol baseline, settlement and provenance, ordinary Enderkin tactics and the pinned compatibility suite. Portable configuration, lunar calendar, territory, wave policy and documentation checks passed.
+
+- The manual New Moon fixture inserted three daylight attackers and observed 15 blocks of movement to the open threshold with a natural cooldown active and natural site sieges disabled. Native save/reopen kept the natural record and site ID. Pending and active duplicate requests, Peaceful, absent recognition, population pressure, and mutual exclusion with PLAYER_ASSAULT produced explicit results.
+- Natural AUTO and manual BREACH both opened an eligible wooden door. A closed fence gate also opened and the attackers moved through it. Opt-in structural pressure removed exactly two cobblestone cells. A second wall layer held. Combat, specialist death, a replaced block, an unloaded target and save/reopen during windup prevented impact.
+- The mixed workshop compared persisted state for an actual IC2 cable and energy buffer, BuildCraft pipe and fluid buffer, ZTO Hopper, chest and unknown functional tile. The Breacher opened one door and all sampled device NBT matched, including after reopen.
+- The clipped factory retained site #1, 44 parts and PARTIAL coverage across save/reopen. The perimeter test placed three actors outside the recorded envelope and observed 7.50 blocks of progress. Elevated and underground fixtures rejected unsupported routes. The audited siege fixtures recorded zero missing-chunk retrievals by the director.
+
+Elapsed time was sampled on the owning thread. Native hostile times include all fixture attackers during one tick. The planner column counts include active revalidation. These measurements cover the sampled legacy runtime on the development host.
+
+| Scenario | Planner p95 µs | Active director p95 µs | Native hostiles p95 µs | Peak block and metadata calls per director tick |
+| --- | ---: | ---: | ---: | ---: |
+| Daytime approach | 2,179.3 | 41.1 | 218.0 | 63 / 24 |
+| Closed wooden door | 78.8 | 22.2 | 100.6 | 59 / 32 |
+| Closed fence gate | 95.7 | 27.5 | 64.5 | 67 / 25 |
+| One cobblestone layer | 150.7 | 32.8 | 97.2 | 698 / 142 |
+| Two cobblestone layers | 107.5 | 36.5 | 93.3 | 700 / 144 |
+
+The daytime sample took 9.1 ms of total planner work including discovery, with an initial peak of 7.2 ms. The clipped factory's 12 candidate lanes took 7.6 ms total. Measured geometry samples stayed within 28 standing positions and 255 sky reads, peak active enemies reached three, and recognition's peak remained 169 reads.
 
 Graphical controls, all GUI scales and the owner's Survival save await manual acceptance. The native probes simulate the same queue entry used by the buttons and measure world behavior without graphical input. The Windows graphical runner is restricted by the repository's input isolation rule. [Test tiers](testing.md#background-client-launch)

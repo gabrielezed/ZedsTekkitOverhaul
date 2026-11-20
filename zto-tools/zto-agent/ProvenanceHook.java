@@ -56,6 +56,8 @@ enum ProvenanceHook implements Opcodes {
                         if (site && ProvenanceHook.this == USE) {
                             currentContainer();
                             visitVarInsn(ASTORE, 9);
+                            currentScreen();
+                            visitVarInsn(ASTORE, 10);
                         }
                         super.visitMethodInsn(opcode, owner, name, desc, itf);
                         if (!site) return;
@@ -91,8 +93,11 @@ enum ProvenanceHook implements Opcodes {
                             visitVarInsn(ILOAD, 8);
                             visitVarInsn(ALOAD, 9);
                             currentContainer();
+                            visitVarInsn(ALOAD, 10);
+                            currentScreen();
                             super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "observeSiteUse",
-                                    "(ZLjava/lang/Object;Ljava/lang/Object;IIIILjava/lang/Object;Ljava/lang/Object;)V", false);
+                                    "(ZLjava/lang/Object;Ljava/lang/Object;IIIILjava/lang/Object;Ljava/lang/Object;"
+                                    + "Ljava/lang/Object;Ljava/lang/Object;)V", false);
                             return;
                         }
                         visitInsn(ICONST_0 + ordinal());
@@ -107,6 +112,12 @@ enum ProvenanceHook implements Opcodes {
                     private void currentContainer() {
                         visitVarInsn(ALOAD, 1);
                         visitFieldInsn(GETFIELD, "yw", "ar", "Ldd;");
+                    }
+
+                    private void currentScreen() {
+                        visitVarInsn(ALOAD, 0);
+                        visitFieldInsn(GETFIELD, "ki", "a", "Lnet/minecraft/client/Minecraft;");
+                        visitFieldInsn(GETFIELD, "net/minecraft/client/Minecraft", "s", "Lvp;");
                     }
                 };
             }

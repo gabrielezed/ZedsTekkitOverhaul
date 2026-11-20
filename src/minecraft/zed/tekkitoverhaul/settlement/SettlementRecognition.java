@@ -41,7 +41,7 @@ public final class SettlementRecognition implements SiteQueries {
     private EntityPlayer player;
     private SiteRegistry registry;
     private Method useHook;
-    private long tick, worldSession, routeEpoch, routeLength;
+    private long tick, worldSession, routeEpoch, routeLength, lastUse;
     private int routeX, routeY, routeZ;
     private boolean routeStarted;
     private int anchorX, anchorY, anchorZ, walked, walkIndex, useIndex, delay, peakReads;
@@ -100,6 +100,7 @@ public final class SettlementRecognition implements SiteQueries {
         routeEpoch++;
         for (int i = 0; i < recentUse.length; i++) recentUse[i] = null;
         useIndex = 0;
+        lastUse = -20;
     }
 
     public void save(World context) {
@@ -194,22 +195,38 @@ public final class SettlementRecognition implements SiteQueries {
 
     private void recordUse(Object[] context, int[] target) {
         if (Thread.currentThread() != owner || context[0] != world || context[1] != player || !eligible(player)) return;
-        Use previous = recentUse[(useIndex + RECENT_LIMIT - 1) % RECENT_LIMIT];
-        if (previous != null && tick - previous.when < 20) return;
+        if (tick - lastUse < 20) return;
         boolean nearby = routeStarted && Math.abs(target[0] - routeX) + Math.abs(target[2] - routeZ) <= 4
                 && Math.abs(target[1] - routeY) <= 1;
         int type = SiteSurvey.utilityType(target[3]);
         TileEntity tile = null;
+        int index = useIndex;
+        boolean append = true;
         if (type == 0) {
-            if (!nearby || context.length < 3) return;
-            tile = Ic2SiteAdapter.get().openedTile(target[3], context[2]);
-            if (tile == null || tile.isInvalid() || tile.worldObj != world
-                    || tile.xCoord != target[0] || tile.yCoord != target[1] || tile.zCoord != target[2]) return;
-            type = SiteSurvey.IC2;
+            if (!nearby || context.length < 3 || !world.blockExists(target[0], target[1], target[2])) return;
+            if (world.getBlockId(target[0], target[1], target[2]) != target[3]) return;
+            int flags = BlockEvidence.flags(target[3]);
+            if ((flags & BlockEvidence.TILE) != 0 && ((flags & BlockEvidence.TILE_VARIANT) == 0
+                    || BlockEvidence.hasTile(target[3], world.getBlockMetadata(target[0], target[1], target[2])))) {
+                tile = BlockEvidence.loadedTile(world, target[0], target[1], target[2]);
+                if (tile == null) return;
+            }
+            type = tile != null && Ic2SiteAdapter.get().openedTile(target[3], context[2]) == tile
+                    ? SiteSurvey.IC2 : SiteSurvey.GENERIC;
+            // Keep one recent use per modded coordinate, including repeated openings and replacements.
+            for (int i = 0; i < recentUse.length; i++) {
+                Use use = recentUse[i];
+                if (use != null && use.x == target[0] && use.y == target[1] && use.z == target[2]) {
+                    index = i;
+                    append = false;
+                    break;
+                }
+            }
         }
-        recentUse[useIndex] = new Use(target[0], target[1], target[2], type, tile, tick,
+        recentUse[index] = new Use(target[0], target[1], target[2], type, target[3], tile, tick,
                 nearby ? routeEpoch : -1, routeLength);
-        useIndex = (useIndex + 1) % RECENT_LIMIT;
+        if (append) useIndex = (useIndex + 1) % RECENT_LIMIT;
+        lastUse = tick;
     }
 
     private void evaluate(Evidence evidence) {
@@ -228,7 +245,7 @@ public final class SettlementRecognition implements SiteQueries {
             }
             for (Use use : recentUse) {
                 if (use == null) continue;
-                if (!survey.associatedUtility(evidence, use.x, use.y, use.z, use.type, use.tile)) result.outside[use.type]++;
+                if (!associated(evidence, use)) result.outside[use.type]++;
                 else if (tick - use.when > USE_MEMORY) result.expired[use.type]++;
                 else {
                     result.opened[use.type]++;
@@ -250,13 +267,19 @@ public final class SettlementRecognition implements SiteQueries {
         int activity = result.activity, steps = result.walked, uses = result.uses;
         long clock = result.clock;
         boolean observed = evidence.manual >= 8;
-        boolean familiar = evidence.inferred >= 16 && uses >= 2;
+        int functionalUses = result.opened[SiteSurvey.IC2] + result.opened[SiteSurvey.GENERIC];
+        boolean contextual = evidence.contextual > 0;
+        boolean familiar = evidence.inferred >= 16 && uses >= 2
+                && (!contextual || (functionalUses >= 2 && evidence.genericTypes >= 2 && activity >= 2));
         boolean shelter = result.cover >= 4;
         int machineOpens = result.opened[SiteSurvey.IC2];
         boolean diverse = Integer.bitCount(evidence.machineTypes) >= 2;
         boolean connectedWorkshop = diverse && evidence.connections > 0;
         boolean industrialGrowth = diverse && (machineOpens >= 2 || (connectedWorkshop && machineOpens >= 1));
         boolean industrialOpenAir = observed && connectedWorkshop && activity >= 2;
+        boolean genericGrowth = evidence.genericTypes >= 2 && functionalUses >= 2;
+        boolean genericOpenAir = observed && activity >= 2 && evidence.endpointTypes >= 2
+                && evidence.associated[SiteSurvey.GENERIC] >= 3 && evidence.localAssociations >= 2;
         Match match = registry.match(bounds, survey.focusX, survey.focusY, survey.focusZ);
         if (match.ambiguous) {
             result.state = "Ambiguous";
@@ -277,18 +300,20 @@ public final class SettlementRecognition implements SiteQueries {
             Part part = result.part;
             boolean fullPart = survey.completelyCovers(part.bounds);
             if (evidence.faces == 0 && evidence.spread() && (evidence.manual >= 4 || evidence.inferred >= 8)
+                    && (!contextual || familiar)
                     && (steps >= 2 || uses > 0) && clock >= 0 && match.overlap > 0) {
                 registry.reobserve(known, part, clock, evidence.manual, evidence.inferred, uses);
                 confirmUses(result);
                 result.confirmed = true;
                 boolean ordinaryGrowth = observed && (shelter || uses > 0);
-                boolean workshopGrowth = industrialGrowth && evidence.inferred >= 16 && steps >= 4
+                boolean workshopGrowth = (industrialGrowth || genericGrowth) && evidence.inferred >= 16 && steps >= 4
                         && usedOutside(part.bounds, evidence);
                 if ((ordinaryGrowth || workshopGrowth)
                         && registry.expand(known, part, bounds)) {
-                    result.networkUsed = !ordinaryGrowth && connectedWorkshop && machineOpens == 1;
+                    result.networkUsed = !ordinaryGrowth && !genericGrowth && connectedWorkshop && machineOpens == 1;
                     result.reason = "Existing site footprint expanded";
-                } else if (fullPart && observed && part.bounds.covers(bounds) && part.bounds.volume() > bounds.volume()) {
+                } else if (fullPart && observed && part.bounds.covers(bounds) && part.bounds.volume() > bounds.volume()
+                        && !survey.legacyConstructionOutside(part.bounds, bounds)) {
                     if (registry.contract(known, part, bounds)) result.reason = "Existing site footprint narrowed";
                     else {
                         result.confirmed = false;
@@ -313,14 +338,15 @@ public final class SettlementRecognition implements SiteQueries {
         } else if (evidence.faces != 0) {
             result.state = "Candidate";
             result.reason = "Construction reaches the survey edge";
-        } else if (!shelter && uses == 0 && !industrialOpenAir) {
-            result.reason = "Little cover in this sample. Open a local utility to corroborate use.";
+        } else if (!shelter && uses == 0 && !industrialOpenAir && !genericOpenAir) {
+            result.reason = "Little cover. Open a local utility or group nearby devices.";
         } else if (activity < 1 && uses < 2) {
             result.reason = "Insufficient local activity";
         } else {
             result.state = "Candidate";
             if (!observed && !familiar) {
-                result.reason = "Unknown authorship. Needs repeated utility use.";
+                result.reason = contextual ? "Unlogged platform needs local use of distinct devices."
+                        : "Unknown authorship. Needs repeated utility use.";
             } else if (steps < 4 || (activity < 2 && uses < 2) || clock < 0) {
                 result.reason = "Structure found. Needs corroborating local use.";
             } else {
@@ -347,6 +373,8 @@ public final class SettlementRecognition implements SiteQueries {
                     result.networkUsed = result.site != null && !shelter && uses == 0 && industrialOpenAir;
                     if (result.site == null) result.reason = "Registry capacity reached";
                     else if (result.networkUsed) result.reason = "Construction and local wiring corroborated";
+                    else if (!shelter && uses == 0 && genericOpenAir) result.reason = "Construction and local equipment corroborated";
+                    else if (functionalUses > 0) result.reason = "Construction and device use corroborated";
                     else result.reason = observed ? "Construction and local use corroborated"
                             : "Structure and repeated utility use corroborated";
                     if (result.site != null) result.part = result.site.parts.get(0);
@@ -360,17 +388,23 @@ public final class SettlementRecognition implements SiteQueries {
 
     private boolean usedOutside(Bounds known, Evidence evidence) {
         for (Use use : recentUse) {
-            if (use != null && use.type == SiteSurvey.IC2 && tick - use.when <= USE_MEMORY
+            if (use != null && (use.type == SiteSurvey.IC2 || use.type == SiteSurvey.GENERIC) && tick - use.when <= USE_MEMORY
                     && !known.contains(use.x, use.y, use.z)
-                    && survey.associatedUtility(evidence, use.x, use.y, use.z, use.type, use.tile)) return true;
+                    && associated(evidence, use)) return true;
         }
         return false;
+    }
+
+    private boolean associated(Evidence evidence, Use use) {
+        return survey.associatedUtility(evidence, use.x, use.y, use.z, use.type, use.id, use.tile)
+                || use.type == SiteSurvey.IC2
+                && survey.associatedUtility(evidence, use.x, use.y, use.z, SiteSurvey.GENERIC, use.id, use.tile);
     }
 
     private void confirmUses(Decision result) {
         for (Use use : recentUse) {
             if (use != null && use.epoch == routeEpoch && tick - use.when <= LINK_TIME
-                    && survey.associatedUtility(result.evidence, use.x, use.y, use.z, use.type, use.tile)) {
+                    && associated(result.evidence, use)) {
                 use.site = result.site;
                 use.part = result.part;
             }
@@ -540,17 +574,18 @@ public final class SettlementRecognition implements SiteQueries {
     }
 
     private static final class Use {
-        final int x, y, z, type;
+        final int x, y, z, type, id;
         final TileEntity tile;
         final long when, epoch, distance;
         Site site;
         Part part;
 
-        Use(int x, int y, int z, int type, TileEntity tile, long when, long epoch, long distance) {
+        Use(int x, int y, int z, int type, int id, TileEntity tile, long when, long epoch, long distance) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.type = type;
+            this.id = id;
             this.tile = tile;
             this.when = when;
             this.epoch = epoch;
@@ -596,9 +631,11 @@ public final class SettlementRecognition implements SiteQueries {
         public final long observedTick, assessedTick, assessmentAge;
         public final boolean useHook, queued;
         public final UtilitySnapshot workbench, furnace, chest;
-        public final UtilitySnapshot ic2;
+        public final UtilitySnapshot ic2, generic;
         public final boolean ic2Available, networkUsed;
         public final int machineTypes, placedMachines, cables, unsupportedIndustrial, connections, clusters, limitedNetworks;
+        public final int verified, contextual, unattributed, genericTypes, inventories, supports, localAssociations;
+        public final int genericReads, ic2Reads;
 
         private Snapshot(String registry, int count, Site site, Decision decision, boolean useHook, boolean queued,
                          int reads, int peakReads, long tick, Bounds pendingExtent, boolean ambiguous, boolean ic2Available) {
@@ -637,6 +674,16 @@ public final class SettlementRecognition implements SiteQueries {
             furnace = new UtilitySnapshot(decision, 2);
             chest = new UtilitySnapshot(decision, 3);
             ic2 = new UtilitySnapshot(decision, SiteSurvey.IC2);
+            generic = new UtilitySnapshot(decision, SiteSurvey.GENERIC);
+            verified = evidence == null ? -1 : evidence.verified;
+            contextual = evidence == null ? -1 : evidence.contextual;
+            unattributed = evidence == null ? -1 : evidence.unattributed;
+            genericTypes = evidence == null ? -1 : evidence.genericTypes;
+            inventories = evidence == null ? -1 : evidence.inventories;
+            supports = evidence == null ? -1 : evidence.supports;
+            localAssociations = evidence == null ? -1 : evidence.localAssociations;
+            genericReads = evidence == null ? -1 : evidence.genericReads;
+            ic2Reads = evidence == null ? -1 : evidence.ic2Reads;
             this.ic2Available = ic2Available;
             networkUsed = decision != null && decision.networkUsed;
             machineTypes = evidence == null ? -1 : Integer.bitCount(evidence.machineTypes);
@@ -646,7 +693,7 @@ public final class SettlementRecognition implements SiteQueries {
             connections = evidence == null ? -1 : evidence.connections;
             clusters = evidence == null ? -1 : evidence.clusters;
             limitedNetworks = evidence == null ? -1 : evidence.limitedNetworks;
-            utilities = evidence == null ? -1 : workbench.associated + furnace.associated + chest.associated + ic2.associated;
+            utilities = evidence == null ? -1 : workbench.associated + furnace.associated + chest.associated + generic.associated;
             cover = evidence == null ? -1 : decision.cover;
             anchorCover = evidence == null ? -1 : evidence.anchorCover;
             clipFaces = evidence == null ? 0 : evidence.faces;

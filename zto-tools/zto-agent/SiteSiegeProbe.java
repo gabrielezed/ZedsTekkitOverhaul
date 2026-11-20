@@ -15,7 +15,7 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 
 /** Native simulation using the same disposable world and recognition setup as the settlement suite. */
-public final class SiteSiegeProbe extends SettlementProbe {
+public class SiteSiegeProbe extends SettlementProbe {
     private final Samples planner = new Samples(), recognition = new Samples(), movement = new Samples();
     private final Samples activeTicks = new Samples();
     private long lastPlannerNanos, firstMeasuredTick, peakPlannerTick, peakPlannerNanos;
@@ -23,7 +23,7 @@ public final class SiteSiegeProbe extends SettlementProbe {
     private int peakBlockReads, peakMetadataReads, peakMobs;
     private double peakStep;
 
-    private SiteSiegeProbe(File root) throws Exception { super(root); }
+    SiteSiegeProbe(File root) throws Exception { super(root); }
 
     public static void main(String[] args) {
         try {
@@ -466,13 +466,13 @@ public final class SiteSiegeProbe extends SettlementProbe {
         System.out.println("PASS planning pause, pre-commit resync, forecast and twilight ownership without late fallback");
     }
 
-    private long siegeDusk(int cycles) {
+    long siegeDusk(int cycles) {
         long seed = world.v();
         long residue = Math.floorMod(seed ^ (seed >>> 32), 3);
         return ((residue + cycles) * 8 + 4) * LunarSnapshot.DAY + LunarSnapshot.NIGHT_START;
     }
 
-    private LunarCalendar siegeCalendar(long session, long time, long watermark) {
+    LunarCalendar siegeCalendar(long session, long time, long watermark) {
         return siegeCalendar(session, time, watermark, 0);
     }
 
@@ -487,14 +487,14 @@ public final class SiteSiegeProbe extends SettlementProbe {
         return calendar;
     }
 
-    private SiegeDirector siegeDirector(boolean enabled, LunarCalendar calendar) {
+    SiegeDirector siegeDirector(boolean enabled, LunarCalendar calendar) {
         SiegeDirector director = new SiegeDirector(true, 15, 900, 8, 16, false, false, false);
         director.attachSites(enabled, settlements);
         director.bind(world, calendar.view());
         return director;
     }
 
-    private long waitForSiege(SiegeDirector director, LunarCalendar calendar, long dusk) {
+    long waitForSiege(SiegeDirector director, LunarCalendar calendar, long dusk) {
         for (long time = dusk; time < dusk + 1100; time++) {
             siegeTicks(director, calendar, time, 1);
             SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
@@ -607,7 +607,7 @@ public final class SiteSiegeProbe extends SettlementProbe {
         }
     }
 
-    private static String siegeDetails(SiteSiege.Snapshot view) {
+    static String siegeDetails(SiteSiege.Snapshot view) {
         return String.format("%s/%s site=%d %s %s %s | %s | inserted=%d active=%d progress=%.2f steps=%d arrivals=%d"
                         + " | lanes=%d columns=%d peak=%d sky=%d peak=%d protection=%d | %d/%d us total/peak",
                 view.kind, view.phase, view.site, view.coverage, view.eligibility, view.rejection, view.approach,

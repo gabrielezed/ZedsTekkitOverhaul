@@ -21,7 +21,7 @@ final class GuiSettlementRecognition extends GuiScreen {
     private SiteSnapshot footprint;
     private Assessment protection;
     private int x, y, z, ticks, row, page;
-    private static final String[] NEXT_PAGE = {"Survey & Storage", "Protection", "Industry", "Assessment"};
+    private static final String[] NEXT_PAGE = {"Survey & Storage", "Protection", "Industry", "IC2 Wiring", "Assessment"};
 
     GuiSettlementRecognition(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -97,6 +97,7 @@ final class GuiSettlementRecognition extends GuiScreen {
             if (page == 1) drawTechnical();
             else if (page == 2) drawProtection();
             else if (page == 3) drawIndustry();
+            else if (page == 4) drawWiring();
             else drawAssessment();
         }
         super.drawScreen(mouseX, mouseY, partialTick);
@@ -138,6 +139,18 @@ final class GuiSettlementRecognition extends GuiScreen {
     }
 
     private void drawIndustry() {
+        if (site.generic.found < 0) return;
+        line("Verified placements in window: " + site.verified);
+        line("Inferred platform blocks: " + site.contextual + " | Unattributed solid blocks: " + site.unattributed);
+        line("Loaded equipment: " + site.generic.found + " | Associated: " + site.generic.associated);
+        line("Associated inventory endpoints: " + site.inventories + " | Equipment types: " + site.genericTypes);
+        line("Successful device openings: " + (site.useHook ? site.generic.opened + site.ic2.opened : "?"));
+        line("Nearby associations: " + site.localAssociations + " | Supporting equipment: " + site.supports);
+        line("Verified IC2 paths: " + (site.ic2Available ? site.connections : "?"));
+        line("Survey reads for equipment / IC2 details: " + site.genericReads + " / " + site.ic2Reads);
+    }
+
+    private void drawWiring() {
         if (!site.ic2Available) {
             line("Pinned IC2 adapter unavailable");
             return;

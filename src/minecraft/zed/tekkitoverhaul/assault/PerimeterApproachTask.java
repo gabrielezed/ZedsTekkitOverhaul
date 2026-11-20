@@ -5,19 +5,25 @@ import net.minecraft.src.EntityAIBase;
 import net.minecraft.src.EntityAITasks;
 import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityMob;
+import net.minecraft.src.MathHelper;
 import net.minecraft.src.PathPoint;
 import zed.tekkitoverhaul.survival.tactical.EntityTank;
+import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 
 /** A transient native action task with a finite, prevalidated set of waypoints. */
 final class PerimeterApproachTask extends EntityAIBase {
     private static final Field ACTIONS = actionField();
+    // The pinned native navigator uses a 16-block search and a 16-block entity path cache margin.
+    private static final int COMBAT_CACHE_RADIUS = 32;
     private final EntityMob mob;
+    private final boolean infantry;
     private PathPoint[] route;
     private boolean engaged = true, hold;
     private int next = 1;
 
     private PerimeterApproachTask(EntityMob mob, SiteApproach approach, boolean hold) {
         this.mob = mob;
+        infantry = !(mob instanceof TacticalHostile);
         route = approach.route;
         this.hold = hold;
         setMutexBits(7);
@@ -32,6 +38,8 @@ final class PerimeterApproachTask extends EntityAIBase {
             if (tasks == null) return null;
             PerimeterApproachTask task = new PerimeterApproachTask(mob, approach, hold);
             tasks.addTask(0, task);
+            if (mob instanceof SiegeZombie) ((SiegeZombie) mob).approach = task;
+            if (mob instanceof DebugSiegeSkeleton) ((DebugSiegeSkeleton) mob).approach = task;
             return task;
         } catch (IllegalAccessException failure) {
             return null;
@@ -53,12 +61,34 @@ final class PerimeterApproachTask extends EntityAIBase {
         }
     }
 
-    @Override public boolean shouldExecute() { return engaged; }
+    @Override public boolean shouldExecute() { return engaged && (!arrived() || hold); }
+
+    boolean combatDeferred() {
+        return infantry && arrived() && !loadedCombatCache();
+    }
+
+    private boolean loadedCombatCache() {
+        int x = MathHelper.floor_double(mob.posX), z = MathHelper.floor_double(mob.posZ);
+        return mob.worldObj.checkChunksExist(x - COMBAT_CACHE_RADIUS, 0, z - COMBAT_CACHE_RADIUS,
+                x + COMBAT_CACHE_RADIUS, 0, z + COMBAT_CACHE_RADIUS);
+    }
+
+    boolean updateWithoutCombat() {
+        if (!engaged || loadedCombatCache()) return false;
+        // Direct waypoints only use the locally validated lane. Skip native searches until their
+        // full cache is available, and keep the movement and look helpers ticking.
+        updateTask();
+        mob.getMoveHelper().onUpdateMoveHelper();
+        mob.getLookHelper().onUpdateLook();
+        mob.getJumpHelper().doJump();
+        return true;
+    }
 
     @Override public void updateTask() {
         // The native scheduler selects tasks before running its update pass.
         if (!engaged) return;
         mob.getNavigator().clearPathEntity();
+        if (infantry) mob.setAttackTarget(null);
         if (arrived()) {
             if (hold) {
                 PathPoint goal = route[route.length - 1];
@@ -69,10 +99,7 @@ final class PerimeterApproachTask extends EntityAIBase {
         PathPoint point = route[next];
         if (horizontalDistanceSq(point) < 0.16 && Math.abs(mob.boundingBox.minY - point.yCoord) < 0.75) {
             next++;
-            if (arrived()) {
-                if (!hold) release();
-                return;
-            }
+            if (arrived()) return;
             point = route[next];
         }
         move(point);

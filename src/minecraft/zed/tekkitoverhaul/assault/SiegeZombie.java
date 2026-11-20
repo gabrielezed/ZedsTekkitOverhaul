@@ -8,11 +8,16 @@ import net.minecraft.src.World;
 final class SiegeZombie extends EntityZombie {
     private final boolean daylightTest;
     private boolean checkingSun;
+    PerimeterApproachTask approach;
 
     SiegeZombie(World world, boolean daylightTest) {
         super(world);
         this.daylightTest = daylightTest;
         getNavigator().setBreakDoors(false);
+    }
+
+    @Override protected void updateAITasks() {
+        if (approach == null || !approach.updateWithoutCombat()) super.updateAITasks();
     }
 
     @Override public void onLivingUpdate() {

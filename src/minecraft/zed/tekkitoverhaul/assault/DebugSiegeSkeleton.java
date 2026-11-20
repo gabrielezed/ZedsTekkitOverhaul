@@ -8,10 +8,15 @@ import net.minecraft.src.World;
 final class DebugSiegeSkeleton extends EntitySkeleton {
     private final boolean daylightTest;
     private boolean checkingSun;
+    PerimeterApproachTask approach;
 
     DebugSiegeSkeleton(World world, boolean daylightTest) {
         super(world);
         this.daylightTest = daylightTest;
+    }
+
+    @Override protected void updateAITasks() {
+        if (approach == null || !approach.updateWithoutCombat()) super.updateAITasks();
     }
 
     @Override public void onLivingUpdate() {

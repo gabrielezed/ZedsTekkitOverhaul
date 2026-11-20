@@ -563,6 +563,7 @@ public final class SiteSiege {
             if (attacker.task.arrived() && !attacker.counted) {
                 attacker.counted = true;
                 arrivals++;
+                if (attacker.task.combatDeferred()) count(failures, attacker.role + "/COMBAT_CACHE_UNLOADED");
                 if (attacker != specialist && mob instanceof TacticalHostile) ((TacticalHostile) mob).beginSiteCombat();
             }
         }

@@ -18,6 +18,7 @@ Use **Semantic Versioning 2.0.0** with prerelease labels, and keep Git/build ide
 - `0.1.0`: stabilized first release of the survival prototype, not necessarily an externally public release.
 - `0.1.1`: bug-fix release after 0.1.0.
 - `0.2.0-alpha.1`: next planned gameplay feature line.
+- `0.4.0-alpha.2`: Draft tactical site-siege candidate with manual Debug Hub testing. [Candidate evidence and owner acceptance](survival-040-alpha2.md)
 - `1.0.0`: meaningful product/API stability milestone; **not** required until scope and compatibility are mature.
 
 While `0.x`, public API and save compatibility may evolve, **but explicit migrations must still be considered**. Do not treat SemVer major/minor numbers as a license to corrupt worlds.

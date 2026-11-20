@@ -1066,6 +1066,8 @@ Extend the ZTO Debug Hub.
 
 Provide a dedicated siege monitor.
 
+Alpha.2 adds Call Site Siege, Cancel Test Siege and an AUTO, PERIMETER or BREACH selector. The overview displays request and tactical states, origin, site ID and coverage, objective, approach and both rejection and resolution. A details view shows planning work and actual changes. The screen remains non-pausing at the legacy GUI scales.
+
 Useful information includes:
 
 - Event kind.
@@ -1164,6 +1166,8 @@ Alpha.1 adds no structural damage, block breaking, machinery sabotage, resource 
 One site-bound group owns one objective. A level exterior lane can lead to an open entrance, accessible frontage, one closed vanilla wooden door or fence gate, or one verified structural obstruction. Prefer open access in AUTO, followed by eligible entrance pressure and opt-in structural pressure, then frontage. PERIMETER limits selection to open access and frontage. BREACH requires a verified specialist target and respects the same structural opt-in as natural admission.
 
 Keep the alpha.1 allocation of up to three attackers and seven insertion attempts. Use at most one Breacher or Tank in that allocation. Use the existing entrance transition and Tank material/drop rules. Allow one bounded, interruptible windup at the designated obstruction. A successful impact can open one entrance or remove up to two eligible vanilla structural blocks. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Use loaded, dimension-appropriate collision checks and preserve native movement. A surviving wall may end the objective at the exterior.
+
+A clipped footprint can admit a manual perimeter test when the insertion is outside the recorded envelope and the approach has additional verified, loaded clearance outside the insertion. Native specialist targets require a resolved perimeter. Natural admission continues to defer clipped perimeters.
 
 The monitor displays Call Site Siege, Cancel Test Siege, profile selection, origin, request state, site ID and coverage, approach, objective phase, attacker accounting and reasons. Manual tests retain the same recognized site identity across attempts. Disabling the experimental natural toggle still permits manual admission. The owner tests through the normal Debug Hub without changing world time. Keep the release Draft pending graphical and gameplay acceptance.
 

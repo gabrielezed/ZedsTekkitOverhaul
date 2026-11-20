@@ -39,6 +39,8 @@ Schema 1 and 2 registries remain readable and preserve IDs. A save writes schema
 
 An unresolved site is returned by SiteQueries with PARTIAL coverage when its evidence is current. It is excluded from SITE_SIEGE approach planning until a compact site has a complete corroborated survey. A newly observed clipped boundary conveys no exterior guarantee. Existing PARTIAL coverage of a historically verified footprint still uses the native approach, open-sky, collision and insertion checks. Rejection leaves settlement identity intact, with ordinary PLAYER_ASSAULT governed by its existing scheduler. [Siege acceptance](survival-040-alpha1.md)
 
+Alpha.2 keeps the unresolved-perimeter gate for natural sieges. A manual perimeter request can use a loaded local route with additional exterior standing checks, open sky, a position outside the full recorded envelope and an EXPOSED Protected Interior assessment. [Manual siege contract](survival-040-alpha2.md)
+
 ## Owner walkthrough
 
 1. Copy the Survival save into an isolated Tekkit Dev profile for the updated build. Leave the existing construction and utility layout in place.

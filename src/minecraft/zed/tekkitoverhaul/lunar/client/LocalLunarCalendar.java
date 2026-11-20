@@ -136,6 +136,18 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
                 ? assault.siteSiegeSnapshot(context) : null;
     }
 
+    void requestTestSiege(World context, SiteSiege.Profile profile) {
+        if (ownsDebugWorld(context)) assault.requestTestSiege(context, game.thePlayer, profile);
+    }
+
+    void cancelTestSiege(World context) {
+        if (ownsDebugWorld(context)) assault.cancelTestSiege(context);
+    }
+
+    private boolean ownsDebugWorld(World context) {
+        return Thread.currentThread() == owner && context == world && context == game.theWorld && local(context);
+    }
+
     public TerritorialActivityService.Snapshot territorialSnapshot(World context) {
         return Thread.currentThread() == owner && context != null && context == game.theWorld
                 ? territory.snapshot(context, game.thePlayer) : null;

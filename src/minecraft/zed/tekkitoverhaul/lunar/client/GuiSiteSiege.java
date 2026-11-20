@@ -10,6 +10,9 @@ final class GuiSiteSiege extends GuiScreen {
     private final LocalLunarCalendar local;
     private final World world;
     private final GuiScreen parent;
+    private SiteSiege.Profile profile = SiteSiege.Profile.AUTO;
+    private GuiButton call, cancel, select, details;
+    private boolean showDetails;
 
     GuiSiteSiege(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -18,13 +21,40 @@ final class GuiSiteSiege extends GuiScreen {
     }
 
     @Override public void initGui() {
-        controlList.add(new GuiButton(0, width / 2 - 100, height - 27, "Back to Debug Hub"));
+        int left = width / 2 - 126;
+        controlList.add(call = new GuiButton(1, left, 23, 80, 20, "Call Site Siege"));
+        controlList.add(cancel = new GuiButton(2, left + 82, 23, 91, 20, "Cancel Test Siege"));
+        controlList.add(select = new GuiButton(3, left + 175, 23, 77, 20, profile.name()));
+        controlList.add(details = new GuiButton(4, left, height - 25, 80, 20, "Details"));
+        controlList.add(new GuiButton(0, left + 82, height - 25, 170, 20, "Back to Debug Hub"));
+        refreshControls();
     }
 
-    @Override protected void actionPerformed(GuiButton button) { mc.displayGuiScreen(parent); }
+    @Override protected void actionPerformed(GuiButton button) {
+        if (button.id == 0) mc.displayGuiScreen(parent);
+        else if (button.id == 1) local.requestTestSiege(world, profile);
+        else if (button.id == 2) local.cancelTestSiege(world);
+        else if (button.id == 3) {
+            SiteSiege.Profile[] profiles = SiteSiege.Profile.values();
+            profile = profiles[(profile.ordinal() + 1) % profiles.length];
+            select.displayString = profile.name();
+        } else if (button.id == 4) {
+            showDetails = !showDetails;
+            details.displayString = showDetails ? "Overview" : "Details";
+        }
+        refreshControls();
+    }
 
     @Override public void updateScreen() {
         if (mc.theWorld != world || world.isRemote) mc.displayGuiScreen(null);
+        else refreshControls();
+    }
+
+    private void refreshControls() {
+        SiteSiege.Snapshot view = local.siteSiegeSnapshot(world);
+        call.enabled = view != null && view.callAvailable;
+        cancel.enabled = view != null && view.cancelAvailable;
+        select.enabled = call.enabled;
     }
 
     @Override public boolean doesGuiPauseGame() { return false; }
@@ -35,32 +65,35 @@ final class GuiSiteSiege extends GuiScreen {
         SiteSiege.Snapshot view = local.siteSiegeSnapshot(world);
         if (view == null) {
             row(0, "No local encounter authority");
-        } else {
+        } else if (showDetails) {
             LunarSnapshot lunar = local.snapshot(world);
             row(0, "Major encounter " + view.kind + " | " + local.assaultEligibility(world).label);
-            row(1, "Siege " + view.phase + " | " + view.eligibility);
-            row(2, "Next siege cycle " + number(view.nextOpportunityCycle) + " | last dusk " + number(view.boundary)
+            row(1, "Next siege cycle " + number(view.nextOpportunityCycle) + " | boundary " + number(view.boundary)
                     + (view.opportunity ? " (eligible)" : ""));
-            String siteLabel = view.phase.equals("ACTIVE") || view.phase.equals("PLANNING") ? "Site " : "Last site ";
-            row(3, siteLabel + (view.site == 0 ? "-" : view.site) + " | " + view.identity + " | " + view.coverage
+            row(2, "Cooldown " + cooldown(view.cooldownUntil, lunar));
+            row(3, "Dimension " + (view.siteSession == 0 ? "-" : view.dimension) + " | session " + view.siteSession);
+            row(4, "Steps " + view.steps + " | arrivals " + view.arrivals + " | geometry age " + view.geometryAge);
+            row(5, "Lanes " + view.candidates + " | " + view.columns + " columns | " + view.skyReads + " sky reads");
+            row(6, "Peak " + view.peakColumns + " columns / " + view.peakSkyReads + " sky reads");
+            row(7, "Protection " + view.protectionReads + " reads | insertion tries " + view.attempts);
+            row(8, "Planner " + view.planningNanos / 1000 + " us total | " + view.peakPlanningNanos / 1000 + " us peak");
+        } else {
+            row(0, "Request " + view.request + " | " + view.requestReason);
+            row(1, "Origin " + view.origin + " | encounter " + view.kind);
+            row(2, "Site " + (view.site == 0 ? "-" : view.site) + " | " + view.coverage
                     + (view.dormant ? " | dormant" : ""));
-            row(4, "Dimension " + (view.siteSession == 0 ? "-" : view.dimension) + " | session " + view.siteSession);
-            row(5, "Approach " + view.approach + " | age " + view.geometryAge);
-            row(6, "Objective " + view.objective + " | " + view.steps + " steps | " + view.arrivals + " arrived");
-            row(7, "Attackers " + view.active + " active / " + view.inserted + " inserted | " + view.remaining + " left");
-            row(8, "Elapsed " + view.elapsed + " ticks | last outcome " + view.outcome);
-            row(9, "Last rejection " + view.rejection);
-            row(10, "Cooldown " + cooldown(view.cooldownUntil, lunar));
-            row(11, "Samples " + view.candidates + " lanes | " + view.columns + " columns | " + view.skyReads + " sky reads");
-            row(12, "Peak " + view.peakColumns + " columns / " + view.peakSkyReads + " sky reads per sample");
-            row(13, "Protection " + view.protectionReads + " reads | insertion tries " + view.attempts);
-            row(14, "Planner " + view.planningNanos / 1000 + " us total | " + view.peakPlanningNanos / 1000 + " us peak");
+            row(3, "Siege " + view.phase + " | " + view.eligibility);
+            row(4, "Objective " + view.objective + " | profile " + view.profile);
+            row(5, "Approach " + view.approach);
+            row(6, "Attackers " + view.active + " active / " + view.inserted + " inserted | " + view.remaining + " left");
+            row(7, "Last rejection " + view.rejection);
+            row(8, "Last resolution " + view.outcome);
         }
         super.drawScreen(mouseX, mouseY, partialTick);
     }
 
     private void row(int index, String value) {
-        drawString(fontRenderer, fontRenderer.trimStringToWidth(value, width - 16), 8, 25 + index * 11, 0xDDDDDD);
+        drawString(fontRenderer, fontRenderer.trimStringToWidth(value, width - 16), 8, 49 + index * 11, 0xDDDDDD);
     }
 
     private static String number(long value) { return value == Long.MIN_VALUE ? "-" : Long.toString(value); }

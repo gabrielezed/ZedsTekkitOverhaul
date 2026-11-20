@@ -1044,6 +1044,10 @@ Own narrow, tested interference contracts.
 
 Preserve mod-specific inventory, fluid and energy behavior.
 
+### Local debug admission (alpha.2)
+
+The non-pausing Site Siege monitor queues a world-bound request for the owning simulation tick. `MANUAL_DEBUG` uses the same site query, approach validation, allocation and execution as `NATURAL`. It bypasses the natural toggle, dusk, moon phase, rarity, cooldown and hostile light checks. Debug attackers are transient and removed by encounter ownership on termination. Peaceful, loaded geometry, local population and Protected Interior remain admission constraints. A natural boundary already awaiting admission has priority over a queued debug request. A boundary arriving while a debug encounter is planning or active passes without a major encounter and is never queued for later admission. Debug admission and resolution write no assault or site cooldown records.
+
 ### Debug and Dev Bridge
 
 Observe the authoritative simulation.
@@ -1155,19 +1159,13 @@ Keep a finite group allocation, deadline and retry allowance. Resolve on elimina
 
 Alpha.1 adds no structural damage, block breaking, machinery sabotage, resource mutation, siege-exclusive creatures, compulsory defenses, or ownership mechanics. Later alpha plans and open owner decisions remain proposals. Range, rarity and encounter pressure require owner playtesting.
 
-## 0.4.0-alpha.2 — Tactical Objectives
+## 0.4.0-alpha.2 — Approved Tactical Objectives and Manual Testing
 
-**Goal:** Make architecture matter.
+One site-bound group owns one objective. A level exterior lane can lead to an open entrance, accessible frontage, one closed vanilla wooden door or fence gate, or one verified structural obstruction. Prefer open access in AUTO, followed by eligible entrance pressure and opt-in structural pressure, then frontage. PERIMETER limits selection to open access and frontage. BREACH requires a verified specialist target and respects the same structural opt-in as natural admission.
 
-Deliver:
+Keep the alpha.1 allocation of up to three attackers and seven insertion attempts. Use at most one Breacher or Tank in that allocation. Use the existing entrance transition and Tank material/drop rules. Allow one bounded, interruptible windup at the designated obstruction. A successful impact can open one entrance or remove up to two eligible vanilla structural blocks. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Use loaded, dimension-appropriate collision checks and preserve native movement. A surviving wall may end the objective at the exterior.
 
-- Perimeter approach objectives.
-- Limited breach opportunities.
-- Group objective ownership.
-- Meaningful defender counterplay.
-- Bounded tactical profile selection.
-
-Test castles, bunkers, courtyards and exposed factories.
+The monitor displays Call Site Siege, Cancel Test Siege, profile selection, origin, request state, site ID and coverage, approach, objective phase, attacker accounting and reasons. Manual tests retain the same recognized site identity across attempts. Disabling the experimental natural toggle still permits manual admission. The owner tests through the normal Debug Hub without changing world time. Keep the release Draft pending graphical and gameplay acceptance.
 
 ## 0.4.0-alpha.3 — Industrial Infiltration
 

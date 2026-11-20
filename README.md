@@ -12,7 +12,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows mor
 
 ## Survival 0.2.3-alpha.2 · Biome ecology and industrial survival
 
-| Fugl | Skelebird (Skelerakk) | Magpie |
+| Fugl | Skelebird | Magpie |
 | :---: | :---: | :---: |
 | ![Fugl gliding with outstretched wings](docs/agents/images/fugl-portrait.png) | ![Skelebird in flight with open ribs and jointed wing bones](docs/agents/images/skelebird-portrait.png) | ![Black-and-white magpie with a blue wing patch](docs/agents/images/magpie-portrait.png) |
 | Aerial predator that circles and dives. Passing Fugls can hunt exposed chickens. | Nocturnal skeletal hunter that crosses low over exposed ground. | Forest bird that perches, scavenges, and occasionally steals one recoverable seed or feather. |

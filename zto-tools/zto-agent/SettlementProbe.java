@@ -1691,6 +1691,12 @@ public class SettlementProbe implements ISaveEventHandler {
             return ((x >> 4) != hiddenX || (z >> 4) != hiddenZ) && super.j(x, y, z);
         }
 
+        @Override public boolean b(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+            if (hiddenX >= (minX >> 4) && hiddenX <= (maxX >> 4)
+                    && hiddenZ >= (minZ >> 4) && hiddenZ <= (maxZ >> 4)) return false;
+            return super.b(minX, minY, minZ, maxX, maxY, maxZ);
+        }
+
         @Override public int a(int x, int y, int z) {
             if (auditBlocks) blockReads++;
             return super.a(x, y, z);

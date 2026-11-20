@@ -134,7 +134,7 @@ public final class SettlementRecognition implements SiteQueries {
         if (delay > 0) delay--;
         if (survey.active && !survey.near(x, y, z, 3, 2)) survey.active = false;
         if (!survey.active) {
-            if (delay > 0) return;
+            if (delay > 0 && !movingAlongFragment(x, y, z)) return;
             survey.start(x, y, z);
             delay = INTERVAL;
         }
@@ -175,6 +175,13 @@ public final class SettlementRecognition implements SiteQueries {
         routeX = x;
         routeY = y;
         routeZ = z;
+    }
+
+    private boolean movingAlongFragment(int x, int y, int z) {
+        return latest != null && latest.part != null && latest.site.fragmented && latest.evidence != null
+                && latest.route == routeEpoch && tick - latest.tick >= 12 && latest.evidence.bounds != null
+                && latest.evidence.bounds.contains(x, y, z, 2)
+                && Math.max(Math.abs(x - resultX), Math.abs(z - resultZ)) >= 5;
     }
 
     private void rememberWalk(int x, int y, int z) {
@@ -234,14 +241,17 @@ public final class SettlementRecognition implements SiteQueries {
         long clock = territory.observationClock(world);
         Bounds bounds = evidence.bounds;
         Decision result = new Decision(survey, tick, evidence, activity, clock);
+        result.route = routeEpoch;
         result.cover = evidence.anchorCover;
         if (bounds != null) {
             for (int i = 0; i < walked; i++) {
                 int x = walkedX[i], y = walkedY[i], z = walkedZ[i];
                 if (!bounds.contains(x, y, z, 0) || Math.abs(y - survey.focusY) > 1) continue;
                 result.walked++;
-                if (result.cover < 9 && survey.walkable(x, y, z))
-                    result.cover = Math.max(result.cover, survey.cover(evidence, x, y, z));
+                if (survey.walkable(x, y, z)) {
+                    if (survey.walkedOn(evidence, x, y, z)) result.supportedWalk++;
+                    if (result.cover < 9) result.cover = Math.max(result.cover, survey.cover(evidence, x, y, z));
+                }
             }
             for (Use use : recentUse) {
                 if (use == null) continue;
@@ -290,6 +300,7 @@ public final class SettlementRecognition implements SiteQueries {
         Site known = match.site;
         result.site = known;
         result.part = match.part;
+        if (bounds != null && (evidence.faces != 0 || registry.fragmentOverlap(bounds)) && classifyFragment(result)) return;
         if (survey.recenter(evidence)) {
             result.state = known == null ? "Candidate" : "Recognized";
             result.reason = "Partial footprint. Sampling closer to the clipped edge.";
@@ -323,7 +334,7 @@ public final class SettlementRecognition implements SiteQueries {
                     if (fullPart) part.resetContraction();
                     result.reason = "Existing site re-observed";
                 }
-            } else if (evidence.faces == 0 && fullPart && !survey.constructionRemains(part.bounds)) {
+            } else if (part.construction == null && evidence.faces == 0 && fullPart && !survey.constructionRemains(part.bounds)) {
                 result.reason = registry.contract(known, part, null)
                         ? "Removed annex retired from footprint" : "Missing part awaiting repeated confirmation";
                 if (!known.parts.contains(part)) result.part = null;
@@ -384,6 +395,74 @@ public final class SettlementRecognition implements SiteQueries {
                 if (result.confirmed) confirmUses(result);
             }
         }
+    }
+
+    private boolean classifyFragment(Decision result) {
+        Evidence evidence = result.evidence;
+        Bounds box = evidence.bounds;
+        if (!evidence.spread() || result.clock < 0) return false;
+        boolean equipment = evidence.associated[1] + evidence.associated[2] + evidence.associated[3] >= 2
+                || evidence.inventories >= 2 || evidence.endpointTypes >= 2 || result.uses >= 2;
+        boolean strong = evidence.manual >= 48 && evidence.manual + evidence.inferred >= 80
+                && box.maxX - box.minX >= 5 && box.maxZ - box.minZ >= 5
+                && result.supportedWalk >= 8 && result.activity >= 6 && (equipment || result.cover >= 4);
+        if (!strong && result.site == null && !registry.fragmentOverlap(box)) return false;
+        Match anchor = registry.connected(survey, evidence);
+        if (anchor.ambiguous || (anchor.site != null && result.site != null && anchor.site != result.site)) {
+            result.site = null;
+            result.part = null;
+            result.state = "Ambiguous";
+            result.reason = "Construction crosses multiple known sites";
+            return true;
+        }
+        if (anchor.site != null) {
+            if (evidence.faces == 0 && !anchor.site.fragmented) return false;
+            if (!anchor.site.fragmented && !strong) return false;
+            result.site = anchor.site;
+            result.part = anchor.part;
+            result.state = "Recognized";
+            result.reason = "Local construction confirms the existing partial footprint";
+            if (result.supportedWalk > 0) {
+                if (result.supportedWalk >= 4 && evidence.faces == 0 && anchor.part.construction != null
+                        && anchor.overlap == anchor.part.construction.cardinality()
+                        && registry.completeFragment(anchor.site, anchor.part, box, result.clock,
+                        evidence.manual, evidence.inferred, result.uses)) {
+                    result.confirmed = true;
+                    result.reason = "Complete construction confirmed under the existing site ID";
+                    return true;
+                }
+                registry.reobserve(anchor.site, anchor.part, result.clock, anchor.part.manual, anchor.part.inferred, anchor.part.uses);
+                if (survey.extend(registry, anchor.site, anchor.part, evidence, result.clock, result.uses))
+                    result.reason = "Connected construction added under the existing site ID";
+            }
+            return true;
+        }
+        if (result.site != null || registry.fragmentOverlap(box)) {
+            if (result.site == null || result.site.fragmented) {
+                result.state = result.site == null ? "Candidate" : "Recognized";
+                result.reason = "Known footprint nearby. Awaiting shared construction.";
+                return true;
+            }
+            return false;
+        }
+        if (!strong || evidence.faces == 0) return false;
+        result.partialQualified = true;
+        result.state = "Candidate";
+        if (latest == null || !latest.partialQualified || latest.route != result.route || tick - latest.tick < 50
+                || tick - latest.tick > INTERVAL * 2 || latest.evidence.bounds.overlap(box) * 2
+                < Math.min(latest.evidence.bounds.volume(), box.volume())) {
+            result.reason = survey.recenter(evidence) ? "Partial footprint. Sampling closer to the clipped edge."
+                    : "Strong partial construction. Awaiting repeat observation.";
+            return true;
+        }
+        Part fragment = survey.fragment(evidence, box, result.clock, result.uses);
+        result.site = registry.promoteFragment(fragment);
+        if (result.site != null) {
+            result.part = fragment;
+            result.state = "Recognized";
+            result.reason = "Strong construction and activity confirmed. Footprint partial.";
+        } else result.reason = "Observed footprint conflicts or registry capacity reached";
+        return true;
     }
 
     private boolean usedOutside(Bounds known, Evidence evidence) {
@@ -512,7 +591,7 @@ public final class SettlementRecognition implements SiteQueries {
             } else if (stale(clock, part.lastSeen)) {
                 coverage = Coverage.STALE;
             } else {
-                coverage = recent ? part.coverage : Coverage.PARTIAL;
+                coverage = recent && part.construction == null ? part.coverage : Coverage.PARTIAL;
                 if (coverage == Coverage.COMPLETE) complete++;
             }
             parts.add(new SiteSnapshot.Part(part, coverage));
@@ -602,13 +681,14 @@ public final class SettlementRecognition implements SiteQueries {
         final Bounds extent;
         final int[] opened = new int[SiteSurvey.UTILITY_TYPES], expired = new int[SiteSurvey.UTILITY_TYPES],
                 outside = new int[SiteSurvey.UTILITY_TYPES];
-        int walked, uses, cover;
+        int walked, supportedWalk, uses, cover;
         String state = "No site", reason;
         Site site;
         Part part;
         Use firstUse;
         int localOpenings;
-        boolean confirmed, networkUsed;
+        boolean confirmed, networkUsed, partialQualified;
+        long route;
 
         Decision(SiteSurvey survey, long tick, Evidence evidence, int activity, long clock) {
             anchorX = survey.x;
@@ -653,13 +733,14 @@ public final class SettlementRecognition implements SiteQueries {
             id = site == null ? 0 : site.id;
             knownParts = site == null ? 0 : site.parts.size();
             state = ambiguous ? "Ambiguous" : site != null ? "Recognized" : evidence == null ? "Unknown" : decision.state;
-            confidence = site != null ? (site.observed ? "Observed construction" : "Inferred. Authorship unknown.")
+            confidence = site != null ? (site.fragmented ? "Observed construction | High confidence"
+                    : site.observed ? "Observed construction" : "Inferred. Authorship unknown.")
                     : "Insufficient for recognition";
             reason = ambiguous ? "Point overlaps multiple known parts" : decision == null ? "Awaiting local survey" : decision.reason;
             boundary = box == null ? "-" : box.toString();
             component = evidence == null || evidence.bounds == null ? "-" : evidence.bounds.toString();
             assessment = decision == null ? "Awaiting survey" : evidence == null ? decision.reason
-                    : evidence.faces != 0 ? "Partial footprint" : "Complete";
+                    : evidence.faces != 0 || site != null && site.fragmented ? "Partial footprint" : "Complete";
             extent = decision == null ? "-" : decision.extent.toString();
             anchorX = decision == null ? 0 : decision.anchorX;
             anchorY = decision == null ? 0 : decision.anchorY;

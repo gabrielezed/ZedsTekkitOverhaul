@@ -10,7 +10,7 @@ public final class SiteSnapshot {
 
     public final long worldSession, lastConfirmed;
     public final int dimension, id;
-    public final boolean observedConstruction, dormant;
+    public final boolean observedConstruction, dormant, perimeterUnresolved;
     public final Coverage coverage;
     public final Bounds envelope;
     public final List<Part> parts;
@@ -22,6 +22,7 @@ public final class SiteSnapshot {
         id = site.id;
         lastConfirmed = site.lastSeen;
         observedConstruction = site.observed;
+        perimeterUnresolved = site.fragmented;
         this.dormant = dormant;
         this.coverage = coverage;
         envelope = site.bounds;

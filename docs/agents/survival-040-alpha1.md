@@ -14,6 +14,8 @@ A committed site waits up to 900 ticks from dusk for native twilight to pass. By
 
 Mixed-mod workshops use this same discovery and admission path. Equipment can corroborate the recognized construction, while the exterior planner uses block collision and route geometry independently. The native mixed-mod fixture exercises natural admission with no vanilla utilities in the workshop. [Generic recognition and native evidence](settlement-generic-modded-evidence.md)
 
+A site with a newly recorded clipped perimeter remains discoverable. It produces a `SITE_FOOTPRINT_UNRESOLVED` approach rejection, preserving its identity and the ordinary assault fallback. Previously complete footprints with current partial availability still receive the ordinary native approach checks. [Partial footprint contract](settlement-partial-footprints.md)
+
 ## Geometry and movement
 
 `SiteApproach` evaluates up to twelve straight cardinal lanes per part. The start is fourteen blocks from the part face and outside the horizontal envelope plus a two-block exclusion margin. A second nearby query checks other recognized envelopes at insertion. A route can reach an open doorway or end at verified exterior frontage. It uses the actual loaded heightmap, standing-height clearance, solid ground and open sky at the insertion column. The native door state and collision shape affect route clearance. Cold, covered, unloaded or uncertain plans defer or fail closed. Protected Interior must report EXPOSED before every insertion. EXPOSED alone gives no permission to spawn.

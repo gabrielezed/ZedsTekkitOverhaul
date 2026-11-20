@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.settlement;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.src.Block;
@@ -8,6 +9,7 @@ import net.minecraft.src.IInventory;
 import net.minecraft.src.TileEntity;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
+import zed.tekkitoverhaul.settlement.SiteRegistry.Part;
 
 /** One local survey, one loaded slice per update, then one bounded component pass. */
 final class SiteSurvey {
@@ -305,6 +307,77 @@ final class SiteSurvey {
         return (blocks[index - SLICE] & SOLID) != 0
                 && ((blocks[index] | blocks[index + SLICE]) & (SOLID | OCCUPIED)) == 0
                 && industrial[index] >= 0 && industrial[index + SLICE] >= 0;
+    }
+
+    boolean walkedOn(Evidence evidence, int px, int py, int pz) {
+        return member(evidence, index(px, py - 1, pz));
+    }
+
+    private int index(int px, int py, int pz) {
+        return (py - minY) * SLICE + (pz - z + RADIUS) * WIDTH + px - x + RADIUS;
+    }
+
+    private static int offset(Bounds box, int px, int py, int pz) {
+        int width = box.maxX - box.minX + 1, depth = box.maxZ - box.minZ + 1;
+        return ((py - box.minY) * depth + pz - box.minZ) * width + px - box.minX;
+    }
+
+    /** A continuation needs common construction cells in the same current face-connected component. */
+    int sharedConstruction(Evidence evidence, Part part) {
+        Bounds box = part.bounds;
+        Bounds overlap = intersection(evidence.bounds, box);
+        if (overlap == null) return 0;
+        int shared = 0;
+        for (int py = overlap.minY; py <= overlap.maxY; py++)
+            for (int pz = overlap.minZ; pz <= overlap.maxZ; pz++)
+                for (int px = overlap.minX; px <= overlap.maxX; px++)
+                    if (member(evidence, index(px, py, pz)) && (part.construction == null
+                            || part.construction.get(offset(box, px, py, pz)))) shared++;
+        return shared;
+    }
+
+    private static Bounds intersection(Bounds a, Bounds b) {
+        return a.overlap(b) == 0 ? null : new Bounds(Math.max(a.minX, b.minX), Math.max(a.minY, b.minY),
+                Math.max(a.minZ, b.minZ), Math.min(a.maxX, b.maxX), Math.min(a.maxY, b.maxY), Math.min(a.maxZ, b.maxZ));
+    }
+
+    Part fragment(Evidence evidence, Bounds box, long clock, int uses) {
+        BitSet cells = new BitSet(box.volume());
+        int manual = 0, inferred = 0;
+        for (int py = box.minY; py <= box.maxY; py++) {
+            for (int pz = box.minZ; pz <= box.maxZ; pz++) {
+                for (int px = box.minX; px <= box.maxX; px++) {
+                    int i = index(px, py, pz);
+                    if (!member(evidence, i)) continue;
+                    cells.set(offset(box, px, py, pz));
+                    if ((blocks[i] & MANUAL) != 0) manual++;
+                    else inferred++;
+                }
+            }
+        }
+        Part part = new Part(box, clock, manual >= 8, manual, inferred, uses);
+        part.construction = cells;
+        return part;
+    }
+
+    /** Consider slices outside each face of the anchored part. Store at most one per survey. */
+    boolean extend(SiteRegistry registry, SiteRegistry.Site site, Part anchor, Evidence evidence, long clock, int uses) {
+        Bounds a = anchor.bounds, b = evidence.bounds;
+        Bounds[] strips = {
+            new Bounds(b.minX, b.minY, b.minZ, a.minX - 1, b.maxY, b.maxZ),
+            new Bounds(a.maxX + 1, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ),
+            new Bounds(b.minX, b.minY, b.minZ, b.maxX, a.minY - 1, b.maxZ),
+            new Bounds(b.minX, a.maxY + 1, b.minZ, b.maxX, b.maxY, b.maxZ),
+            new Bounds(b.minX, b.minY, b.minZ, b.maxX, b.maxY, a.minZ - 1),
+            new Bounds(b.minX, b.minY, a.maxZ + 1, b.maxX, b.maxY, b.maxZ)
+        };
+        for (Bounds strip : strips) {
+            if (!strip.valid() || !b.covers(strip) || strip.maxX == strip.minX || strip.maxZ == strip.minZ) continue;
+            Part fragment = fragment(evidence, strip, clock, uses);
+            if (fragment.manual >= 4 && fragment.manual + fragment.inferred >= 12
+                    && registry.attachFragment(site, fragment)) return true;
+        }
+        return false;
     }
 
     private boolean associated(Evidence evidence, int index) {

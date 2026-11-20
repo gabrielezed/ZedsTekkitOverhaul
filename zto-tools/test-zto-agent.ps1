@@ -6,7 +6,8 @@ param(
     [string]$CandidateJar,
     [string]$IndustrialProfileBaseline,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
-        'compound','protection','query','industrial','industrial-profile','modded','modded-profile','site-siege')][string]$Focus
+        'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
+        'partial','partial-baseline','site-siege')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,15 +54,17 @@ try {
             'FurnaceFuelProbe.java','NativeMiningProbe.java','ProvenanceProbe.java','SettlementProbe.java','SettlementProfile.java') |
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         $moddedSuite = $Focus -in 'modded','modded-profile' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
+        $partialSuite = $Focus -in 'partial','partial-baseline' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
         $siteSiegeSuite = $Focus -eq 'site-siege' -or ($Pack -and !$CandidateJar)
         $mixedSiegeSuite = $siteSiegeSuite -and !$CandidateJar
-        if ($siteSiegeSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
+        if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
-        if ($moddedSuite -or $mixedSiegeSuite) {
+        if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSettlementProbe.java'
             $compileClasspath = $moddedClasspath
         }
         if ($mixedSiegeSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSiteSiegeProbe.java' }
+        if ($partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java' }
         & javac -source 8 -target 8 -cp $compileClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
@@ -104,6 +107,11 @@ try {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath ModdedSettlementProbe @probeArgs
                 if ($LASTEXITCODE) { throw 'Native modded settlement probe failed.' }
                 if ($Focus -in 'modded','modded-profile') { return }
+            }
+            if ($partialSuite) {
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath PartialSettlementProbe $out.FullName $Focus
+                if ($LASTEXITCODE) { throw 'Native partial settlement probe failed.' }
+                if ($Focus -in 'partial','partial-baseline') { return }
             }
             if ($Focus -eq 'cabin') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SettlementProbe $out.FullName cabin

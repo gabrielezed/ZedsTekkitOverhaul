@@ -54,6 +54,13 @@ public final class TerritorialActivityService {
         return assess(block(player.posX), block(player.posZ));
     }
 
+    /** Bounded read for a loaded site anchor on the simulation thread. */
+    public ThreatAssessment assessSite(World context, int x, int y, int z) {
+        if (context != world || !ready() || !TerritorialActivity.inBounds(x)
+                || !TerritorialActivity.inBounds(z) || !world.blockExists(x, y, z)) return null;
+        return assess(x, z);
+    }
+
     private ThreatAssessment assess(int x, int z) {
         // The legacy biome manager consults its biome cache and generation layers, with no chunk lookup.
         WorldChunkManager biomes = world.getWorldChunkManager();

@@ -30,6 +30,7 @@ import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 public final class SiteSiege {
     public enum Origin { NATURAL, MANUAL_DEBUG }
     public enum Profile { AUTO, PERIMETER, BREACH }
+    public enum Intensity { NATURAL, LOW, MODERATE, HIGH, MAXIMUM }
 
     private enum TacticalPhase { IDLE, PLANNING, APPROACHING, PRESSURING, BREACHING, ENGAGING, RESOLVED, ABORTED }
 

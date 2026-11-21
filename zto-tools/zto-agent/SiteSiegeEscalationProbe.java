@@ -175,12 +175,18 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
         check(thief != null && !thief.carryingLoot() && assault.entranceChanges == 1 && player.ap.a[20].a == 3,
                 "Thief cannot take from behind cover, while Breacher can physically open the selected door | "
                         + siegeDetails(assault), here());
-        for (int tick = 0; tick < 140 && !thief.carryingLoot(); tick++) {
-            player.c(thief.o + 1.4D, Y, thief.q, 0, 0);
+        for (int tick = 0; tick < 220 && !thief.carryingLoot(); tick++) {
+            // The defender clears other roles first, then exposes a flank outside the building.
+            for (Object entity : new ArrayList<Object>(world.b)) {
+                if (entity != thief && entity instanceof yy && ((yy) entity).bb() > 0)
+                    ((yy) entity).a(md.a(player), 100);
+            }
+            if (thief.o >= X - 7) player.c(thief.o, Y, thief.q + 1.65D, 0, 0);
             player.l(20);
             siegeTicks(director, calendar, time++, 1);
         }
-        check(thief.carryingLoot() && player.ap.a[20].a == 2, "exposed defender permits one native theft", here());
+        check(thief.carryingLoot() && player.ap.a[20].a == 2, "exposed defender permits one native theft | "
+                + siegeDetails(director.siteSiegeSnapshot(world)), here());
         if (reopen) {
             save();
             director.bind(null, null);
@@ -249,11 +255,16 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
         SiegeDirector director = siegeDirector(false, calendar);
         world.hideChunk((X + 32) >> 4, Z >> 4);
         director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
-        siegeTicks(director, calendar, time, 300);
+        forceEntityTick = true;
+        try {
+            siegeTicks(director, calendar, time, 300);
+        } finally {
+            forceEntityTick = false;
+        }
         SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
         check(view.progress > 13 && view.arrivals > 0 && world.chunkMisses == 0
                         && view.failures.keySet().stream().anyMatch(reason -> reason.toString().contains("COMBAT_CACHE_UNLOADED")),
-                "loaded approach still moves while a native path cache is unavailable: " + siegeDetails(view), here());
+                "loaded approach still moves while a native path cache is unavailable, misses=" + world.chunkMisses + " | " + siegeDetails(view), here());
         world.hideChunk(Integer.MIN_VALUE, Integer.MIN_VALUE);
         director.bind(null, null);
         System.out.println("PASS missing native combat cache defers pathfinding without loading chunks");

@@ -24,6 +24,7 @@ public class SiteSiegeProbe extends SettlementProbe {
     private int peakBlockReads, peakMetadataReads, peakMobs;
     private double peakStep;
     TerritorialActivityService siegeTerritory;
+    boolean forceEntityTick;
     private final Samples totalTicks = new Samples();
 
     SiteSiegeProbe(File root) throws Exception { super(root); }
@@ -525,7 +526,13 @@ public class SiteSiegeProbe extends SettlementProbe {
                 if (entity instanceof yy && !((yy) entity).G) {
                     yy mob = (yy) entity;
                     double x = mob.o, z = mob.q;
-                    world.f(mob);
+                    if (forceEntityTick) {
+                        // Model a Forge-forced entity update, then let World reconcile chunk membership.
+                        mob.J_();
+                        world.a(mob, false);
+                    } else {
+                        world.f(mob);
+                    }
                     if (measured) peakStep = Math.max(peakStep, Math.hypot(mob.o - x, mob.q - z));
                     moved++;
                 }

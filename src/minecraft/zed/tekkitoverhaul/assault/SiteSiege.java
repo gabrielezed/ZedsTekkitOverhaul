@@ -27,6 +27,7 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
+import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
 import zed.tekkitoverhaul.survival.tactical.EntityTank;
 import zed.tekkitoverhaul.survival.tactical.EntityThief;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
@@ -85,7 +86,7 @@ public final class SiteSiege {
     private Attacker specialist;
     private int impactTick, windupHealth, firstContact, breachChecks, structuralChanges, entranceChanges;
     private String objectiveOutcome = "NONE", tacticalRejection = "NO_ELIGIBLE_BREACH";
-    private String insertionFailure;
+    private String insertionFailure, industrial = "NONE";
     private boolean triedSpecialist;
     private PathPoint destination;
     private PathPoint[] passageAfterOpen;
@@ -380,12 +381,21 @@ public final class SiteSiege {
         if (SpawnController.localHostiles(world, area) >= SpawnController.LOCAL_CAP)
             return reject("POPULATION_CAP");
         EntityMob mob = createAttacker(role);
-        if ((role == Role.THIEF || role == Role.TANK || role == Role.BREACHER)
+        if ((role == Role.SABOTEUR || role == Role.THIEF || role == Role.TANK || role == Role.BREACHER)
                 && !world.getEntitiesWithinAABB(mob.getClass(), area).isEmpty()) return reject("SPECIALIST_POPULATION");
 
         mob.setLocationAndAngles(x, y, z, 0, 0);
         String collision = SpawnController.placementCollision(world, mob);
         if (collision != null) return reject(collision);
+        if (role == Role.SABOTEUR) {
+            EntitySaboteur scout = (EntitySaboteur) mob;
+            PathPoint entry = lane.goal();
+            scout.setPosition(entry.xCoord + 0.5, entry.yCoord, entry.zCoord + 0.5);
+            boolean supported = scout.assignSiteMachine(part);
+            scout.setLocationAndAngles(x, y, z, 0, 0);
+            industrial = scout.targetType() + " / " + scout.lastOutcome();
+            if (!supported) return reject("NO_ACCESSIBLE_MACHINE");
+        }
         return mob;
     }
 
@@ -396,6 +406,7 @@ public final class SiteSiege {
             case BREACHER: return new EntityBreacher(world);
             case TANK: return new EntityTank(world);
             case SKIRMISHER: return new EntitySkirmisher(world);
+            case SABOTEUR: return new EntitySaboteur(world);
             case THIEF: return new EntityThief(world);
             default: throw new IllegalArgumentException("Unassigned site siege role " + role);
         }
@@ -531,6 +542,7 @@ public final class SiteSiege {
     }
 
     private SiteApproach laneFor(Role role, int slot, int attempt) {
+        if (role == Role.SABOTEUR) return openedApproach == null ? approach : openedApproach;
         SiteApproach primary = approach;
         if (approach.connected && !connectedAlternates.isEmpty()) {
             int choice = attempt % (connectedAlternates.size() + 1);
@@ -569,6 +581,10 @@ public final class SiteSiege {
         int slot = wave.nextSlot(force.activeCap - attackers.size());
         if (slot < 0) return;
         Role role = wave.roles[slot];
+        if (role == Role.SABOTEUR && (inserted == 0 || approach.barrier != null && openedApproach == null)) {
+            rejectWave(role, "WAITING_FOR_ACCESS");
+            return;
+        }
         boolean objectiveRole = isObjectiveRole(role);
         if (objectiveRole && !objectivePending()) {
             wave.placementFailures[slot] = SiteSiegeForcePlan.ATTEMPTS_PER_SLOT;
@@ -659,6 +675,10 @@ public final class SiteSiege {
             Attacker attacker = iterator.next();
             EntityMob mob = attacker.mob;
             int x = MathHelper.floor_double(mob.posX), z = MathHelper.floor_double(mob.posZ);
+            if (mob instanceof EntitySaboteur) {
+                EntitySaboteur scout = (EntitySaboteur) mob;
+                industrial = scout.targetType() + " / " + scout.lastOutcome() + " / pose " + scout.pose();
+            }
             boolean alive = mob.isEntityAlive();
             boolean loaded = alive && mob.worldObj == world && world.blockExists(x, 64, z)
                     && mob.addedToChunk;
@@ -906,6 +926,7 @@ public final class SiteSiege {
         objectiveOutcome = "NONE";
         tacticalRejection = "NO_ELIGIBLE_BREACH";
         insertionFailure = null;
+        industrial = "NONE";
         rejection = "NONE";
     }
 

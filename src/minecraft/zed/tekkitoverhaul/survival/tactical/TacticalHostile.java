@@ -81,7 +81,7 @@ public abstract class TacticalHostile extends EntityMob {
     protected final boolean holdingSiteSiege() { return siteSiegeControlled; }
 
     @Override public boolean addEntityID(NBTTagCompound tag) {
-        return !siteSiegeControlled && super.addEntityID(tag);
+        return (!siteSiegeControlled || carriesSiteCargo()) && super.addEntityID(tag);
     }
 
     @Override
@@ -95,7 +95,7 @@ public abstract class TacticalHostile extends EntityMob {
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
         if (siteSiegeControlled) {
-            if (siteEngaging && !independentTactics()) fightAtSite();
+            if (siteEngaging && !independentTactics() && !siteObjective(siteDefender)) fightAtSite();
             super.updateAITasks();
             updateAttackPose();
             return;
@@ -220,6 +220,9 @@ public abstract class TacticalHostile extends EntityMob {
     protected boolean canAcquireUnseen(EntityPlayer player) { return false; }
 
     protected double siteCombatRadius() { return 8.0D; }
+
+    protected boolean carriesSiteCargo() { return false; }
+    protected boolean siteObjective(EntityPlayer defender) { return false; }
 
     protected boolean independentTactics() { return false; }
 

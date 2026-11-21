@@ -54,6 +54,7 @@ final class SiteSiegeForcePlan {
         }
         if (tier >= 1 && difficulty >= 2) waves[0].roles[0] = Role.SKIRMISHER;
         if (objective.barrier != null && !heavy) waves[0].roles[waves[0].roles.length - 1] = Role.BREACHER;
+        if (hard && tier >= 2) waves[1].roles[0] = Role.SABOTEUR;
         if (heavy || (hard && tier == 3)) waves[waves.length - 1].roles[0] = Role.TANK;
         if (hard && tier == 3) waves[2].roles[1] = Role.SKIRMISHER;
         if (tier >= 1 && difficulty >= 2 && waves[1].roles.length >= 3 && random.nextInt(3) == 0)

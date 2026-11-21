@@ -49,7 +49,39 @@ public final class EntitySaboteur extends TacticalHostile {
     private double progressX, progressZ;
     private int pathPlans, blinkAttempts, blinkChecks, blinks;
     private int scans, scannedBlocks, windups, cancelled, disruptions, diversions;
+    private zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds assignment;
+    private int entryPathChecks, siteArrival = -1;
     private TileEntity machine;
+
+    /** Preflight at the final verified approach cell before inserting this entity outside. */
+    public boolean assignSiteMachine(zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds bounds) {
+        assignment = bounds;
+        onGround = true;
+        try {
+            scan();
+            return machine != null;
+        } finally {
+            onGround = false;
+        }
+    }
+
+    @Override protected boolean carriesSiteCargo() { return hasCargo(); }
+
+    @Override protected boolean siteObjective(EntityPlayer defender) {
+        if (assignment == null) return false;
+        if (siteArrival < 0) siteArrival = ticksExisted;
+        target = defender;
+        heartbeat = worldObj.getWorldTime();
+        if (windingUp()) continueWindup(false);
+        else if (machine != null) {
+            if (invalidTarget() != Outcome.NONE) finish(Outcome.TARGET_CHANGED, true);
+            else if (ticksExisted - siteArrival > 120) finish(Outcome.OUT_OF_REACH, true);
+            else approachMachine();
+        } else if (outcome == Outcome.APPLIED && ticksExisted < recoverEnd && defender != null)
+            blink(defender.posX, defender.posZ, BlinkCause.INTERRUPTED);
+        return true;
+    }
+
     private TileEntity connection;
     private SabotageTarget disruption;
     private TransportTheft transportTheft;
@@ -189,6 +221,7 @@ public final class EntitySaboteur extends TacticalHostile {
                 double horizontal = dx * dx + dz * dz;
                 if (horizontal > 64.0D || !worldObj.blockExists(x, baseY, z)) continue;
                 for (int y = Math.max(0, baseY - 2); y <= Math.min(worldObj.getHeight() - 1, baseY + 2); y++) {
+                    if (assignment != null && !assignment.contains(x, y, z)) continue;
                     scannedBlocks++;
                     double distance = horizontal + (y + 0.5D - posY) * (y + 0.5D - posY);
                     if (distance > 64.0D) continue;
@@ -242,6 +275,7 @@ public final class EntitySaboteur extends TacticalHostile {
                     } else if (theft == null && !seesMachine(x, y, z)) {
                         outcome = Outcome.NO_SIGHT;
                     } else {
+                        if (assignment != null && !reachableFromEntry(x, y, z)) continue;
                         bestPriority = priority;
                         bestDistance = distance;
                         machine = candidate;
@@ -265,6 +299,18 @@ public final class EntitySaboteur extends TacticalHostile {
         getNavigator().clearPathEntity();
     }
 
+    private boolean reachableFromEntry(int x, int y, int z) {
+        // A short unobstructed interaction from the verified entry cell needs no further navigation.
+        if (Math.abs(boundingBox.minY - y) <= 1.25D && getDistanceSq(x + 0.5, y + 0.5, z + 0.5) <= CONTACT_SQ)
+            return true;
+        for (int side = 0; side < SIDE_X.length && entryPathChecks < 4; side++) {
+            int sx = x + SIDE_X[side], sz = z + SIDE_Z[side];
+            entryPathChecks++;
+            if (reaches(plan(sx, y, sz), sx, y, sz)) return true;
+        }
+        return false;
+    }
+
     private void approachMachine() {
         Vec3D point = visibleTargetPoint();
         lookAtMachine(point);
@@ -272,7 +318,7 @@ public final class EntitySaboteur extends TacticalHostile {
             startWindup();
             return;
         }
-        if (blink(machineX + 0.5D, machineZ + 0.5D, BlinkCause.APPROACH)) return;
+        if (assignment == null && blink(machineX + 0.5D, machineZ + 0.5D, BlinkCause.APPROACH)) return;
         if (ticksExisted < nextRoute || !onGround) return;
         nextRoute = ticksExisted + ROUTE_INTERVAL;
         double x = machineX + 0.5D + SIDE_X[nextSide];

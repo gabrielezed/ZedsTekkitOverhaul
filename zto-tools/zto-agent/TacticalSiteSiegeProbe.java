@@ -16,6 +16,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             TacticalSiteSiegeProbe probe = new TacticalSiteSiegeProbe(new File(args[0]));
             probe.manualSiege();
             probe.tacticalSieges();
+            probe.sideEntrance();
             probe.naturalEntrance();
             probe.naturalArbitration();
             probe.undergroundAndPopulation();
@@ -89,6 +90,16 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             debugMobs++;
         }
         check(debugMobs == active.active, "actual owned hostile accounting", here());
+        double px = player.o, py = player.p, pz = player.q;
+        Method despawn = acq.class.getDeclaredMethod("w");
+        despawn.setAccessible(true);
+        player.c(px + 180, py, pz, 0, 0);
+        for (Object actor : world.b) {
+            if (!infantry(actor)) continue;
+            despawn.invoke(actor);
+            check(!((yy) actor).G, "owned infantry survives native distance despawn", here());
+        }
+        player.c(px, py, pz, 0, 0);
         endSamples("manual-daytime");
 
         director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
@@ -138,6 +149,23 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     private static boolean infantry(Object entity) {
         String type = entity.getClass().getSimpleName();
         return type.equals("DebugSiegeSkeleton") || type.equals("SiegeZombie");
+    }
+
+    private void sideEntrance() throws Exception {
+        tacticalHouse("siege-offset-east-door", 4, false);
+        int x = X + 4, z = Z + 1;
+        world.d(x, Y, z, 64, 0);
+        world.d(x, Y + 1, z, 64, 8);
+        long time = 6000;
+        LunarCalendar calendar = siegeCalendar(73, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO, SiteSiege.Intensity.MAXIMUM);
+        long windup = waitForPhase(director, calendar, time, "PRESSURING");
+        check(director.siteSiegeSnapshot(world).objectiveTarget.equals(x + "," + Y + "," + z),
+                "east door takes priority over western frontage", here());
+        siegeTicks(director, calendar, windup, 70);
+        check((world.e(x, Y, z) & 4) != 0, "Breacher opens the offset east door", here());
+        director.bind(null, null);
     }
 
     private void tacticalSieges() throws Exception {
@@ -238,7 +266,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                     check(result.arrivals > 0 && result.approach.endsWith("321,4,322"),
                             "skeletons can walk through a verified breach: " + siegeDetails(result), here());
             } else {
-                String cause = fixture.equals("killed") ? "SPECIALIST_LOST"
+                String cause = fixture.equals("killed") ? "DEATH"
                         : fixture.equals("combat") ? "WINDUP_INTERRUPTED" : "TARGET_CHANGED";
                 check(cause.equals(result.objectiveOutcome) && result.structuralChanges == 0 && world.a(X, Y, Z + 2) == 4
                                 && world.a(X, Y + 1, Z + 2) == (fixture.equals("replacement") ? 42 : 4),

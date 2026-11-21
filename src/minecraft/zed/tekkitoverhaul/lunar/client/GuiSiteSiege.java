@@ -137,6 +137,10 @@ final class GuiSiteSiege extends GuiScreen {
         rows.add("Next cycle " + number(view.nextOpportunityCycle) + " | boundary " + number(view.boundary));
         rows.add("Cooldown " + cooldown(view.cooldownUntil, lunar));
         rows.add("Routes " + view.validRoutes + " valid / " + view.failedRoutes + " failed | " + view.planningColumns + " samples");
+        rows.add("Native despawns " + view.nativeDespawns);
+        rows.add("Sectors " + view.sectors);
+        rows.add("Saboteur active/inserted/planned " + role(view, "SABOTEUR"));
+        rows.add("Industry " + view.industry);
         rows.add("Target " + view.objectiveTarget + " | " + view.specialist);
         rows.add("Structural " + view.structuralChanges + "/" + view.structuralBudget + " removed | "
                 + view.entranceChanges + " opened");

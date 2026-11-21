@@ -19,6 +19,7 @@ final class PerimeterApproachTask extends EntityAIBase {
     private final boolean infantry;
     private PathPoint[] route;
     private boolean engaged = true, hold;
+    boolean nativeDespawn;
     private int next = 1;
 
     private PerimeterApproachTask(EntityMob mob, SiteApproach approach, boolean hold) {
@@ -92,7 +93,7 @@ final class PerimeterApproachTask extends EntityAIBase {
         if (arrived()) {
             if (hold) {
                 PathPoint goal = route[route.length - 1];
-                if (horizontalDistanceSq(goal) >= 0.16) move(goal);
+                if (horizontalDistanceSq(goal) >= 0.025) move(goal);
             }
             return;
         }
@@ -127,6 +128,17 @@ final class PerimeterApproachTask extends EntityAIBase {
     boolean arrived() { return next == route.length; }
     PathPoint[] waypoints() { return route; }
 
+    boolean retreat() {
+        if (!engaged || !arrived() || route.length < 2 || horizontalDistanceSq(route[route.length - 1]) > 1)
+            return false;
+        PathPoint[] reverse = new PathPoint[route.length];
+        for (int i = 0; i < route.length; i++) reverse[i] = route[route.length - 1 - i];
+        route = reverse;
+        next = 1;
+        hold = false;
+        return true;
+    }
+
     void advance(PathPoint[] passage) {
         PathPoint[] extended = new PathPoint[route.length + passage.length];
         System.arraycopy(route, 0, extended, 0, route.length);
@@ -135,5 +147,9 @@ final class PerimeterApproachTask extends EntityAIBase {
         hold = false;
     }
 
-    void release() { engaged = false; }
+    void release() {
+        engaged = false;
+        if (mob instanceof SiegeZombie) ((SiegeZombie) mob).approach = null;
+        if (mob instanceof DebugSiegeSkeleton) ((DebugSiegeSkeleton) mob).approach = null;
+    }
 }

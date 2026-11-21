@@ -8,7 +8,7 @@ param(
     [switch]$TerrainBaseline,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
-        'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-terrain')][string]$Focus
+        'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,7 +59,7 @@ try {
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         $moddedSuite = $Focus -in 'modded','modded-profile' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
         $partialSuite = $Focus -in 'partial','partial-baseline' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
-        $siteSiegeSuite = $Focus -in 'site-siege','site-siege-escalation','site-siege-terrain' -or ($Pack -and !$CandidateJar)
+        $siteSiegeSuite = $Focus -in 'site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain' -or ($Pack -and !$CandidateJar)
         $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -eq 'site-siege-terrain')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
@@ -109,6 +109,11 @@ try {
             }
             if ($siteSiegeSuite) {
                 $siegeWorlds = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'site-siege-worlds')
+                if ($Focus -eq 'site-siege-industry') {
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath ModdedSiteSiegeProbe $siegeWorlds.FullName
+                    if ($LASTEXITCODE) { throw 'Native industrial site siege probe failed.' }
+                    return
+                }
                 if ($mixedSiegeSuite -and $Focus -ne 'site-siege-escalation') {
                     $terrainArgs = @($siegeWorlds.FullName)
                     if ($TerrainBaseline) { $terrainArgs += 'baseline' }

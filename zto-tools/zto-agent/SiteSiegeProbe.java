@@ -103,6 +103,14 @@ public class SiteSiegeProbe extends SettlementProbe {
                         && active.peak <= active.activeCap && active.inserted <= active.planned && active.peakColumns <= 28
                         && active.peakSkyReads <= 255 && here().peakReads <= 169 && world.chunkMisses == 0,
                 "native movement stays site-directed and within work/population limits: " + siegeDetails(active), here());
+        // Expose the defender to an archer on its actual approach sector.
+        for (Object actor : world.b) {
+            if (actor.getClass().getSimpleName().equals("DebugSiegeSkeleton")) {
+                yy archer = (yy) actor;
+                player.c(archer.o + 0.5, Y, archer.q + 3.5, 0, 0);
+                break;
+            }
+        }
         for (int tick = 100; tick < 350; tick++) {
             siegeTicks(director, calendar, afterAdmission + tick, 1);
             active = director.siteSiegeSnapshot(world);

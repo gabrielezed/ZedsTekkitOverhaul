@@ -65,6 +65,25 @@ public abstract class TacticalHostile extends EntityMob {
         siteZ = staging.zCoord + 0.5;
     }
 
+    private boolean nativeSiteDespawn;
+    public final boolean nativeSiteDespawn() { return nativeSiteDespawn; }
+
+    @Override protected void despawnEntity() {
+        boolean owned = siteSiegeControlled && !isDead;
+        super.despawnEntity();
+        if (owned && isDead) nativeSiteDespawn = true;
+    }
+
+    @Override protected boolean canDespawn() { return !siteSiegeControlled && super.canDespawn(); }
+
+    public final void releaseSiteSiege() {
+        siteSiegeControlled = siteEngaging = false;
+        siteDefender = null;
+        disengage();
+    }
+
+    public final void holdSiteMovement() { siteEngaging = false; }
+
     public final void beginSiteCombat() { siteEngaging = true; }
     protected final boolean nearSiteStaging(double x, double z) {
         double dx = x - siteX, dz = z - siteZ;
@@ -73,7 +92,7 @@ public abstract class TacticalHostile extends EntityMob {
     protected final boolean holdingSiteSiege() { return siteSiegeControlled; }
 
     @Override public boolean addEntityID(NBTTagCompound tag) {
-        return !siteSiegeControlled && super.addEntityID(tag);
+        return (!siteSiegeControlled || carriesSiteCargo()) && super.addEntityID(tag);
     }
 
     @Override
@@ -87,7 +106,7 @@ public abstract class TacticalHostile extends EntityMob {
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
         if (siteSiegeControlled) {
-            if (siteEngaging && !independentTactics()) fightAtSite();
+            if (siteEngaging && !independentTactics() && !siteObjective(siteDefender)) fightAtSite();
             super.updateAITasks();
             updateAttackPose();
             return;
@@ -212,6 +231,9 @@ public abstract class TacticalHostile extends EntityMob {
     protected boolean canAcquireUnseen(EntityPlayer player) { return false; }
 
     protected double siteCombatRadius() { return 8.0D; }
+
+    protected boolean carriesSiteCargo() { return false; }
+    protected boolean siteObjective(EntityPlayer defender) { return false; }
 
     protected boolean independentTactics() { return false; }
 

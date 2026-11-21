@@ -8,7 +8,7 @@ import zed.tekkitoverhaul.distillation.DistillationPartType;
 
 /** Validated startup settings shared by the local client features. */
 public final class ZtoConfig {
-    public final boolean experimentalSiteSieges;
+    public final boolean experimentalSiteSieges, siteSiegeStructuralBreaching;
     public final boolean playerAssault, lunarPatrols, lunarOutdoorLightPressure;
     public final boolean experimentalEnderkinEncounters, experimentalTerritorialThreat, disableNightSkipping;
     public final int assaultSpawnBudget, assaultWaveInterval, assaultActiveCap, assaultOuterRadius;
@@ -36,6 +36,7 @@ public final class ZtoConfig {
         values.section("Survival");
         playerAssault = values.flag("playerAssault", true);
         experimentalSiteSieges = values.flag("experimentalSiteSieges", false);
+        siteSiegeStructuralBreaching = values.flag("siteSiegeStructuralBreaching", false);
         lunarPatrols = values.flag("lunarPatrols", true);
         lunarOutdoorLightPressure = values.flag("lunarOutdoorLightPressure", true);
         experimentalEnderkinEncounters = values.flag("experimentalEnderkinEncounters", false);

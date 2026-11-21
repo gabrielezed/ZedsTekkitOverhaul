@@ -4,6 +4,7 @@ import net.minecraft.src.EntityAISwimming;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.MathHelper;
+import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
@@ -21,6 +22,14 @@ public abstract class TacticalHostile extends EntityMob {
     private int unseenTicks;
     private int swingTicks;
     private int previousSwingTicks;
+    private boolean siteSiegeControlled;
+    private EntityPlayer siteDefender;
+    private boolean siteEngaging;
+    private double siteX, siteZ;
+    private long sitePathNanos, peakSitePathNanos;
+
+    public final long sitePathNanos() { return sitePathNanos; }
+    public final long peakSitePathNanos() { return peakSitePathNanos; }
 
     protected TacticalHostile(World world, float width, float height, String skin) {
         super(world);
@@ -48,6 +57,25 @@ public abstract class TacticalHostile extends EntityMob {
         if (canEngageEncounterPlayer(player)) target = player;
     }
 
+    /** The encounter owns navigation and physical actions while this transient role is assigned. */
+    public final void claimSiteSiege(EntityPlayer defender, PathPoint staging) {
+        siteSiegeControlled = true;
+        siteDefender = defender;
+        siteX = staging.xCoord + 0.5;
+        siteZ = staging.zCoord + 0.5;
+    }
+
+    public final void beginSiteCombat() { siteEngaging = true; }
+    protected final boolean nearSiteStaging(double x, double z) {
+        double dx = x - siteX, dz = z - siteZ;
+        return dx * dx + dz * dz <= siteCombatRadius() * siteCombatRadius();
+    }
+    protected final boolean holdingSiteSiege() { return siteSiegeControlled; }
+
+    @Override public boolean addEntityID(NBTTagCompound tag) {
+        return !siteSiegeControlled && super.addEntityID(tag);
+    }
+
     @Override
     protected final boolean isAIEnabled() {
         return true;
@@ -58,6 +86,12 @@ public abstract class TacticalHostile extends EntityMob {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
         previousSwingTicks = swingTicks;
         if (swingTicks > 0) swingTicks--;
+        if (siteSiegeControlled) {
+            if (siteEngaging && !independentTactics()) fightAtSite();
+            super.updateAITasks();
+            updateAttackPose();
+            return;
+        }
         if (independentTactics()) {
             super.updateAITasks();
             updateAttackPose();
@@ -89,6 +123,18 @@ public abstract class TacticalHostile extends EntityMob {
         updateAttackPose();
     }
 
+    private void fightAtSite() {
+        if (valid(siteDefender) && nearSiteStaging(posX, posZ)
+                && nearSiteStaging(siteDefender.posX, siteDefender.posZ)
+                && loadedBetween(siteDefender) && canEntityBeSeen(siteDefender)) {
+            target = siteDefender;
+            getLookHelper().setLookPositionWithEntity(target, 30.0F, 30.0F);
+            fight(getDistanceSqToEntity(target), true);
+        } else if (target != null) {
+            disengage();
+        }
+    }
+
     private boolean valid(EntityPlayer player) {
         return player != null && player.worldObj == worldObj && player.isEntityAlive()
                 && !player.capabilities.disableDamage && getDistanceSqToEntity(player) <= TARGET_RANGE * TARGET_RANGE;
@@ -108,8 +154,15 @@ public abstract class TacticalHostile extends EntityMob {
         // World#getEntityPathToXYZ constructs a ChunkCache covering this entire square.
         if (!worldObj.checkChunksExist(sx - PATH_CACHE_RADIUS, 0, sz - PATH_CACHE_RADIUS,
                 sx + PATH_CACHE_RADIUS, 0, sz + PATH_CACHE_RADIUS)) return null;
-        return worldObj.getEntityPathToXYZ(this, MathHelper.floor_double(x), MathHelper.floor_double(y),
+        long started = siteSiegeControlled ? System.nanoTime() : 0;
+        PathEntity path = worldObj.getEntityPathToXYZ(this, MathHelper.floor_double(x), MathHelper.floor_double(y),
                 MathHelper.floor_double(z), PATH_RANGE, true, false, true, false);
+        if (siteSiegeControlled) {
+            long nanos = System.nanoTime() - started;
+            sitePathNanos += nanos;
+            peakSitePathNanos = Math.max(peakSitePathNanos, nanos);
+        }
+        return path;
     }
 
     @Override
@@ -157,6 +210,8 @@ public abstract class TacticalHostile extends EntityMob {
     protected void idle() {}
 
     protected boolean canAcquireUnseen(EntityPlayer player) { return false; }
+
+    protected double siteCombatRadius() { return 8.0D; }
 
     protected boolean independentTactics() { return false; }
 

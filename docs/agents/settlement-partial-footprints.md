@@ -37,7 +37,9 @@ The stationary owner-scale benchmark used 3,000 warm-up updates and 3,600 measur
 
 Schema 1 and 2 registries remain readable and preserve IDs. A save writes schema 3 only when a partial construction mask is present. The new row payload is at most 191 mask bytes per local part. This stores the actual overlap evidence across reloads and distinguishes an unresolved perimeter from temporarily stale coverage of a previously complete footprint. Older binaries require the prior registry from the backup when rolling back a save that has written schema 3.
 
-An unresolved site is returned by SiteQueries with PARTIAL coverage when its evidence is current. It is excluded from SITE_SIEGE approach planning until a compact site has a complete corroborated survey. A newly observed clipped boundary conveys no exterior guarantee. Existing PARTIAL coverage of a historically verified footprint still uses the native approach, open-sky, collision and insertion checks. Rejection leaves settlement identity intact, with ordinary PLAYER_ASSAULT governed by its existing scheduler. [Siege acceptance](survival-040-alpha1.md)
+SiteQueries returns an unresolved site with PARTIAL coverage when its evidence is current. Alpha.1 requires a complete corroborated perimeter for siege admission. Existing PARTIAL coverage of a historically verified footprint uses the native approach, open-sky, collision and insertion checks. Rejection leaves settlement identity intact, with ordinary PLAYER_ASSAULT governed by its existing scheduler. [Alpha.1 siege acceptance](survival-040-alpha1.md)
+
+Alpha.2 keeps the unresolved-perimeter gate for natural sieges. A manual perimeter request can use a loaded local route with additional exterior standing checks, open sky, a position outside the full recorded envelope and an EXPOSED Protected Interior assessment. [Manual siege contract](survival-040-alpha2.md)
 
 ## Owner walkthrough
 

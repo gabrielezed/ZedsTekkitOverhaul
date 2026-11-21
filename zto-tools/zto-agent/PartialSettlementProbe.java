@@ -8,23 +8,25 @@ import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 
 /** Owner-scale native fixtures. Run the same source against the pre-fix archive for the baseline. */
-public final class PartialSettlementProbe extends SiteSiegeProbe {
-    private static final int AX = -121, AY = 63, AZ = 256, FAR = AX + 223;
+public class PartialSettlementProbe extends SiteSiegeProbe {
+    static final int AX = -121, AY = 63, AZ = 256, FAR = AX + 223;
 
-    private PartialSettlementProbe(File root) throws Exception { super(root); }
+    PartialSettlementProbe(File root) throws Exception { super(root); }
 
     public static void main(String[] args) {
         try {
-            PartialSettlementProbe probe = new PartialSettlementProbe(new File(args[0]));
-            ModdedSettlementProbe.register(true);
-            boolean baseline = "partial-baseline".equals(args[1]);
-            probe.ownerFactory(baseline);
-            if (!baseline) probe.temporaryWalls();
+            run(new PartialSettlementProbe(new File(args[0])), "partial-baseline".equals(args[1]));
         } catch (Throwable failure) {
             failure.printStackTrace();
             System.exit(1);
         }
         System.exit(0);
+    }
+
+    static void run(PartialSettlementProbe probe, boolean baseline) throws Exception {
+        ModdedSettlementProbe.register(true);
+        probe.ownerFactory(baseline);
+        if (!baseline) probe.temporaryWalls();
     }
 
     private void ownerFactory(boolean baseline) throws Exception {
@@ -126,7 +128,10 @@ public final class PartialSettlementProbe extends SiteSiegeProbe {
                         && reopened.coverage == Coverage.PARTIAL && here().id == id && here().siteCount == 1,
                 "fragment masks and stable identity persist across native save/reopen", here());
         System.out.printf("PASS partial registry saved and reopened under the same ID (%d bytes)%n", registryBytes);
+        onFactoryReopened(id);
     }
+
+    void onFactoryReopened(int id) {}
 
     private void temporaryWalls() throws Exception {
         open("partial-temporary-walls", false);

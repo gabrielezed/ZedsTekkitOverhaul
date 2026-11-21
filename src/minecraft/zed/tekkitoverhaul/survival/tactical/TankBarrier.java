@@ -9,7 +9,7 @@ import net.minecraft.src.World;
 import zed.tekkitoverhaul.integration.LoadedTile;
 
 /** One exposed column of the obstruction in the Tank's pursuit lane. */
-final class TankBarrier {
+public final class TankBarrier {
     private static final double[] LANES = {0, 0.80D, -0.80D};
     private static final double REACH = 2.8D;
     private static final double TARGET_RANGE = 12.0D;
@@ -68,16 +68,19 @@ final class TankBarrier {
         for (int level = blocks.length - 1; level >= 0; level--) {
             int intended = blocks[level];
             if (intended == 0 || intended != current.blocks[level] || intended != state(world, x, y + level, z)) continue;
-            Block block = Block.blocksList[intended >> 4];
-            if (world.setBlockWithNotify(x, y + level, z, 0)) {
-                block.dropBlockAsItem(world, x, y + level, z, intended & 15, 0);
-                broken = true;
-            }
+            if (remove(world, x, y + level, z, intended)) broken = true;
         }
         return broken;
     }
 
-    private static int state(World world, int x, int y, int z) {
+    public static boolean remove(World world, int x, int y, int z, int expected) {
+        if (expected == 0 || expected != state(world, x, y, z) || !world.setBlockWithNotify(x, y, z, 0)) return false;
+        Block.blocksList[expected >> 4].dropBlockAsItem(world, x, y, z, expected & 15, 0);
+        return true;
+    }
+
+    public static int state(World world, int x, int y, int z) {
+        if (!world.blockExists(x, y, z)) return 0;
         int id = world.getBlockId(x, y, z);
         Block block = Block.blocksList[id];
         if (block != Block.planks && block != Block.wood && block != Block.cobblestone && block != Block.glass

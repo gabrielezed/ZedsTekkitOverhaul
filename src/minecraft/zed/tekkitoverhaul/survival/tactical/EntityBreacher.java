@@ -17,7 +17,7 @@ public final class EntityBreacher extends TacticalHostile {
     private static final int ROUTE_INTERVAL = 24;
     private static final int GIVE_UP_TICKS = 192;
     private static final int MAX_IMPACTS = 3;
-    private static final int FORCE_TICKS = 36;
+    public static final int FORCE_TICKS = 36;
     private static final int FORCE_RETRY = 60;
     private static final int FORCE_RECOVERY = 12;
     private static final double ENTRANCE_REACH_SQ = 3.24D;
@@ -85,7 +85,7 @@ public final class EntityBreacher extends TacticalHostile {
         double y = target.boundingBox.minY;
         PathEntity path = plan(target.posX, y, target.posZ);
         boolean route = reaches(path, target.posX, y, target.posZ);
-        if (worldObj.difficultySetting >= 2) {
+        if (!holdingSiteSiege() && worldObj.difficultySetting >= 2) {
             Entrance barrier = entranceBetween(target);
             if (barrier != null && (!route || usesClosedEntrance(path, barrier))) {
                 if (ticksExisted >= retryAt && onGround && barrier.inReach(this)) {
@@ -103,7 +103,7 @@ public final class EntityBreacher extends TacticalHostile {
             }
         }
         boolean stalled = ticksExisted - lastProgress >= 2 * ROUTE_INTERVAL;
-        if (visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
+        if (!holdingSiteSiege() && visible && (!route || stalled) && ticksExisted >= nextBlink && distanceSq > 9 && distanceSq < 81) {
             double[] landing = EnderkinBlink.elevatedLanding(this, target, 2.6D, 3);
             boolean advanced = landing != null;
             if (advanced) EnderkinBlink.move(this, landing[0], landing[1], landing[2], 6, 0.92F);
@@ -183,18 +183,26 @@ public final class EntityBreacher extends TacticalHostile {
         }
         lookAt(current);
         if (ticksExisted < forceAt) return;
-        if (current.door) {
-            ((BlockDoor) Block.doorWood).onPoweredBlockChange(worldObj, current.x, current.y, current.z, true);
-        } else {
-            // The native powered gate transition sets the open bit and emits event 1003.
-            worldObj.setBlockMetadataWithNotify(current.x, current.y, current.z, current.lower | 4);
-            worldObj.playAuxSFX(1003, current.x, current.y, current.z, 0);
-        }
+        openWoodenEntrance(worldObj, current.x, current.y, current.z, current.door, current.lower);
         stopForcing();
-        pressureSwing = true;
-        swing();
+        signalSiteImpact();
         lastProgress = ticksExisted;
         getNavigator().setPath(plan(target.posX, target.boundingBox.minY, target.posZ), SPEED);
+    }
+
+    /** Callers revalidate the specific vanilla entrance, its state and the approach before applying. */
+    public static void openWoodenEntrance(World world, int x, int y, int z, boolean door, int lower) {
+        if (door) {
+            ((BlockDoor) Block.doorWood).onPoweredBlockChange(world, x, y, z, true);
+        } else {
+            world.setBlockMetadataWithNotify(x, y, z, lower | 4);
+            world.playAuxSFX(1003, x, y, z, 0);
+        }
+    }
+
+    public void signalSiteImpact() {
+        pressureSwing = true;
+        swing();
     }
 
     private void stopForcing() {

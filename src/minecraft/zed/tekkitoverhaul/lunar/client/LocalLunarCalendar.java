@@ -66,7 +66,8 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     private String storageStatus = "No active local save";
 
     public void register(BaseMod mod, int keyCode, boolean verbose, SiegeDirector assault,
-                         boolean siteSieges, boolean survivalDebug, int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
+                         boolean siteSieges, boolean structuralBreaching, boolean survivalDebug,
+                         int survivalKey, int logCapacity, boolean experimentalTerritorialThreat,
                          int territorialHostileCapBonusPercent, boolean naturalEnderkinSpawning,
                          boolean naturalAerialEncounters, int aerialEncounterCooldownSeconds,
                          boolean electricJetpackWeather, boolean lunarAerialEncounters, boolean forestMagpies) {
@@ -74,7 +75,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         owner = Thread.currentThread();
         this.verbose = verbose;
         this.assault = assault;
-        assault.attachSites(siteSieges, settlements);
+        assault.attachSites(siteSieges, structuralBreaching, settlements);
         this.experimentalTerritorialThreat = experimentalTerritorialThreat;
         naturalSpawning = new NaturalSpawnPressure(territory, territorialHostileCapBonusPercent, naturalEnderkinSpawning);
         naturalSpawning.register();
@@ -134,6 +135,18 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
     public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
         return Thread.currentThread() == owner && context != null && context == world && context == game.theWorld
                 ? assault.siteSiegeSnapshot(context) : null;
+    }
+
+    void requestTestSiege(World context, SiteSiege.Profile profile, SiteSiege.Intensity intensity) {
+        if (ownsDebugWorld(context)) assault.requestTestSiege(context, game.thePlayer, profile, intensity);
+    }
+
+    void cancelTestSiege(World context) {
+        if (ownsDebugWorld(context)) assault.cancelTestSiege(context);
+    }
+
+    private boolean ownsDebugWorld(World context) {
+        return Thread.currentThread() == owner && context == world && context == game.theWorld && local(context);
     }
 
     public TerritorialActivityService.Snapshot territorialSnapshot(World context) {

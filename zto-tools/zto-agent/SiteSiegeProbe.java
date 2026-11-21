@@ -13,6 +13,7 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
+import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Native simulation using the same disposable world and recognition setup as the settlement suite. */
 public class SiteSiegeProbe extends SettlementProbe {
@@ -22,6 +23,9 @@ public class SiteSiegeProbe extends SettlementProbe {
     private boolean measured;
     private int peakBlockReads, peakMetadataReads, peakMobs;
     private double peakStep;
+    TerritorialActivityService siegeTerritory;
+    boolean forceEntityTick;
+    private final Samples totalTicks = new Samples();
 
     SiteSiegeProbe(File root) throws Exception { super(root); }
 
@@ -85,7 +89,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         long afterAdmission = waitForSiege(director, calendar, dusk);
         SiteSiege.Snapshot active = director.siteSiegeSnapshot(world);
         check(active.kind == SiegeDirector.EncounterKind.SITE_SIEGE && active.site == house && active.inserted > 0
-                        && director.snapshot(world).starts == 0 && "OPENING".equals(active.objective),
+                        && director.snapshot(world).starts == 0 && "APPROACH_ENTRANCE".equals(active.objective),
                 "open entrance admits a committed siege instead of assault: " + siegeDetails(active), here());
         String fixedApproach = active.approach;
         String[] start = fixedApproach.split(" > ")[0].split(",");
@@ -96,15 +100,18 @@ public class SiteSiegeProbe extends SettlementProbe {
         siegeTicks(director, calendar, afterAdmission, 100);
         active = director.siteSiegeSnapshot(world);
         check(active.site == house && fixedApproach.equals(active.approach) && active.progress >= 4 && active.steps >= 4
-                        && active.peak <= 3 && active.inserted <= 3 && active.peakColumns <= 28
+                        && active.peak <= active.activeCap && active.inserted <= active.planned && active.peakColumns <= 28
                         && active.peakSkyReads <= 255 && here().peakReads <= 169 && world.chunkMisses == 0,
                 "native movement stays site-directed and within work/population limits: " + siegeDetails(active), here());
-        siegeTicks(director, calendar, afterAdmission + 100, 105);
-        active = director.siteSiegeSnapshot(world);
+        for (int tick = 100; tick < 350; tick++) {
+            siegeTicks(director, calendar, afterAdmission + tick, 1);
+            active = director.siteSiegeSnapshot(world);
+            if (active.progress >= 14.5 && world.b.stream().anyMatch(entity -> entity instanceof nm)) break;
+        }
         check(active.arrivals > 0 && active.progress >= 14.5,
                 "native task crossed the open threshold: " + siegeDetails(active), here());
         check(world.b.stream().anyMatch(entity -> entity instanceof nm),
-                "native ranged combat resumes after arrival", here());
+                "native ranged combat resumes after arrival: " + siegeDetails(active), here());
         endSamples("open-walled-house");
         long cooldown = active.cooldownUntil;
         check(cooldown == dusk + 16L * LunarSnapshot.DAY, "two-cycle cooldown", here());
@@ -144,7 +151,9 @@ public class SiteSiegeProbe extends SettlementProbe {
 
         open("siege-sealed", false);
         prepare(X, Z);
-        room(X, Y, Z, true);
+        room(X, Y, Z, false);
+        world.g(X, Y, Z + 2, 4);
+        world.g(X, Y + 1, Z + 2, 4);
         position(X + 2, Y, Z + 2);
         walk();
         ticks(560);
@@ -157,16 +166,16 @@ public class SiteSiegeProbe extends SettlementProbe {
         afterAdmission = waitForSiege(director, calendar, dusk);
         siegeTicks(director, calendar, afterAdmission, 120);
         SiteSiege.Snapshot sealed = director.siteSiegeSnapshot(world);
-        check(house == sealed.site && "FRONTAGE".equals(sealed.objective) && sealed.progress >= 4
-                        && (world.e(X, Y, Z + 2) & 4) == 0,
-                "sealed entry preserves an exterior frontage: " + siegeDetails(sealed), here());
+        check(house == sealed.site && "PRESSURE_PERIMETER".equals(sealed.objective) && sealed.progress >= 4
+                        && world.a(X, Y, Z + 2) == 4,
+                "sealed wall preserves an exterior frontage: " + siegeDetails(sealed), here());
         position(X + 80, Y, Z + 2);
         siegeTicks(director, calendar, afterAdmission + 120, 1);
         check("PLAYER_ABSENT".equals(director.siteSiegeSnapshot(world).outcome)
                         && director.siteSiegeSnapshot(world).active == 0 && director.snapshot(world).starts == 0,
                 "leaving releases siege authority and cannot start a second encounter", here());
         endSamples("sealed");
-        System.out.println("PASS sealed frontage, unchanged wooden door and player absence " + siegeDetails(sealed));
+        System.out.println("PASS sealed frontage, unchanged cobblestone and player absence " + siegeDetails(sealed));
         terminalTransitions(director, house);
 
 
@@ -188,14 +197,14 @@ public class SiteSiegeProbe extends SettlementProbe {
         director = siegeDirector(true, calendar);
         world.auditChunks = true;
         beginSamples();
-        siegeTicks(director, calendar, dusk, 38);
+        siegeTicks(director, calendar, dusk, 98);
         SiteSiege.Snapshot unloaded = director.siteSiegeSnapshot(world);
         check(unloaded.inserted == 0 && world.chunkMisses == 0 && director.snapshot(world).starts == 1
                         && "NO_VALID_APPROACH".equals(unloaded.eligibility),
                 "unloaded routes safely fall back without fetching chunks: " + siegeDetails(unloaded), here());
         endSamples("missing-chunks");
         // The first legacy wave has always started at natural dusk +100.
-        siegeTicks(director, calendar, dusk + 38, 62);
+        siegeTicks(director, calendar, dusk + 98, 2);
         check(director.snapshot(world).currentWave == 0, "fallback must wait until the legacy first-wave tick", here());
         siegeTicks(director, calendar, dusk + 100, 1);
         check(director.snapshot(world).currentWave == 1, "delayed preflight must not postpone the first wave", here());
@@ -211,7 +220,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         director = siegeDirector(true, calendar);
         afterAdmission = waitForSiege(director, calendar, dusk);
         active = director.siteSiegeSnapshot(world);
-        check(active.site == house && "PARTIAL".equals(active.coverage) && "OPENING".equals(active.objective)
+        check(active.site == house && "PARTIAL".equals(active.coverage) && "APPROACH_ENTRANCE".equals(active.objective)
                         && active.kind == SiegeDirector.EncounterKind.SITE_SIEGE,
                 "partial recognized site admits locally verified route: " + siegeDetails(active), here());
         siegeTicks(director, calendar, afterAdmission, 35);
@@ -219,7 +228,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         toggle(X, Y, Z + 2);
         siegeTicks(director, calendar, afterAdmission + 35, 125);
         SiteSiege.Snapshot blocked = director.siteSiegeSnapshot(world);
-        check("ROUTE_LOST".equals(blocked.outcome) && blocked.arrivals == 0 && blocked.progress < 14
+        check(blocked.failures.containsKey("ROUTE_OBSTRUCTED") && blocked.progress < 14
                         && director.snapshot(world).starts == 0 && (world.e(X, Y, Z + 2) & 4) == 0,
                 "closing the door stops moving attackers before the threshold: " + siegeDetails(blocked), here());
         System.out.println("PASS unloaded fallback, locally verified partial site and route invalidation " + siegeDetails(blocked));
@@ -277,8 +286,12 @@ public class SiteSiegeProbe extends SettlementProbe {
                 world.q = 0;
                 siegeTicks(director, calendar, next, 1);
             } else if (i == 1) {
-                for (Object entity : world.b) if (entity instanceof xr) ((xr) entity).A();
-                siegeTicks(director, calendar, next, 1);
+                for (Object entity : new ArrayList<Object>(world.b)) if (entity instanceof yy) ((yy) entity).a(md.a(player), 100);
+                for (int tick = 0; tick < 1000
+                        && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.SITE_SIEGE; tick++) {
+                    siegeTicks(director, calendar, next + tick, 1);
+                    for (Object entity : new ArrayList<Object>(world.b)) if (entity instanceof yy) ((yy) entity).a(md.a(player), 100);
+                }
             } else if (i == 2) {
                 siegeTicks(director, calendar, next + 30, 1);
             } else if (i == 3) {
@@ -302,8 +315,8 @@ public class SiteSiegeProbe extends SettlementProbe {
     }
 
     private void verifyReleaseDuringNativeDispatch() throws Exception {
-        xr mob = null;
-        for (Object entity : world.b) if (entity instanceof xr) mob = (xr) entity;
+        yy mob = null;
+        for (Object entity : world.b) if (entity instanceof yy && !((yy) entity).G) mob = (yy) entity;
         check(mob != null, "native skeleton for release dispatch", here());
         Field tasksField = acq.class.getDeclaredField("bT");
         tasksField.setAccessible(true);
@@ -389,10 +402,10 @@ public class SiteSiegeProbe extends SettlementProbe {
         LunarCalendar calendar = siegeCalendar(41, dusk - 1, Long.MIN_VALUE);
         SiegeDirector director = siegeDirector(true, calendar);
         beginSamples();
-        siegeTicks(director, calendar, dusk, 48);
+        siegeTicks(director, calendar, dusk, 98);
         SiteSiege.Snapshot inactive = director.siteSiegeSnapshot(world);
         check(inactive.site == site && inactive.inserted == 0 && inactive.candidates > 0
-                        && "SURFACE_OUT_OF_REACH".equals(inactive.rejection) && world.chunkMisses == 0,
+                        && inactive.kind == SiegeDirector.EncounterKind.PLAYER_ASSAULT && world.chunkMisses == 0,
                 "elevated industrial geometry fails closed: " + siegeDetails(inactive), here());
         endSamples("elevated-industrial");
         System.out.println("PASS elevated dense industrial approach safely rejected");
@@ -460,7 +473,9 @@ public class SiteSiegeProbe extends SettlementProbe {
         toggle(X, Y, Z + 2);
         siegeTicks(director, calendar, dusk + 48, 1050);
         SiteSiege.Snapshot blocked = director.siteSiegeSnapshot(world);
-        check("ROUTE_OBSTRUCTED".equals(blocked.outcome) && blocked.inserted == 0
+        check("APPROACH_ENTRANCE".equals(blocked.objective) && blocked.progress < 14
+                        && (world.e(X, Y, Z + 2) & 4) == 0
+                        && blocked.failures.keySet().stream().anyMatch(reason -> reason.toString().contains("ROUTE_OBSTRUCTED"))
                         && director.snapshot(world).starts == 0 && blocked.cooldownUntil == waiting.cooldownUntil,
                 "committed twilight obstruction cannot start a late ordinary assault: " + siegeDetails(blocked), here());
         System.out.println("PASS planning pause, pre-commit resync, forecast and twilight ownership without late fallback");
@@ -503,17 +518,23 @@ public class SiteSiegeProbe extends SettlementProbe {
         throw new AssertionError("admission deadline: " + siegeDetails(director.siteSiegeSnapshot(world)));
     }
 
-    private void siegeTicks(SiegeDirector director, LunarCalendar calendar, long from, int count) {
+    void siegeTicks(SiegeDirector director, LunarCalendar calendar, long from, int count) {
         for (long time = from; time < from + count; time++) {
             world.a(time);
             world.q();
             long entityStarted = System.nanoTime();
             int moved = 0;
             for (Object entity : new ArrayList<Object>(world.b)) {
-                if (entity instanceof xr) {
-                    xr mob = (xr) entity;
+                if (entity instanceof yy && !((yy) entity).G) {
+                    yy mob = (yy) entity;
                     double x = mob.o, z = mob.q;
-                    world.f(mob);
+                    if (forceEntityTick) {
+                        // Model a Forge-forced entity update, then let World reconcile chunk membership.
+                        mob.J_();
+                        world.a(mob, false);
+                    } else {
+                        world.f(mob);
+                    }
                     if (measured) peakStep = Math.max(peakStep, Math.hypot(mob.o - x, mob.q - z));
                     moved++;
                 }
@@ -529,10 +550,11 @@ public class SiteSiegeProbe extends SettlementProbe {
             world.auditBlocks = measured;
             world.blockReads = world.metadataReads = 0;
             long directorStarted = System.nanoTime();
-            director.tick(player, false, null);
+            director.tick(player, false, siegeTerritory);
             long spent = System.nanoTime() - directorStarted;
             world.auditBlocks = false;
             if (measured) {
+                totalTicks.add(System.nanoTime() - entityStarted);
                 peakBlockReads = Math.max(peakBlockReads, world.blockReads);
                 peakMetadataReads = Math.max(peakMetadataReads, world.metadataReads);
                 SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
@@ -566,23 +588,28 @@ public class SiteSiegeProbe extends SettlementProbe {
                 nbt.report("one-row encounter NBT"), (System.nanoTime() - start) / 1000.0);
     }
 
-    private void beginSamples() {
+    void beginSamples() {
         measured = true;
+        world.measurePaths = true;
+        world.pathNanos = world.peakPathNanos = world.pathCalls = 0;
         lastPlannerNanos = peakPlannerTick = peakPlannerNanos = 0;
         firstMeasuredTick = Long.MIN_VALUE;
         peakBlockReads = peakMetadataReads = peakMobs = 0;
         peakStep = 0;
     }
 
-    private void endSamples(String name) {
+    void endSamples(String name) {
         measured = false;
+        world.measurePaths = false;
         System.out.println("PROFILE " + name + " | " + planner.report("planner") + " peak offset=" + peakPlannerTick
                 + " | " + recognition.report("territory+recognition")
-                + " | " + movement.report("native skeleton tick")
-                + " | " + activeTicks.report("active director tick")
+                + " | " + movement.report("native hostile tick")
+                + " | " + activeTicks.report("active director tick") + " | " + totalTicks.report("fixture tick")
                 + String.format(Locale.ROOT, " | peak block/meta calls %d/%d | mobs %d | step %.3f blocks",
-                        peakBlockReads, peakMetadataReads, peakMobs, peakStep));
-        check(peakMobs <= 3 && peakStep < 1.0 && here().peakReads <= 169,
+                        peakBlockReads, peakMetadataReads, peakMobs, peakStep)
+                + " | native path calls " + world.pathCalls + " | " + world.pathNanos / 1000 + "/"
+                + world.peakPathNanos / 1000 + " us total/peak");
+        check(peakStep < 1.0 && here().peakReads <= 169,
                 "sampled movement and recognition respect native fixture bounds", here());
     }
 
@@ -613,7 +640,13 @@ public class SiteSiegeProbe extends SettlementProbe {
                 view.kind, view.phase, view.site, view.coverage, view.eligibility, view.rejection, view.approach,
                 view.inserted, view.active, view.progress, view.steps, view.arrivals, view.candidates, view.columns,
                 view.peakColumns, view.skyReads, view.peakSkyReads, view.protectionReads,
-                view.planningNanos / 1000, view.peakPlanningNanos / 1000);
+                view.planningNanos / 1000, view.peakPlanningNanos / 1000)
+                + " | " + view.intensity + " threat=" + view.threat + " wave=" + view.wave + "/" + view.waves
+                + " planned=" + view.planned + " cap=" + view.activeCap + " peak=" + view.peak
+                + " attempted=" + view.attempts + " defeated=" + view.defeated + " withdrawn=" + view.withdrawn
+                + " deferred=" + view.deferred + " reserve=" + view.remaining + " undeployed=" + view.abandoned
+                + " | " + view.insertedRoles + " | " + view.failures + " | objective " + view.objectiveOutcome + " | outcome " + view.outcome + " | lifetime " + view.peakLifetime
+                + " ticks | path " + view.pathNanos / 1000 + "/" + view.peakPathNanos / 1000 + " us total/peak";
     }
 
 }

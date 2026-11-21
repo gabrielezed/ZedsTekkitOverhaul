@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.4.0-alpha.2 — Tactical site objectives and manual siege testing
+
+- Call or cancel a local Site Siege from the Debug Hub, including daytime tests on a recognized site.
+- Give a small site-bound group an open entrance, exterior frontage or one specialist objective.
+- Let a Breacher force one eligible wooden door or fence gate. Hard structural breaching requires the explicit setting and permits at most two verified vanilla block removals.
+- Report the active profile, site, route, tactical phase, actual insertions and outcome in the monitor.
+
 ## 0.4.0-alpha.1 — Site-targeted siege candidate
 
 - Adds opt-in full-moon site sieges with persistent site identity, exterior skeleton approaches and bounded resolution.

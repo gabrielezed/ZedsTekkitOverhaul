@@ -8,7 +8,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Selecting checks and managing fixtures | [Test tiers and host launch restriction](testing.md), [Dev Bridge lifecycle](test-automation.md), [workspace hygiene](workspace-hygiene.md) |
 | Calendar, world ownership or rendering | [Lunar implementation](lunar-cycle-implementation.md), [lunar specification](lunar-cycle-system.md) |
 | Natural encounters and replay | [Current implementation](survival-021-implementation.md), [integration evidence](survival-021-integration.md), [Survival contract](SURVIVAL_SIEGE_SPEC.md) |
-| Site sieges and fortress warfare | [Survival 0.4 specification](survival-040-spec.md), [alpha.1 implementation and owner walkthrough](survival-040-alpha1.md) |
+| Site sieges and fortress warfare | [Survival 0.4 specification](survival-040-spec.md), [alpha.2 implementation and owner walkthrough](survival-040-alpha2.md), [alpha.1 evidence](survival-040-alpha1.md) |
 | Biome ecology, forest wildlife and predation | [Legacy biome registry and current prototype](survival-023-implementation.md), [0.2.3 design draft](survival-023-spec.md) |
 | Tactical mobs and mob equipment | [Enderkin bestiary](../../README.md#survival-021--the-enderkin-bestiary), [equipment contract](MOB_EQUIPMENT_BACKPORT_SPEC.md), [Saboteur compatibility](saboteur-industrial.md) |
 | Inventory, crafting and Creative | [Compatibility acceptance](compatibility-acceptance.md), [crafting UX](crafting-inventory-ux.md), [Creative backport](../engineering/creative-inventory-backport.md) |

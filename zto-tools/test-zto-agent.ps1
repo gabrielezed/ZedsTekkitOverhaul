@@ -5,9 +5,10 @@ param(
     [switch]$AerialSample,
     [string]$CandidateJar,
     [string]$IndustrialProfileBaseline,
+    [switch]$TerrainBaseline,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
-        'partial','partial-baseline','site-siege')][string]$Focus
+        'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-terrain')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,6 +17,9 @@ if ($IndustrialProfileBaseline -and $Focus -ne 'industrial-profile') {
 }
 if ($IndustrialProfileBaseline) {
     $IndustrialProfileBaseline = (Resolve-Path -LiteralPath $IndustrialProfileBaseline).Path
+}
+if ($TerrainBaseline -and ($Focus -ne 'site-siege-terrain' -or !$CandidateJar)) {
+    throw 'TerrainBaseline requires -Focus site-siege-terrain and -CandidateJar.'
 }
 $root = Split-Path $PSScriptRoot
 $agent = (Resolve-Path -LiteralPath (Join-Path $root 'dist-zto/ZTOAgent.jar')).Path
@@ -55,16 +59,28 @@ try {
             ForEach-Object { Join-Path $PSScriptRoot "zto-agent/$_" }
         $moddedSuite = $Focus -in 'modded','modded-profile' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
         $partialSuite = $Focus -in 'partial','partial-baseline' -or (!$CandidateJar -and ($Pack -or $Focus -eq 'settlement'))
-        $siteSiegeSuite = $Focus -eq 'site-siege' -or ($Pack -and !$CandidateJar)
-        $mixedSiegeSuite = $siteSiegeSuite -and !$CandidateJar
+        $siteSiegeSuite = $Focus -in 'site-siege','site-siege-escalation','site-siege-terrain' -or ($Pack -and !$CandidateJar)
+        $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -eq 'site-siege-terrain')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
         if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSettlementProbe.java'
             $compileClasspath = $moddedClasspath
         }
-        if ($mixedSiegeSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSiteSiegeProbe.java' }
-        if ($partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java' }
+        if ($mixedSiegeSuite) {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/TacticalSiteSiegeProbe.java'
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSiteSiegeProbe.java'
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeEscalationProbe.java'
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/TerrainSiteSiegeProbe.java'
+        }
+        $partialMain = 'PartialSettlementProbe'
+        if ($partialSuite) {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/PartialSettlementProbe.java'
+            if (!$CandidateJar -and $Focus -ne 'partial-baseline') {
+                $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ManualPartialSiteSiegeProbe.java'
+                $partialMain = 'ManualPartialSiteSiegeProbe'
+            }
+        }
         & javac -source 8 -target 8 -cp $compileClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
@@ -93,9 +109,23 @@ try {
             }
             if ($siteSiegeSuite) {
                 $siegeWorlds = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'site-siege-worlds')
+                if ($mixedSiegeSuite -and $Focus -ne 'site-siege-escalation') {
+                    $terrainArgs = @($siegeWorlds.FullName)
+                    if ($TerrainBaseline) { $terrainArgs += 'baseline' }
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath TerrainSiteSiegeProbe @terrainArgs
+                    if ($LASTEXITCODE) { throw 'Native site siege terrain probe failed.' }
+                }
+                if ($Focus -eq 'site-siege-terrain') { return }
+                if ($mixedSiegeSuite) {
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeEscalationProbe $siegeWorlds.FullName
+                    if ($LASTEXITCODE) { throw 'Native site siege escalation probe failed.' }
+                }
+                if ($Focus -eq 'site-siege-escalation') { return }
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath SiteSiegeProbe $siegeWorlds.FullName
                 if ($LASTEXITCODE) { throw 'Native site siege probe failed.' }
                 if ($mixedSiegeSuite) {
+                    & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $industrialClasspath TacticalSiteSiegeProbe $siegeWorlds.FullName
+                    if ($LASTEXITCODE) { throw 'Native tactical site siege probe failed.' }
                     & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath ModdedSiteSiegeProbe $siegeWorlds.FullName
                     if ($LASTEXITCODE) { throw 'Native mixed-mod site siege probe failed.' }
                 }
@@ -109,7 +139,7 @@ try {
                 if ($Focus -in 'modded','modded-profile') { return }
             }
             if ($partialSuite) {
-                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath PartialSettlementProbe $out.FullName $Focus
+                & $PackJava '-Xverify:all' "-javaagent:$agent" -cp $moddedClasspath $partialMain $out.FullName $Focus
                 if ($LASTEXITCODE) { throw 'Native partial settlement probe failed.' }
                 if ($Focus -in 'partial','partial-baseline') { return }
             }

@@ -25,6 +25,7 @@ import zed.tekkitoverhaul.settlement.SiteQueries;
 /** Arbitrates one major encounter at natural dusk. All methods run on the owning simulation thread. */
 public final class SiegeDirector implements LunarService.Listener {
     public enum EncounterKind { NONE, PLAYER_ASSAULT, SITE_SIEGE }
+    public enum DebugState { READY, REQUESTED, PLANNING, ADMITTED, ACTIVE, REJECTED, CANCELLED, RESOLVED }
     public enum State { IDLE, ACTIVE, RESOLVED, ABORTED }
     public enum Eligibility {
         UNAVAILABLE("Unavailable"), ACTIVE("Encounter active"), PEACEFUL("Peaceful difficulty"),
@@ -52,7 +53,14 @@ public final class SiegeDirector implements LunarService.Listener {
     private final List<TrackedMob> tracked = new ArrayList<TrackedMob>();
     private AssaultWave[] waves = AssaultWave.plan(0);
     private SiteSiege siteSiege;
+    private SiteSiege.Profile debugRequest;
+    private SiteSiege.Intensity debugIntensity;
+    private EntityPlayer debugPlayer;
+    private boolean debugCancel;
+    private DebugState debugState = DebugState.READY;
+    private String debugReason = "NONE";
     private World world;
+    private Thread owner;
     private LunarService lunar;
     private AssaultDiagnostics diagnostics;
     private AssaultWorldState storage;
@@ -87,12 +95,112 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void attachSites(boolean siteSieges, SiteQueries sites) {
-        siteSiege = new SiteSiege(siteSieges, sites);
+        attachSites(siteSieges, false, sites);
+    }
+
+    public void attachSites(boolean siteSieges, boolean structuralBreaching, SiteQueries sites) {
+        siteSiege = new SiteSiege(siteSieges, structuralBreaching, sites);
     }
 
     public SiteSiege.Snapshot siteSiegeSnapshot(World context) {
         return context != null && context == world && siteSiege != null
-                ? new SiteSiege.Snapshot(siteSiege, encounterKind(), activeCap, lunar == null ? null : lunar.snapshot()) : null;
+                ? new SiteSiege.Snapshot(siteSiege, encounterKind(), lunar == null ? null : lunar.snapshot(),
+                        debugState, debugReason, debugBlock(), debugCancelable() && !debugCancel) : null;
+    }
+
+    /** Queues one command on the local owner thread. Only tick may plan or mutate the world. */
+    public void requestTestSiege(World context, EntityPlayer player, SiteSiege.Profile profile) {
+        requestTestSiege(context, player, profile, SiteSiege.Intensity.NATURAL);
+    }
+
+    public void requestTestSiege(World context, EntityPlayer player, SiteSiege.Profile profile, SiteSiege.Intensity intensity) {
+        if (Thread.currentThread() != owner || context == null || context != world || siteSiege == null
+                || profile == null || intensity == null) return;
+        String block = debugBlock();
+        if (block != null) {
+            debugReason = block;
+            if (!debugCancelable()) debugState = DebugState.REJECTED;
+            return;
+        }
+        debugPlayer = player;
+        debugRequest = profile;
+        debugIntensity = intensity;
+        debugState = DebugState.REQUESTED;
+        debugReason = "NONE";
+    }
+
+    public void cancelTestSiege(World context) {
+        if (Thread.currentThread() == owner && context != null && context == world && debugCancelable()) debugCancel = true;
+    }
+
+    private String debugBlock() {
+        if (world.isRemote || world.worldProvider.worldType != 0) return "WORLD_UNAVAILABLE";
+        if (state == State.ACTIVE) return "PLAYER_ASSAULT_ACTIVE";
+        if (siteActive()) return "SITE_SIEGE_ACTIVE";
+        if (debugCancelable()) return "REQUEST_PENDING";
+        if (pending != null || siteSiege.planning()) return "NATURAL_ADMISSION_PENDING";
+        return null;
+    }
+
+    private boolean debugCancelable() {
+        return debugRequest != null || (siteSiege != null && siteSiege.manual()
+                && (siteSiege.planning() || siteActive()));
+    }
+
+    private boolean tickDebug(EntityPlayer player, TerritorialActivityService territory) {
+        if (debugCancel) {
+            if (siteSiege.manual()) siteSiege.interrupt("DEBUG_CANCELLED");
+            clearDebugCommand();
+            debugState = DebugState.CANCELLED;
+            debugReason = "DEBUG_CANCELLED";
+            return false;
+        }
+        if (siteActive() && siteSiege.manual()) {
+            siteSiege.tick(player, lunar == null ? null : lunar.snapshot());
+            if (!siteActive()) {
+                debugReason = siteSiege.resolution();
+                debugState = siteSiege.hasInserted() ? DebugState.RESOLVED : DebugState.REJECTED;
+            } else if (siteSiege.hasInserted()) {
+                debugState = DebugState.ACTIVE;
+            }
+            return true;
+        }
+        if (debugRequest == null) return false;
+        if (pending != null || (siteSiege.planning() && !siteSiege.manual())
+                || (encounterKind() != EncounterKind.NONE)) {
+            rejectDebug("MAJOR_ENCOUNTER_RESERVED");
+            return false;
+        }
+        if (world.difficultySetting <= 0 || player != debugPlayer || !available(world, player)) {
+            debugReason = world.difficultySetting <= 0 ? "PEACEFUL" : "PLAYER_UNAVAILABLE";
+            if (siteSiege.manual()) siteSiege.interrupt(debugReason);
+            rejectDebug(debugReason);
+            return false;
+        }
+        SiteSiege.Admission admission = siteSiege.admitManual(player, debugRequest, debugIntensity, territory, activeCap);
+        if (admission == SiteSiege.Admission.WAIT) {
+            debugState = DebugState.PLANNING;
+        } else if (admission == SiteSiege.Admission.COMMITTED) {
+            clearDebugCommand();
+            debugState = DebugState.ADMITTED;
+            debugReason = "NONE";
+        } else {
+            rejectDebug(siteSiege.admissionStatus());
+        }
+        return true;
+    }
+
+    private void clearDebugCommand() {
+        debugRequest = null;
+        debugIntensity = null;
+        debugPlayer = null;
+        debugCancel = false;
+    }
+
+    private void rejectDebug(String cause) {
+        clearDebugCommand();
+        debugState = DebugState.REJECTED;
+        debugReason = cause;
     }
 
     private EncounterKind encounterKind() {
@@ -114,10 +222,14 @@ public final class SiegeDirector implements LunarService.Listener {
         }
         if (lunar != null) lunar.unsubscribe(this);
         world = incoming;
+        owner = world == null ? null : Thread.currentThread();
         lunar = service;
         patrol.reset();
         storage = null;
         if (siteSiege != null) siteSiege.bind(world, null);
+        clearDebugCommand();
+        debugState = DebugState.READY;
+        debugReason = "NONE";
         pending = null;
         target = null;
         selectedBudget = budget;
@@ -168,7 +280,7 @@ public final class SiegeDirector implements LunarService.Listener {
         if (storage == null) return;
         if (event.kind == LunarEvent.Kind.RESYNC) {
             pending = null;
-            if (siteSiege != null) siteSiege.interrupt("LUNAR_" + event.cause.name());
+            if (siteSiege != null && !siteSiege.manual()) siteSiege.interrupt("LUNAR_" + event.cause.name());
             if (state == State.ACTIVE) end(State.ABORTED, event.cause.name());
             if (diagnostics != null && AssaultSchedule.WINDOW.matches(event.after)) {
                 diagnostics.assault(event.after.rawTime, "No assault boundary: " + event.cause
@@ -176,15 +288,16 @@ public final class SiegeDirector implements LunarService.Listener {
             }
         } else if (event.kind == LunarEvent.Kind.NIGHT_ENDED) {
             pending = null;
-            if (siteSiege != null) siteSiege.interrupt("NIGHT_ENDED");
+            if (siteSiege != null && !siteSiege.manual()) siteSiege.interrupt("NIGHT_ENDED");
             if (state == State.ACTIVE) end(State.RESOLVED, "NIGHT_ENDED");
-        } else if (state != State.ACTIVE && !siteActive() && pending == null
+        } else if (state != State.ACTIVE && !siteActive() && !(siteSiege != null && siteSiege.manual() && siteSiege.planning()) && pending == null
                 && AssaultSchedule.canStart(event, storage.consumed)) {
             pending = event.after;
         } else if (diagnostics != null && event.kind == LunarEvent.Kind.NIGHT_STARTED
                 && AssaultSchedule.WINDOW.matches(event.after)) {
             String rejection = event.cause != LunarEvent.Cause.NATURAL ? event.cause.name()
-                    : state == State.ACTIVE || siteActive() || pending != null ? "ACTIVE" : "CONSUMED";
+                    : state == State.ACTIVE || siteActive() || pending != null
+                    || (siteSiege != null && siteSiege.manual() && siteSiege.planning()) ? "ACTIVE" : "CONSUMED";
             diagnostics.assault(event.after.rawTime, "Eligibility rejected: " + rejection
                     + " | consumed " + storage.consumed + " | starts " + starts);
         }
@@ -192,6 +305,7 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public void tick(EntityPlayer player, boolean paused, TerritorialActivityService territory) {
         if (patrol.state == State.ACTIVE) patrol.tick(world, lunar.snapshot(), player, paused, diagnostics);
+        if (!paused && siteSiege != null && tickDebug(player, territory)) return;
         if (storage == null) return;
         LunarSnapshot boundary = pending;
         pending = null;
@@ -201,7 +315,7 @@ public final class SiegeDirector implements LunarService.Listener {
             return;
         }
         if (siteActive()) {
-            siteSiege.tick(player, lunar.snapshot(), activeCap);
+            siteSiege.tick(player, lunar.snapshot());
             return;
         }
         if (boundary != null) {
@@ -212,7 +326,7 @@ public final class SiegeDirector implements LunarService.Listener {
                 return;
             }
             if (siteSiege != null) {
-                SiteSiege.Admission decision = siteSiege.admit(player, boundary);
+                SiteSiege.Admission decision = siteSiege.admit(player, boundary, territory, activeCap);
                 if (decision == SiteSiege.Admission.WAIT) {
                     pending = boundary;
                     return;

@@ -56,6 +56,13 @@ final class SiteApproach {
         return new SiteApproach(combined, Objective.APPROACH_ENTRANCE, null, connected);
     }
 
+    int priority() { return objective == Objective.PRESSURE_ENTRANCE ? 4 : objective.ordinal(); }
+
+    String sector() {
+        int dx = start().xCoord - goal().xCoord, dz = start().zCoord - goal().zCoord;
+        return Math.abs(dx) >= Math.abs(dz) ? (dx < 0 ? "WEST" : "EAST") : (dz < 0 ? "NORTH" : "SOUTH");
+    }
+
     String signature() {
         StringBuilder key = new StringBuilder();
         for (PathPoint point : route) key.append(point.xCoord).append(',').append(point.yCoord)
@@ -81,6 +88,22 @@ final class SiteApproach {
             int dx = DX[direction], dz = DZ[direction];
             int x = dx < 0 ? part.minX : dx > 0 ? part.maxX : lane(part.minX, part.maxX, offset);
             int z = dz < 0 ? part.minZ : dz > 0 ? part.maxZ : lane(part.minZ, part.maxZ, offset);
+            if (offset == 0 && profile != SiteSiege.Profile.PERIMETER && world.difficultySetting >= 2) {
+                int center = dx == 0 ? x : z;
+                int min = dx == 0 ? part.minX : part.minZ, max = dx == 0 ? part.maxX : part.maxZ;
+                entrance: for (int n = 0; n <= 24; n++) {
+                    int v = center + (n % 2 == 0 ? n / 2 : -(n + 1) / 2);
+                    if (v < min || v > max) continue;
+                    int px = dx == 0 ? v : x, pz = dx == 0 ? z : v;
+                    if (!world.blockExists(px, part.minY, pz)) continue;
+                    for (int y = part.minY; y <= Math.min(part.minY + 2, 253); y++) {
+                        if (SiegeBarrier.entrance(world, px, y, pz, dx, dz) == null) continue;
+                        x = px;
+                        z = pz;
+                        break entrance;
+                    }
+                }
+            }
             int sx = x + dx * DEPTH, sz = z + dz * DEPTH;
             if (!exterior(envelope, sx, sz)) {
                 rejection = "INSIDE_EXCLUSION";

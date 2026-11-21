@@ -63,6 +63,9 @@ public final class SiteSiege {
     private SiteApproach approach, openedApproach;
     private final List<SiteApproach> frontages = new ArrayList<SiteApproach>();
     private final List<SiteApproach> connectedAlternates = new ArrayList<SiteApproach>();
+    private final List<SiteApproach> sectors = new ArrayList<SiteApproach>();
+    private final Set<String> deployedSectors = new HashSet<String>();
+    private final Set<PathPoint> insertionPositions = new HashSet<PathPoint>();
     private final Set<String> failedLanes = new HashSet<String>();
     private TerrainApproachSearch terrainSearch, heavySearch;
     private final List<SiteApproach> heavyRoutes = new ArrayList<SiteApproach>();
@@ -214,6 +217,12 @@ public final class SiteSiege {
             status = manual() ? "WARNING" : "WAITING_FOR_DARKNESS";
             world.playSoundEffect(approach.goal().xCoord + 0.5, approach.goal().yCoord,
                     approach.goal().zCoord + 0.5, "ambient.cave.cave", 0.55F, 0.85F);
+            sectors.add(approach);
+            for (SiteApproach other : frontages) {
+                boolean represented = false;
+                for (SiteApproach sector : sectors) represented |= sector.sector().equals(other.sector());
+                if (!represented) sectors.add(other);
+            }
             resetPlan();
             return Admission.COMMITTED;
         } finally {
@@ -297,16 +306,9 @@ public final class SiteSiege {
         }
         validRoutes++;
         if (profile == Profile.BREACH && plan.barrier == null) return;
-        if (plan.objective == SiteApproach.Objective.APPROACH_ENTRANCE
-                || (profile == Profile.BREACH && plan.objective == SiteApproach.Objective.PRESSURE_ENTRANCE)) {
-            approach = plan;
-            triedSpecialist |= plan.barrier != null;
-        } else {
-            int index = 0;
-            while (index < frontages.size() && frontages.get(index).objective.ordinal() >= plan.objective.ordinal())
-                index++;
-            frontages.add(index, plan);
-        }
+        int index = 0;
+        while (index < frontages.size() && frontages.get(index).priority() >= plan.priority()) index++;
+        frontages.add(index, plan);
     }
 
     private void nextConnectedApproach(SiteApproach.Sampler sampler) {
@@ -534,7 +536,11 @@ public final class SiteSiege {
             int choice = attempt % (connectedAlternates.size() + 1);
             if (choice > 0) primary = connectedAlternates.get(choice - 1);
         }
-        if (isObjectiveRole(role)) return primary;
+        if (isObjectiveRole(role)) return approach;
+        if (!approach.connected && sectors.size() > 1) {
+            SiteApproach sector = sectors.get((slot + attempt + waveIndex) % sectors.size());
+            if (sector != approach) return sector.staging(0, role == Role.SKIRMISHER ? 5 : 2);
+        }
         if (approach.connected) {
             if (role == Role.TANK) return heavyRoutes.isEmpty() ? primary.staging(0, 3)
                     : heavyRoutes.get(attempt % heavyRoutes.size());
@@ -621,6 +627,8 @@ public final class SiteSiege {
                 rejectWave(role, rejection);
                 return;
             }
+            insertionPositions.add(lane.start());
+            deployedSectors.add(lane.sector());
             wave.inserted[slot] = true;
             wave.deployed++;
             Attacker attacker = new Attacker(mob, task, role, elapsed);
@@ -875,6 +883,9 @@ public final class SiteSiege {
         force = null;
         openedApproach = null;
         passageAfterOpen = null;
+        sectors.clear();
+        deployedSectors.clear();
+        insertionPositions.clear();
         connectedAlternates.clear();
         failedLanes.clear();
         terrainSearch = heavySearch = null;

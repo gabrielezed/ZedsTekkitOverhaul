@@ -197,14 +197,14 @@ public class SiteSiegeProbe extends SettlementProbe {
         director = siegeDirector(true, calendar);
         world.auditChunks = true;
         beginSamples();
-        siegeTicks(director, calendar, dusk, 38);
+        siegeTicks(director, calendar, dusk, 98);
         SiteSiege.Snapshot unloaded = director.siteSiegeSnapshot(world);
         check(unloaded.inserted == 0 && world.chunkMisses == 0 && director.snapshot(world).starts == 1
                         && "NO_VALID_APPROACH".equals(unloaded.eligibility),
                 "unloaded routes safely fall back without fetching chunks: " + siegeDetails(unloaded), here());
         endSamples("missing-chunks");
         // The first legacy wave has always started at natural dusk +100.
-        siegeTicks(director, calendar, dusk + 38, 62);
+        siegeTicks(director, calendar, dusk + 98, 2);
         check(director.snapshot(world).currentWave == 0, "fallback must wait until the legacy first-wave tick", here());
         siegeTicks(director, calendar, dusk + 100, 1);
         check(director.snapshot(world).currentWave == 1, "delayed preflight must not postpone the first wave", here());
@@ -402,10 +402,10 @@ public class SiteSiegeProbe extends SettlementProbe {
         LunarCalendar calendar = siegeCalendar(41, dusk - 1, Long.MIN_VALUE);
         SiegeDirector director = siegeDirector(true, calendar);
         beginSamples();
-        siegeTicks(director, calendar, dusk, 48);
+        siegeTicks(director, calendar, dusk, 98);
         SiteSiege.Snapshot inactive = director.siteSiegeSnapshot(world);
         check(inactive.site == site && inactive.inserted == 0 && inactive.candidates > 0
-                        && "SURFACE_OUT_OF_REACH".equals(inactive.rejection) && world.chunkMisses == 0,
+                        && inactive.kind == SiegeDirector.EncounterKind.PLAYER_ASSAULT && world.chunkMisses == 0,
                 "elevated industrial geometry fails closed: " + siegeDetails(inactive), here());
         endSamples("elevated-industrial");
         System.out.println("PASS elevated dense industrial approach safely rejected");

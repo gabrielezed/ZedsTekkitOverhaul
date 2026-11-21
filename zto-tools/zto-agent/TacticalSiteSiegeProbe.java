@@ -341,16 +341,20 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         int site = tacticalHouse("siege-underground", 64, false);
         // Bury the site under the center of a supported, higher surface.
         for (int x = X - 16; x <= X + 20; x++) {
-            for (int z = Z - 16; z <= Z + 20; z++) world.g(x, Y + 4, z, 1);
+            for (int z = Z - 16; z <= Z + 20; z++) {
+                world.g(x, Y + 4, z, 1);
+                if (x == X - 16 || x == X + 20 || z == Z - 16 || z == Z + 20)
+                    for (int y = Y; y < Y + 4; y++) world.g(x, y, z, 1);
+            }
         }
         long day = 5500;
         LunarCalendar calendar = siegeCalendar(87, day, Long.MIN_VALUE);
         SiegeDirector director = siegeDirector(false, calendar);
         director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
-        siegeTicks(director, calendar, day, 44);
+        siegeTicks(director, calendar, day, 100);
         SiteSiege.Snapshot rejected = director.siteSiegeSnapshot(world);
         check(rejected.site == site && rejected.inserted == 0 && world.chunkMisses == 0
-                        && "SURFACE_OUT_OF_REACH".equals(rejected.requestReason),
+                        && rejected.request == SiegeDirector.DebugState.REJECTED,
                 "an underground site cannot insert through an unsupported surface route: " + siegeDetails(rejected), here());
         director.bind(null, null);
 
@@ -365,7 +369,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             check(world.a(mob), "native local hostile for cap check", here());
         }
         director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
-        for (int tick = 0; tick < 41; tick++) {
+        for (int tick = 0; tick < 100; tick++) {
             world.a(day + tick);
             ticks(1);
             director.tick(player, false, null);

@@ -150,6 +150,10 @@ public final class ModdedSettlementProbe extends SettlementProbe {
         return cells;
     }
 
+    static void installMacerator(xd world, int x, int y, int z) {
+        install(world, x, y, z, IC2, 3, TileEntityMacerator.class);
+    }
+
     private static void install(xd world, int x, int y, int z, int id, int meta, Class<? extends kw> type) {
         check(world.d(x, y, z, id, meta) && type.isInstance(world.b(x, y, z)),
                 "native placement and tile " + type.getSimpleName(), null);

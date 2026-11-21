@@ -89,6 +89,31 @@ After `REJECTED`, correct the reported condition and call again. Terminal result
 
 Use `zto-tools/test-zto-agent.ps1 -Focus site-siege` for the native local command queue, tactical fixtures, mixed equipment and natural regressions. Use `-Focus partial` for the owner-scale clipped case. The full `-Pack` run includes both. All automated native fixtures use marked disposable saves, pinned Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The MCP build uses Forge 3.4.9.171 with MCP 6.2 and JDK 8.
 
+### Terrain deployment candidate
+
+Clean build `56c2330` compiled and reobfuscated through MCP 6.2. The verified archives are mod `60dea839e11e519e2e36cdefb3fe67307384c9bfa1580356ff3fe6bcfd236f2b` and agent `f4d405045b96349d7d404c701ce7dc5df0c9dcbe8649658186f8c66e1225a7f0`.
+
+The archived `2e92f13` build excluded the torch-lit approach and inserted a Skeleton at a different frontage. It rejected the matching waterfront fixture as `ROUTE_OBSTRUCTED`, with zero insertions. The terrain candidate inserted four attackers and reached the threshold on the lit and dark natural roads, daylight road, walkway, nighttime walkway, leaf-covered road and short tunnel. Ordinary vanilla Skeleton spawn checks continued rejecting the lit position.
+
+Both waterfront fixtures used the owner's Debug Hub command path at Hard, MAXIMUM + AUTO, with a real assessed threat of 12. The recognized elevated workshop held a native IC2 Macerator. Attackers inserted on the shore and traversed turns and the bridge. The narrow route included a one-block rise. Both Breachers opened the closed wooden door, the wide Tank crossed the turn, and the tallies include only successful native insertions. The Macerator's NBT remained equal. A cut or unloaded bridge blocked deployment with zero missing-chunk retrievals. The repaired, loaded bridge became eligible after site re-observation.
+
+| Waterfront fixture | Planned / attempted / inserted | Inserted by wave | Peak active | Zombies / Skeletons / Skirmishers / Breacher / Tank / Thief |
+| --- | --- | --- | ---: | --- |
+| Narrow | 18 / 27 / 17 | 6 / 6 / 5 | 8 | 7 / 6 / 2 / 1 / 0 / 1 |
+| Wide | 18 / 20 / 17 | 6 / 6 / 5 | 8 | 7 / 5 / 2 / 1 / 1 / 1 |
+
+The narrow Tank exhausted its candidates and reported `TANK_CLEARANCE`. The wide case used the separately searched heavy route and had one infantry reserve left when the final window closed under cap pressure. A preceding complete run inserted all 18 on the wide route. Both final encounters resolved with zero active attackers and a maximum member lifetime of 560 ticks.
+
+| Sample | Planning samples | Valid / failed route candidates | Siege planning total / peak step | Worst fixture tick |
+| --- | ---: | ---: | ---: | ---: |
+| Archived narrow, rejected | 27 | 0 / 12 straight lanes | 1.00 / 0.84 ms | 0.96 ms |
+| Corrected narrow | 360 | 3 / 13 | 8.80 / 1.08 ms | 2.21 ms |
+| Corrected wide | 651 | 5 / 12 | 3.83 / 0.62 ms | 13.81 ms |
+
+The archived sample ends at rejection. The corrected rows include the complete encounter, including route revalidation, native actor ticks and recognition. The largest recorded standing sample used 27 of 28 columns. The comparison measures headless Tekkit work and excludes rendering and the rest of the live world loop.
+
+The complete pinned Tekkit Classic 3.1.2 headless `-Pack` run passed on Java 8u51, including ordinary spawning, the previous siege lifecycle and re-open cases, interruptions, independent neighboring sites, the clipped factory, structural settings, Thief recovery and equipment conservation. The portable calendar, Territory, configuration and documentation checks passed. Owner graphical and Survival playtesting remains a separate acceptance step.
+
 ### Force escalation before the terrain correction
 
 Clean production build `ed0dd74c5db09b4d1a96a415c057986dde1ad0f7` compiled and reobfuscated through MCP. The mod and agent hashes are `2953c2db37ad0159107a61e6bbaa59f3bcc19fca7936d4e8514b23bd8298aba4` and `88af3e7442df111ba60941555be42391cadba744f1e9da51bb20e5913dbea41a`. The fixture-only follow-up covers the closed threshold after the natural boundary commits. The focused native siege suite and the complete pinned headless `-Pack` regression passed on Java 8u51. Portable configuration, lunar calendar, Territory and PLAYER_ASSAULT policy checks passed.

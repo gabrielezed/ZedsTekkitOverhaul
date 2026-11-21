@@ -43,7 +43,7 @@ public final class ModdedSettlementProbe extends SettlementProbe {
             RAILCRAFT = 185, EE2 = 186, COMPUTER = 187, HOPPER = 188, IC2 = 189, ORE = 190, LEAVES = 191, OIL = 193;
     private static final int FEET = Y + 8;
     private static final int RUBBER_WOOD = 194;
-    private static yr pipeItem;
+    static yr pipeItem;
 
     private ModdedSettlementProbe(File root) throws Exception { super(root); }
 
@@ -87,7 +87,7 @@ public final class ModdedSettlementProbe extends SettlementProbe {
         BlockEEDevice collector = new BlockEEDevice(EE2) {};
         collector.addTileEntityMapping(0, TileCollector.class);
         new BlockComputer(COMPUTER);
-        new BlockHopper(HOPPER);
+        zed.tekkitoverhaul.hopper.HopperRegistry.block = new BlockHopper(HOPPER);
         new BlockNetherOres(ORE, 0);
         new BlockRubLeaves(LEAVES);
         new BlockRubWood(RUBBER_WOOD);

@@ -12,6 +12,10 @@ public final class ModdedSiteSiegeProbe extends TacticalSiteSiegeProbe {
             ModdedSiteSiegeProbe probe = new ModdedSiteSiegeProbe(new File(args[0]));
             probe.mixedModSite();
             probe.protectedEquipment();
+            probe.infiltration("open");
+            probe.infiltration("interrupt");
+            probe.infiltration("sealed");
+            probe.infiltration("cargo");
         } catch (Throwable failure) {
             failure.printStackTrace();
             System.exit(1);
@@ -83,6 +87,83 @@ public final class ModdedSiteSiegeProbe extends TacticalSiteSiegeProbe {
         check(java.util.Arrays.equals(before, captureDevices(deviceCells)) && settlements.resolve(world, site) != null,
                 "native inventories, energy and fluid NBT persist on reopen", here());
         System.out.println("PASS mixed workshop entrance, native cable and pipe, IC2 energy, BuildCraft fluid, hopper, chest and unknown tile");
+    }
+
+    private void infiltration(String layout) throws Exception {
+        String saveName = "siege-infiltration-" + layout;
+        tacticalHouse(saveName, layout.equals("sealed") ? 4 : 64, false);
+        world.q = 3;
+        int x = X + 2, z = Z + 1;
+        boolean cargo = layout.equals("cargo");
+        io hopper = null;
+        if (cargo) {
+            java.lang.reflect.Method register = aao.class.getDeclaredMethod("a", Class.class, String.class, int.class);
+            register.setAccessible(true);
+            register.invoke(null, zed.tekkitoverhaul.survival.tactical.EntitySaboteur.class, "ZTO.Saboteur", 209);
+            place(ModdedSettlementProbe.pipeItem.bQ, x, Y - 1, z, 1);
+        } else {
+            world.g(x, Y, z, 188);
+            hopper = (io) world.b(x, Y, z);
+            hopper.a(0, new aan(263, 9, 0));
+        }
+        long time = 6000;
+        LunarCalendar calendar = siegeCalendar(83, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        director.requestTestSiege(world, player, SiteSiege.Profile.AUTO, SiteSiege.Intensity.MAXIMUM);
+        boolean windup = false;
+        SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
+        for (int i = 0; i < 800; i++) {
+            siegeTicks(director, calendar, time++, 1);
+            player.l(20);
+            view = director.siteSiegeSnapshot(world);
+            if (i == 290 && view.entranceChanges == 1) {
+                // The defender clears the opened threshold before the industrial reserve arrives.
+                for (Object actor : new java.util.ArrayList<Object>(world.b))
+                    if (actor instanceof yy) ((yy) actor).a(md.a(player), 100);
+            }
+            windup |= view.industry.contains("pose 2");
+            if (layout.equals("interrupt") && windup) {
+                for (Object actor : new java.util.ArrayList<Object>(world.b))
+                    if (actor instanceof zed.tekkitoverhaul.survival.tactical.EntitySaboteur)
+                        ((yy) actor).a(md.a(player), 100);
+            }
+            if (cargo && view.industry.contains("COMPONENT_STOLEN")) break;
+            if (view.industry.contains("APPLIED")) break;
+        }
+        if (cargo) {
+            check(view.industry.contains("COMPONENT_STOLEN") && world.a(x, Y, z) == 0,
+                    "one siege-assigned pipe removed | " + view.industry + " | " + siegeDetails(view), here());
+            save();
+            director.bind(null, null);
+            open(saveName, false);
+            prepare(X, Z);
+            int recovered = 0;
+            for (Object actor : new java.util.ArrayList<Object>(world.b)) {
+                if (actor instanceof zed.tekkitoverhaul.survival.tactical.EntitySaboteur)
+                    ((yy) actor).a(md.a(player), 100);
+            }
+            for (Object actor : world.b) {
+                if (actor instanceof fq && ((fq) actor).a.c == ModdedSettlementProbe.pipeItem.bQ)
+                    recovered += ((fq) actor).a.a;
+            }
+            check(recovered == 1 && world.a(x, Y, z) == 0, "one carried component recovered on reopen", here());
+            System.out.println("PASS siege-assigned pipe teardown, Save/Quit in flight and one native recovery");
+            return;
+        }
+        if (layout.equals("sealed")) {
+            check(!view.insertedRoles.containsKey("SABOTEUR") && !windup && view.entranceChanges == 0,
+                    "sealed workshop denies infiltration " + siegeDetails(view), here());
+        } else check(windup && view.industry.contains("APPLIED") == layout.equals("open") && view.entranceChanges == 1
+                        && Integer.valueOf(1).equals(view.insertedRoles.get("SABOTEUR")) && hopper.k_(0).a == 9,
+                "physical infiltration and conserved fuel | " + view.industry + " | " + siegeDetails(view), here());
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, time, 1);
+        save();
+        director.bind(null, null);
+        open(saveName, false);
+        prepare(X, Z);
+        check(((io) world.b(x, Y, z)).k_(0).a == 9, "stock survives siege cancellation and reopen", here());
+        System.out.println("PASS site-assigned Saboteur " + layout + " and workshop stock on reopen");
     }
 
     private ady[] captureDevices(int[][] cells) {

@@ -56,7 +56,7 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
         return activeExtractionPeer() == null ? null : lastExtraction.operation;
     }
 
-    private boolean hasStock() {
+    public boolean hasStock() {
         for (ItemStack stack : items) if (stack != null && stack.stackSize > 0) return true;
         return false;
     }

@@ -81,10 +81,22 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
                         && first.origin == SiteSiege.Origin.NATURAL && !first.overridden && first.difficulty == difficulty,
                 "real site threat selects " + name + " | " + siegeDetails(first), here());
         int previousWave = 0, previousInserted = 0, wavesWithInsertions = 0;
+        boolean sustained = false;
         boolean insertedThisWave = false, pulse = false, heavySwing = false;
         for (int age = 0; age < 1800; age++) {
             SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
             if (view.kind == SiegeDirector.EncounterKind.NONE) break;
+            sustained |= view.peakLifetime > 560 && view.active >= 3;
+            // A defended site makes room under the real cap for subsequent reserves.
+            if (age > 580 && age % 24 == 0 && view.active >= cap - 1) {
+                for (Object entity : new ArrayList<Object>(world.b)) {
+                    if (entity instanceof yy && (entity.getClass().getSimpleName().equals("SiegeZombie")
+                            || entity.getClass().getSimpleName().equals("DebugSiegeSkeleton")) && ((yy) entity).bb() > 0) {
+                        ((yy) entity).a(md.a(player), 100);
+                        break;
+                    }
+                }
+            }
             if (view.wave > previousWave) {
                 previousWave = view.wave;
                 insertedThisWave = false;
@@ -117,7 +129,7 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
                         && done.insertedRoles.containsKey("ZOMBIE") && done.insertedRoles.containsKey("SKELETON"),
                 "deployed every wave with real native movement " + name + " | " + siegeDetails(done), here());
         if (intensity == SiteSiege.Intensity.MAXIMUM)
-            check(pulse && heavySwing && done.insertedRoles.containsKey("TANK") && done.structuralChanges == 0,
+            check(sustained && done.sectorCount >= 2 && done.nativeDespawns == 0 && Integer.valueOf(1).equals(done.plannedRoles.get("SABOTEUR")) && pulse && heavySwing && done.insertedRoles.containsKey("TANK") && done.structuralChanges == 0,
                     "native pulse, heavy sweep, and safe combat Tank at maximum | pulse=" + pulse
                             + " swing=" + heavySwing + " | " + siegeDetails(done), here());
         endSamples(name);
@@ -228,6 +240,15 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
         // Leave the primary lane intact. Remove support under every alternate Tank footprint.
         for (int x = X - 17; x <= X - 7; x++) {
             for (int z = Z - 4; z <= Z + 8; z++) if (z != Z + 2) world.g(x, Y - 1, z, 0);
+        }
+        // Apply the same narrow footing to the other three exterior sectors.
+        for (int forward = 7; forward <= 17; forward++) {
+            for (int lateral = -5; lateral <= 9; lateral++) {
+                if (lateral == 2) continue;
+                world.g(X + 4 + forward, Y - 1, Z + lateral, 0);
+                world.g(X + lateral, Y - 1, Z - forward, 0);
+                world.g(X + lateral, Y - 1, Z + 4 + forward, 0);
+            }
         }
         territory(false, 0);
         long time = 6000;

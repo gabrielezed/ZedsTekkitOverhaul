@@ -2,6 +2,8 @@
 
 The local Debug Hub can call a real SITE_SIEGE in daylight. Manual and natural sieges share site observations, placement, movement, tactical objectives and resolution. Open entrances, exposed frontage and defended obstacles shape the deployment and combat of a mixed force. Reinforcements give the defender different targets over the course of one site-directed encounter. This advances the Project Vision's defensive architecture and counterplay. Settlement Recognition supplies stable site identity and the force plan reserves roles for the encounter director. [Project Vision](../../PROJECT_VISION.md) · [Approved scope](survival-040-spec.md#25-proposed-development-campaign)
 
+The measurements below describe alpha.2. Alpha.3 replaces the individual lifetime and extends deployment and industrial objectives. [Alpha.3 implementation](survival-040-alpha3.md).
+
 ## Admission and persistence
 
 `GuiSiteSiege` is non-pausing. A click queues the selected profile, intensity and current player in the bound local world. The owner-thread world tick reads the queue after settlement observations and evaluates the request. The director arbitrates one major encounter. An outstanding request reserves its slot during planning and a second click reports the current reservation. Cancel accepts a pending or active manual request and releases its ownership on the next simulation tick.

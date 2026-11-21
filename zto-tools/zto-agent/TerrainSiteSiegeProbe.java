@@ -126,7 +126,7 @@ public final class TerrainSiteSiegeProbe extends TacticalSiteSiegeProbe {
             siegeTicks(director, calendar, time++, 1);
             SiteSiege.Snapshot view = director.siteSiegeSnapshot(world);
             stage |= "CONNECTED_TERRAIN_ROUTE".equals(view.eligibility);
-            for (Object entity : world.b) {
+            for (Object entity : new java.util.ArrayList<Object>(world.b)) {
                 if (!(entity instanceof yy) || ((yy) entity).G) continue;
                 yy mob = (yy) entity;
                 if (mob.V <= 1) {
@@ -134,6 +134,8 @@ public final class TerrainSiteSiegeProbe extends TacticalSiteSiegeProbe {
                             "all actor insertions are directly above solid shore", here());
                     shoreSpawn = true;
                 }
+                if (tick > 590 && tick % 22 == 0 && view.active >= 6 && mob.o >= TURN_X && mob.bb() > 0
+                        && (mob.getClass().getSimpleName().equals("SiegeZombie") || mob.getClass().getSimpleName().equals("DebugSiegeSkeleton"))) mob.a(md.a(player), 100);
                 crossTurn |= mob.o >= TURN_X && mob.q > TURN_Z + 4;
                 tank |= mob instanceof EntityTank && mob.o >= TURN_X - 1 && mob.q >= TURN_Z + 3;
             }

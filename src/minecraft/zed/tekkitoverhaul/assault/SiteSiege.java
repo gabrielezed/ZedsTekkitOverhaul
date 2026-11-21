@@ -86,6 +86,7 @@ public final class SiteSiege {
     private Attacker specialist;
     private int impactTick, windupHealth, firstContact, breachChecks, structuralChanges, entranceChanges;
     private String objectiveOutcome = "NONE", tacticalRejection = "NO_ELIGIBLE_BREACH";
+    private int nativeDespawns;
     private String insertionFailure, industrial = "NONE";
     private boolean triedSpecialist;
     private PathPoint destination;
@@ -378,6 +379,10 @@ public final class SiteSiege {
         if (world.getClosestPlayer(x, y, z, SpawnController.INNER_RADIUS) != null)
             return reject("PLAYER_TOO_CLOSE");
         AxisAlignedBB area = AxisAlignedBB.getBoundingBox(x - 32, y - 24, z - 32, x + 32, y + 24, z + 32);
+        int padding = (int) Math.ceil(World.MAX_ENTITY_RADIUS);
+        if (!world.checkChunksExist(MathHelper.floor_double(area.minX) - padding, 0,
+                MathHelper.floor_double(area.minZ) - padding, MathHelper.floor_double(area.maxX) + padding, 0,
+                MathHelper.floor_double(area.maxZ) + padding)) return reject("POPULATION_AREA_UNLOADED");
         if (SpawnController.localHostiles(world, area) >= SpawnController.LOCAL_CAP)
             return reject("POPULATION_CAP");
         EntityMob mob = createAttacker(role);
@@ -466,7 +471,7 @@ public final class SiteSiege {
         Wave wave = force.waves[waveIndex];
         if (elapsed < wave.end && wave.remaining() > 0
                 && (elapsed - wave.start) % SiteSiegeForcePlan.RETRY_INTERVAL == 0) {
-            if (attackers.size() >= force.activeCap) {
+            if (attackers.size() >= Math.max(1, force.activeCap - (force.waves.length - waveIndex - 1))) {
                 wave.capDeferrals++;
                 count(wave.rejections, "ACTIVE_CAP");
                 count(failures, "ACTIVE_CAP");
@@ -549,6 +554,10 @@ public final class SiteSiege {
             if (choice > 0) primary = connectedAlternates.get(choice - 1);
         }
         if (isObjectiveRole(role)) return approach;
+        if ((role == Role.SKELETON || role == Role.ZOMBIE) && attempt == 0 && slot < 2) {
+            if (openedApproach != null) return openedApproach;
+            if (approach.objective == SiteApproach.Objective.APPROACH_ENTRANCE) return approach;
+        }
         if (!approach.connected && sectors.size() > 1) {
             SiteApproach sector = sectors.get((slot + attempt + waveIndex) % sectors.size());
             if (sector != approach) return sector.staging(0, role == Role.SKIRMISHER ? 5 : 2);
@@ -675,7 +684,7 @@ public final class SiteSiege {
             Attacker attacker = iterator.next();
             EntityMob mob = attacker.mob;
             int x = MathHelper.floor_double(mob.posX), z = MathHelper.floor_double(mob.posZ);
-            if (mob instanceof EntitySaboteur) {
+            if (mob instanceof EntitySaboteur && elapsed % 4 == 0) {
                 EntitySaboteur scout = (EntitySaboteur) mob;
                 industrial = scout.targetType() + " / " + scout.lastOutcome() + " / pose " + scout.pose();
             }
@@ -684,7 +693,11 @@ public final class SiteSiege {
                     && mob.addedToChunk;
             if (!loaded) {
                 if (!alive && mob.getHealth() <= 0) defeated++;
-                withdraw(attacker, mob.getHealth() <= 0 ? "DEATH" : mob.isDead ? "EXTERNAL_REMOVAL" : "ENTITY_UNLOADED");
+                boolean despawn = mob instanceof TacticalHostile ? ((TacticalHostile) mob).nativeSiteDespawn()
+                        : attacker.task.nativeDespawn;
+                if (despawn) nativeDespawns++;
+                withdraw(attacker, mob.getHealth() <= 0 ? "DEATH" : despawn ? "NATIVE_DESPAWN"
+                        : mob.isDead ? "EXTERNAL_REMOVAL" : "ENTITY_UNLOADED");
                 iterator.remove();
                 continue;
             }
@@ -698,6 +711,18 @@ public final class SiteSiege {
             } else if (!attacker.task.arrived() && elapsed - attacker.lastProgress >= STALL) {
                 if (!attacker.stalled) count(failures, attacker.role + "/MOVEMENT_STALL");
                 attacker.stalled = true;
+            }
+            if (attacker.retreating && attacker.task.arrived()) {
+                withdraw(attacker, "WITHDREW_TO_STAGING");
+                iterator.remove();
+                continue;
+            }
+            if (!attacker.retreating && attacker.counted && attacker != specialist
+                    && elapsed >= force.deadline - 110 + attacker.mob.entityId % 32
+                    && !(mob instanceof EntitySaboteur) && !(mob instanceof EntityThief)
+                    && attacker.task.retreat()) {
+                attacker.retreating = true;
+                if (mob instanceof TacticalHostile) ((TacticalHostile) mob).holdSiteMovement();
             }
             if (attacker.task.arrived() && !attacker.counted) {
                 attacker.counted = true;
@@ -875,6 +900,11 @@ public final class SiteSiege {
             peakPathNanos = Math.max(peakPathNanos, mob.peakSitePathNanos());
         }
         if (attacker.mob instanceof TacticalHostile) ((TacticalHostile) attacker.mob).releaseSiteSiege();
+        if (attacker.mob instanceof EntitySaboteur) {
+            EntitySaboteur scout = (EntitySaboteur) attacker.mob;
+            industrial = scout.targetType() + " / " + scout.lastOutcome() + " / " + cause;
+            if (scout.carriesSiteCargo()) return;
+        }
         if (attacker.mob.isEntityAlive() && !"ENTITY_UNLOADED".equals(cause)) {
             attacker.mob.spawnExplosionParticle();
             attacker.mob.setDead();
@@ -927,6 +957,7 @@ public final class SiteSiege {
         tacticalRejection = "NO_ELIGIBLE_BREACH";
         insertionFailure = null;
         industrial = "NONE";
+        nativeDespawns = 0;
         rejection = "NONE";
     }
 
@@ -1004,7 +1035,7 @@ public final class SiteSiege {
         final Role role;
         final int insertedAt;
         int steps, lastProgress;
-        boolean counted, stalled;
+        boolean counted, stalled, retreating;
 
         Attacker(EntityMob mob, PerimeterApproachTask task, Role role, int elapsed) {
             this.mob = mob;
@@ -1022,6 +1053,8 @@ public final class SiteSiege {
         public final String requestReason, callBlock;
         public final boolean callAvailable, cancelAvailable;
         public final String eligibility, phase, rejection, outcome, coverage, approach, objective, identity;
+        public final int nativeDespawns, sectorCount;
+        public final String sectors, industry;
         public final String tacticalPhase, objectiveOutcome, specialist, objectiveTarget;
         public final boolean opportunity, dormant, destructive;
         public final int breachChecks, structuralChanges, entranceChanges, structuralBudget;
@@ -1066,6 +1099,11 @@ public final class SiteSiege {
                     + point(siege.destination == null ? lane.goal() : siege.destination);
             objective = lane == null ? "NONE" : lane.objective.name();
             objectiveTarget = lane == null || lane.barrier == null ? "NONE" : point(lane.barrier.target);
+            nativeDespawns = siege.nativeDespawns;
+            sectorCount = siege.deployedSectors.size();
+            sectors = siege.sectors.size() + " available | " + siege.deployedSectors + " | "
+                    + siege.insertionPositions.size() + " starts";
+            industry = siege.industrial;
             tacticalPhase = siege.tacticalPhase.name();
             objectiveOutcome = siege.objectiveOutcome;
             specialist = siege.specialist == null ? "NONE"

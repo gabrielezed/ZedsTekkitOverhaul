@@ -65,6 +65,15 @@ public abstract class TacticalHostile extends EntityMob {
         siteZ = staging.zCoord + 0.5;
     }
 
+    private boolean nativeSiteDespawn;
+    public final boolean nativeSiteDespawn() { return nativeSiteDespawn; }
+
+    @Override protected void despawnEntity() {
+        boolean owned = siteSiegeControlled && !isDead;
+        super.despawnEntity();
+        if (owned && isDead) nativeSiteDespawn = true;
+    }
+
     @Override protected boolean canDespawn() { return !siteSiegeControlled && super.canDespawn(); }
 
     public final void releaseSiteSiege() {
@@ -72,6 +81,8 @@ public abstract class TacticalHostile extends EntityMob {
         siteDefender = null;
         disengage();
     }
+
+    public final void holdSiteMovement() { siteEngaging = false; }
 
     public final void beginSiteCombat() { siteEngaging = true; }
     protected final boolean nearSiteStaging(double x, double z) {

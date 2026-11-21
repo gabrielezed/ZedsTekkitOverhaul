@@ -19,6 +19,7 @@ final class PerimeterApproachTask extends EntityAIBase {
     private final boolean infantry;
     private PathPoint[] route;
     private boolean engaged = true, hold;
+    boolean nativeDespawn;
     private int next = 1;
 
     private PerimeterApproachTask(EntityMob mob, SiteApproach approach, boolean hold) {
@@ -126,6 +127,17 @@ final class PerimeterApproachTask extends EntityAIBase {
     int steps() { return next - 1; }
     boolean arrived() { return next == route.length; }
     PathPoint[] waypoints() { return route; }
+
+    boolean retreat() {
+        if (!engaged || !arrived() || route.length < 2 || horizontalDistanceSq(route[route.length - 1]) > 1)
+            return false;
+        PathPoint[] reverse = new PathPoint[route.length];
+        for (int i = 0; i < route.length; i++) reverse[i] = route[route.length - 1 - i];
+        route = reverse;
+        next = 1;
+        hold = false;
+        return true;
+    }
 
     void advance(PathPoint[] passage) {
         PathPoint[] extended = new PathPoint[route.length + passage.length];

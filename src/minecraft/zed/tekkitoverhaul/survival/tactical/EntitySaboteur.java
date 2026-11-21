@@ -65,7 +65,7 @@ public final class EntitySaboteur extends TacticalHostile {
         }
     }
 
-    @Override protected boolean carriesSiteCargo() { return hasCargo(); }
+    @Override public boolean carriesSiteCargo() { return hasCargo(); }
 
     @Override protected boolean siteObjective(EntityPlayer defender) {
         if (assignment == null) return false;
@@ -204,6 +204,7 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private void scan() {
+        if (!holdingSiteSiege() && addedToChunk) assignment = null;
         nextScan = ticksExisted + SCAN_INTERVAL;
         scans++;
         outcome = Outcome.NO_SUPPORTED_TARGET;
@@ -213,7 +214,7 @@ public final class EntitySaboteur extends TacticalHostile {
         int baseZ = MathHelper.floor_double(posZ);
         int bestPriority = -1;
         double bestDistance = 64.0D;
-        boolean seekTransport = !hasStolenPipe && worldObj.difficultySetting >= 2 && rand.nextInt(3) == 0;
+        boolean seekTransport = !hasStolenPipe && worldObj.difficultySetting >= 2 && (assignment != null || rand.nextInt(3) == 0);
         for (int x = baseX - 8; x <= baseX + 8; x++) {
             double dx = x + 0.5D - posX;
             for (int z = baseZ - 8; z <= baseZ + 8; z++) {
@@ -239,6 +240,7 @@ public final class EntitySaboteur extends TacticalHostile {
                         priority = 4;
                     } else if (candidate instanceof TileHopper) {
                         TileHopper hopper = (TileHopper) candidate;
+                        if (assignment != null && !hopper.hasStock() && hopper.activeExtractionPeer() == null) continue;
                         effect = hopper;
                         pipe = hopper.activeExtractionPeer();
                         type = pipe == null ? "HOPPER" : hopper.activeIndustrialOperation();

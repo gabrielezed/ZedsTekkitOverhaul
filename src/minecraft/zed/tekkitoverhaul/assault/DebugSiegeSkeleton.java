@@ -15,6 +15,12 @@ final class DebugSiegeSkeleton extends EntitySkeleton {
         this.daylightTest = daylightTest;
     }
 
+    @Override protected void despawnEntity() {
+        boolean owned = approach != null && !isDead;
+        super.despawnEntity();
+        if (owned && isDead) approach.nativeDespawn = true;
+    }
+
     @Override protected boolean canDespawn() { return approach == null; }
 
     @Override protected void updateAITasks() {

@@ -1181,7 +1181,7 @@ The monitor displays Call Site Siege, Cancel Test Siege, independent profile and
 
 ## 0.4.0-alpha.3 — Industrial Infiltration
 
-**Goal:** Make the Saboteur a meaningful site-siege specialist.
+The Hard HIGH and MAXIMUM force plans reserve one industrial specialist. Its assignment requires a verified exterior lane, access to the selected site part and a supported machine. [Implementation and acceptance](survival-040-alpha3.md).
 
 Deliver:
 

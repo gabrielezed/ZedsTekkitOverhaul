@@ -158,6 +158,7 @@ public final class ModdedSiteSiegeProbe extends TacticalSiteSiegeProbe {
                 "physical infiltration and conserved fuel | " + view.industry + " | " + siegeDetails(view), here());
         if (layout.equals("open")) {
             position(X + 21, Y, Z + 2);
+            siegeTicks(director, calendar, time++, 1);
             boolean validLease = false;
             for (Object actor : world.b) {
                 if (actor instanceof zed.tekkitoverhaul.survival.tactical.EntitySaboteur) {

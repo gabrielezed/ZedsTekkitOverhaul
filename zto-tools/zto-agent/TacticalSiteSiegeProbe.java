@@ -130,7 +130,14 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
 
         director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
         siegeTicks(director, calendar, day + 192, 35);
-        check(director.siteSiegeSnapshot(world).inserted > 0, "restart after cancel", here());
+        int inserted = director.siteSiegeSnapshot(world).inserted;
+        check(inserted > 0, "restart after cancel", here());
+        position(X + 180, Y, Z + 2);
+        siegeTicks(director, calendar, day + 227, 1);
+        SiteSiege.Snapshot absent = director.siteSiegeSnapshot(world);
+        check("PLAYER_ABSENT".equals(absent.outcome) && absent.inserted == inserted,
+                "retreat stops further reinforcements", here());
+        position(X + 2, Y, Z + 2);
         long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
                 .filter(entity -> !((yy) entity).G).count();
         save();
@@ -154,7 +161,11 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         director.requestTestSiege(world, player, SiteSiege.Profile.AUTO);
         check("PLAYER_ASSAULT_ACTIVE".equals(director.siteSiegeSnapshot(world).requestReason)
                         && director.snapshot(world).starts == 1, "active player assault rejects a debug siege", here());
-        System.out.println("PASS manual daytime, New Moon, cooldown, disabled toggle, duplicates, Peaceful, cancel and reopen "
+        world.q = 0;
+        siegeTicks(director, calendar, dusk + 1, 2);
+        check(world.b.stream().filter(TacticalSiteSiegeProbe::infantry).noneMatch(actor -> !((yy) actor).G),
+                "Peaceful applies native hostile removal to restored siege infantry", here());
+        System.out.println("PASS manual daytime, New Moon, cooldown, disabled toggle, duplicates, Peaceful, cancel, retreat and reopen "
                 + siegeDetails(active));
     }
 

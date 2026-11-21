@@ -104,6 +104,7 @@ final class GuiSiteSiege extends GuiScreen {
         row(6, "Objective " + view.objectiveOutcome);
         row(7, "Outcome " + view.outcome + " | " + view.duration / 20 + " s");
         row(8, "Last rejection " + view.rejection);
+        row(9, "Deployment " + view.eligibility);
     }
 
     private void force(SiteSiege.Snapshot view) {

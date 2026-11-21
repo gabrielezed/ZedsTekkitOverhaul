@@ -333,7 +333,8 @@ public final class SiteSiege {
         if (terrainSearch.routes.isEmpty()) {
             rejection = terrainSearch.rejection;
             failedRoutes++;
-            count(failures, "PLAN/" + rejection);
+            count(failures, "PLAN/NO_CONNECTED_STAGING");
+            if (!"NO_CONNECTED_STAGING".equals(rejection)) count(failures, "PLAN/" + rejection);
         } else {
             validRoutes += terrainSearch.routes.size();
             connectedAlternates.addAll(terrainSearch.routes);
@@ -712,9 +713,16 @@ public final class SiteSiege {
                 else endObjective("TARGET_CHANGED");
                 return;
             }
-            if (!barrier.inReach(mob, 0) || !sampler.standing(approach.goal(), mob instanceof EntityTank)) {
-                if (tacticalPhase != TacticalPhase.APPROACHING || elapsed - firstContact >= 24)
-                    endObjective("TARGET_OUT_OF_REACH");
+            if (!sampler.standing(approach.goal(), mob instanceof EntityTank)) {
+                endObjective("TARGET_OUT_OF_REACH");
+                return;
+            }
+            if (!barrier.inReach(mob, 0)) {
+                // A heavy actor can regain its footing after incidental contact. Damage, block
+                // changes and loss of the loaded target still interrupt immediately.
+                int contactDeadline = tacticalPhase == TacticalPhase.APPROACHING ? firstContact + 24
+                        : mob instanceof EntityTank ? impactTick + 8 : elapsed;
+                if (elapsed >= contactDeadline) endObjective("TARGET_OUT_OF_REACH");
                 return;
             }
             if (tacticalPhase == TacticalPhase.APPROACHING) {

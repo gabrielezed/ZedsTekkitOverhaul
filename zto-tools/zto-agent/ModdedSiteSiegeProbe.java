@@ -163,7 +163,7 @@ public final class ModdedSiteSiegeProbe extends TacticalSiteSiegeProbe {
                 if (actor instanceof zed.tekkitoverhaul.survival.tactical.EntitySaboteur) {
                     zed.tekkitoverhaul.survival.tactical.EntitySaboteur saboteur =
                             (zed.tekkitoverhaul.survival.tactical.EntitySaboteur) actor;
-                    validLease |= saboteur.canMaintainDisruption(hopper);
+                    validLease |= saboteur.canMaintainDisruption(world.b(x, Y, z));
                 }
             }
             check(validLease, "site disruption lease survives the defender leaving the machine room", here());

@@ -100,7 +100,7 @@ final class SiteApproach {
             List<PathPoint> route = new ArrayList<PathPoint>();
             for (int i = DEPTH; i >= 0; i--) {
                 int px = x + dx * i, pz = z + dz * i;
-                if (!standing(px, y, pz)) {
+                if (i != DEPTH && !standing(px, y, pz)) {
                     if ("APPROACH_UNLOADED".equals(rejection) || route.size() < 7 || i > 4) return null;
                     if (i == 0 && profile != SiteSiege.Profile.PERIMETER) {
                         SiteApproach tactic = specialist(route, x, y, z, dx, dz, destructive);
@@ -138,12 +138,8 @@ final class SiteApproach {
             if (!destructive) breachRejection = "STRUCTURAL_BREACH_DISABLED";
             else if (world.difficultySetting < 3) breachRejection = "STRUCTURAL_BREACH_REQUIRES_HARD";
             else {
+                // Admission samples the Tank's complete footprint with a separate fresh budget.
                 List<PathPoint> staging = route.subList(0, route.size() - 1);
-                for (PathPoint point : staging) {
-                    if (standing(point, true)) continue;
-                    breachRejection = rejection;
-                    return null;
-                }
                 return new SiteApproach(staging, Objective.LIMITED_BREACH, barrier);
             }
             return null;

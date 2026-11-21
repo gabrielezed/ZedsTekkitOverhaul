@@ -183,7 +183,7 @@ public final class EntityThief extends TacticalHostile {
         return Math.max(0, 1 - (ticksExisted - contact + partialTick) / 7);
     }
 
-    @Override protected boolean canDespawn() { return trail() == null; }
+    @Override protected boolean canDespawn() { return super.canDespawn() && trail() == null; }
 
     @Override
     public void onDeath(DamageSource source) {

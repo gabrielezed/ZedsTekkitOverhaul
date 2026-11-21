@@ -65,6 +65,14 @@ public abstract class TacticalHostile extends EntityMob {
         siteZ = staging.zCoord + 0.5;
     }
 
+    @Override protected boolean canDespawn() { return !siteSiegeControlled && super.canDespawn(); }
+
+    public final void releaseSiteSiege() {
+        siteSiegeControlled = siteEngaging = false;
+        siteDefender = null;
+        disengage();
+    }
+
     public final void beginSiteCombat() { siteEngaging = true; }
     protected final boolean nearSiteStaging(double x, double z) {
         double dx = x - siteX, dz = z - siteZ;

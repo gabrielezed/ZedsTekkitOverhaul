@@ -653,10 +653,10 @@ public final class SiteSiege {
             int x = MathHelper.floor_double(mob.posX), z = MathHelper.floor_double(mob.posZ);
             boolean alive = mob.isEntityAlive();
             boolean loaded = alive && mob.worldObj == world && world.blockExists(x, 64, z)
-                    && (elapsed % 5 != 0 || world.getEntitiesWithinAABB(EntityMob.class, mob.boundingBox).contains(mob));
-            if (!loaded || elapsed - attacker.insertedAt >= SiteSiegeForcePlan.LIFETIME) {
+                    && mob.addedToChunk;
+            if (!loaded) {
                 if (!alive && mob.getHealth() <= 0) defeated++;
-                withdraw(attacker, loaded ? "ATTACKER_WITHDREW" : "SPECIALIST_LOST");
+                withdraw(attacker, mob.getHealth() <= 0 ? "DEATH" : mob.isDead ? "EXTERNAL_REMOVAL" : "ENTITY_UNLOADED");
                 iterator.remove();
                 continue;
             }
@@ -664,12 +664,12 @@ public final class SiteSiege {
             int walked = attacker.task.steps();
             steps = Math.max(steps, walked);
             if (walked > attacker.steps) {
+                attacker.stalled = false;
                 attacker.lastProgress = elapsed;
                 attacker.steps = walked;
             } else if (!attacker.task.arrived() && elapsed - attacker.lastProgress >= STALL) {
-                withdraw(attacker, "APPROACH_STALLED");
-                iterator.remove();
-                continue;
+                if (!attacker.stalled) count(failures, attacker.role + "/MOVEMENT_STALL");
+                attacker.stalled = true;
             }
             if (attacker.task.arrived() && !attacker.counted) {
                 attacker.counted = true;
@@ -686,7 +686,7 @@ public final class SiteSiege {
             if (objectivePending()) endObjective(cause);
             specialist = null;
         }
-        release(attacker);
+        release(attacker, cause);
     }
 
     private static <K> void count(Map<K, Integer> counts, K key) {
@@ -823,7 +823,7 @@ public final class SiteSiege {
         for (Attacker attacker : attackers) {
             if (attacker.mob.getHealth() <= 0) defeated++;
             else withdrawn++;
-            release(attacker);
+            release(attacker, cause);
         }
         attackers.clear();
         specialist = null;
@@ -837,7 +837,8 @@ public final class SiteSiege {
         if (!manual()) storage.closeSite(cause);
     }
 
-    private void release(Attacker attacker) {
+    private void release(Attacker attacker, String cause) {
+        count(failures, "REMOVAL/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE" : "/DEAD"));
         attacker.task.release();
         maxLifetime = Math.max(maxLifetime, elapsed - attacker.insertedAt);
         if (attacker.mob instanceof TacticalHostile) {
@@ -845,7 +846,11 @@ public final class SiteSiege {
             retiredPathNanos += mob.sitePathNanos();
             peakPathNanos = Math.max(peakPathNanos, mob.peakSitePathNanos());
         }
-        if (attacker.mob.isEntityAlive()) attacker.mob.setDead();
+        if (attacker.mob instanceof TacticalHostile) ((TacticalHostile) attacker.mob).releaseSiteSiege();
+        if (attacker.mob.isEntityAlive() && !"ENTITY_UNLOADED".equals(cause)) {
+            attacker.mob.spawnExplosionParticle();
+            attacker.mob.setDead();
+        }
     }
 
     private Admission fallback(String cause) {
@@ -967,7 +972,7 @@ public final class SiteSiege {
         final Role role;
         final int insertedAt;
         int steps, lastProgress;
-        boolean counted;
+        boolean counted, stalled;
 
         Attacker(EntityMob mob, PerimeterApproachTask task, Role role, int elapsed) {
             this.mob = mob;

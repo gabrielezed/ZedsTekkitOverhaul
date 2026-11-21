@@ -16,6 +16,8 @@ final class SiegeZombie extends EntityZombie {
         getNavigator().setBreakDoors(false);
     }
 
+    @Override protected boolean canDespawn() { return approach == null; }
+
     @Override protected void updateAITasks() {
         if (approach == null || !approach.updateWithoutCombat()) super.updateAITasks();
     }

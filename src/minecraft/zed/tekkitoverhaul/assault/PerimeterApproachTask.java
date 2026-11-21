@@ -135,5 +135,9 @@ final class PerimeterApproachTask extends EntityAIBase {
         hold = false;
     }
 
-    void release() { engaged = false; }
+    void release() {
+        engaged = false;
+        if (mob instanceof SiegeZombie) ((SiegeZombie) mob).approach = null;
+        if (mob instanceof DebugSiegeSkeleton) ((DebugSiegeSkeleton) mob).approach = null;
+    }
 }

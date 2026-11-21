@@ -603,7 +603,7 @@ public final class EntitySaboteur extends TacticalHostile {
 
     private boolean hasCargo() { return stolenComponent != null || unresolvedComponent != null; }
 
-    @Override protected boolean canDespawn() { return !hasCargo(); }
+    @Override protected boolean canDespawn() { return super.canDespawn() && !hasCargo(); }
 
     @Override
     public void onDeath(DamageSource source) {

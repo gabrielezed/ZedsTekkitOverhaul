@@ -10,7 +10,7 @@ import zed.tekkitoverhaul.territory.ThreatAssessment;
 final class SiteSiegeForcePlan {
     enum Role { ZOMBIE, SKELETON, SKIRMISHER, BREACHER, TANK, THIEF, SABOTEUR }
 
-    static final int RETRY_INTERVAL = 8, ATTEMPTS_PER_SLOT = 9, LIFETIME = 560;
+    static final int RETRY_INTERVAL = 8, ATTEMPTS_PER_SLOT = 9, FINAL_COMBAT_TICKS = 560;
     final int siteId, difficulty, total, activeCap, deadline, structuralBudget;
     final ThreatAssessment threat;
     final SiteSiege.Intensity intensity;
@@ -43,7 +43,7 @@ final class SiteSiegeForcePlan {
                 ? new Wave[] { new Wave(first, 0, 320), new Wave(second, 320, 690),
                                new Wave(total - first - second, 690, 1130) }
                 : new Wave[] { new Wave(first, 0, 320), new Wave(second, 320, 750) };
-        deadline = waves[waves.length - 1].end + LIFETIME;
+        deadline = waves[waves.length - 1].end + FINAL_COMBAT_TICKS;
         Random random = new Random(seed ^ (siteId * 0x9e3779b97f4a7c15L));
         boolean ranged = random.nextBoolean();
         for (Wave wave : waves) {

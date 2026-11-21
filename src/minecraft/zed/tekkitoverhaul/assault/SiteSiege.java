@@ -4,18 +4,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
-import net.minecraft.src.EnumCreatureType;
-import net.minecraft.src.EnumSkyBlock;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.PathPoint;
-import net.minecraft.src.SpawnerAnimals;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.assault.SiteSiegeForcePlan.Role;
 import zed.tekkitoverhaul.assault.SiteSiegeForcePlan.Wave;
@@ -43,7 +42,7 @@ public final class SiteSiege {
     private enum TacticalPhase { IDLE, PLANNING, APPROACHING, PRESSURING, BREACHING, ENGAGING, RESOLVED, ABORTED }
 
     enum Admission { WAIT, FALLBACK, COMMITTED }
-    private static final int OPTIONS = 12, MAX_PARTS = 2, PLANNING_TICKS = 40;
+    private static final int OPTIONS = 12, MAX_PARTS = 2, PLANNING_TICKS = 88;
     private static final int STALL = 140, PRESENCE = 48, LIGHT_WAIT = 900;
     private static final int WARNING = 8;
     private static final int[] OFFSETS = { 0, -2, 2, -4, 4 };
@@ -63,12 +62,17 @@ public final class SiteSiege {
     private SiteSnapshot observed;
     private SiteApproach approach, openedApproach;
     private final List<SiteApproach> frontages = new ArrayList<SiteApproach>();
+    private final List<SiteApproach> connectedAlternates = new ArrayList<SiteApproach>();
+    private final Set<String> failedLanes = new HashSet<String>();
+    private TerrainApproachSearch terrainSearch, heavySearch;
+    private final List<SiteApproach> heavyRoutes = new ArrayList<SiteApproach>();
+    private int terrainPart, validRoutes, failedRoutes, planningColumns;
     private Bounds part;
     private EntityPlayer observer;
     private long boundary = Long.MIN_VALUE, lunarSession;
-    private int optionsTried, frames, attempts, inserted, peak, elapsed, arrivals, steps, peakColumns, peakSkyReads;
+    private int optionsTried, frames, attempts, inserted, peak, elapsed, arrivals, steps, peakColumns;
     private int lastVerified;
-    private long columns, skyReads, heightReads, protectionReads, planningNanos, peakPlanningNanos;
+    private long columns, heightReads, protectionReads, planningNanos, peakPlanningNanos;
     private double progress;
     private String phase = "IDLE", status, rejection = "NONE", outcome = "NONE";
     private boolean opportunity;
@@ -81,6 +85,7 @@ public final class SiteSiege {
     private String insertionFailure;
     private boolean triedSpecialist;
     private PathPoint destination;
+    private PathPoint[] passageAfterOpen;
 
     String admissionStatus() { return status; }
     String resolution() { return outcome; }
@@ -172,7 +177,10 @@ public final class SiteSiege {
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
             frames++;
-            if (frames > PLANNING_TICKS) return fallback("PLANNING_DEADLINE");
+            if (frames > PLANNING_TICKS) {
+                count(failures, "PLAN/TERRAIN_PLANNING_LIMIT");
+                return fallback(insertionFailure == null ? "TERRAIN_PLANNING_LIMIT" : insertionFailure);
+            }
             if (approach == null) nextApproach(sampler);
             if (approach == null) return plansExhausted() ? noApproach() : Admission.WAIT;
             // A second sample is always required, with a fresh budget, before the first insertion.
@@ -182,6 +190,7 @@ public final class SiteSiege {
             if (mob == null) {
                 if ("PROTECTION_DEFERRED".equals(rejection)) return Admission.WAIT;
                 if (insertionFailure == null) insertionFailure = rejection;
+                count(failures, "ADMISSION/" + rejection);
                 approach = null;
                 return plansExhausted() ? noApproach() : Admission.WAIT;
             }
@@ -195,6 +204,8 @@ public final class SiteSiege {
             ThreatAssessment threat = territory == null ? null : territory.assessSite(world, x, part.minY, z);
             force = new SiteSiegeForcePlan(selected.id, world.difficultySetting, threat, requestedIntensity, cap,
                     approach, world.getSeed() ^ boundary);
+            if (approach.connected && force.reserves(Role.TANK))
+                heavySearch = new TerrainApproachSearch(part, observed.envelope, approach);
             if (!manual()) storage.startSite(force.siteId, boundary);
             observer = player;
             phase = "ACTIVE";
@@ -206,6 +217,7 @@ public final class SiteSiege {
             resetPlan();
             return Admission.COMMITTED;
         } finally {
+            planningColumns += sampler.columns;
             account(sampler, start);
         }
     }
@@ -253,7 +265,8 @@ public final class SiteSiege {
     }
 
     private boolean plansExhausted() {
-        return optionsTried >= candidates.size() * OPTIONS && frontages.isEmpty();
+        return optionsTried >= candidates.size() * OPTIONS && frontages.isEmpty()
+                && connectedAlternates.isEmpty() && terrainPart >= candidates.size();
     }
 
     private void nextApproach(SiteApproach.Sampler sampler) {
@@ -262,7 +275,10 @@ public final class SiteSiege {
             triedSpecialist |= approach.barrier != null;
             return;
         }
-        if (plansExhausted()) return;
+        if (optionsTried >= candidates.size() * OPTIONS) {
+            nextConnectedApproach(sampler);
+            return;
+        }
         Candidate candidate = candidates.get(optionsTried / OPTIONS);
         int option = optionsTried++ % OPTIONS;
         selected = candidate.site;
@@ -272,11 +288,14 @@ public final class SiteSiege {
         Profile allowed = observed.perimeterUnresolved ? Profile.PERIMETER : profile;
         SiteApproach plan = sampler.plan(part, observed.envelope, option, allowed, destructive);
         if (sampler.breachRejection != null) tacticalRejection = sampler.breachRejection;
-        if (plan == null || !sampler.openSky(plan.start()) || (observed.perimeterUnresolved && !sampler.localExterior(plan))) {
+        if (plan == null || (observed.perimeterUnresolved && !sampler.localExterior(plan))) {
             rejection = sampler.rejection;
+            failedRoutes++;
+            if (rejection != null) count(failures, "PLAN/" + rejection);
             if (plan != null && plan.barrier != null) tacticalRejection = rejection;
             return;
         }
+        validRoutes++;
         if (profile == Profile.BREACH && plan.barrier == null) return;
         if (plan.objective == SiteApproach.Objective.APPROACH_ENTRANCE
                 || (profile == Profile.BREACH && plan.objective == SiteApproach.Objective.PRESSURE_ENTRANCE)) {
@@ -290,6 +309,38 @@ public final class SiteSiege {
         }
     }
 
+    private void nextConnectedApproach(SiteApproach.Sampler sampler) {
+        if (!connectedAlternates.isEmpty()) {
+            approach = connectedAlternates.remove(0);
+            triedSpecialist |= approach.barrier != null;
+            return;
+        }
+        if (terrainPart >= candidates.size()) return;
+        Candidate candidate = candidates.get(terrainPart);
+        selected = candidate.site;
+        part = candidate.part;
+        observed = sites.resolve(world, selected.id);
+        if (currentPart() == null || observed.perimeterUnresolved) {
+            terrainPart++;
+            terrainSearch = null;
+            return;
+        }
+        if (terrainSearch == null)
+            terrainSearch = new TerrainApproachSearch(part, observed.envelope, profile);
+        terrainSearch.advance(sampler);
+        if (!terrainSearch.finished && (terrainSearch.routes.isEmpty() || frames < PLANNING_TICKS - 5)) return;
+        terrainPart++;
+        if (terrainSearch.routes.isEmpty()) {
+            rejection = terrainSearch.rejection;
+            failedRoutes++;
+            count(failures, "PLAN/" + rejection);
+        } else {
+            validRoutes += terrainSearch.routes.size();
+            connectedAlternates.addAll(terrainSearch.routes);
+        }
+        terrainSearch = null;
+    }
+
     private EntityMob validateInsertion(EntityPlayer player, SiteApproach.Sampler sampler,
                                         SiteApproach lane, Role role, boolean admission) {
         PathPoint start = lane.start();
@@ -298,7 +349,10 @@ public final class SiteSiege {
         if (!nearSite(player)) return reject("PLAYER_ABSENT");
         if (!sites.insertionExterior(world, start.xCoord, start.zCoord, SiteApproach.MARGIN))
             return reject("INSIDE_SITE_EXCLUSION");
-        if (!sampler.validate(lane, role == Role.TANK) || !sampler.openSky(start)) return reject(sampler.rejection);
+        if (!sampler.validate(lane, role == Role.TANK)) return reject(sampler.rejection);
+        if (role == Role.THIEF) {
+            for (PathPoint point : lane.route) if (!sampler.thiefClear(point)) return reject(sampler.rejection);
+        }
         if (observed.perimeterUnresolved && (lane.barrier != null || !sampler.localExterior(lane)))
             return reject(lane.barrier == null ? sampler.rejection : "SITE_FOOTPRINT_UNRESOLVED");
         if (lane.barrier != null && (admission || isObjectiveRole(role))) {
@@ -309,16 +363,19 @@ public final class SiteSiege {
         ProtectedInterior.Assessment protection = sites.protection(world, start.xCoord, start.yCoord, start.zCoord);
         protectionReads += protection.reads;
         if (protection.state == ProtectedInterior.State.PROTECTED) return reject("PROTECTED_INSERTION");
-        if (protection.state == ProtectedInterior.State.UNKNOWN)
-            return reject(protection.reads == 0 ? "PROTECTION_DEFERRED" : "UNCERTAIN_PROTECTION");
+        if (protection.state == ProtectedInterior.State.UNKNOWN) {
+            if (protection.reads == 0) return reject("PROTECTION_DEFERRED");
+            if (!"Covered route leaves local search window".equals(protection.reason)
+                    && !"Ambiguous collision geometry".equals(protection.reason))
+                return reject("UNCERTAIN_PROTECTION");
+        }
+        if (!sampler.surfaceAccess(lane, observed.envelope)) return reject(sampler.rejection);
         double x = start.xCoord + 0.5, y = start.yCoord, z = start.zCoord + 0.5;
         if (world.getClosestPlayer(x, y, z, SpawnController.INNER_RADIUS) != null)
             return reject("PLAYER_TOO_CLOSE");
         AxisAlignedBB area = AxisAlignedBB.getBoundingBox(x - 32, y - 24, z - 32, x + 32, y + 24, z + 32);
         if (SpawnController.localHostiles(world, area) >= SpawnController.LOCAL_CAP)
             return reject("POPULATION_CAP");
-        if (!SpawnerAnimals.canCreatureTypeSpawnAtLocation(EnumCreatureType.monster, world,
-                start.xCoord, start.yCoord, start.zCoord)) return reject("UNSUITABLE_GROUND");
         EntityMob mob = createAttacker(role);
         if ((role == Role.THIEF || role == Role.TANK || role == Role.BREACHER)
                 && !world.getEntitiesWithinAABB(mob.getClass(), area).isEmpty()) return reject("SPECIALIST_POPULATION");
@@ -326,8 +383,6 @@ public final class SiteSiege {
         mob.setLocationAndAngles(x, y, z, 0, 0);
         String collision = SpawnController.placementCollision(world, mob);
         if (collision != null) return reject(collision);
-        if (!manual() && world.getSavedLightValue(EnumSkyBlock.Block, start.xCoord, start.yCoord, start.zCoord) > 7)
-            return reject("INSERTION_TOO_BRIGHT");
         return mob;
     }
 
@@ -341,10 +396,6 @@ public final class SiteSiege {
             case THIEF: return new EntityThief(world);
             default: throw new IllegalArgumentException("Unassigned site siege role " + role);
         }
-    }
-
-    private static boolean nativeSpawn(EntityMob mob) {
-        return mob instanceof TacticalHostile ? ((TacticalHostile) mob).canSpawnForEncounter() : mob.getCanSpawnHere();
     }
 
     void tick(EntityPlayer player, LunarSnapshot now) {
@@ -379,7 +430,7 @@ public final class SiteSiege {
             if (admittedTicks < WARNING || (!manual() && world.skylightSubtracted < 11 && admittedTicks < LIGHT_WAIT))
                 return;
             combatStart = admittedTicks;
-            status = approach.objective.name();
+            status = approach.connected ? "CONNECTED_TERRAIN_ROUTE" : approach.objective.name();
         }
         elapsed = admittedTicks - combatStart;
         refreshAttackers();
@@ -394,14 +445,20 @@ public final class SiteSiege {
             tacticalPhase = TacticalPhase.ENGAGING;
             objectiveOutcome = "DESTINATION_REACHED";
         }
-        if (waveIndex + 1 < force.waves.length && elapsed >= force.waves[waveIndex + 1].start) waveIndex++;
+        if (waveIndex + 1 < force.waves.length && elapsed >= force.waves[waveIndex + 1].start) {
+            waveIndex++;
+            failedLanes.clear();
+        }
         Wave wave = force.waves[waveIndex];
         if (elapsed < wave.end && wave.remaining() > 0
                 && (elapsed - wave.start) % SiteSiegeForcePlan.RETRY_INTERVAL == 0) {
             if (attackers.size() >= force.activeCap) {
                 wave.capDeferrals++;
+                count(wave.rejections, "ACTIVE_CAP");
                 count(failures, "ACTIVE_CAP");
             } else reinforce(player, wave);
+        } else if (heavySearch != null && elapsed % 3 == 1) {
+            sampleHeavyRoutes();
         } else if (!attackers.isEmpty()) {
             observeRoute();
         }
@@ -409,6 +466,25 @@ public final class SiteSiege {
         boolean finalWave = waveIndex == force.waves.length - 1;
         if (attackers.isEmpty() && finalWave && (elapsed >= wave.end || wave.remaining() == 0))
             finish(inserted == 0 ? "DEPLOYMENT_FAILED" : defeated == inserted ? "ATTACKERS_GONE" : "WAVES_COMPLETE");
+    }
+
+    private void sampleHeavyRoutes() {
+        long start = System.nanoTime();
+        SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
+        try {
+            heavySearch.advance(sampler);
+            if (!heavySearch.finished && elapsed < 600) return;
+            heavyRoutes.addAll(heavySearch.routes);
+            validRoutes += heavyRoutes.size();
+            if (heavyRoutes.isEmpty()) {
+                failedRoutes++;
+                count(failures, "PLAN/TANK/" + heavySearch.rejection);
+            }
+            heavySearch = null;
+        } finally {
+            planningColumns += sampler.columns;
+            account(sampler, start);
+        }
     }
 
     private boolean objectivePending() {
@@ -436,8 +512,11 @@ public final class SiteSiege {
             int index = attacker.task.steps() + 1;
             PathPoint[] route = attacker.task.waypoints();
             for (int i = Math.max(0, index - 1); i < Math.min(index + 2, route.length); i++) {
-                if (sampler.standing(route[i], attacker.role == Role.TANK)) continue;
+                boolean wide = attacker.role == Role.TANK;
+                if (sampler.standing(route[i], wide) && (i == 0 || sampler.transition(route[i - 1], route[i], wide))
+                        && (attacker.role != Role.THIEF || sampler.thiefClear(route[i]))) continue;
                 count(failures, sampler.rejection);
+                rejectWave(attacker.role, sampler.rejection);
                 withdraw(attacker, "ROUTE_LOST");
                 attackers.remove(attacker);
                 return;
@@ -449,12 +528,25 @@ public final class SiteSiege {
     }
 
     private SiteApproach laneFor(Role role, int slot, int attempt) {
-        if (isObjectiveRole(role)) return approach;
+        SiteApproach primary = approach;
+        if (approach.connected && !connectedAlternates.isEmpty()) {
+            int choice = attempt % (connectedAlternates.size() + 1);
+            if (choice > 0) primary = connectedAlternates.get(choice - 1);
+        }
+        if (isObjectiveRole(role)) return primary;
+        if (approach.connected) {
+            if (role == Role.TANK) return heavyRoutes.isEmpty() ? primary.staging(0, 3)
+                    : heavyRoutes.get(attempt % heavyRoutes.size());
+            if (role == Role.SKIRMISHER) return primary.staging(0, 5);
+            if (role == Role.THIEF) return primary.staging(0, 3);
+            if (openedApproach != null) return primary.opened(passageAfterOpen);
+            return approach.barrier == null ? primary : primary.staging(0, 2);
+        }
         int offset = OFFSETS[(slot + attempt) % OFFSETS.length];
         if (role == Role.TANK) return approach.staging(offset, 5);
         if (role == Role.SKIRMISHER)
-            return approach.staging(offset == 0 ? 3 : offset, 6);
-        if (role == Role.THIEF) return approach.staging(offset == 0 ? -3 : offset, 3);
+            return approach.staging(offset == 0 && attempt == 0 ? 3 : offset, 6);
+        if (role == Role.THIEF) return approach.staging(offset == 0 && attempt == 0 ? -3 : offset, 3);
         if (approach.barrier != null && objectivePending())
             return approach.staging(offset == 0 && attempt == 0 ? 2 : offset, 2);
         SiteApproach entrance = openedApproach != null ? openedApproach
@@ -473,26 +565,35 @@ public final class SiteSiege {
         boolean objectiveRole = isObjectiveRole(role);
         if (objectiveRole && !objectivePending()) {
             wave.placementFailures[slot] = SiteSiegeForcePlan.ATTEMPTS_PER_SLOT;
-            count(failures, role + "/OBJECTIVE_CLOSED");
+            rejectWave(role, "OBJECTIVE_CLOSED");
             return;
         }
         long start = System.nanoTime();
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
-            int retry = wave.attempts[slot]++;
-            attempts++;
-            wave.tried++;
-            SiteApproach lane = laneFor(role, slot, retry);
-            EntityMob mob = validateInsertion(player, sampler, lane, role, false);
-            if (mob != null && !manual() && !nativeSpawn(mob)) {
-                count(failures, role + "/VANILLA_SPAWN_RULE");
-                rejection = "VANILLA_SPAWN_RULE";
+            SiteApproach lane = null;
+            String key = null;
+            for (int choice = 0; choice < 15; choice++) {
+                lane = laneFor(role, slot, wave.attempts[slot]++);
+                key = role + "/" + lane.signature();
+                if (!failedLanes.contains(key)) break;
+                lane = null;
+            }
+            if (lane == null) {
+                wave.placementFailures[slot] = SiteSiegeForcePlan.ATTEMPTS_PER_SLOT;
+                rejectWave(role, "ROUTE_CANDIDATES_EXHAUSTED");
                 return;
             }
+            attempts++;
+            wave.tried++;
+            EntityMob mob = validateInsertion(player, sampler, lane, role, false);
             if (mob == null) {
                 if ("POPULATION_CAP".equals(rejection)) wave.capDeferrals++;
-                else if (!"PROTECTION_DEFERRED".equals(rejection)) wave.placementFailures[slot]++;
-                count(failures, role + "/" + rejection);
+                else if (permanentPlacementFailure(rejection)) {
+                    failedLanes.add(key);
+                    wave.placementFailures[slot]++;
+                }
+                rejectWave(role, rejection);
                 if (objectiveRole && "TARGET_CHANGED".equals(rejection)) {
                     PathPoint[] open = approach.barrier.structural() ? null : passage(sampler, false);
                     if (open == null) endObjective("TARGET_CHANGED");
@@ -502,7 +603,7 @@ public final class SiteSiege {
             }
             PerimeterApproachTask task = PerimeterApproachTask.attach(mob, lane, objectiveRole);
             if (task == null) {
-                count(failures, role + "/NATIVE_TASK_UNAVAILABLE");
+                rejectWave(role, "NATIVE_TASK_UNAVAILABLE");
                 finish("NATIVE_TASK_UNAVAILABLE");
                 return;
             }
@@ -516,12 +617,12 @@ public final class SiteSiege {
                 task.release();
                 rejection = "INSERTION_REJECTED";
                 wave.placementFailures[slot]++;
-                count(failures, role + "/" + rejection);
+                rejectWave(role, rejection);
                 return;
             }
             wave.inserted[slot] = true;
             wave.deployed++;
-            Attacker attacker = new Attacker(mob, task, lane, role, elapsed);
+            Attacker attacker = new Attacker(mob, task, role, elapsed);
             attackers.add(attacker);
             if (objectiveRole) specialist = attacker;
             inserted++;
@@ -530,6 +631,17 @@ public final class SiteSiege {
         } finally {
             account(sampler, start);
         }
+    }
+
+    private void rejectWave(Role role, String cause) {
+        count(failures, role + "/" + cause);
+        count(force.waves[waveIndex].rejections, role + "/" + cause);
+    }
+
+    private static boolean permanentPlacementFailure(String reason) {
+        return !"PROTECTION_DEFERRED".equals(reason) && !"PLAYER_TOO_CLOSE".equals(reason)
+                && !"OCCUPIED".equals(reason) && !"SPECIALIST_POPULATION".equals(reason)
+                && !"APPROACH_UNLOADED".equals(reason);
     }
 
     private void refreshAttackers() {
@@ -547,11 +659,7 @@ public final class SiteSiege {
                 iterator.remove();
                 continue;
             }
-            PathPoint first = attacker.lane.start(), goal = attacker.lane.goal();
-            double dx = mob.posX - first.xCoord - 0.5, dz = mob.posZ - first.zCoord - 0.5;
-            double length = Math.abs(goal.xCoord - first.xCoord) + Math.abs(goal.zCoord - first.zCoord);
-            double advance = (dx * (goal.xCoord - first.xCoord) + dz * (goal.zCoord - first.zCoord)) / length;
-            progress = Math.max(progress, Math.min(advance, length));
+            progress = Math.max(progress, attacker.task.progress());
             int walked = attacker.task.steps();
             steps = Math.max(steps, walked);
             if (walked > attacker.steps) {
@@ -678,6 +786,7 @@ public final class SiteSiege {
     }
 
     private void completePassage(PathPoint[] passage, String reason) {
+        passageAfterOpen = passage;
         openedApproach = approach.opened(passage);
         destination = approach.barrier.inside;
         tacticalPhase = TacticalPhase.ENGAGING;
@@ -701,6 +810,7 @@ public final class SiteSiege {
     }
 
     private void finish(String cause) {
+        terrainSearch = heavySearch = null;
         if (force != null) abandoned = force.total - inserted;
         for (Attacker attacker : attackers) {
             if (attacker.mob.getHealth() <= 0) defeated++;
@@ -747,16 +857,22 @@ public final class SiteSiege {
     }
 
     private void resetCounters() {
-        optionsTried = frames = attempts = inserted = peak = elapsed = arrivals = steps = peakColumns = peakSkyReads = 0;
+        optionsTried = frames = attempts = inserted = peak = elapsed = arrivals = steps = peakColumns = 0;
         lastVerified = -1;
         force = null;
         openedApproach = null;
+        passageAfterOpen = null;
+        connectedAlternates.clear();
+        failedLanes.clear();
+        terrainSearch = heavySearch = null;
+        heavyRoutes.clear();
+        terrainPart = validRoutes = failedRoutes = planningColumns = 0;
         combatStart = waveIndex = -1;
         admittedTicks = defeated = withdrawn = abandoned = routeCursor = maxLifetime = 0;
         peakTickNanos = retiredPathNanos = peakPathNanos = 0;
         insertedRoles.clear();
         failures.clear();
-        columns = heightReads = skyReads = protectionReads = planningNanos = peakPlanningNanos = 0;
+        columns = heightReads = protectionReads = planningNanos = peakPlanningNanos = 0;
         progress = 0;
         destination = null;
         specialist = null;
@@ -773,9 +889,7 @@ public final class SiteSiege {
         columns += sampler.columns;
         heightReads += sampler.heightReads;
         breachChecks += sampler.breachChecks;
-        skyReads += sampler.skyReads;
         peakColumns = Math.max(peakColumns, sampler.columns);
-        peakSkyReads = Math.max(peakSkyReads, sampler.skyReads);
         accountTime(start);
     }
 
@@ -842,16 +956,14 @@ public final class SiteSiege {
     private static final class Attacker {
         final EntityMob mob;
         final PerimeterApproachTask task;
-        final SiteApproach lane;
         final Role role;
         final int insertedAt;
         int steps, lastProgress;
         boolean counted;
 
-        Attacker(EntityMob mob, PerimeterApproachTask task, SiteApproach lane, Role role, int elapsed) {
+        Attacker(EntityMob mob, PerimeterApproachTask task, Role role, int elapsed) {
             this.mob = mob;
             this.task = task;
-            this.lane = lane;
             this.role = role;
             insertedAt = lastProgress = elapsed;
         }
@@ -874,9 +986,9 @@ public final class SiteSiege {
         public final int duration, deadline, peakLifetime;
         public final long pathNanos, peakPathNanos, peakTickNanos;
         public final List<String> allocations, deployment;
-        public final Map<String, Integer> plannedRoles, insertedRoles, activeRoles, failures;
+        public final Map<String, Integer> plannedRoles, insertedRoles, activeRoles, failures, waveFailures;
         public final int site, dimension, active, inserted, peak, attempts, remaining, elapsed, steps, arrivals;
-        public final int candidates, peakColumns, peakSkyReads, geometryAge;
+        public final int candidates, validRoutes, failedRoutes, planningColumns, peakColumns, peakSkyReads, geometryAge;
         public final long boundary, nextOpportunityCycle, cooldownUntil, observation, siteSession;
         public final long columns, skyReads, heightReads, protectionReads;
         public final long planningNanos, peakPlanningNanos;
@@ -938,6 +1050,7 @@ public final class SiteSiege {
             waves = plan == null ? 0 : plan.waves.length;
             wave = siege.waveIndex + 1;
             int pending = 0, reserve = 0;
+            Map<String, Integer> waveReasons = new LinkedHashMap<String, Integer>();
             List<String> rosters = new ArrayList<String>(), results = new ArrayList<String>();
             Map<String, Integer> plannedByRole = new LinkedHashMap<String, Integer>();
             for (int i = 0; i < waves; i++) {
@@ -946,6 +1059,8 @@ public final class SiteSiege {
                 results.add(allocation.deployed + "/" + allocation.roles.length + " inserted | " + allocation.tried
                         + " tries | " + allocation.capDeferrals + " cap delays");
                 for (Role role : allocation.roles) count(plannedByRole, role.name());
+                for (Map.Entry<String, Integer> reason : allocation.rejections.entrySet())
+                    waveReasons.put("W" + (i + 1) + " " + reason.getKey(), reason.getValue());
                 if (!siege.active()) continue;
                 if (i >= wave) reserve += allocation.remaining();
                 else if (i == wave - 1 && siege.elapsed < allocation.end) pending = allocation.remaining();
@@ -981,19 +1096,23 @@ public final class SiteSiege {
             plannedRoles = Collections.unmodifiableMap(plannedByRole);
             insertedRoles = Collections.unmodifiableMap(insertedByRole);
             activeRoles = Collections.unmodifiableMap(activeByRole);
+            waveFailures = Collections.unmodifiableMap(waveReasons);
             failures = Collections.unmodifiableMap(new LinkedHashMap<String, Integer>(siege.failures));
             elapsed = siege.elapsed;
             steps = siege.steps;
             arrivals = siege.arrivals;
             progress = siege.progress;
             candidates = siege.optionsTried;
+            validRoutes = siege.validRoutes;
+            failedRoutes = siege.failedRoutes;
+            planningColumns = siege.planningColumns;
             columns = siege.columns;
             geometryAge = siege.lastVerified < 0 ? -1 : siege.elapsed - siege.lastVerified;
-            skyReads = siege.skyReads;
+            skyReads = 0;
             heightReads = siege.heightReads;
             protectionReads = siege.protectionReads;
             peakColumns = siege.peakColumns;
-            peakSkyReads = siege.peakSkyReads;
+            peakSkyReads = 0;
             planningNanos = siege.planningNanos;
             peakPlanningNanos = siege.peakPlanningNanos;
         }

@@ -1,6 +1,8 @@
 package zed.tekkitoverhaul.assault;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Random;
 import zed.tekkitoverhaul.territory.ThreatAssessment;
 
@@ -58,6 +60,11 @@ final class SiteSiegeForcePlan {
             waves[1].roles[1] = Role.THIEF;
     }
 
+    boolean reserves(Role role) {
+        for (Wave wave : waves) for (Role slot : wave.roles) if (slot == role) return true;
+        return false;
+    }
+
     private static SiteSiege.Intensity classify(ThreatAssessment assessment) {
         int threat = assessment == null ? 0 : assessment.threat;
         if (threat >= ThreatAssessment.MAX - 5) return SiteSiege.Intensity.MAXIMUM;
@@ -71,6 +78,7 @@ final class SiteSiegeForcePlan {
         final int[] attempts, placementFailures;
         final boolean[] inserted;
         int cursor, tried, deployed, capDeferrals;
+        final Map<String, Integer> rejections = new LinkedHashMap<String, Integer>();
 
         Wave(int count, int start, int end) {
             roles = new Role[count];

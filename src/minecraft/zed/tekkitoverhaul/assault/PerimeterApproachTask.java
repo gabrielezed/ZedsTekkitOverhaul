@@ -115,6 +115,14 @@ final class PerimeterApproachTask extends EntityAIBase {
                 mob instanceof EntityTank ? 0.18F : 0.25F);
     }
 
+    double progress() {
+        if (arrived()) return steps();
+        PathPoint last = route[next - 1], point = route[next];
+        double dx = mob.posX - last.xCoord - 0.5, dz = mob.posZ - last.zCoord - 0.5;
+        double forward = dx * (point.xCoord - last.xCoord) + dz * (point.zCoord - last.zCoord);
+        return steps() + Math.max(0, Math.min(1, forward));
+    }
+
     int steps() { return next - 1; }
     boolean arrived() { return next == route.length; }
     PathPoint[] waypoints() { return route; }

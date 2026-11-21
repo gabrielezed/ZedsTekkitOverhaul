@@ -135,6 +135,7 @@ final class GuiSiteSiege extends GuiScreen {
         LunarSnapshot lunar = local.snapshot(world);
         rows.add("Next cycle " + number(view.nextOpportunityCycle) + " | boundary " + number(view.boundary));
         rows.add("Cooldown " + cooldown(view.cooldownUntil, lunar));
+        rows.add("Routes " + view.validRoutes + " valid / " + view.failedRoutes + " failed | " + view.planningColumns + " samples");
         rows.add("Target " + view.objectiveTarget + " | " + view.specialist);
         rows.add("Structural " + view.structuralChanges + "/" + view.structuralBudget + " removed | "
                 + view.entranceChanges + " opened");
@@ -144,6 +145,8 @@ final class GuiSiteSiege extends GuiScreen {
         for (int i = 0; i < view.deployment.size(); i++)
             rows.add("Wave " + (i + 1) + " | " + view.deployment.get(i));
         for (Map.Entry<String, Integer> failure : view.failures.entrySet())
+            rows.add(failure.getValue() + " " + failure.getKey());
+        for (Map.Entry<String, Integer> failure : view.waveFailures.entrySet())
             rows.add(failure.getValue() + " " + failure.getKey());
         return rows;
     }

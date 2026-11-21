@@ -81,6 +81,33 @@ After `REJECTED`, correct the reported condition and call again. Terminal result
 
 Use `zto-tools/test-zto-agent.ps1 -Focus site-siege` for the native local command queue, tactical fixtures, mixed equipment and natural regressions. Use `-Focus partial` for the owner-scale clipped case. The full `-Pack` run includes both. All automated native fixtures use marked disposable saves, pinned Tekkit Classic 3.1.2, Minecraft 1.2.5, Forge 3.3.8.164, FML 2.2.106.176 and Java 8u51. The MCP build uses Forge 3.4.9.171 with MCP 6.2 and JDK 8.
 
+### Escalation candidate
+
+Clean production build `ed0dd74c5db09b4d1a96a415c057986dde1ad0f7` compiled and reobfuscated through MCP. The mod and agent hashes are `2953c2db37ad0159107a61e6bbaa59f3bcc19fca7936d4e8514b23bd8298aba4` and `88af3e7442df111ba60941555be42391cadba744f1e9da51bb20e5913dbea41a`. The fixture-only follow-up covers the closed threshold after the natural boundary commits. The focused native siege suite and the complete pinned headless `-Pack` regression passed on Java 8u51. Portable configuration, lunar calendar, Territory and PLAYER_ASSAULT policy checks passed.
+
+The native escalation fixture seeds the saved regional records and sets a fixed biome, difficulty, geometry and lunar boundary. Legacy insertion light rolls remain active. Counts below describe one focused run of the candidate.
+
+| Natural profile | Actual threat | Planned | Attempted | Inserted | Peak active | Waves with insertions |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Normal Low | 12 | 6 | 29 | 6 | 4 | 2/2 |
+| Hard Moderate | 18 | 10 | 24 | 10 | 6 | 3/3 |
+| Hard High | 24 | 14 | 54 | 14 | 7 | 3/3 |
+| Hard Maximum | 50 | 18 | 82 | 17 | 8 | 3/3 |
+
+Hard Maximum inserted 7 Zombies, 7 Skeletons, 2 Skirmishers and 1 Tank. Its waves inserted 6, 6 and 5 attackers. The repeat in the full suite inserted 16 of 18 over three waves, with 49 attempts and eight peak active. The probe saw waypoint progress through 15 blocks, an actual Ender Pulse and the Tank's native sweep. Structural edits stayed at zero with breaching disabled.
+
+- Manual MAXIMUM + AUTO assessed threat 12, planned 18, and reached 8 insertions before the recovery scenario interrupted wave two. A Breacher physically opened a wooden door. A Thief stole once after the defender exposed a flank. Cancellation and save/reopen each recovered one item with the original ID, metadata and NBT.
+- A narrow lane inserted 14 infantry and reported nine `TANK/TANK_CLEARANCE` failures. A separate test inserted a six-actor vanguard and then held wave two at zero under the local hostile cap. Cancellation left all 28 unrelated Zombies alive. Forced entity updates at a missing combat-cache chunk verified exterior movement without requesting that chunk.
+- Native regressions exercise open and closed entrances, fence gates, sealed and layered perimeters, killed and interrupted specialists, player retreat, world detach, repeated manual requests, natural arbitration and replay, and both structural settings. Mixed-mod checks compare pre- and post-encounter equipment NBT.
+
+| Profile sample | Peak active | Planner total / peak | Native path total / peak | Longest actor lifetime | Fixture tick maximum |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Three-Skeleton daytime baseline | 3 | 9.14 / 6.09 ms | 3.07 / 1.24 ms | At least 175 ticks when sampled | 6.11 ms |
+| Hard Moderate | 6 | 2.90 / 0.38 ms | 8.05 / 0.03 ms | 560 ticks | 0.39 ms |
+| Hard Maximum | 8 | 4.54 / 0.75 ms | 22.04 / 11.44 ms | 560 ticks | 11.64 ms |
+
+The baseline measures a 185-tick daytime sample. The candidate profiles come from the focused run above. The natural rows measure full encounters after the runtime warmed up. The fixture tick includes already loaded mob updates, recognition and the director. It excludes rendering and normal world-loop work such as chunk generation. These are observed samples, with the pathfinding outlier included in the maximum.
+
 ### Three-attacker baseline
 
 Clean build `e5934af1a683403e4ba11afa4eec867d4a6a19b3` compiled and reobfuscated through MCP. The pack test used the verified 478-entry mod archive with SHA-256 `270c3c4c3036453056b1a6eeffe72bdcc303f5dac9ee6829f1f93fe5b5b05d0c` and agent SHA-256 `7e3cbb494a77110a70490d08bf0af59ba43885160e7e0ffa6d4a0941dacbee06`.

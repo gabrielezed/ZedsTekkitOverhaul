@@ -108,8 +108,8 @@ final class GuiSiteSiege extends GuiScreen {
     }
 
     private void force(SiteSiege.Snapshot view) {
-        row(0, view.attempts + " attempts | " + view.inserted + " inserted | " + view.active + " active");
-        row(1, view.defeated + " eliminated | " + view.withdrawn + " withdrawn | peak " + view.peak);
+        row(0, view.attempts + " attempts | " + view.inserted + " inserted | " + view.active + " controlled");
+        row(1, view.defeated + " confirmed dead | " + view.withdrawn + " released | peak " + view.peak);
         row(2, view.deferred + " deferred | " + view.remaining + " reserves | " + view.abandoned + " undeployed");
         for (int i = 0; i < view.allocations.size(); i++) row(3 + i, "Wave " + (i + 1) + " " + view.allocations.get(i)
                 .replace("ZOMBIE", "Zombie").replace("SKELETON", "Skeleton").replace("SKIRMISHER", "Skirm.")

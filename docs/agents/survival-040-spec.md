@@ -883,7 +883,7 @@ Possible conditions:
 - Attacker budget exhausted.
 - Tactical objectives defeated.
 - Key specialist attackers eliminated.
-- Encounter deadline reached with the site still defended.
+- Mobilization ended and the offensive objectives were neutralized. Report surviving hostiles separately.
 - Attackers voluntarily disengage after unsuccessful approaches.
 
 ## 18.2 Attacker tactical success
@@ -1046,7 +1046,7 @@ Preserve mod-specific inventory, fluid and energy behavior.
 
 ### Local debug admission (alpha.2)
 
-The non-pausing Site Siege monitor queues a world-bound request for the owning simulation tick. `MANUAL_DEBUG` uses the same site query, approach validation, allocation and execution as `NATURAL`. It bypasses the natural toggle, dusk, moon phase, rarity, cooldown and hostile light checks. Debug attackers are transient and removed by encounter ownership on termination. Peaceful, loaded geometry, local population and Protected Interior remain admission constraints. A natural boundary already awaiting admission has priority over a queued debug request. A boundary arriving while a debug encounter is planning or active passes without a major encounter and is never queued for later admission. Debug admission and resolution write no assault or site cooldown records.
+The non-pausing Site Siege monitor queues a world-bound request for the owning simulation tick. `MANUAL_DEBUG` uses the same site query, approach validation, allocation and execution as `NATURAL`. It bypasses the natural toggle, dusk, moon phase, rarity, cooldown and hostile light checks. Debug attackers use the same native persistence contract as natural siege attackers. Cancel Test Siege stops reinforcements and releases its tactical controller. Peaceful, loaded geometry, local population and Protected Interior remain admission constraints. A natural boundary already awaiting admission has priority over a queued debug request. A boundary arriving while a debug encounter is planning or active passes without a major encounter and is never queued for later admission. Debug admission and resolution write no assault or site cooldown records.
 
 ### Debug and Dev Bridge
 
@@ -1157,7 +1157,7 @@ Implement the milestone in several substantial iterations.
 
 The sole objective is `PERIMETER_APPROACH`. A small group of existing non-destructive hostiles inserts into verified loaded terrain outside the envelope and physically walks toward reachable site frontage. Solid obstacles and entrances affect route feasibility. The frontage remains site-anchored when the player moves. Ordinary nearby combat may take over after observable approach progress. Missing routes trigger bounded failure, retreat or resolution.
 
-Keep a finite group allocation, deadline and retry allowance. Resolve on elimination, exhausted allocation, loss of route, deadline, player absence, world or dimension invalidation, Peaceful, unavailable site identity or geometry, interrupted reload, or lunar cancellation and resynchronization as applicable. Release ordinary mobs to their native lifecycle on resolution, stop reinforcement and drop encounter references. Reopen interrupted saves without restarting the encounter.
+Keep a finite force allocation, deployment windows and retry allowance. Ending mobilization stops reinforcement. The bounded tactical controller may continue supporting already-deployed actors before releasing control. Living siege-origin mobs retain their native saved entity state and persistent site identity across chunk unload and Save/Quit. Ordinary despawning is suppressed for these mobs. Combat and environmental damage still apply, and Peaceful retains its native exceptional removal behavior. Objective failure, player absence, event expiry and debug cancellation leave survivors alive. Reload preserves survivors and consumed admissions without replaying waves. A released survivor uses local hostile behavior. Site cooldowns and loaded population limits govern further admissions.
 
 Alpha.1 adds no structural damage, block breaking, machinery sabotage, resource mutation, siege-exclusive creatures, compulsory defenses, or ownership mechanics. Later alpha plans and open owner decisions remain proposals. Range, rarity and encounter pressure require owner playtesting.
 
@@ -1195,6 +1195,8 @@ Deliver:
 Do not expand third-party support beyond verified safe integrations without a separate compatibility implementation.
 
 ## 0.4.0-alpha.4 — Combined Arms and Fortress Warfare
+
+The approved scope includes persistent battlefield survivors, bounded ground reassessment, industrial objective validation, optional aerial pressure with verified persistence, and atmosphere and outcome reporting driven by actual events.
 
 **Goal:** Produce mature, readable siege encounters.
 
@@ -1454,7 +1456,7 @@ These require separate design decisions.
 
 ## Player absence
 
-- Should a siege stop, suspend or withdraw when the player leaves the loaded area?
+- Which bounded local withdrawal behaviors should surviving attackers use after release?
 - Should the player receive any lasting consequence for retreat?
 - Can a siege remain pending for a future visit without becoming unfair?
 

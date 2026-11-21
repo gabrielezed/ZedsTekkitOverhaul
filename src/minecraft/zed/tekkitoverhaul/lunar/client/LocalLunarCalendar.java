@@ -313,7 +313,7 @@ public final class LocalLunarCalendar implements ITickHandler, ISaveEventHandler
         forestWildlife.tick(game.thePlayer, game.isGamePaused);
         if (calendar != null) {
             calendar.observe(world.getWorldTime());
-            assault.tick(game.thePlayer, game.isGamePaused, experimentalTerritorialThreat ? territory : null);
+            assault.tick(game.thePlayer, game.isGamePaused, territory, experimentalTerritorialThreat);
         }
     }
 

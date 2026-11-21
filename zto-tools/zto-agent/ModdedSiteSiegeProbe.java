@@ -156,6 +156,20 @@ public final class ModdedSiteSiegeProbe extends TacticalSiteSiegeProbe {
         } else check(windup && view.industry.contains("APPLIED") == layout.equals("open") && view.entranceChanges == 1
                         && Integer.valueOf(1).equals(view.insertedRoles.get("SABOTEUR")) && hopper.k_(0).a == 9,
                 "physical infiltration and conserved fuel | " + view.industry + " | " + siegeDetails(view), here());
+        if (layout.equals("open")) {
+            position(X + 21, Y, Z + 2);
+            siegeTicks(director, calendar, time++, 1);
+            boolean validLease = false;
+            for (Object actor : world.b) {
+                if (actor instanceof zed.tekkitoverhaul.survival.tactical.EntitySaboteur) {
+                    zed.tekkitoverhaul.survival.tactical.EntitySaboteur saboteur =
+                            (zed.tekkitoverhaul.survival.tactical.EntitySaboteur) actor;
+                    validLease |= saboteur.canMaintainDisruption(world.b(x, Y, z));
+                }
+            }
+            check(validLease, "site disruption lease survives the defender leaving the machine room", here());
+            position(X + 2, Y, Z + 2);
+        }
         director.cancelTestSiege(world);
         siegeTicks(director, calendar, time, 1);
         save();

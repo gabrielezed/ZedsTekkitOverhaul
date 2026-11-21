@@ -210,6 +210,13 @@ public final class SiegeDirector implements LunarService.Listener {
 
     private boolean siteActive() { return siteSiege != null && siteSiege.active(); }
 
+    public static void registerSiteInfantry() {
+        net.minecraft.src.ModLoader.registerEntityID(SiegeZombie.class, "ZTO.SiegeZombie",
+                net.minecraft.src.ModLoader.getUniqueEntityId());
+        net.minecraft.src.ModLoader.registerEntityID(DebugSiegeSkeleton.class, "ZTO.SiegeSkeleton",
+                net.minecraft.src.ModLoader.getUniqueEntityId());
+    }
+
     public void bind(World incoming, LunarService service) {
         if (world != null) {
             String cause = incoming != null && world.worldProvider.worldType != incoming.worldProvider.worldType
@@ -304,6 +311,11 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void tick(EntityPlayer player, boolean paused, TerritorialActivityService territory) {
+        tick(player, paused, territory, territory != null);
+    }
+
+    public void tick(EntityPlayer player, boolean paused, TerritorialActivityService territory,
+                     boolean adaptPlayerAssault) {
         if (patrol.state == State.ACTIVE) patrol.tick(world, lunar.snapshot(), player, paused, diagnostics);
         if (!paused && siteSiege != null && tickDebug(player, territory)) return;
         if (storage == null) return;
@@ -336,8 +348,8 @@ public final class SiegeDirector implements LunarService.Listener {
                     return;
                 }
             }
-            territorialAdaptation = territory != null;
-            admissionThreat = territory == null ? null : territory.assess(world, player);
+            territorialAdaptation = adaptPlayerAssault && territory != null;
+            admissionThreat = territorialAdaptation ? territory.assess(world, player) : null;
             admissionProfile = AssaultWave.Profile.select(territorialAdaptation, admissionThreat);
             selectedBudget = admissionProfile.budget(budget);
             storage.start(boundary.rawTime);

@@ -311,7 +311,7 @@ final class IndustrialSabotage implements SabotageTarget {
     }
 
     public boolean beginDisruption(EntitySaboteur owner) {
-        if (!owner.canStartDisruption(tile) || !owner.canMaintainDisruption(tile.worldObj) || isDisrupted()) return false;
+        if (!owner.canStartDisruption(tile) || !owner.canMaintainDisruption(tile) || isDisrupted()) return false;
         IndustrialSabotage current = find(tile);
         if (current == null || current.key != key || current.side != side || current.source != source) return false;
         LEASES.put(key, new Lease(this, owner));
@@ -337,7 +337,7 @@ final class IndustrialSabotage implements SabotageTarget {
         boolean isLive(Object key) {
             EntitySaboteur actor = owner.get();
             TileEntity target = tile.get();
-            if (actor == null || target == null || !actor.canMaintainDisruption(target.worldObj)) return false;
+            if (actor == null || target == null || !actor.canMaintainDisruption(target)) return false;
             long now = target.worldObj.getWorldTime();
             return now >= start && now - start < DURATION && bindingMatches(target, key, side, source.get());
         }

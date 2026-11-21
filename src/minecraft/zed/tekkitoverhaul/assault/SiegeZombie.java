@@ -2,17 +2,24 @@ package zed.tekkitoverhaul.assault;
 
 import net.minecraft.src.EntityZombie;
 import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
 
 /** Keeps native infantry combat and leaves entrance changes to the encounter objective. */
-final class SiegeZombie extends EntityZombie {
+public final class SiegeZombie extends EntityZombie {
     private final boolean daylightTest;
     private boolean checkingSun;
+    private int siegeSite;
     PerimeterApproachTask approach;
 
-    SiegeZombie(World world, boolean daylightTest) {
+    public SiegeZombie(World world) {
+        this(world, false, 0);
+    }
+
+    SiegeZombie(World world, boolean daylightTest, int siegeSite) {
         super(world);
         this.daylightTest = daylightTest;
+        this.siegeSite = siegeSite;
         getNavigator().setBreakDoors(false);
     }
 
@@ -22,14 +29,14 @@ final class SiegeZombie extends EntityZombie {
         if (owned && isDead) approach.nativeDespawn = true;
     }
 
-    @Override protected boolean canDespawn() { return approach == null; }
+    @Override protected boolean canDespawn() { return false; }
 
     @Override protected void updateAITasks() {
         if (approach == null || !approach.updateWithoutCombat()) super.updateAITasks();
     }
 
     @Override public void onLivingUpdate() {
-        checkingSun = daylightTest;
+        checkingSun = daylightTest && approach != null;
         try {
             super.onLivingUpdate();
         } finally {
@@ -41,5 +48,14 @@ final class SiegeZombie extends EntityZombie {
         return checkingSun ? 0.0F : super.getBrightness(partialTick);
     }
 
-    @Override public boolean addEntityID(NBTTagCompound tag) { return false; }
+    @Override public void writeEntityToNBT(NBTTagCompound tag) {
+        super.writeEntityToNBT(tag);
+        if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
+    }
+
+    @Override public void readEntityFromNBT(NBTTagCompound tag) {
+        super.readEntityFromNBT(tag);
+        siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt
+                ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
+    }
 }

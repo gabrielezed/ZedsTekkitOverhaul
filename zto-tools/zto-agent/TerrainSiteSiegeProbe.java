@@ -149,6 +149,10 @@ public final class TerrainSiteSiegeProbe extends TacticalSiteSiegeProbe {
             director.bind(null, null);
             return;
         }
+        check("REINFORCEMENTS_EXHAUSTED".equals(done.outcome) && world.b.stream()
+                        .anyMatch(actor -> actor instanceof yy && !((yy) actor).G
+                                && ((yy) actor).bb() > 0 && ((yy) actor).V > 560),
+                "an attacker lives past 560 ticks and the end of all deployment windows", here());
         ady machineAfter = new ady();
         world.b(X + 3, DECK, Z + 3).b(machineAfter);
         check(machineBefore.equals(machineAfter), "native machinery NBT remains identical", here());

@@ -82,7 +82,7 @@ public final class TileEntityDistillationReceiver extends TileEntityDistillation
     }
 
     public boolean beginDisruption(EntitySaboteur owner) {
-        if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(worldObj)
+        if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(this)
                 || isDisrupted() || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return false;
         TileEntity pipe = activeExtractionPipe();
         if (pipe == null || pipe != owner.disruptionConnection()) return false;
@@ -94,7 +94,7 @@ public final class TileEntityDistillationReceiver extends TileEntityDistillation
     }
 
     public boolean isDisrupted() {
-        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(worldObj)
+        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(this)
                 && LoadedTile.at(worldObj, xCoord, yCoord, zCoord) == this && woodenExtractionPipe() == leasedPipe;
     }
 

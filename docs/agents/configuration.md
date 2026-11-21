@@ -12,7 +12,7 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 | `lunarPatrols` | true | First-quarter and waxing-gibbous patrols |
 | `lunarOutdoorLightPressure` | true | Allow the limited artificial-light exception for open lunar encounters. Set false to use ordinary light checks. |
 | `experimentalEnderkinEncounters` | false | Set true to allow opt-in substitutions. Set false for ordinary lunar composition. Creative spawn eggs work either way. |
-| `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. |
+| `experimentalTerritorialThreat` | false | At natural full-moon admission, select a wave profile from local threat. Quiet encounters can use one fewer slot. `assaultSpawnBudget` remains the ceiling. Local Overworld activity is collected in either mode. An enabled SITE_SIEGE always uses threat at the recognized site. |
 | `territorialHostileCapBonusPercent` | 70 | 0–100% maximum ordinary hostile cap increase in the local Overworld. The bonus scales with blended activity. Set 0 to disable. Requires the pinned ZTOAgent hook. |
 | `naturalEnderkinSpawning` | true | Enable ordinary Enderkin substitutions in the local Overworld with the matching ZTOAgent. Set false to keep ordinary species selection native. Lunar encounter settings are independent. |
 | `naturalAerialEncounters` | true | Enable natural Overworld aerial wildlife and flocks. Creative eggs work either way. |

@@ -25,7 +25,7 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
 
     public boolean beginDisruption(EntitySaboteur owner) {
         if (isDisrupted() || activeIndustrialOperation() == null || !owner.canStartDisruption(this)
-                || !owner.canMaintainDisruption(worldObj)
+                || !owner.canMaintainDisruption(this)
                 || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return false;
         disruptionOwner = owner;
         disruptionStart = worldObj.getWorldTime();
@@ -35,7 +35,7 @@ public final class TileAlchemicalConverter extends TileEntity implements IEEPowe
     public boolean isDisrupted() { return disruptionTicksRemaining() > 0; }
 
     int disruptionTicksRemaining() {
-        if (disruptionOwner == null || !disruptionOwner.canMaintainDisruption(worldObj)
+        if (disruptionOwner == null || !disruptionOwner.canMaintainDisruption(this)
                 || LoadedTile.at(worldObj, xCoord, yCoord, zCoord) != this) return 0;
         long age = worldObj.getWorldTime() - disruptionStart;
         return age >= 0 && age < 80 ? 80 - (int) age : 0;

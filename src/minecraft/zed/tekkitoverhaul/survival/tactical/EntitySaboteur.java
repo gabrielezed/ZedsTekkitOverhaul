@@ -72,6 +72,10 @@ public final class EntitySaboteur extends TacticalHostile {
         if (siteArrival < 0) siteArrival = ticksExisted;
         target = defender;
         heartbeat = worldObj.getWorldTime();
+        if (siteLease != null) {
+            if (siteLease.isDisrupted()) return true;
+            siteLease = null;
+        }
         if (windingUp()) continueWindup(false);
         else if (machine != null) {
             if (invalidTarget() != Outcome.NONE) finish(Outcome.TARGET_CHANGED, true);
@@ -83,7 +87,7 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     private TileEntity connection;
-    private SabotageTarget disruption;
+    private SabotageTarget disruption, siteLease;
     private TransportTheft transportTheft;
     private ItemStack stolenComponent;
     private NBTTagCompound unresolvedComponent;
@@ -419,6 +423,7 @@ public final class EntitySaboteur extends TacticalHostile {
                     if (removed != null) carry(removed);
                     else finish(Outcome.REMOVAL_FAILED, true);
                 } else if (disruption.beginDisruption(this)) {
+                    if (holdingSiteSiege()) siteLease = disruption;
                     disruptions++;
                     if (connection == null) burst(machineX + 0.5D, machineY + 0.85D, machineZ + 0.5D, "portal");
                     finish(Outcome.APPLIED, false);
@@ -536,13 +541,19 @@ public final class EntitySaboteur extends TacticalHostile {
     }
 
     /** The lease expires if either world object stops owning or ticking this encounter. */
-    public boolean canMaintainDisruption(World world) {
-        if (world == null || world != worldObj || world.isRemote || world.difficultySetting == 0
-                || !addedToChunk || !isEntityAlive() || target == null || target.worldObj != world
-                || !target.isEntityAlive() || target.capabilities.disableDamage || getDistanceSqToEntity(target) > 256)
-            return false;
-        long age = world.getWorldTime() - heartbeat;
-        return age >= 0 && age <= 2 && world.getChunkProvider().chunkExists(chunkCoordX, chunkCoordZ);
+    public boolean canMaintainDisruption(TileEntity leasedTarget) {
+        if (leasedTarget == null || leasedTarget.worldObj != worldObj || worldObj.isRemote
+                || worldObj.difficultySetting == 0 || !addedToChunk || !isEntityAlive()) return false;
+        if (holdingSiteSiege()) {
+            int x = leasedTarget.xCoord, y = leasedTarget.yCoord, z = leasedTarget.zCoord;
+            double contactX = Math.max(x, Math.min(x + 1.0D, posX));
+            double contactZ = Math.max(z, Math.min(z + 1.0D, posZ));
+            if (Math.abs(boundingBox.minY - y) > 1.25D || getDistanceSq(contactX, y + 0.5D, contactZ) > CONTACT_SQ
+                    || LoadedTile.at(worldObj, x, y, z) != leasedTarget) return false;
+        } else if (target == null || target.worldObj != worldObj || !target.isEntityAlive()
+                || target.capabilities.disableDamage || getDistanceSqToEntity(target) > 256) return false;
+        long age = worldObj.getWorldTime() - heartbeat;
+        return age >= 0 && age <= 2 && worldObj.getChunkProvider().chunkExists(chunkCoordX, chunkCoordZ);
     }
 
     public boolean canStartDisruption(TileEntity tile) {
@@ -637,6 +648,7 @@ public final class EntitySaboteur extends TacticalHostile {
 
     @Override
     protected void resetTactics() {
+        siteLease = null;
         stalledRoutes = 0;
         closeTicks = hitEvadeEnd = evadeEnd = 0;
         clearTarget();

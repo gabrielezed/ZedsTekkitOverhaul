@@ -5,6 +5,7 @@ import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
@@ -23,6 +24,7 @@ public abstract class TacticalHostile extends EntityMob {
     private int swingTicks;
     private int previousSwingTicks;
     private boolean siteSiegeControlled;
+    private int siegeSite;
     private EntityPlayer siteDefender;
     private boolean siteEngaging;
     private double siteX, siteZ;
@@ -58,8 +60,9 @@ public abstract class TacticalHostile extends EntityMob {
     }
 
     /** The encounter owns navigation and physical actions while this transient role is assigned. */
-    public final void claimSiteSiege(EntityPlayer defender, PathPoint staging) {
+    public final void claimSiteSiege(EntityPlayer defender, PathPoint staging, int siteId) {
         siteSiegeControlled = true;
+        siegeSite = siteId;
         siteDefender = defender;
         siteX = staging.xCoord + 0.5;
         siteZ = staging.zCoord + 0.5;
@@ -74,7 +77,7 @@ public abstract class TacticalHostile extends EntityMob {
         if (owned && isDead) nativeSiteDespawn = true;
     }
 
-    @Override protected boolean canDespawn() { return !siteSiegeControlled && super.canDespawn(); }
+    @Override protected boolean canDespawn() { return siegeSite == 0 && super.canDespawn(); }
 
     public final void releaseSiteSiege() {
         siteSiegeControlled = siteEngaging = false;
@@ -91,8 +94,15 @@ public abstract class TacticalHostile extends EntityMob {
     }
     protected final boolean holdingSiteSiege() { return siteSiegeControlled; }
 
-    @Override public boolean addEntityID(NBTTagCompound tag) {
-        return (!siteSiegeControlled || carriesSiteCargo()) && super.addEntityID(tag);
+    @Override public void writeEntityToNBT(NBTTagCompound tag) {
+        super.writeEntityToNBT(tag);
+        if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
+    }
+
+    @Override public void readEntityFromNBT(NBTTagCompound tag) {
+        super.readEntityFromNBT(tag);
+        siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt
+                ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
     }
 
     @Override

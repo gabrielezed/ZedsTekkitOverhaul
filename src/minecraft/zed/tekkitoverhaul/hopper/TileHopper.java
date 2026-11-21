@@ -26,7 +26,7 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     }
 
     public boolean beginDisruption(EntitySaboteur owner) {
-        if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(worldObj) || isDisrupted()
+        if (!owner.canStartDisruption(this) || !owner.canMaintainDisruption(this) || isDisrupted()
                 || loadedAt(worldObj, xCoord, yCoord, zCoord) != this) return false;
         if (owner.disruptionConnection() != null) {
             if (activeExtractionPeer() != owner.disruptionConnection()) return false;
@@ -38,7 +38,7 @@ public final class TileHopper extends TileEntity implements ISidedInventory, Sab
     }
 
     public boolean isDisrupted() {
-        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(worldObj)
+        return disruptionTicks > 0 && !isInvalid() && disruptionOwner.canMaintainDisruption(this)
                 && loadedAt(worldObj, xCoord, yCoord, zCoord) == this;
     }
 

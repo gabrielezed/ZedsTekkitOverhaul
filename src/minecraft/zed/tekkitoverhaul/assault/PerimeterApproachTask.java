@@ -7,6 +7,7 @@ import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.PathPoint;
+import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 import zed.tekkitoverhaul.survival.tactical.EntityTank;
 import zed.tekkitoverhaul.survival.tactical.TacticalHostile;
 
@@ -127,6 +128,36 @@ final class PerimeterApproachTask extends EntityAIBase {
     int steps() { return next - 1; }
     boolean arrived() { return next == route.length; }
     PathPoint[] waypoints() { return route; }
+
+    /** Replaces a blocked straight segment with a short, verified exterior bypass. */
+    boolean tryExteriorBypass(SiteApproach.Sampler sampler, Bounds envelope) {
+        if (next + 1 >= route.length || horizontalDistanceSq(route[next - 1]) > 1.0D) return false;
+        PathPoint from = route[next - 1], blocked = route[next], to = route[next + 1];
+        int dx = blocked.xCoord - from.xCoord, dz = blocked.zCoord - from.zCoord;
+        if (Math.abs(dx) + Math.abs(dz) != 1 || blocked.yCoord != from.yCoord || to.yCoord != from.yCoord
+                || to.xCoord != blocked.xCoord + dx || to.zCoord != blocked.zCoord + dz) return false;
+        for (int side : new int[] {1, -1}) {
+            PathPoint[] bypass = new PathPoint[3];
+            boolean legal = true;
+            for (int step = 0; step < bypass.length; step++) {
+                PathPoint point = new PathPoint(from.xCoord + dx * step - dz * side,
+                        from.yCoord, from.zCoord + dz * step + dx * side);
+                if (!SiteApproach.exterior(envelope, point.xCoord, point.zCoord) || !sampler.standing(point, false)) {
+                    legal = false;
+                    break;
+                }
+                bypass[step] = point;
+            }
+            if (!legal || !sampler.standing(to, false)) continue;
+            PathPoint[] detour = new PathPoint[route.length + 2];
+            System.arraycopy(route, 0, detour, 0, next);
+            System.arraycopy(bypass, 0, detour, next, bypass.length);
+            System.arraycopy(route, next + 1, detour, next + bypass.length, route.length - next - 1);
+            route = detour;
+            return true;
+        }
+        return false;
+    }
 
     boolean retreat() {
         if (!engaged || !arrived() || route.length < 2 || horizontalDistanceSq(route[route.length - 1]) > 1)

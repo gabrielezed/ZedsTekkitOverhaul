@@ -40,7 +40,7 @@ public final class SiteSiege {
     public enum Profile { AUTO, PERIMETER, BREACH }
     public enum Intensity { NATURAL, LOW, MODERATE, HIGH, MAXIMUM }
 
-    private enum TacticalPhase { IDLE, PLANNING, APPROACHING, PRESSURING, BREACHING, ENGAGING, RESOLVED, ABORTED }
+    private enum TacticalPhase { IDLE, PLANNING, APPROACHING, PRESSURING, BREACHING, ENGAGING, BATTLEFIELD_ACTIVE, RESOLVED, ABORTED }
 
     enum Admission { WAIT, FALLBACK, COMMITTED }
     private static final int OPTIONS = 12, MAX_PARTS = 2, PLANNING_TICKS = 88;
@@ -416,8 +416,8 @@ public final class SiteSiege {
 
     private EntityMob createAttacker(Role role) {
         switch (role) {
-            case SKELETON: return new DebugSiegeSkeleton(world, manual());
-            case ZOMBIE: return new SiegeZombie(world, manual());
+            case SKELETON: return new DebugSiegeSkeleton(world, manual(), selected.id);
+            case ZOMBIE: return new SiegeZombie(world, manual(), selected.id);
             case BREACHER: return new EntityBreacher(world);
             case TANK: return new EntityTank(world);
             case SKIRMISHER: return new EntitySkirmisher(world);
@@ -463,8 +463,9 @@ public final class SiteSiege {
         }
         elapsed = admittedTicks - combatStart;
         refreshAttackers();
-        if (elapsed >= force.deadline) {
-            finish("DEADLINE");
+        if (elapsed >= force.tacticsEnd) {
+            finish(defeated == inserted ? (inserted == 0 ? "DEPLOYMENT_FAILED" : "ATTACKERS_GONE")
+                    : "REINFORCEMENTS_EXHAUSTED");
             return;
         }
         if (specialist != null && objectivePending()) executeObjective();
@@ -546,6 +547,7 @@ public final class SiteSiege {
                         && (attacker.role != Role.THIEF || sampler.thiefClear(route[i]))) continue;
                 count(failures, sampler.rejection);
                 rejectWave(attacker.role, sampler.rejection);
+                if (i == index && recoverRoute(attacker, sampler)) return;
                 withdraw(attacker, "ROUTE_LOST");
                 attackers.remove(attacker);
                 return;
@@ -554,6 +556,17 @@ public final class SiteSiege {
         } finally {
             account(sampler, start);
         }
+    }
+
+    private boolean recoverRoute(Attacker attacker, SiteApproach.Sampler sampler) {
+        if (attacker.recoveryTried || attacker.retreating
+                || (attacker.role != Role.ZOMBIE && attacker.role != Role.SKELETON)) return false;
+        attacker.recoveryTried = true;
+        if (!attacker.task.tryExteriorBypass(sampler, observed.envelope)) return false;
+        attacker.lastProgress = elapsed;
+        attacker.stalled = false;
+        count(failures, attacker.role + "/ROUTE_BYPASSED");
+        return true;
     }
 
     private SiteApproach laneFor(Role role, int slot, int attempt) {
@@ -599,9 +612,11 @@ public final class SiteSiege {
     private void reinforce(EntityPlayer player, Wave wave) {
         int slot = wave.nextSlot(force.activeCap - attackers.size());
         if (slot < 0) return;
-        Role role = wave.roles[slot];
+        Role role = wave.infantryFallback[slot] ? Role.ZOMBIE : wave.roles[slot];
         if (role == Role.SABOTEUR && (inserted == 0 || approach.barrier != null && openedApproach == null)) {
             rejectWave(role, "WAITING_FOR_ACCESS");
+            if (objectivePending() && elapsed < (wave.start + wave.end) / 2) return;
+            wave.infantryFallback[slot] = true;
             return;
         }
         boolean objectiveRole = isObjectiveRole(role);
@@ -630,6 +645,11 @@ public final class SiteSiege {
             wave.tried++;
             EntityMob mob = validateInsertion(player, sampler, lane, role, false);
             if (mob == null) {
+                if (role == Role.SABOTEUR && "NO_ACCESSIBLE_MACHINE".equals(rejection)) {
+                    wave.infantryFallback[slot] = true;
+                    rejectWave(role, rejection);
+                    return;
+                }
                 if ("POPULATION_CAP".equals(rejection)) wave.capDeferrals++;
                 else if (permanentPlacementFailure(rejection)) {
                     failedLanes.add(key);
@@ -650,7 +670,7 @@ public final class SiteSiege {
                 return;
             }
             if (mob instanceof TacticalHostile) {
-                ((TacticalHostile) mob).claimSiteSiege(player, lane.goal());
+                ((TacticalHostile) mob).claimSiteSiege(player, lane.goal(), force.siteId);
             } else {
                 PathPoint goal = lane.goal();
                 mob.setHomeArea(goal.xCoord, goal.yCoord, goal.zCoord, 10);
@@ -666,6 +686,8 @@ public final class SiteSiege {
             deployedSectors.add(lane.sector());
             wave.inserted[slot] = true;
             wave.deployed++;
+            if (waveIndex > 0 && wave.deployed == 1)
+                world.playSoundEffect(mob.posX, mob.posY, mob.posZ, "ambient.cave.cave", 0.45F, 0.9F);
             Attacker attacker = new Attacker(mob, task, role, elapsed);
             attackers.add(attacker);
             if (objectiveRole) specialist = attacker;
@@ -728,7 +750,7 @@ public final class SiteSiege {
                 continue;
             }
             if (!attacker.retreating && attacker.counted && attacker != specialist
-                    && elapsed >= force.deadline - 110 + attacker.mob.entityId % 32
+                    && elapsed >= force.tacticsEnd - 110 + attacker.mob.entityId % 32
                     && !(mob instanceof EntitySaboteur) && !(mob instanceof EntityThief)
                     && attacker.task.retreat()) {
                 attacker.retreating = true;
@@ -890,18 +912,20 @@ public final class SiteSiege {
         }
         attackers.clear();
         specialist = null;
-        boolean reached = "WAVES_COMPLETE".equals(cause) || "ATTACKERS_GONE".equals(cause);
-        tacticalPhase = reached ? TacticalPhase.RESOLVED : TacticalPhase.ABORTED;
+        if ("ATTACKERS_GONE".equals(cause)) tacticalPhase = TacticalPhase.RESOLVED;
+        else if ("REINFORCEMENTS_EXHAUSTED".equals(cause) || "WAVES_COMPLETE".equals(cause))
+            tacticalPhase = TacticalPhase.BATTLEFIELD_ACTIVE;
+        else tacticalPhase = TacticalPhase.ABORTED;
         if ("NONE".equals(objectiveOutcome)) objectiveOutcome = cause;
         observer = null;
         phase = "TERMINAL";
         outcome = cause;
-        status = "RESOLVED";
+        status = inserted > defeated ? "BATTLEFIELD_SURVIVORS_POSSIBLE" : "RESOLVED";
         if (!manual()) storage.closeSite(cause);
     }
 
     private void release(Attacker attacker, String cause) {
-        count(failures, "REMOVAL/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE" : "/DEAD"));
+        count(failures, "TACTICAL_RELEASE/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE" : "/DEAD"));
         attacker.task.release();
         maxLifetime = Math.max(maxLifetime, elapsed - attacker.insertedAt);
         if (attacker.mob instanceof TacticalHostile) {
@@ -913,11 +937,6 @@ public final class SiteSiege {
         if (attacker.mob instanceof EntitySaboteur) {
             EntitySaboteur scout = (EntitySaboteur) attacker.mob;
             industrial = scout.targetType() + " / " + scout.lastOutcome() + " / " + cause;
-            if (scout.carriesSiteCargo()) return;
-        }
-        if (attacker.mob.isEntityAlive() && !"ENTITY_UNLOADED".equals(cause)) {
-            attacker.mob.spawnExplosionParticle();
-            attacker.mob.setDead();
         }
     }
 
@@ -1045,7 +1064,7 @@ public final class SiteSiege {
         final Role role;
         final int insertedAt;
         int steps, lastProgress;
-        boolean counted, stalled, retreating;
+        boolean counted, stalled, retreating, recoveryTried;
 
         Attacker(EntityMob mob, PerimeterApproachTask task, Role role, int elapsed) {
             this.mob = mob;
@@ -1071,7 +1090,7 @@ public final class SiteSiege {
         public final Intensity intensity;
         public final boolean overridden;
         public final int threat, difficulty, planned, activeCap, waves, wave, defeated, withdrawn, deferred, abandoned;
-        public final int duration, deadline, peakLifetime;
+        public final int duration, tacticsEnd, peakLifetime;
         public final long pathNanos, peakPathNanos, peakTickNanos;
         public final List<String> allocations, deployment;
         public final Map<String, Integer> plannedRoles, insertedRoles, activeRoles, failures, waveFailures;
@@ -1164,7 +1183,7 @@ public final class SiteSiege {
             withdrawn = siege.withdrawn;
             abandoned = siege.active() ? planned - inserted - reserve - pending : siege.abandoned;
             duration = siege.admittedTicks;
-            deadline = plan == null ? 0 : plan.deadline;
+            tacticsEnd = plan == null ? 0 : plan.tacticsEnd;
             Map<String, Integer> insertedByRole = new LinkedHashMap<String, Integer>();
             for (Map.Entry<Role, Integer> role : siege.insertedRoles.entrySet())
                 insertedByRole.put(role.getKey().name(), role.getValue());

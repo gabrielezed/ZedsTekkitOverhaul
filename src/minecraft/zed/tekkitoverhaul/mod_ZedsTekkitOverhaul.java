@@ -72,6 +72,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
         TacticalHostiles.register();
         AerialPredators.register();
+        zed.tekkitoverhaul.assault.SiegeDirector.registerSiteInfantry();
         EntityAerialPredator.configureChickenHunting(settings.fuglChickenHunting);
         AerialSoundRegistration.register(ModLoader.getMinecraftInstance().sndManager);
         AdvancedCraftingRegistry.register(settings);

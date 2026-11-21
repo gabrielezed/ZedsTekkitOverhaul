@@ -28,6 +28,11 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     }
 
     private void manualSiege() throws Exception {
+        Method register = aao.class.getDeclaredMethod("a", Class.class, String.class, int.class);
+        register.setAccessible(true);
+        register.invoke(null, zed.tekkitoverhaul.assault.SiegeZombie.class, "ZTO.SiegeZombie", 215);
+        register.invoke(null, zed.tekkitoverhaul.assault.DebugSiegeSkeleton.class, "ZTO.SiegeSkeleton", 216);
+        register.invoke(null, zed.tekkitoverhaul.survival.tactical.EntityTank.class, "ZTO.Tank", 217);
         open("siege-debug-no-site", false);
         prepare(X, Z);
         position(X + 2, Y, Z + 2);
@@ -86,7 +91,12 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         for (Object entity : world.b) {
             if (!(entity instanceof yy) || !infantry(entity)) continue;
             yy mob = (yy) entity;
-            check(!mob.T() && !mob.c(new ady()), "debug skeleton survives sun and is excluded from saves", here());
+            ady saved = new ady();
+            check(!mob.T() && mob.c(saved) && saved.f("ZTOSiegeSite") == site,
+                    "debug infantry survives sun and saves its site", here());
+            yy restored = (yy) aao.a(saved, world);
+            check(restored != null && restored.getClass() == mob.getClass() && restored.bb() == mob.bb(),
+                    "native registry restores infantry class and health", here());
             debugMobs++;
         }
         check(debugMobs == active.active, "actual owned hostile accounting", here());
@@ -112,7 +122,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 "cancel releases ownership and resolves", here());
         for (Object entity : world.b) {
             if (infantry(entity))
-                check(((yy) entity).G, "cancel marks only owned mobs dead", here());
+                check(!((yy) entity).G, "cancel leaves infantry alive", here());
         }
         ady afterCancel = new ady();
         stored.b(afterCancel);
@@ -121,6 +131,8 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER);
         siegeTicks(director, calendar, day + 192, 35);
         check(director.siteSiegeSnapshot(world).inserted > 0, "restart after cancel", here());
+        long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
+                .filter(entity -> !((yy) entity).G).count();
         save();
         director.bind(null, null);
         open("siege-debug", false);
@@ -133,9 +145,9 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         ady reopened = new ady();
         ((AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault")).b(reopened);
         check(original.equals(reopened) && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.NONE
-                        && world.b.stream().noneMatch(entity -> infantry(entity))
+                        && world.b.stream().filter(TacticalSiteSiegeProbe::infantry).count() == surviving
                         && settlements.resolve(world, site).coverage == Coverage.PARTIAL,
-                "save/reopen carries only natural records, with a partial recognized site | records match "
+                "save/reopen restores infantry and preserves natural records | records match "
                         + original.equals(reopened) + " | " + siegeDetails(director.siteSiegeSnapshot(world))
                         + " | coverage " + settlements.resolve(world, site).coverage, here());
         siegeTicks(director, calendar, dusk, 1);
@@ -245,8 +257,8 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 siegeTicks(director, calendar, windup, 80);
                 check(director.siteSiegeSnapshot(world).inserted == 0
                                 && world.a(X, Y, Z + 2) == 4 && world.a(X, Y + 1, Z + 2) == 4
-                                && world.b.stream().noneMatch(e -> e.getClass().getSimpleName().equals("EntityTank")),
-                        "save/reopen during windup has no transient Tank or delayed impact", here());
+                                && world.b.stream().anyMatch(e -> e.getClass().getSimpleName().equals("EntityTank")),
+                        "save/reopen during windup preserves the Tank without delayed impact", here());
                 director.bind(null, null);
                 endSamples("structural-reload");
                 continue;

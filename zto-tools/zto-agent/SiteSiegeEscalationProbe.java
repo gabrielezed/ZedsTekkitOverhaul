@@ -200,20 +200,26 @@ public final class SiteSiegeEscalationProbe extends TacticalSiteSiegeProbe {
         check(thief.carryingLoot() && player.ap.a[20].a == 2, "exposed defender permits one native theft | "
                 + siegeDetails(director.siteSiegeSnapshot(world)), here());
         if (reopen) {
+            java.lang.reflect.Method register = aao.class.getDeclaredMethod("a", Class.class, String.class, int.class);
+            register.setAccessible(true);
+            register.invoke(null, EntityThief.class, "ZTO.Thief", 218);
             save();
             director.bind(null, null);
             open(saveName, false);
             prepare(X, Z);
             player.a(world.B().h());
             world.d.add(player);
-            check(live(EntityThief.class) == null && player.ap.a[20].a == 2,
-                    "save keeps native inventory debit and no transient carrier", here());
+            thief = live(EntityThief.class);
+            check(thief != null && player.ap.a[20].a == 2,
+                    "save keeps the carrier and native inventory debit", here());
         } else {
             director.cancelTestSiege(world);
             siegeTicks(director, calendar, time, 1);
             check("DEBUG_CANCELLED".equals(director.siteSiegeSnapshot(world).outcome)
                             && director.siteSiegeSnapshot(world).active == 0, "manual cancellation ends ownership", here());
         }
+        check(thief.bb() > 0 && !thief.G, "carrier survives tactical release", here());
+        thief.a(md.a(player), 100);
         uh trail = ThiefTrail.inspect(world, player);
         if (reopen && trail != null) {
             // Follow the saved compass point and stand on the exterior surface before recovery.

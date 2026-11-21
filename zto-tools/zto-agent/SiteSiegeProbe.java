@@ -473,7 +473,8 @@ public class SiteSiegeProbe extends SettlementProbe {
         toggle(X, Y, Z + 2);
         siegeTicks(director, calendar, dusk + 48, 1050);
         SiteSiege.Snapshot blocked = director.siteSiegeSnapshot(world);
-        check("APPROACH_ENTRANCE".equals(blocked.objective) && blocked.arrivals > 0
+        check("APPROACH_ENTRANCE".equals(blocked.objective) && blocked.progress < 14
+                        && (world.e(X, Y, Z + 2) & 4) == 0
                         && blocked.failures.keySet().stream().anyMatch(reason -> reason.toString().contains("ROUTE_OBSTRUCTED"))
                         && director.snapshot(world).starts == 0 && blocked.cooldownUntil == waiting.cooldownUntil,
                 "committed twilight obstruction cannot start a late ordinary assault: " + siegeDetails(blocked), here());

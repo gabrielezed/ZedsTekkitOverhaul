@@ -219,7 +219,11 @@ public final class SiteSiege {
             status = manual() ? "WARNING" : "WAITING_FOR_DARKNESS";
             world.playSoundEffect(approach.goal().xCoord + 0.5, approach.goal().yCoord,
                     approach.goal().zCoord + 0.5, "ambient.cave.cave", 0.55F, 0.85F);
-            sectors.add(approach);
+            if (approach.connected) sectors.clear();
+            for (Iterator<SiteApproach> it = sectors.iterator(); it.hasNext();) {
+                if (it.next().sector().equals(approach.sector())) it.remove();
+            }
+            sectors.add(0, approach);
             for (SiteApproach other : frontages) {
                 boolean represented = false;
                 for (SiteApproach sector : sectors) represented |= sector.sector().equals(other.sector());
@@ -290,6 +294,7 @@ public final class SiteSiege {
             nextConnectedApproach(sampler);
             return;
         }
+        if (optionsTried % OPTIONS == 0) sectors.clear();
         Candidate candidate = candidates.get(optionsTried / OPTIONS);
         int option = optionsTried++ % OPTIONS;
         selected = candidate.site;
@@ -307,7 +312,12 @@ public final class SiteSiege {
             return;
         }
         validRoutes++;
-        if (profile == Profile.BREACH && plan.barrier == null) return;
+        if (profile == Profile.BREACH && plan.barrier == null) {
+            boolean represented = false;
+            for (SiteApproach sector : sectors) represented |= sector.sector().equals(plan.sector());
+            if (!represented) sectors.add(plan);
+            return;
+        }
         int index = 0;
         while (index < frontages.size() && frontages.get(index).priority() >= plan.priority()) index++;
         frontages.add(index, plan);
@@ -576,7 +586,7 @@ public final class SiteSiege {
             return approach.staging(offset == 0 && attempt == 0 ? 3 : offset, 6);
         if (role == Role.THIEF) return approach.staging(offset == 0 && attempt == 0 ? -3 : offset, 3);
         if (approach.barrier != null && objectivePending())
-            return approach.staging(offset == 0 && attempt == 0 ? 2 : offset, 2);
+            return approach.staging(offset == 0 && attempt == 0 ? 2 : offset, approach.barrier.structural() ? 5 : 2);
         SiteApproach entrance = openedApproach != null ? openedApproach
                 : approach.objective == SiteApproach.Objective.APPROACH_ENTRANCE ? approach : null;
         if (entrance != null && attempt % 3 != 2) return entrance;
@@ -770,7 +780,7 @@ public final class SiteSiege {
                 endObjective("TARGET_OUT_OF_REACH");
                 return;
             }
-            if (!barrier.inReach(mob, 0)) {
+            if (!barrier.readyForImpact(mob)) {
                 // A heavy actor can regain its footing after incidental contact. Damage, block
                 // changes and loss of the loaded target still interrupt immediately.
                 int contactDeadline = tacticalPhase == TacticalPhase.APPROACHING ? firstContact + 24

@@ -93,7 +93,7 @@ final class PerimeterApproachTask extends EntityAIBase {
         if (arrived()) {
             if (hold) {
                 PathPoint goal = route[route.length - 1];
-                if (horizontalDistanceSq(goal) >= 0.16) move(goal);
+                if (horizontalDistanceSq(goal) >= 0.025) move(goal);
             }
             return;
         }

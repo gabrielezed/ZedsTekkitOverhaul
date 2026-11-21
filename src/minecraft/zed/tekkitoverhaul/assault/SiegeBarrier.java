@@ -87,6 +87,10 @@ final class SiegeBarrier {
         return hit != null && hit.blockX == x && hit.blockY == y && hit.blockZ == z && hit.sideHit == side;
     }
 
+    boolean readyForImpact(EntityMob mob) {
+        return inReach(mob, 0) && (!structural() || upper == 0 || inReach(mob, 1));
+    }
+
     int impact(EntityMob mob) {
         World world = mob.worldObj;
         if (!unchanged(world) || !inReach(mob, 0)) return 0;

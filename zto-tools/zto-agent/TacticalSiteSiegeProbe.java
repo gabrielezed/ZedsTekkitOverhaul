@@ -137,9 +137,29 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         SiteSiege.Snapshot absent = director.siteSiegeSnapshot(world);
         check("PLAYER_ABSENT".equals(absent.outcome) && absent.inserted == inserted,
                 "retreat stops further reinforcements", here());
-        position(X + 2, Y, Z + 2);
         long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
                 .filter(entity -> !((yy) entity).G).count();
+        check(surviving > 0, "live siege infantry available for native chunk eviction", here());
+        world.auditChunks = false;
+        world.a(new uh(0, Y, 0));
+        position(X + 512, Y, Z + 2);
+        ko provider = (ko) world.z();
+        java.util.Set<String> queued = new java.util.HashSet<String>();
+        for (Object actor : world.b) {
+            if (!infantry(actor)) continue;
+            yy mob = (yy) actor;
+            int cx = (int) Math.floor(mob.o) >> 4, cz = (int) Math.floor(mob.q) >> 4;
+            if (queued.add(cx + "," + cz)) provider.d(cx, cz);
+        }
+        provider.a();
+        world.n();
+        check(world.b.stream().noneMatch(TacticalSiteSiegeProbe::infantry),
+                "evicted infantry leave the loaded world list", here());
+        position(X + 2, Y, Z + 2);
+        prepare(X, Z);
+        check(world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
+                        .filter(entity -> !((yy) entity).G).count() == surviving,
+                "native chunk reload restores the infantry once", here());
         save();
         director.bind(null, null);
         open("siege-debug", false);

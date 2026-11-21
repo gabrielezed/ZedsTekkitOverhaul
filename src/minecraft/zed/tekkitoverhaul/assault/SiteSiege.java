@@ -457,11 +457,13 @@ public final class SiteSiege {
         if (role == Role.THIEF) return approach.staging(offset == 0 ? -3 : offset, 3);
         if (approach.barrier != null && objectivePending())
             return approach.staging(offset == 0 && attempt == 0 ? 2 : offset, 2);
-        if (attempt % 2 == 0) {
-            if (openedApproach != null) return openedApproach;
-            if (approach.barrier == null) return approach;
-        }
-        return approach.staging(OFFSETS[(slot + attempt / 2) % OFFSETS.length], 2);
+        SiteApproach entrance = openedApproach != null ? openedApproach
+                : approach.objective == SiteApproach.Objective.APPROACH_ENTRANCE ? approach : null;
+        if (entrance != null && attempt % 3 != 2) return entrance;
+        if (approach.barrier == null && attempt % 2 == 0) return approach;
+        int flank = OFFSETS[(slot + attempt / 2) % OFFSETS.length];
+        // Keep the threshold lane free of infantry assigned to a shorter holding position.
+        return approach.staging(entrance != null && flank == 0 ? 2 : flank, 2);
     }
 
     private void reinforce(EntityPlayer player, Wave wave) {

@@ -106,7 +106,7 @@ final class SiteSiegeForcePlan {
             if (headroom == 1) {
                 for (int slot = 0; slot < roles.length; slot++) {
                     Role role = roles[slot];
-                    if ((role == Role.TANK || role == Role.BREACHER) && pending(slot)) return slot;
+                    if ((role == Role.TANK || role == Role.BREACHER || role == Role.SKELEBIRD) && pending(slot)) return slot;
                 }
             }
             for (int i = 0; i < roles.length; i++) {

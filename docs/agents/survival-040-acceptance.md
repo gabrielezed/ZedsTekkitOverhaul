@@ -15,6 +15,44 @@ The census retains the newest 256 successful actor insertions in the Overworld. 
 
 The Skelebird keeps its native type, health, position and movement in the chunk save. Restoring begins with safe cruise steering and clears transient target and flock state. Tactical release preserves the siege origin, suppresses ordinary wildlife expiration and distance despawn, and returns the bird to its local hostile behavior. Native death, bone drops and Peaceful behavior use the established species code. Ordinary Fugl and Skelebird lifecycle and player-assault allocations keep their existing rules. Structural damage remains opt-in.
 
+## Native evidence and build identity
+
+Clean source build `2b5a2e7d69652da139a5651d7c7e9774f09f21a5` used MCP 6.2 and compile Forge 3.4.9.171. The mod JAR SHA-256 is `f38f2eb4bd943b388f1eb35d2ac3f569eee224e39a7c7583055da26b16f6edbd`. The ZTOAgent hash is `ebcb591cb6085c6a2990d2bae981faf48f6243d3121b4125eaa2a91541a4acb8`. MCP client compilation, reobfuscation and streaming verification of all 492 entries passed. The isolated headless runtime used Java 8u51 and the pinned pack overlay with Forge 3.3.8.164 and FML 2.2.106.176.
+
+Portable checks passed for configuration and migration, calendar and major scheduling, outdoor approaches, Territorial Activity, force selection, Dev Bridge transport, documentation links, distillation and alchemical conversion. These results exercise the typed settings, including fresh defaults and explicit legacy choices. Native pack fixtures test admission and fallback separately from the settings parser.
+
+The history fixture ran four finite manual mobilizations across two recognized workshops. It retained 16 native infantry through two Save/Quit cycles, checked the 580-byte compressed census, admitted a natural siege near the residual population and reopened it without replay. Its first full native save and flush took 270 ms. The Skelebird fixture checked tactical release, native motion beyond 1,100 ticks, native chunk eviction, a single restoration at the saved health, and one confirmed death after reopening. The wooden entrance fixture replaced a closed door during windup and observed the same Breacher walk to and open the second door.
+
+### Performance samples
+
+Times are microseconds from the headless simulation on the same workstation. The fixture tick covers native entity motion, territorial and settlement ticks, and director work. The snapshot includes the bounded census lookup. Samples exclude graphical rendering and sound playback. Dashes mark distributions with fewer than 100 samples for p99.
+
+| Workload | Samples | p50 | p95 | p99 | Max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Two-site history fixture before mobilization | 256 | 0.80 | 8.30 | 19.90 | 120.10 |
+| Same fixture after four mobilizations | 256 | 99.60 | 165.60 | 515.90 | 540.50 |
+| Same fixture after first reopen | 256 | 67.10 | 207.40 | 516.90 | 809.10 |
+| Same fixture after second reopen | 256 | 67.70 | 117.10 | 773.00 | 2198.90 |
+| History snapshot after four mobilizations | 256 | 7.10 | 10.40 | 23.00 | 29.40 |
+| History snapshot after first reopen | 256 | 1.90 | 4.80 | 7.00 | 26.60 |
+| Hard/MAXIMUM director ticks | 1690 | 0.60 | 5.00 | 69.90 | 10898.50 |
+| Hard/MAXIMUM planner samples | 290 | 1.30 | 72.30 | 171.30 | 10878.70 |
+| Combined force native hostile ticks, peak seven actors | 96 | 132.10 | 255.20 | — | 709.70 |
+| Skelebird native update within the combined fixture | 96 | 28.80 | 63.10 | — | 491.40 |
+
+The narrow waterfront fixture used the same shape and pinned runtime on the baseline and candidate. Across 1,690 active director ticks in each run, baseline → candidate p50 was 2.30 → 2.40 µs, p95 was 11.80 → 11.00 µs, and p99 was 127.10 → 119.50 µs. Native hostile p95 was 151.70 → 127.20 µs and p99 was 473.60 → 751.30 µs, with peaks of eight and nine loaded actors respectively. Native paths took 9.66 ms across 123 calls and 18.37 ms across 44 calls. These single-run distributions describe the matched fixtures. Long-run memory growth and wall-clock frequency in representative player worlds remain unmeasured.
+
+### Milestone definition of done
+
+| Specification items | Status |
+| --- | --- |
+| 1–5. Distinct event, fixed site identity, bounded calendar and safe approach | Implemented. Verified in native cabin, compound, covered, waterfront, partial and fallback probes. |
+| 6–8. Objectives, responsive defenses and mob roles | Implemented. Native entrance changes, specialist combat, ranged roles and one limited aerial slot verified. Graphical playtest and additional terrain layouts pending. |
+| 9–10. Reversible disruption and bounded structural impact | Implemented. Native cable, pipe, energy, fluid, unsupported tiles, drop recovery and damage-budget probes exercise conservation. |
+| 11–12. Save lifecycle and independent PLAYER_ASSAULT | Implemented. Native release, Save/Quit, chunk eviction, persistence, cooldown, replay and ordinary assault probes exercised. |
+| 13–14. Population, performance, persistence and debugging | Implemented with bounded queries and retention. Native observations and distributions above. Long-duration memory measurements and graphical monitor review pending. |
+| 15–16. Player counterplay and owner gameplay | Pending owner playtest. The pack fixtures cover underlying movement, collision, advanced equipment and machinery. |
+
 ## Specification scenarios
 
 | Spec | Implementation and native probe | Evidence to collect in the graphical client |

@@ -508,11 +508,12 @@ public final class SiteSiege {
         Wave wave = force.waves[waveIndex];
         if (elapsed < wave.end && wave.remaining() > 0
                 && (elapsed - wave.start) % SiteSiegeForcePlan.RETRY_INTERVAL == 0) {
-            if (activeAttackers() >= Math.max(1, force.activeCap - (force.waves.length - waveIndex - 1))) {
+            int headroom = Math.max(1, force.activeCap - (force.waves.length - waveIndex - 1)) - activeAttackers();
+            if (headroom <= 0) {
                 wave.capDeferrals++;
                 count(wave.rejections, "ACTIVE_CAP");
                 count(failures, "ACTIVE_CAP");
-            } else reinforce(player, wave);
+            } else reinforce(player, wave, headroom);
         } else if (heavySearch != null && elapsed % 3 == 1) {
             sampleHeavyRoutes();
         } else if (elapsed % 8 == 3 && elapsed >= nextReassessment && reassessPending) {
@@ -702,8 +703,8 @@ public final class SiteSiege {
         return approach.staging(entrance != null && flank == 0 ? 2 : flank, 2);
     }
 
-    private void reinforce(EntityPlayer player, Wave wave) {
-        int slot = wave.nextSlot(force.activeCap - activeAttackers());
+    private void reinforce(EntityPlayer player, Wave wave, int headroom) {
+        int slot = wave.nextSlot(headroom);
         if (slot < 0) return;
         Role role = wave.infantryFallback[slot] ? Role.ZOMBIE : wave.roles[slot];
         if (role == Role.SKELEBIRD) {

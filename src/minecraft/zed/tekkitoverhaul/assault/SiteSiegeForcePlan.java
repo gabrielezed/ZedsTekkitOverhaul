@@ -8,7 +8,7 @@ import zed.tekkitoverhaul.territory.ThreatAssessment;
 
 /** Frozen admission and roster. A slot has at most one successful insertion. */
 final class SiteSiegeForcePlan {
-    enum Role { ZOMBIE, SKELETON, SKIRMISHER, BREACHER, TANK, THIEF, SABOTEUR }
+    enum Role { ZOMBIE, SKELETON, SKIRMISHER, BREACHER, TANK, THIEF, SABOTEUR, SKELEBIRD }
 
     static final int RETRY_INTERVAL = 8, ATTEMPTS_PER_SLOT = 9, POST_DEPLOYMENT_TACTICS_TICKS = 560;
     final int siteId, difficulty, total, activeCap, tacticsEnd, structuralBudget;
@@ -64,6 +64,16 @@ final class SiteSiegeForcePlan {
     boolean reserves(Role role) {
         for (Wave wave : waves) for (Role slot : wave.roles) if (slot == role) return true;
         return false;
+    }
+
+    void reserveAerialSlot() {
+        Wave reinforcement = waves[1];
+        for (int i = reinforcement.roles.length - 1; i >= 0; --i) {
+            Role role = reinforcement.roles[i];
+            if (role != Role.ZOMBIE && role != Role.SKELETON) continue;
+            reinforcement.roles[i] = Role.SKELEBIRD;
+            return;
+        }
     }
 
     private static SiteSiege.Intensity classify(ThreatAssessment assessment) {

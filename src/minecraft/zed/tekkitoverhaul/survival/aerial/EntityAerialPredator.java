@@ -211,7 +211,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     public static void configureChickenHunting(boolean enabled) { chickenHunting = enabled; }
 
     private void detect() {
-        if (slashingPass() && !EntitySkelebird.isNight(worldObj)) return;
+        if (slashingPass() && (siegeSite == 0 || encounter == null) && !EntitySkelebird.isNight(worldObj)) return;
         if (natural) {
             if (encounter == null) return;
             if (!encounter.hunting) {

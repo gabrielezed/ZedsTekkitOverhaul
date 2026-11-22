@@ -6,6 +6,10 @@ import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
+import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
+import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Exercises the exact local command mailbox and native tactical execution without rendering. */
 public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
@@ -15,6 +19,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         try {
             TacticalSiteSiegeProbe probe = new TacticalSiteSiegeProbe(new File(args[0]));
             probe.manualSiege();
+            probe.aerialSurvivor();
             probe.tacticalSieges();
             probe.sideEntrance();
             probe.naturalEntrance();
@@ -192,6 +197,79 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     private static boolean infantry(Object entity) {
         String type = entity.getClass().getSimpleName();
         return type.equals("DebugSiegeSkeleton") || type.equals("SiegeZombie");
+    }
+
+    private void aerialSurvivor() throws Exception {
+        Method register = aao.class.getDeclaredMethod("a", Class.class, String.class, int.class);
+        register.setAccessible(true);
+        register.invoke(null, EntitySkelebird.class, "ZTO.Skelebird", 218);
+        open("siege-aerial-survivor", false);
+        prepare(X, Z);
+        room(X, Y, Z, true);
+        position(X + 2, Y, Z + 2);
+        walk();
+        ticks(560);
+        int site = recognized("aerial siege cabin", true).id;
+        toggle(X, Y, Z + 2);
+        position(X - 1, Y, Z + 2);
+        world.d.add(player);
+        world.q = 3;
+        long day = 6000;
+        LunarCalendar calendar = siegeCalendar(73, day, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        TerritorialActivityService territory = new TerritorialActivityService();
+        NaturalSpawnPressure spawning = new NaturalSpawnPressure(territory, 70, true);
+        AerialEcology air = new AerialEcology(false, true, 90, territory, spawning);
+        territory.bind(world);
+        spawning.bind(world);
+        air.bind(world);
+        director.attachAerialEcology(air);
+        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.MAXIMUM);
+        long tick = day;
+        while (tick < day + 720 && siteBird() == null) {
+            siegeTicks(director, calendar, ++tick, 1);
+            air.tick(player, false);
+        }
+        EntitySkelebird bird = siteBird();
+        SiteSiege.Snapshot deployed = director.siteSiegeSnapshot(world);
+        check(bird != null && bird.siegeSite() == site && deployed.activeAerial == 1
+                && deployed.inserted <= deployed.planned, "siege spends one reserved air slot: "
+                + deployed.aerialStatus + " | " + siegeDetails(deployed), here());
+        yy nativeBird = (yy) (Object) bird;
+        nativeBird.l(9);
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, ++tick, 1);
+        check(director.siteSiegeSnapshot(world).activeAerial == 0
+                && bird.encounterStatus().equals("Persistent siege survivor"), "release clears tactical control", here());
+        double departureX = nativeBird.o, departureZ = nativeBird.q;
+        siegeTicks(director, calendar, tick + 1, 1100);
+        check(!nativeBird.G && nativeBird.bb() == 9 && (nativeBird.o != departureX || nativeBird.q != departureZ),
+                "bird flies beyond the former wild lifetime", here());
+        int cx = (int) Math.floor(nativeBird.o) >> 4, cz = (int) Math.floor(nativeBird.q) >> 4;
+        world.a(new uh(0, Y, 0));
+        position(X + 512, Y, Z + 2);
+        ko provider = (ko) world.z();
+        provider.d(cx, cz);
+        provider.a();
+        world.n();
+        check(siteBird() == null, "native eviction removes the loaded observation", here());
+        world.d(cx, cz);
+        check(siteBird() != null && siteBird() != bird, "native chunk loading reconstructs the bird", here());
+        save();
+        director.bind(null, null);
+        open("siege-aerial-survivor", false);
+        world.d(cx, cz);
+        bird = siteBird();
+        check(bird != null && bird.siegeSite() == site && ((yy) (Object) bird).bb() == 9
+                && bird.encounterStatus().equals("Persistent siege survivor")
+                && world.b.stream().filter(EntitySkelebird.class::isInstance).count() == 1,
+                "Save/Quit reconstructs exactly one healthy, released siege bird", here());
+        System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");
+    }
+
+    private EntitySkelebird siteBird() {
+        for (Object entity : world.b) if (entity instanceof EntitySkelebird) return (EntitySkelebird) entity;
+        return null;
     }
 
     private void sideEntrance() throws Exception {

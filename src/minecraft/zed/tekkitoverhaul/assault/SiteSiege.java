@@ -25,6 +25,8 @@ import zed.tekkitoverhaul.settlement.SiteQueries;
 import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Bounds;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 import zed.tekkitoverhaul.survival.tactical.EntityBreacher;
 import zed.tekkitoverhaul.survival.tactical.EntitySkirmisher;
 import zed.tekkitoverhaul.survival.tactical.EntitySaboteur;
@@ -59,6 +61,9 @@ public final class SiteSiege {
     private final List<Candidate> candidates = new ArrayList<Candidate>();
     private World world;
     private AssaultWorldState storage;
+    private AerialEcology aerial;
+    private EntitySkelebird siteBird;
+    private String aerialStatus = "NO_SLOT";
     private SiteSnapshot selected;
     private SiteSnapshot observed;
     private SiteApproach approach, openedApproach;
@@ -97,6 +102,8 @@ public final class SiteSiege {
     boolean hasInserted() { return inserted > 0; }
 
     boolean manual() { return origin == Origin.MANUAL_DEBUG; }
+
+    void attachAerialEcology(AerialEcology ecology) { aerial = ecology; }
 
     SiteSiege(boolean enabled, boolean destructive, SiteQueries sites) {
         this.enabled = enabled;
@@ -209,6 +216,12 @@ public final class SiteSiege {
             ThreatAssessment threat = territory == null ? null : territory.assessSite(world, x, part.minY, z);
             force = new SiteSiegeForcePlan(selected.id, world.difficultySetting, threat, requestedIntensity, cap,
                     approach, world.getSeed() ^ boundary);
+            if (aerial != null && aerial.siteSiegeAvailable() && force.difficulty >= 2
+                    && force.intensity.ordinal() >= Intensity.HIGH.ordinal()
+                    && (force.overridden || Math.floorMod(world.getSeed() ^ boundary ^ force.siteId, 100) < 45)) {
+                force.reserveAerialSlot();
+                if (force.reserves(Role.SKELEBIRD)) aerialStatus = "RESERVED";
+            }
             if (approach.connected && force.reserves(Role.TANK))
                 heavySearch = new TerrainApproachSearch(part, observed.envelope, approach);
             if (!manual()) storage.startSite(force.siteId, boundary);
@@ -463,6 +476,7 @@ public final class SiteSiege {
         }
         elapsed = admittedTicks - combatStart;
         refreshAttackers();
+        refreshSiteBird("AERIAL_CONTROL_ENDED");
         if (elapsed >= force.tacticsEnd) {
             finish(defeated == inserted ? (inserted == 0 ? "DEPLOYMENT_FAILED" : "ATTACKERS_GONE")
                     : "REINFORCEMENTS_EXHAUSTED");
@@ -482,7 +496,7 @@ public final class SiteSiege {
         Wave wave = force.waves[waveIndex];
         if (elapsed < wave.end && wave.remaining() > 0
                 && (elapsed - wave.start) % SiteSiegeForcePlan.RETRY_INTERVAL == 0) {
-            if (attackers.size() >= Math.max(1, force.activeCap - (force.waves.length - waveIndex - 1))) {
+            if (activeAttackers() >= Math.max(1, force.activeCap - (force.waves.length - waveIndex - 1))) {
                 wave.capDeferrals++;
                 count(wave.rejections, "ACTIVE_CAP");
                 count(failures, "ACTIVE_CAP");
@@ -494,7 +508,7 @@ public final class SiteSiege {
         }
         if (!active()) return;
         boolean finalWave = waveIndex == force.waves.length - 1;
-        if (attackers.isEmpty() && finalWave && (elapsed >= wave.end || wave.remaining() == 0))
+        if (activeAttackers() == 0 && finalWave && (elapsed >= wave.end || wave.remaining() == 0))
             finish(inserted == 0 ? "DEPLOYMENT_FAILED" : defeated == inserted ? "ATTACKERS_GONE" : "WAVES_COMPLETE");
     }
 
@@ -610,9 +624,13 @@ public final class SiteSiege {
     }
 
     private void reinforce(EntityPlayer player, Wave wave) {
-        int slot = wave.nextSlot(force.activeCap - attackers.size());
+        int slot = wave.nextSlot(force.activeCap - activeAttackers());
         if (slot < 0) return;
         Role role = wave.infantryFallback[slot] ? Role.ZOMBIE : wave.roles[slot];
+        if (role == Role.SKELEBIRD) {
+            deploySiteBird(player, wave, slot);
+            return;
+        }
         if (role == Role.SABOTEUR && (inserted == 0 || approach.barrier != null && openedApproach == null)) {
             rejectWave(role, "WAITING_FOR_ACCESS");
             if (objectivePending() && elapsed < (wave.start + wave.end) / 2) return;
@@ -693,10 +711,51 @@ public final class SiteSiege {
             if (objectiveRole) specialist = attacker;
             inserted++;
             count(insertedRoles, role);
-            peak = Math.max(peak, attackers.size());
+            peak = Math.max(peak, activeAttackers());
         } finally {
             account(sampler, start);
         }
+    }
+
+    private int activeAttackers() { return attackers.size() + (siteBird == null ? 0 : 1); }
+
+    private void deploySiteBird(EntityPlayer player, Wave wave, int slot) {
+        PathPoint start = approach.start(), goal = approach.goal();
+        attempts++;
+        wave.tried++;
+        if (sites.insertionExterior(world, start.xCoord, start.zCoord, SiteApproach.MARGIN))
+            siteBird = aerial.admitSiteSiege(world, player, force.siteId, start.xCoord, start.yCoord,
+                    start.zCoord, goal.xCoord, goal.zCoord);
+        if (siteBird == null) {
+            wave.placementFailures[slot] = SiteSiegeForcePlan.ATTEMPTS_PER_SLOT;
+            aerialStatus = "AIRSPACE_OR_CAP_REJECTED";
+            rejectWave(Role.SKELEBIRD, aerialStatus);
+            return;
+        }
+        aerialStatus = "PERSISTENT_SIEGE_MEMBER";
+        wave.inserted[slot] = true;
+        wave.deployed++;
+        inserted++;
+        count(insertedRoles, Role.SKELEBIRD);
+        peak = Math.max(peak, activeAttackers());
+    }
+
+    private void refreshSiteBird(String reason) {
+        if (siteBird == null || siteBird.isEntityAlive() && aerial.controlsSiteBird(siteBird)) return;
+        releaseSiteBird(reason);
+    }
+
+    private void releaseSiteBird(String reason) {
+        if (siteBird == null) return;
+        if (siteBird.getHealth() <= 0) {
+            defeated++;
+            aerialStatus = "CONFIRMED_DEAD";
+        } else {
+            withdrawn++;
+            aerialStatus = "PERSISTENT_RELEASED";
+        }
+        aerial.endSiteSiege(siteBird, reason);
+        siteBird = null;
     }
 
     private void rejectWave(Role role, String cause) {
@@ -904,6 +963,7 @@ public final class SiteSiege {
 
     private void finish(String cause) {
         terrainSearch = heavySearch = null;
+        releaseSiteBird(cause);
         if (force != null) abandoned = force.total - inserted;
         for (Attacker attacker : attackers) {
             if (attacker.mob.getHealth() <= 0) defeated++;
@@ -960,6 +1020,7 @@ public final class SiteSiege {
         optionsTried = frames = attempts = inserted = peak = elapsed = arrivals = steps = peakColumns = 0;
         lastVerified = -1;
         force = null;
+        aerialStatus = "NO_SLOT";
         openedApproach = null;
         passageAfterOpen = null;
         sectors.clear();
@@ -1083,7 +1144,8 @@ public final class SiteSiege {
         public final boolean callAvailable, cancelAvailable;
         public final String eligibility, phase, rejection, outcome, coverage, approach, objective, identity;
         public final int nativeDespawns, sectorCount;
-        public final String sectors, industry;
+        public final String sectors, industry, aerialStatus;
+        public final int activeAerial;
         public final String tacticalPhase, objectiveOutcome, specialist, objectiveTarget;
         public final boolean opportunity, dormant, destructive;
         public final int breachChecks, structuralChanges, entranceChanges, structuralBudget;
@@ -1133,6 +1195,8 @@ public final class SiteSiege {
             sectors = siege.sectors.size() + " available | " + siege.deployedSectors + " | "
                     + siege.insertionPositions.size() + " starts";
             industry = siege.industrial;
+            aerialStatus = siege.aerialStatus;
+            activeAerial = siege.siteBird == null ? 0 : 1;
             tacticalPhase = siege.tacticalPhase.name();
             objectiveOutcome = siege.objectiveOutcome;
             specialist = siege.specialist == null ? "NONE"
@@ -1147,7 +1211,7 @@ public final class SiteSiege {
             boundary = siege.boundary != Long.MIN_VALUE ? siege.boundary
                     : siege.storage != null ? siege.storage.lastSiteBoundary : Long.MIN_VALUE;
             cooldownUntil = siege.storage == null ? Long.MIN_VALUE : siege.storage.cooldownUntil(site);
-            active = siege.attackers.size();
+            active = siege.activeAttackers();
             inserted = siege.inserted;
             peak = siege.peak;
             attempts = siege.attempts;
@@ -1188,6 +1252,7 @@ public final class SiteSiege {
             for (Map.Entry<Role, Integer> role : siege.insertedRoles.entrySet())
                 insertedByRole.put(role.getKey().name(), role.getValue());
             Map<String, Integer> activeByRole = new LinkedHashMap<String, Integer>();
+            if (activeAerial > 0) activeByRole.put(Role.SKELEBIRD.name(), activeAerial);
             long pathTime = siege.retiredPathNanos, peakPath = siege.peakPathNanos;
             int longest = siege.maxLifetime;
             for (Attacker attacker : siege.attackers) {

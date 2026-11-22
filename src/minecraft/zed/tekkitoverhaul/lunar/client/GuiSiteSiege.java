@@ -140,6 +140,7 @@ final class GuiSiteSiege extends GuiScreen {
         rows.add("Native despawns " + view.nativeDespawns);
         rows.add("Sectors " + view.sectors);
         rows.add("Saboteur active/inserted/planned " + role(view, "SABOTEUR"));
+        rows.add("Skelebird " + role(view, "SKELEBIRD") + " | " + view.aerialStatus);
         rows.add("Industry " + view.industry);
         rows.add("Target " + view.objectiveTarget + " | " + view.specialist);
         rows.add("Structural " + view.structuralChanges + "/" + view.structuralBudget + " removed | "

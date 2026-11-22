@@ -79,7 +79,10 @@ public final class SiegeDirector implements LunarService.Listener {
     private int aerialAllocation;
     private AerialEcology aerialEcology;
 
-    public void attachAerialEcology(AerialEcology ecology) { aerialEcology = ecology; }
+    public void attachAerialEcology(AerialEcology ecology) {
+        aerialEcology = ecology;
+        if (siteSiege != null) siteSiege.attachAerialEcology(ecology);
+    }
     private int difficulty;
     public SiegeDirector(boolean enabled, int budget, int interval, int activeCap, int outerRadius,
                          boolean patrolEnabled, boolean outdoorPressure, boolean experimentalEnderkin) {
@@ -100,6 +103,7 @@ public final class SiegeDirector implements LunarService.Listener {
 
     public void attachSites(boolean siteSieges, boolean structuralBreaching, SiteQueries sites) {
         siteSiege = new SiteSiege(siteSieges, structuralBreaching, sites);
+        siteSiege.attachAerialEcology(aerialEcology);
     }
 
     public SiteSiege.Snapshot siteSiegeSnapshot(World context) {

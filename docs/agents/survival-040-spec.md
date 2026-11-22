@@ -2,13 +2,23 @@
 ## SITE_SIEGE & Fortress Warfare
 
 **Document type:** Major Gameplay and Technical Design Specification  
-**Status:** Strategic direction and alpha.1 boundary approved. Later phases require separate authorization. Gameplay values remain provisional until owner playtesting.
+**Status:** Survival 0.4 completion campaign. The approved design below remains the acceptance contract. Gameplay values remain provisional until owner playtesting.
 
 **Target:** Minecraft Java 1.2.5 / Tekkit Classic 3.1.2  
 **Prerequisite milestone:** Survival 0.3 — Settlement Recognition  
 **Strategic milestone:** Survival 0.4 — SITE_SIEGE & Fortress Warfare  
 
 ---
+
+## Completion baseline
+
+- **Implemented and previously verified in the pinned pack:** Site-bound lunar and manual admission, loaded exterior routes including supported bridge crossings, bounded ground waves, entrance forcing, opt-in structural breaching, reversible industrial interference, and ground survivor persistence through tactical release, chunk eviction and Save/Quit. The [alpha.4 evidence](survival-040-alpha4.md) identifies the exact tested artifact.
+- **Implemented and awaiting owner acceptance:** The range of fortress layouts that can be defended in ordinary Survival, the readability of ground specialists and reinforcement pacing, and the effectiveness of advanced Tekkit equipment during an encounter.
+- **Required for completion:** Bounded tactical reassessment when routes and specialists change, limited persistent aerial pressure through verified exposed airspace, bounded survivor accounting with explicit unknown states, natural enablement that preserves explicit settings, observable lunar eligibility and recovery, and the acceptance and performance evidence in sections 26–31.
+- **Deferred:** New enemies and defensive machines, Survival 0.5 exploration and End progression, and dedicated multiplayer certification. Existing pack abilities and native world ownership remain the integration points for later work.
+- **Provisional balance:** One natural opportunity per three full moons is the alpha.4 baseline. Compare a two-cycle cadence with the same physical admission and cooldown rules before choosing a release cadence. Higher-threat air pressure may replace a small number of planned ground slots. Geometry, arbitration and local caps can yield zero aerial insertions.
+
+The director owns mobilization and tactical assignments. Every inserted siege actor belongs to the native world after insertion. Tactical release, save, chunk eviction, player absence and elapsed time preserve living siege actors. Native death and Peaceful behavior still apply. A tactical release never establishes a casualty or a cleared battlefield.
 
 # 1. Executive Vision
 

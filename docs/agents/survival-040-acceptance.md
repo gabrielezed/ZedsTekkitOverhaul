@@ -20,9 +20,26 @@ The census retains the newest 256 successful actor insertions in the Overworld. 
 
 Retained observations hold weak entity references. Evicting history drops its record and leaves the native actor and its site identity intact. Older actors with only `ZTOSiegeSite` remain persistent and contribute to the existing loaded population caps. Optional census data does not gate natural admission or change the lunar save record. Manual test sieges still populate the census when the major natural encounter authority is disabled.
 
+Existing census files retain their stored outcomes. The native confirmation rule applies to observations recorded by the stabilization build.
+
 The Skelebird keeps its native type, health, position and movement in the chunk save. Restoring begins with safe cruise steering and clears transient target and flock state. Tactical release preserves the siege origin, suppresses ordinary wildlife expiration and distance despawn, and returns the bird to its local hostile behavior. Native death, bone drops and Peaceful behavior use the established species code. Ordinary Fugl and Skelebird lifecycle and player-assault allocations keep their existing rules. The Fugl continues its wildlife and chicken-hunting role. Structural damage remains opt-in.
 
 The natural warning uses the existing cave ambience at a verified exterior staging column. The warning window precedes the first deployment and later successful waves have a single arrival cue. The role-specific wood, Tank, Saboteur and flight sounds still come from their existing implementations. The monitor distinguishes the live site threat sample from the admission assessment and reports reinforcement exhaustion separately from tactical control and physical casualties. Audible clarity awaits the owner pass.
+
+## Final stabilization evidence
+
+Build `3d026617a39784f07d5e4a4f71cfc8a461c571ec` was packaged from a clean tree as `0.4.0-alpha.4`. The mod JAR SHA-256 is `9483921a241b69baf1442d8815df67702ea713c0a67bedbf681504db35cfd887`. The ZTOAgent SHA-256 is `e107789d42d951f45e2a104a7e7366c3883554fee4b8157751d2a0e4de5a382b`. MCP 6.2 and compile Forge 3.4.9.171 built and reobfuscated the client. Streaming verification read 492 entries. The pinned Tekkit Classic 3.1.2 headless fixtures use Java 8u51, Minecraft 1.2.5, Forge 3.3.8.164 and FML 2.2.106.176.
+
+| Check | Result |
+| --- | --- |
+| Portable configuration, calendar, major scheduling and handbook links | **PASS.** Fresh settings and explicit opt-outs were exercised. Natural cadence remains the fixed one-in-three-cycle opportunity. |
+| Prior JAR with the immediate-death assertion | **FAIL as reproduced.** A restored Skelebird killed after tactical release still showed no new confirmed death before its next entity tick. |
+| `-Focus site-siege-completion` | **PASS.** Confirmed immediate deaths after release for the restored Skelebird and infantry, zero new casualties for unverified removal, and one living restoration after eviction of the oldest diagnostic record. The conflicting-identity fixture preserved the existing live observation. The manual fixture recorded its census with major natural admission disabled. |
+| `-Focus site-siege` | **PASS on retry.** The initial run reached the doubled cobblestone wall, then the Tank aborted on `TARGET_OUT_OF_REACH`. The identical JAR completed the same fixture on retry and also passed it in the full pack. |
+| Complete pinned `-Pack` | **PASS.** Included terrain, escalation, the natural-admission and no-replay cases, multi-site and aerial persistence, structural limits, settlement and protection, and native IC2, BuildCraft and RedPower resource-conservation fixtures. The two wetland assaults produced 4 + 6 insertions against the existing combined floor of 5. |
+| Graphical, owner gameplay and sustained heap run | **NOT RUN.** The owner walkthrough remains open. The retention fixture tests the actual record cap and native persistence. |
+
+The two-site focused fixture retained 16 actors across two reopens. Its compressed census measured 581 bytes in that run. A natural siege then admitted near the residual population and reopened without reinforcement replay. Early harness runs exposed timing assumptions in chunk restoration and the pilot reacquisition check. The chunk probe flushes pending native writes and counts living bodies. The combat probe fixes its initial search delay after checking the restored NBT, then lets the native flight AI acquire and attack the pilot.
 
 ## Completion campaign baseline evidence
 

@@ -248,17 +248,21 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 && deployed.inserted <= deployed.planned && deployed.censusInserted == deployed.inserted
                 && deployed.censusLoaded > 0, "siege spends one reserved air slot: "
                 + deployed.aerialStatus + " | " + siegeDetails(deployed), here());
-        yy nativeBird = (yy) (Object) bird;
-        nativeBird.l(9);
+        beginSamples();
+        siegeTicks(director, calendar, tick + 1, 96);
+        tick += 96;
+        endSamples("combined siege air and ground");
+        bird.l(9);
         director.cancelTestSiege(world);
         siegeTicks(director, calendar, ++tick, 1);
         check(director.siteSiegeSnapshot(world).activeAerial == 0
                 && bird.encounterStatus().equals("Persistent siege survivor"), "release clears tactical control", here());
-        double departureX = nativeBird.o, departureZ = nativeBird.q;
+        double departureX = bird.o, departureZ = bird.q;
         siegeTicks(director, calendar, tick + 1, 1100);
-        check(!nativeBird.G && nativeBird.bb() == 9 && (nativeBird.o != departureX || nativeBird.q != departureZ),
+        check(!bird.G && bird.bb() == 9 && (bird.o != departureX || bird.q != departureZ),
                 "bird flies beyond the former wild lifetime", here());
-        int cx = (int) Math.floor(nativeBird.o) >> 4, cz = (int) Math.floor(nativeBird.q) >> 4;
+        int cx = (int) Math.floor(bird.o) >> 4, cz = (int) Math.floor(bird.q) >> 4;
+        int deathsBeforeEviction = director.siteSiegeSnapshot(world).censusDead;
         world.a(new uh(0, Y, 0));
         position(X + 512, Y, Z + 2);
         ko provider = (ko) world.z();
@@ -266,8 +270,10 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         provider.a();
         world.n();
         SiteSiege.Snapshot evicted = director.siteSiegeSnapshot(world);
-        check(siteBird() == null && evicted.censusUnloaded + evicted.censusUnknown > 0 && evicted.censusDead == 0,
-                "native eviction removes the loaded observation without confirming death", here());
+        check(siteBird() == null && evicted.censusUnloaded + evicted.censusUnknown > 0 && evicted.censusDead == deathsBeforeEviction,
+                "native eviction removes the loaded observation without confirming death: bird still loaded " + (siteBird() != null)
+                        + " | unloaded " + evicted.censusUnloaded + " | unknown " + evicted.censusUnknown
+                        + " | dead " + deathsBeforeEviction + " -> " + evicted.censusDead, here());
         world.d(cx, cz);
         check(siteBird() != null && siteBird() != bird, "native chunk loading reconstructs the bird", here());
         save();
@@ -275,7 +281,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         open("siege-aerial-survivor", false);
         world.d(cx, cz);
         bird = siteBird();
-        check(bird != null && bird.siegeSite() == site && ((yy) (Object) bird).bb() == 9
+        check(bird != null && bird.siegeSite() == site && bird.bb() == 9
                 && bird.encounterStatus().equals("Persistent siege survivor")
                 && world.b.stream().filter(EntitySkelebird.class::isInstance).count() == 1,
                 "Save/Quit reconstructs exactly one healthy, released siege bird", here());
@@ -284,8 +290,13 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         director = siegeDirector(false, calendar);
         SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
         check(reopened.censusSite == site && reopened.censusInserted == deployed.censusInserted
-                && reopened.censusDead == 0 && reopened.censusUnknown > 0 && reopened.censusReleased > 0,
+                && reopened.censusDead == deathsBeforeEviction && reopened.censusUnknown > 0 && reopened.censusReleased > 0,
                 "recent insertions and releases persist across reopening before new observations", here());
+        prepare((int) Math.floor(bird.o), (int) Math.floor(bird.q));
+        bird.a(md.a(player), 100);
+        siegeTicks(director, calendar, day, 2);
+        check(bird.bb() <= 0 && director.siteSiegeSnapshot(world).censusDead == deathsBeforeEviction + 1,
+                "native death after Save/Quit closes exactly one retained record", here());
         System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");
     }
 
@@ -316,6 +327,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         check(after.reassessments > 0 && after.reassessments <= 8 && after.reassessment.startsWith("ALTERNATE_")
                 && (world.e(x, Y, z) & 4) == 0 && (world.e(X, Y, Z + 2) & 4) != 0,
                 "reclosed east door triggers bounded reassessment with the west door open: " + after.reassessment, here());
+        System.out.println("PASS east entrance reclosed, alternate west approach reassessed in " + after.reassessments + " samples");
         director.bind(null, null);
     }
 

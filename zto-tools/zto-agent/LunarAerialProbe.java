@@ -67,6 +67,7 @@ public final class LunarAerialProbe {
         roof.start();
         roof.assertBudget();
         check(roof.air.lunarMembers() == 0 && roof.air.lunarStatus().contains("cover"), "glass overhead prevents lunar air admission");
+        check(siteSlot(roof) == null, "site air admission also respects overhead glass");
 
         Fixture easy = new Fixture(root, "moon-easy", 1, false);
         easy.start();
@@ -82,6 +83,7 @@ public final class LunarAerialProbe {
         capped.start();
         capped.assertBudget();
         check(capped.air.lunarMembers() == 0 && capped.air.lunarStatus().contains("cap"), "loaded aerial population blocks the air allocation");
+        check(siteSlot(capped) == null, "site air allocation shares the aerial population cap");
 
         Fixture wildlife = new Fixture(root, "moon-wildlife", 2, false);
         wildlife.world.r = new Random(92L) {
@@ -93,7 +95,12 @@ public final class LunarAerialProbe {
         check(wildlife.air.snapshot().activeMembers == 1 && wildlife.air.lunarMembers() == 0
                 && wildlife.director.snapshot(wildlife.world).aerialAllocation == 0,
                 "active natural encounter and cooldown keep the lunar allocation on the ground");
+        check(siteSlot(wildlife) == null, "a site allocation cannot take over an active wildlife encounter");
         System.out.println("PASS lunar authority, Normal/Hard split, ground insertion, Easy, cover, cap, overlap, lifecycle and replay");
+    }
+
+    private static EntitySkelebird siteSlot(Fixture fixture) {
+        return fixture.air.admitSiteSiege(fixture.world, fixture.player, 1, 272, 4, 288, 287, 288);
     }
 
     private static long selectedSeed() {

@@ -13,11 +13,13 @@ import zed.tekkitoverhaul.lunar.LunarEvent;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
+import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Native simulation using the same disposable world and recognition setup as the settlement suite. */
 public class SiteSiegeProbe extends SettlementProbe {
     private final Samples planner = new Samples(), recognition = new Samples(), movement = new Samples();
+    private final Samples aerialTicks = new Samples();
     private final Samples activeTicks = new Samples();
     private long lastPlannerNanos, firstMeasuredTick, peakPlannerTick, peakPlannerNanos;
     private boolean measured;
@@ -533,9 +535,10 @@ public class SiteSiegeProbe extends SettlementProbe {
             long entityStarted = System.nanoTime();
             int moved = 0;
             for (Object entity : new ArrayList<Object>(world.b)) {
-                if (entity instanceof yy && !((yy) entity).G) {
-                    yy mob = (yy) entity;
+                if ((entity instanceof yy || entity instanceof EntityAerialPredator) && !((acq) entity).G) {
+                    acq mob = (acq) entity;
                     double x = mob.o, z = mob.q;
+                    long flightStart = measured && entity instanceof EntityAerialPredator ? System.nanoTime() : 0;
                     if (forceEntityTick) {
                         // Model a Forge-forced entity update, then let World reconcile chunk membership.
                         mob.J_();
@@ -543,6 +546,7 @@ public class SiteSiegeProbe extends SettlementProbe {
                     } else {
                         world.f(mob);
                     }
+                    if (flightStart != 0) aerialTicks.add(System.nanoTime() - flightStart);
                     if (measured) peakStep = Math.max(peakStep, Math.hypot(mob.o - x, mob.q - z));
                     moved++;
                 }
@@ -612,6 +616,7 @@ public class SiteSiegeProbe extends SettlementProbe {
         System.out.println("PROFILE " + name + " | " + planner.report("planner") + " peak offset=" + peakPlannerTick
                 + " | " + recognition.report("territory+recognition")
                 + " | " + movement.report("native hostile tick")
+                + " | " + aerialTicks.report("native aerial actor tick")
                 + " | " + activeTicks.report("active director tick") + " | " + totalTicks.report("fixture tick")
                 + String.format(Locale.ROOT, " | peak block/meta calls %d/%d | mobs %d | step %.3f blocks",
                         peakBlockReads, peakMetadataReads, peakMobs, peakStep)

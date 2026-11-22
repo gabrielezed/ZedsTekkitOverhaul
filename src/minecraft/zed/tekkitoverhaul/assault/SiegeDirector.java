@@ -160,7 +160,7 @@ public final class SiegeDirector implements LunarService.Listener {
             return false;
         }
         if (siteActive() && siteSiege.manual()) {
-            siteSiege.tick(player, lunar == null ? null : lunar.snapshot());
+            siteSiege.tick(player, lunar == null ? null : lunar.snapshot(), territory);
             if (!siteActive()) {
                 debugReason = siteSiege.resolution();
                 debugState = siteSiege.hasInserted() ? DebugState.RESOLVED : DebugState.REJECTED;
@@ -331,7 +331,7 @@ public final class SiegeDirector implements LunarService.Listener {
             return;
         }
         if (siteActive()) {
-            siteSiege.tick(player, lunar.snapshot());
+            siteSiege.tick(player, lunar.snapshot(), territory);
             return;
         }
         if (boundary != null) {

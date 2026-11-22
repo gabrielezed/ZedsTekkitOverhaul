@@ -90,6 +90,7 @@ public final class SiteSiege {
     private long boundary = Long.MIN_VALUE, lunarSession;
     private int optionsTried, frames, attempts, inserted, peak, elapsed, arrivals, steps, peakColumns;
     private int lastVerified;
+    private int liveThreat;
     private long columns, heightReads, protectionReads, planningNanos, peakPlanningNanos;
     private double progress;
     private String phase = "IDLE", status, rejection = "NONE", outcome = "NONE";
@@ -220,9 +221,8 @@ public final class SiteSiege {
                 String blocked = storage.siegeEligibility(selected.id, boundary);
                 if (blocked != null) return fallback(blocked);
             }
-            int x = part.minX + (part.maxX - part.minX) / 2;
-            int z = part.minZ + (part.maxZ - part.minZ) / 2;
-            ThreatAssessment threat = territory == null ? null : territory.assessSite(world, x, part.minY, z);
+            ThreatAssessment threat = assessThreat(territory);
+            liveThreat = threat == null ? -1 : threat.threat;
             force = new SiteSiegeForcePlan(selected.id, world.difficultySetting, threat, requestedIntensity, cap,
                     approach, world.getSeed() ^ boundary);
             if (aerial != null && aerial.siteSiegeAvailable() && force.difficulty >= 2
@@ -451,16 +451,23 @@ public final class SiteSiege {
         }
     }
 
-    void tick(EntityPlayer player, LunarSnapshot now) {
+    private ThreatAssessment assessThreat(TerritorialActivityService territory) {
+        if (territory == null) return null;
+        int x = part.minX + (part.maxX - part.minX) / 2;
+        int z = part.minZ + (part.maxZ - part.minZ) / 2;
+        return territory.assessSite(world, x, part.minY, z);
+    }
+
+    void tick(EntityPlayer player, LunarSnapshot now, TerritorialActivityService territory) {
         long start = System.nanoTime();
         try {
-            tickForce(player, now);
+            tickForce(player, now, territory);
         } finally {
             peakTickNanos = Math.max(peakTickNanos, System.nanoTime() - start);
         }
     }
 
-    private void tickForce(EntityPlayer player, LunarSnapshot now) {
+    private void tickForce(EntityPlayer player, LunarSnapshot now, TerritorialActivityService territory) {
         admittedTicks++;
         if (!manual() && (now == null || now.sessionId != lunarSession || !AssaultSchedule.WINDOW.matches(now))) {
             finish("LUNAR_CONTEXT_LOST");
@@ -479,6 +486,10 @@ public final class SiteSiege {
             return;
         }
         if (admittedTicks % 5 == 0 && !refreshSite()) return;
+        if (admittedTicks % 100 == 0) {
+            ThreatAssessment current = assessThreat(territory);
+            liveThreat = current == null ? -1 : current.threat;
+        }
         if (combatStart < 0) {
             if (admittedTicks < (manual() ? MANUAL_WARNING : NATURAL_WARNING)
                     || (!manual() && world.skylightSubtracted < 11 && admittedTicks < LIGHT_WAIT))
@@ -1106,6 +1117,7 @@ public final class SiteSiege {
         else tacticalPhase = TacticalPhase.ABORTED;
         if ("NONE".equals(objectiveOutcome)) objectiveOutcome = cause;
         observer = null;
+        liveThreat = -1;
         phase = "TERMINAL";
         outcome = cause;
         status = inserted > defeated ? "BATTLEFIELD_SURVIVORS_POSSIBLE" : "RESOLVED";
@@ -1148,6 +1160,7 @@ public final class SiteSiege {
     private void resetCounters() {
         optionsTried = frames = attempts = inserted = peak = elapsed = arrivals = steps = peakColumns = 0;
         lastVerified = -1;
+        liveThreat = -1;
         force = null;
         aerialStatus = "NO_SLOT";
         openedApproach = null;
@@ -1289,7 +1302,7 @@ public final class SiteSiege {
         public final int breachChecks, structuralChanges, entranceChanges, structuralBudget;
         public final Intensity intensity;
         public final boolean overridden;
-        public final int threat, difficulty, planned, activeCap, waves, wave, defeated, withdrawn, deferred, abandoned;
+        public final int threat, liveThreat, difficulty, planned, activeCap, waves, wave, defeated, withdrawn, deferred, abandoned;
         public final int duration, tacticsEnd, peakLifetime;
         public final long pathNanos, peakPathNanos, peakTickNanos;
         public final List<String> allocations, deployment;
@@ -1368,6 +1381,7 @@ public final class SiteSiege {
             attempts = siege.attempts;
             SiteSiegeForcePlan plan = siege.force;
             threat = plan == null || plan.threat == null ? -1 : plan.threat.threat;
+            liveThreat = siege.liveThreat;
             difficulty = plan == null ? 0 : plan.difficulty;
             intensity = plan == null ? Intensity.NATURAL : plan.intensity;
             overridden = plan != null && plan.overridden;

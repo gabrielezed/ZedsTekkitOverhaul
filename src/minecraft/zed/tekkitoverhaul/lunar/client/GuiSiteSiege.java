@@ -139,6 +139,8 @@ final class GuiSiteSiege extends GuiScreen {
         if (view.inserted > 0 && view.deferred + view.remaining == 0)
             rows.add("No more reinforcements | " + view.active + " still under tactical control");
         rows.add("Cooldown " + cooldown(view.cooldownUntil, lunar));
+        rows.add("Territorial Threat " + (view.liveThreat < 0 ? "-" : view.liveThreat)
+                + " live | " + (view.threat < 0 ? "-" : view.threat) + " at admission");
         rows.add("Routes " + view.validRoutes + " valid / " + view.failedRoutes + " failed | " + view.planningColumns + " samples");
         rows.add("Reassessment " + view.reassessments + " | " + view.reassessment);
         rows.add("Native despawns " + view.nativeDespawns);

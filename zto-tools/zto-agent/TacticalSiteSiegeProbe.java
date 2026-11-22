@@ -11,6 +11,7 @@ import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
 import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.Flight;
 import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
 import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
 import zed.tekkitoverhaul.territory.TerritorialActivityService;
@@ -293,9 +294,33 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         check(reopened.censusSite == site && reopened.censusInserted == deployed.censusInserted
                 && reopened.censusDead == deathsBeforeEviction && reopened.censusUnknown > 0 && reopened.censusReleased > 0,
                 "recent insertions and releases persist across reopening before new observations", here());
-        prepare((int) Math.floor(bird.o), (int) Math.floor(bird.q));
+        ady savedBird = new ady();
+        check(bird.c(savedBird), "save restored native Skelebird", here());
+        savedBird.a("ZTOSiegeCensus", -1);
+        EntitySkelebird legacyBird = (EntitySkelebird) aao.a(savedBird, world);
+        check(legacyBird != null && legacyBird.siegeSite() == site && legacyBird.bb() == bird.bb(),
+                "malformed optional actor census preserves the native body and site origin", here());
+        prepare(X + 40, Z + 16);
+        world.a(18000L);
+        player.c(X + 40.5, 26, Z + 16.5, 0, 0);
+        player.z = false;
+        player.l(20);
+        player.r = player.s = player.t = 0;
+        bird.c(X + 24, 32, Z + 16.5, -90, 0);
+        bird.r = bird.s = bird.t = 0;
+        java.lang.reflect.Field random = nn.class.getDeclaredField("U");
+        random.setAccessible(true);
+        random.set(bird, new java.util.Random(3865L));
+        boolean committed = false;
+        for (int i = 0; i < 300 && !committed; ++i) {
+            world.a(bird, true);
+            committed = bird.flight() == Flight.DIVE;
+        }
+        check(committed, "restored bird reacquires a pilot and commits a real dive: " + bird.diveStatus(), here());
+        for (int i = 0; i < 45 && bird.flight() == Flight.DIVE; ++i) world.a(bird, true);
+        check(player.bb() < 20, "restored siege bird retains native slashing contact", here());
         bird.a(md.a(player), 100);
-        siegeTicks(director, calendar, day, 2);
+        world.a(bird, true);
         check(bird.bb() <= 0 && director.siteSiegeSnapshot(world).censusDead == deathsBeforeEviction + 1,
                 "native death after Save/Quit closes exactly one retained record", here());
         System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");

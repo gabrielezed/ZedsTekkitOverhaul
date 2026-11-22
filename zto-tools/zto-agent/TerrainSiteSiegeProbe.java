@@ -197,8 +197,21 @@ public final class TerrainSiteSiegeProbe extends TacticalSiteSiegeProbe {
         SiteSiege.Snapshot restored = director.siteSiegeSnapshot(world);
         check(restored.inserted > 3, "restored loaded bridge permits deployment again | " + siegeDetails(restored)
                 + " request=" + restored.requestReason, here());
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, time += 250, 1);
+        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.LOW);
+        time = waitForSiege(director, calendar, time + 1);
+        SiteSiege.Snapshot crossing = director.siteSiegeSnapshot(world);
+        check(crossing.inserted == 1 && crossing.site == site, "a live attacker is staged before severing the bridge", here());
+        yy vanguard = (yy) world.b.get(world.b.size() - 1);
+        bridge(halfWidth, false);
+        siegeTicks(director, calendar, time, 150);
+        SiteSiege.Snapshot disconnected = director.siteSiegeSnapshot(world);
+        check(disconnected.inserted == crossing.inserted && disconnected.reassessments > 0
+                && world.b.contains(vanguard) && vanguard.bb() > 0 && !vanguard.G && world.chunkMisses == 0,
+                "mid-approach bridge loss blocks new insertions and leaves the vanguard alive | " + siegeDetails(disconnected), here());
         director.bind(null, null);
-        System.out.println("PASS broken and unloaded bridge deny insertion, restored bridge reopens deployment");
+        System.out.println("PASS broken and unloaded bridge deny insertion, restoration reopens deployment, mid-approach loss preserves the vanguard");
     }
 
     private static Object reading(SiteSiege.Snapshot view, String field) throws Exception {

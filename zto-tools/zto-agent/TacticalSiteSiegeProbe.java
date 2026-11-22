@@ -30,6 +30,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             probe.manualSiege();
             probe.aerialSurvivor();
             probe.sideEntrance();
+            probe.breacherAlternateEntrance();
             probe.battlefieldHistory();
             if (args.length < 2) {
                 probe.tacticalSieges();
@@ -406,6 +407,31 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         malformed.b(new ady());
         System.out.printf(Locale.ROOT, "PASS recent history two sites, four mobilizations, two reopens, %d actors, census %d bytes, native save %d us%n",
                 total, bytes, saveMicros);
+    }
+
+    private void breacherAlternateEntrance() throws Exception {
+        int site = tacticalHouse("siege-breacher-alternate", 64, false);
+        int firstDoor = Z + 2, alternateDoor = Z + 1;
+        world.d(X, Y, alternateDoor, 64, 0);
+        world.d(X, Y + 1, alternateDoor, 64, 8);
+        long time = 6000;
+        LunarCalendar calendar = siegeCalendar(75, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        director.requestTestSiege(world, player, SiteSiege.Profile.BREACH, SiteSiege.Intensity.MAXIMUM);
+        time = waitForPhase(director, calendar, time, "PRESSURING");
+        check(director.siteSiegeSnapshot(world).objectiveTarget.equals(X + "," + Y + "," + firstDoor),
+                "original door selected before change", here());
+        world.g(X, Y + 1, firstDoor, 4);
+        world.g(X, Y, firstDoor, 4);
+        siegeTicks(director, calendar, time, 180);
+        SiteSiege.Snapshot finalView = director.siteSiegeSnapshot(world);
+        check(finalView.site == site && finalView.reassessment.equals("ALTERNATE_ENTRANCE_ASSIGNED")
+                && finalView.objectiveTarget.equals(X + "," + Y + "," + alternateDoor)
+                && (world.e(X, Y, alternateDoor) & 4) != 0 && world.a(X, Y, firstDoor) == 4
+                && finalView.entranceChanges == 1 && finalView.insertedRoles.get("BREACHER") == 1,
+                "existing Breacher walks to the alternate door and opens it: " + siegeDetails(finalView), here());
+        director.bind(null, null);
+        System.out.println("PASS one Breacher changes physical objective without a replacement spawn");
     }
 
     private void profileHistory(String label, SiegeDirector director, LunarCalendar calendar, long time) {

@@ -74,7 +74,7 @@ public final class SiteSiege {
     private SiteApproach reassessedApproach;
     private int reassessCursor, nextReassessment;
     private String reassessment = "CURRENT_ROUTE";
-    private boolean reassessPending;
+    private boolean reassessPending, reassignBreacher, breacherRetargeted;
     private final List<SiteApproach> frontages = new ArrayList<SiteApproach>();
     private final List<SiteApproach> connectedAlternates = new ArrayList<SiteApproach>();
     private final List<SiteApproach> sectors = new ArrayList<SiteApproach>();
@@ -494,7 +494,7 @@ public final class SiteSiege {
                     : "REINFORCEMENTS_EXHAUSTED");
             return;
         }
-        if (specialist != null && objectivePending()) executeObjective();
+        if (specialist != null && objectivePending() && !reassignBreacher) executeObjective();
         if (!active()) return;
 
         if (approach.barrier == null && arrivals > 0 && objectivePending()) {
@@ -599,7 +599,7 @@ public final class SiteSiege {
     }
 
     private void observeEntrance() {
-        if (openedApproach == null && !objectivePending()) return;
+        if (reassignBreacher || openedApproach == null && !objectivePending()) return;
         long start = System.nanoTime();
         SiteApproach.Sampler sampler = new SiteApproach.Sampler(world);
         try {
@@ -624,7 +624,15 @@ public final class SiteSiege {
             int choice = reassessCursor++;
             nextReassessment = elapsed + 16;
             SiteApproach candidate;
-            if (approach.connected) {
+            if (reassignBreacher) {
+                candidate = sampler.plan(part, observed.envelope, choice, Profile.AUTO, false);
+                if (assignAlternateEntrance(candidate, sampler)) return;
+                if (reassessCursor >= REASSESS_LIMIT) {
+                    endObjective("NO_ALTERNATE_ENTRANCE");
+                    reassessPending = false;
+                }
+                return;
+            } else if (approach.connected) {
                 candidate = choice < connectedAlternates.size() ? connectedAlternates.get(choice) : null;
                 if (candidate != null && (candidate.barrier != null || !sampler.validate(candidate, false))) candidate = null;
             } else {
@@ -646,12 +654,33 @@ public final class SiteSiege {
         }
     }
 
+    private boolean assignAlternateEntrance(SiteApproach candidate, SiteApproach.Sampler sampler) {
+        if (candidate == null || candidate.barrier == null || candidate.barrier.structural()
+                || candidate.barrier.target.equals(approach.barrier.target)
+                || !specialist.task.rejoin(candidate, sampler, observed.envelope, true)) return false;
+        ((TacticalHostile) specialist.mob).claimSiteSiege(observer, candidate.goal(), force.siteId);
+        approach = candidate;
+        destination = candidate.goal();
+        specialist.assigned = candidate;
+        specialist.counted = false;
+        specialist.steps = specialist.task.steps();
+        specialist.lastProgress = elapsed;
+        specialist.stalled = false;
+        firstContact = -1;
+        tacticalPhase = TacticalPhase.APPROACHING;
+        objectiveOutcome = "ALTERNATE_ENTRANCE_ASSIGNED";
+        reassessment = objectiveOutcome;
+        reassessPending = reassignBreacher = false;
+        return true;
+    }
+
     private boolean recoverRoute(Attacker attacker, SiteApproach.Sampler sampler) {
         if (attacker.recoveryTried || attacker.retreating
                 || (attacker.role != Role.ZOMBIE && attacker.role != Role.SKELETON)) return false;
         attacker.recoveryTried = true;
         boolean bypassed = attacker.task.tryExteriorBypass(sampler, observed.envelope);
-        if (!bypassed && (reassessedApproach == null || !attacker.task.rejoin(reassessedApproach, sampler, observed.envelope)))
+        if (!bypassed && (reassessedApproach == null
+                || !attacker.task.rejoin(reassessedApproach, sampler, observed.envelope, false)))
             return false;
         if (!bypassed) attacker.assigned = reassessedApproach;
         attacker.steps = attacker.task.steps();
@@ -943,7 +972,7 @@ public final class SiteSiege {
             if (!barrier.unchanged(world)) {
                 if (!barrier.structural() && passage(sampler, false) != null)
                     advanceObjective(sampler, "ENTRANCE_ALREADY_OPEN");
-                else endObjective("TARGET_CHANGED");
+                else if (!tryRetargetBreacher()) endObjective("TARGET_CHANGED");
                 return;
             }
             if (!sampler.standing(approach.goal(), mob instanceof EntityTank)) {
@@ -994,6 +1023,15 @@ public final class SiteSiege {
         }
     }
 
+    private boolean tryRetargetBreacher() {
+        if (specialist.role != Role.BREACHER || approach.connected || observed.perimeterUnresolved
+                || breacherRetargeted || reassessCursor >= REASSESS_LIMIT) return false;
+        breacherRetargeted = reassignBreacher = reassessPending = true;
+        tacticalPhase = TacticalPhase.APPROACHING;
+        reassessment = "SEARCHING_ALTERNATE_ENTRANCE";
+        return true;
+    }
+
     private PathPoint[] passage(SiteApproach.Sampler sampler, boolean wide) {
         SiegeBarrier barrier = approach.barrier;
         PathPoint target = barrier.target, inside = barrier.inside;
@@ -1035,6 +1073,7 @@ public final class SiteSiege {
 
     private void endObjective(String reason) {
         objectiveOutcome = reason;
+        reassignBreacher = false;
         requestReassessment(reason, false);
         tacticalPhase = TacticalPhase.ENGAGING;
         if (specialist != null) {
@@ -1116,6 +1155,7 @@ public final class SiteSiege {
         reassessment = "CURRENT_ROUTE";
         reassessCursor = nextReassessment = 0;
         reassessPending = false;
+        reassignBreacher = breacherRetargeted = false;
         rejectedApproaches.clear();
         sectors.clear();
         deployedSectors.clear();
@@ -1293,7 +1333,7 @@ public final class SiteSiege {
             dormant = siteView != null && siteView.dormant;
             identity = siteView == null ? "UNAVAILABLE" : "RECOGNIZED";
             observation = siteView == null ? Long.MIN_VALUE : siteView.lastConfirmed;
-            SiteApproach lane = siege.force == null ? siege.approach : siege.force.objective;
+            SiteApproach lane = siege.approach;
             approach = lane == null ? "NONE" : point(lane.start()) + " > "
                     + point(siege.destination == null ? lane.goal() : siege.destination);
             objective = lane == null ? "NONE" : lane.objective.name();

@@ -15,7 +15,6 @@ final class SiteSiegeForcePlan {
     final ThreatAssessment threat;
     final SiteSiege.Intensity intensity;
     final boolean overridden;
-    final SiteApproach objective;
     final Wave[] waves;
 
     SiteSiegeForcePlan(int siteId, int difficulty, ThreatAssessment threat, SiteSiege.Intensity requested,
@@ -25,7 +24,6 @@ final class SiteSiegeForcePlan {
         this.threat = threat;
         overridden = requested != SiteSiege.Intensity.NATURAL;
         intensity = overridden ? requested : classify(threat);
-        this.objective = objective;
         boolean hard = difficulty >= 3;
         int tier = intensity.ordinal() - SiteSiege.Intensity.LOW.ordinal();
         int[] totals = hard ? new int[] {8, 10, 14, 18}

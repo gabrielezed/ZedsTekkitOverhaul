@@ -132,17 +132,17 @@ final class PerimeterApproachTask extends EntityAIBase {
     PathPoint[] waypoints() { return route; }
 
     /** Rejoins a verified lane from a nearby exterior cell along supported level ground. */
-    boolean rejoin(SiteApproach replacement, SiteApproach.Sampler sampler, Bounds envelope) {
+    boolean rejoin(SiteApproach replacement, SiteApproach.Sampler sampler, Bounds envelope, boolean holdAtGoal) {
         int x = MathHelper.floor_double(mob.posX), y = MathHelper.floor_double(mob.boundingBox.minY + 0.1);
         int z = MathHelper.floor_double(mob.posZ);
         PathPoint start = new PathPoint(x, y, z);
-        if (!SiteApproach.exterior(envelope, x, z) || !sampler.standing(start, false)) return false;
+        if (!outsideFootprint(envelope, x, z) || !sampler.standing(start, false)) return false;
         PathPoint[] lane = replacement.route;
         int join = -1, bestDistance = 4;
         for (int i = 0; i < lane.length - 1; ++i) {
             PathPoint point = lane[i];
             int distance = Math.abs(x - point.xCoord) + Math.abs(z - point.zCoord);
-            if (point.yCoord != y || distance >= bestDistance || !SiteApproach.exterior(envelope, point.xCoord, point.zCoord))
+            if (point.yCoord != y || distance >= bestDistance || !outsideFootprint(envelope, point.xCoord, point.zCoord))
                 continue;
             bestDistance = distance;
             join = i;
@@ -155,14 +155,18 @@ final class PerimeterApproachTask extends EntityAIBase {
             if (x != goal.xCoord) x += Integer.signum(goal.xCoord - x);
             else z += Integer.signum(goal.zCoord - z);
             PathPoint step = new PathPoint(x, y, z);
-            if (!SiteApproach.exterior(envelope, x, z) || !sampler.standing(step, false)) return false;
+            if (!outsideFootprint(envelope, x, z) || !sampler.standing(step, false)) return false;
             connector.add(step);
         }
         for (int i = join + 1; i < lane.length; ++i) connector.add(lane[i]);
         route = connector.toArray(new PathPoint[connector.size()]);
         next = 1;
-        hold = false;
+        hold = holdAtGoal;
         return true;
+    }
+
+    private static boolean outsideFootprint(Bounds b, int x, int z) {
+        return x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ;
     }
 
     /** Replaces a blocked straight segment with a short, verified exterior bypass. */

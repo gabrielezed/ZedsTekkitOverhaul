@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.survival.tactical;
 
+import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntityAISwimming;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
@@ -10,7 +11,6 @@ import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
-import net.minecraft.src.DamageSource;
 import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.survival.Shoreline;
 

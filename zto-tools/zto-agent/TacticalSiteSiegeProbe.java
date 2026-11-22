@@ -1,7 +1,9 @@
 import java.io.File;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import zed.tekkitoverhaul.assault.AssaultWorldState;
@@ -159,8 +161,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         SiteSiege.Snapshot absent = director.siteSiegeSnapshot(world);
         check("PLAYER_ABSENT".equals(absent.outcome) && absent.inserted == inserted,
                 "retreat stops further reinforcements", here());
-        long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
-                .filter(entity -> !((yy) entity).G).count();
+        long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count();
         check(surviving > 0, "live siege infantry available for native chunk eviction", here());
         world.auditChunks = false;
         world.a(new uh(0, Y, 0));
@@ -175,13 +176,14 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         }
         provider.a();
         world.n();
+        ce.a.a();
         check(world.b.stream().noneMatch(TacticalSiteSiegeProbe::infantry),
                 "evicted infantry leave the loaded world list", here());
         position(X + 2, Y, Z + 2);
         prepare(X, Z);
-        check(world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
-                        .filter(entity -> !((yy) entity).G).count() == surviving,
-                "native chunk reload restores the infantry once", here());
+        long restoredInfantry = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count();
+        check(restoredInfantry == surviving,
+                "native chunk reload restores the infantry once (" + surviving + " -> " + restoredInfantry + ")", here());
         save();
         director.bind(null, null);
         open("siege-debug", false);
@@ -194,7 +196,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         ady reopened = new ady();
         ((AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault")).b(reopened);
         check(original.equals(reopened) && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.NONE
-                        && world.b.stream().filter(TacticalSiteSiegeProbe::infantry).count() == surviving
+                        && world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count() == surviving
                         && settlements.resolve(world, site).coverage == Coverage.PARTIAL,
                 "save/reopen restores infantry and preserves natural records | records match "
                         + original.equals(reopened) + " | " + siegeDetails(director.siteSiegeSnapshot(world))
@@ -214,6 +216,10 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
     private static boolean infantry(Object entity) {
         String type = entity.getClass().getSimpleName();
         return type.equals("DebugSiegeSkeleton") || type.equals("SiegeZombie");
+    }
+
+    private static boolean livingInfantry(Object entity) {
+        return infantry(entity) && !((yy) entity).G && ((yy) entity).bb() > 0;
     }
 
     private void aerialSurvivor() throws Exception {
@@ -479,8 +485,9 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         SiteSiege.Snapshot released = director.siteSiegeSnapshot(world);
         check(released.active == 0 && released.censusReleased >= 3 && released.censusDead == 0,
                 "manual siege and census remain available with major admission disabled", here());
-        yy[] survivors = world.b.stream().filter(TacticalSiteSiegeProbe::infantry).toArray(yy[]::new);
-        yy oldest = survivors[0];
+        List<yy> survivors = new ArrayList<yy>();
+        for (Object entity : world.b) if (infantry(entity)) survivors.add((yy) entity);
+        yy oldest = survivors.get(0);
         ady ticket = new ady();
         check(oldest.c(ticket), "save oldest living infantry identity", here());
         yy duplicate = (yy) aao.a(ticket, world);
@@ -494,12 +501,13 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         check(oldest.bb() > 0 && director.siteSiegeSnapshot(world).censusDead == 0,
                 "death of a conflicting copy does not mark the surviving original dead", here());
 
-        survivors[1].a(md.a(player), 100);
+        survivors.get(1).a(md.a(player), 100);
         check(director.siteSiegeSnapshot(world).censusDead == 1,
                 "released infantry death is recorded before another native tick", here());
-        survivors[2].l(0);
-        world.a(survivors[2], true);
-        world.e(survivors[2]);
+        yy missing = survivors.get(2);
+        missing.l(0);
+        world.a(missing, true);
+        world.e(missing);
         check(director.siteSiegeSnapshot(world).censusDead == 1 && director.siteSiegeSnapshot(world).censusUnknown > 0,
                 "zero-health disappearance without a committed death stays unknown", here());
 
@@ -519,11 +527,16 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         open(name, false);
         prepare(X, Z);
         world.d.add(player);
-        long matching = world.b.stream().filter(TacticalSiteSiegeProbe::infantry).map(actor -> {
+        calendar = siegeCalendar(87, dusk + 125, Long.MIN_VALUE);
+        director.bind(world, calendar.view());
+        SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+        check(reopened.censusInserted == 256 && reopened.censusUnknown == 256 && reopened.censusTruncated,
+                "native save preserves the bounded history independently of restored actors", here());
+        long matching = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).map(actor -> {
             ady saved = new ady();
             return ((yy) actor).c(saved) ? saved.m("ZTOSiegeCensus") : new ady();
         }).filter(ticket.m("ZTOSiegeCensus")::equals).count();
-        check(matching == 1, "native reopen restores the oldest living identity once despite census eviction", here());
+        check(matching == 1, "native reopen restores the oldest living identity once despite census eviction (" + matching + ")", here());
         System.out.println("PASS manual census with major admission disabled, immediate released deaths, conflicting identity, unknown disappearance and 256-row eviction");
     }
 

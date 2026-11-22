@@ -1,10 +1,10 @@
 package zed.tekkitoverhaul.assault;
 
+import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntityZombie;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
-import net.minecraft.src.DamageSource;
 
 /** Keeps native infantry combat and leaves entrance changes to the encounter objective. */
 public final class SiegeZombie extends EntityZombie implements SiegeCensus.Participant {

@@ -71,7 +71,7 @@ public final class SiegeCensus extends WorldSavedData {
             }
             return null;
         }
-        row.live = new WeakReference<EntityLiving>(mob);
+        if (previous != mob) row.live = new WeakReference<EntityLiving>(mob);
         return row;
     }
 

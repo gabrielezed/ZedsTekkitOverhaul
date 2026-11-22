@@ -1,10 +1,10 @@
 package zed.tekkitoverhaul.assault;
 
+import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
-import net.minecraft.src.DamageSource;
 
 /** An encounter-owned skeleton with an optional daytime test exemption. Its visible brightness and native combat remain intact. */
 public final class DebugSiegeSkeleton extends EntitySkeleton implements SiegeCensus.Participant {

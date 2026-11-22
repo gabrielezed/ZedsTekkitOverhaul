@@ -361,7 +361,7 @@ The encounter ends through success, repulsion, exhaustion, disengagement, player
 
 The system records the outcome and enters a meaningful cooldown.
 
-Remaining owned enemies are cleaned up or released according to documented rules.
+The director releases tactical control of surviving enemies. The native world preserves their bodies and saves them with their chunks.
 
 Temporary sabotage must expire safely.
 
@@ -968,11 +968,7 @@ Save authoritative encounter identity, target site, admission key, consumed even
 
 ## 20.2 Reload
 
-Do not duplicate a consumed lunar event or resurrect an already resolved siege.
-
-Define whether a paused siege resumes or terminates after reopening.
-
-Prefer a conservative policy for the first release.
+Reopening ends the previous tactical session. The natural admission remains consumed, prior waves do not replay, and surviving siege actors restore through native chunk saves.
 
 ## 20.3 Chunk unloading
 

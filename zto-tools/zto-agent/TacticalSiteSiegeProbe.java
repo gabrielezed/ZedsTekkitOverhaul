@@ -233,7 +233,8 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         EntitySkelebird bird = siteBird();
         SiteSiege.Snapshot deployed = director.siteSiegeSnapshot(world);
         check(bird != null && bird.siegeSite() == site && deployed.activeAerial == 1
-                && deployed.inserted <= deployed.planned, "siege spends one reserved air slot: "
+                && deployed.inserted <= deployed.planned && deployed.censusInserted == deployed.inserted
+                && deployed.censusLoaded > 0, "siege spends one reserved air slot: "
                 + deployed.aerialStatus + " | " + siegeDetails(deployed), here());
         yy nativeBird = (yy) (Object) bird;
         nativeBird.l(9);
@@ -252,7 +253,9 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         provider.d(cx, cz);
         provider.a();
         world.n();
-        check(siteBird() == null, "native eviction removes the loaded observation", here());
+        SiteSiege.Snapshot evicted = director.siteSiegeSnapshot(world);
+        check(siteBird() == null && evicted.censusUnloaded + evicted.censusUnknown > 0 && evicted.censusDead == 0,
+                "native eviction removes the loaded observation without confirming death", here());
         world.d(cx, cz);
         check(siteBird() != null && siteBird() != bird, "native chunk loading reconstructs the bird", here());
         save();
@@ -264,6 +267,13 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 && bird.encounterStatus().equals("Persistent siege survivor")
                 && world.b.stream().filter(EntitySkelebird.class::isInstance).count() == 1,
                 "Save/Quit reconstructs exactly one healthy, released siege bird", here());
+        world.d.add(player);
+        calendar = siegeCalendar(74, day, Long.MIN_VALUE);
+        director = siegeDirector(false, calendar);
+        SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+        check(reopened.censusSite == site && reopened.censusInserted == deployed.censusInserted
+                && reopened.censusDead == 0 && reopened.censusUnknown > 0 && reopened.censusReleased > 0,
+                "recent insertions and releases persist across reopening before new observations", here());
         System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");
     }
 

@@ -55,7 +55,7 @@ public final class SiegeCensus extends WorldSavedData {
         Record row = ((Participant) mob).siegeActor().record;
         if (row == null) return;
         observeDeath(mob, row);
-        if (!row.released) {
+        if (!row.dead && !row.released) {
             row.released = true;
             markDirty();
         }
@@ -81,7 +81,7 @@ public final class SiegeCensus extends WorldSavedData {
             EntityLiving mob = row.live == null ? null : row.live.get();
             if (mob == null || mob.worldObj != world || !mob.isEntityAlive() || !mob.addedToChunk) {
                 ++result.unknown;
-            } else if (!world.getChunkProvider().chunkExists(mob.chunkCoordX, mob.chunkCoordZ)) {
+            } else if (!world.blockExists(mob.chunkCoordX << 4, 0, mob.chunkCoordZ << 4)) {
                 ++result.unloaded;
             } else {
                 Chunk chunk = world.getChunkFromChunkCoords(mob.chunkCoordX, mob.chunkCoordZ);

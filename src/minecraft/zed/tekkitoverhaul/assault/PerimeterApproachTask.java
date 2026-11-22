@@ -1,6 +1,8 @@
 package zed.tekkitoverhaul.assault;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.src.EntityAIBase;
 import net.minecraft.src.EntityAITasks;
 import net.minecraft.src.EntityLiving;
@@ -128,6 +130,40 @@ final class PerimeterApproachTask extends EntityAIBase {
     int steps() { return next - 1; }
     boolean arrived() { return next == route.length; }
     PathPoint[] waypoints() { return route; }
+
+    /** Rejoins a verified lane from a nearby exterior cell along supported level ground. */
+    boolean rejoin(SiteApproach replacement, SiteApproach.Sampler sampler, Bounds envelope) {
+        int x = MathHelper.floor_double(mob.posX), y = MathHelper.floor_double(mob.boundingBox.minY + 0.1);
+        int z = MathHelper.floor_double(mob.posZ);
+        PathPoint start = new PathPoint(x, y, z);
+        if (!SiteApproach.exterior(envelope, x, z) || !sampler.standing(start, false)) return false;
+        PathPoint[] lane = replacement.route;
+        int join = -1, bestDistance = 4;
+        for (int i = 0; i < lane.length - 1; ++i) {
+            PathPoint point = lane[i];
+            int distance = Math.abs(x - point.xCoord) + Math.abs(z - point.zCoord);
+            if (point.yCoord != y || distance >= bestDistance || !SiteApproach.exterior(envelope, point.xCoord, point.zCoord))
+                continue;
+            bestDistance = distance;
+            join = i;
+        }
+        if (join < 0) return false;
+        PathPoint goal = lane[join];
+        List<PathPoint> connector = new ArrayList<PathPoint>(bestDistance + lane.length - join);
+        connector.add(start);
+        while (x != goal.xCoord || z != goal.zCoord) {
+            if (x != goal.xCoord) x += Integer.signum(goal.xCoord - x);
+            else z += Integer.signum(goal.zCoord - z);
+            PathPoint step = new PathPoint(x, y, z);
+            if (!SiteApproach.exterior(envelope, x, z) || !sampler.standing(step, false)) return false;
+            connector.add(step);
+        }
+        for (int i = join + 1; i < lane.length; ++i) connector.add(lane[i]);
+        route = connector.toArray(new PathPoint[connector.size()]);
+        next = 1;
+        hold = false;
+        return true;
+    }
 
     /** Replaces a blocked straight segment with a short, verified exterior bypass. */
     boolean tryExteriorBypass(SiteApproach.Sampler sampler, Bounds envelope) {

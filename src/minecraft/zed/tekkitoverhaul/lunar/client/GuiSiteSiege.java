@@ -136,6 +136,8 @@ final class GuiSiteSiege extends GuiScreen {
         LunarSnapshot lunar = local.snapshot(world);
         rows.add("Natural " + (view.naturalEnabled ? "on" : "off") + " | next cycle " + number(view.nextOpportunityCycle));
         rows.add("Admission boundary " + number(view.boundary));
+        if (view.inserted > 0 && view.deferred + view.remaining == 0)
+            rows.add("No more reinforcements | " + view.active + " still under tactical control");
         rows.add("Cooldown " + cooldown(view.cooldownUntil, lunar));
         rows.add("Routes " + view.validRoutes + " valid / " + view.failedRoutes + " failed | " + view.planningColumns + " samples");
         rows.add("Reassessment " + view.reassessments + " | " + view.reassessment);

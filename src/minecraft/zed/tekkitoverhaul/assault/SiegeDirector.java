@@ -102,7 +102,7 @@ public final class SiegeDirector implements LunarService.Listener {
     }
 
     public void attachSites(boolean siteSieges, boolean structuralBreaching, SiteQueries sites) {
-        siteSiege = new SiteSiege(siteSieges, structuralBreaching, sites);
+        siteSiege = new SiteSiege(enabled && siteSieges, structuralBreaching, sites);
         siteSiege.attachAerialEcology(aerialEcology);
     }
 

@@ -399,13 +399,37 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         }
         check(Files.size(new File(root, name + "/data/zto_siege_census.dat").toPath()) == bytes,
                 "unchanged census does not grow from reopening", here());
+        long dusk = siegeDusk(0);
+        calendar = siegeCalendar(84, dusk - 1, Long.MIN_VALUE);
+        walk();
+        ticks(150);
+        director = siegeDirector(true, calendar);
+        world.auditChunks = true;
+        long afterAdmission = waitForSiege(director, calendar, dusk);
+        SiteSiege.Snapshot natural = director.siteSiegeSnapshot(world);
+        check(natural.kind == SiegeDirector.EncounterKind.SITE_SIEGE && natural.site == sites[1] && natural.inserted > 0
+                && natural.censusInserted == expected[1] + natural.inserted && natural.censusLoaded > natural.active
+                && world.chunkMisses == 0,
+                "natural admission budgets the residual population on a previously besieged site: " + siegeDetails(natural), here());
+        save();
+        director.bind(null, null);
+        open(name, false);
+        prepare(outpost, Z);
+        position(outpost + 2, Y, Z + 2);
+        world.d.add(player);
+        calendar = siegeCalendar(85, afterAdmission, Long.MIN_VALUE);
+        director = siegeDirector(true, calendar);
+        siegeTicks(director, calendar, afterAdmission + 1, 100);
+        check(director.siteSiegeSnapshot(world).censusInserted == natural.censusInserted
+                && director.siteSiegeSnapshot(world).inserted == 0 && director.snapshot(world).starts == 0,
+                "reopening the natural mobilization adds zero reinforcements", here());
         SiegeCensus malformed = new SiegeCensus("fixture");
         ady bad = new ady();
         bad.a("Version", 1);
         bad.a("Records", 7);
         malformed.a(bad);
         malformed.b(new ady());
-        System.out.printf(Locale.ROOT, "PASS recent history two sites, four mobilizations, two reopens, %d actors, census %d bytes, native save %d us%n",
+        System.out.printf(Locale.ROOT, "PASS recent history two sites, four manual mobilizations, two reopens, %d actors, census %d bytes, native save %d us, natural admission and no replay%n",
                 total, bytes, saveMicros);
     }
 
@@ -428,7 +452,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         check(finalView.site == site && finalView.reassessment.equals("ALTERNATE_ENTRANCE_ASSIGNED")
                 && finalView.objectiveTarget.equals(X + "," + Y + "," + alternateDoor)
                 && (world.e(X, Y, alternateDoor) & 4) != 0 && world.a(X, Y, firstDoor) == 4
-                && finalView.entranceChanges == 1 && finalView.insertedRoles.get("BREACHER") == 1,
+                && finalView.entranceChanges == 1 && Integer.valueOf(1).equals(finalView.insertedRoles.get("BREACHER")),
                 "existing Breacher walks to the alternate door and opens it: " + siegeDetails(finalView), here());
         director.bind(null, null);
         System.out.println("PASS one Breacher changes physical objective without a replacement spawn");

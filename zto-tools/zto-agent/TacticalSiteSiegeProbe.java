@@ -320,6 +320,11 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         java.lang.reflect.Field random = nn.class.getDeclaredField("U");
         random.setAccessible(true);
         random.set(bird, new java.util.Random(3865L));
+        // Start the combat probe after the variable post-reload search delay has elapsed.
+        java.lang.reflect.Field scanDelay = zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.class
+                .getDeclaredField("scanDelay");
+        scanDelay.setAccessible(true);
+        scanDelay.setInt(bird, 1);
         boolean committed = false;
         for (int i = 0; i < 300 && !committed; ++i) {
             world.a(bird, true);

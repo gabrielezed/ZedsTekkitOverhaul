@@ -134,13 +134,17 @@ final class GuiSiteSiege extends GuiScreen {
     private List<String> detailRows(SiteSiege.Snapshot view) {
         List<String> rows = new ArrayList<String>();
         LunarSnapshot lunar = local.snapshot(world);
-        rows.add("Next cycle " + number(view.nextOpportunityCycle) + " | boundary " + number(view.boundary));
+        rows.add("Natural " + (view.naturalEnabled ? "on" : "off") + " | next cycle " + number(view.nextOpportunityCycle));
+        rows.add("Admission boundary " + number(view.boundary));
         rows.add("Cooldown " + cooldown(view.cooldownUntil, lunar));
         rows.add("Routes " + view.validRoutes + " valid / " + view.failedRoutes + " failed | " + view.planningColumns + " samples");
         rows.add("Native despawns " + view.nativeDespawns);
         rows.add("Sectors " + view.sectors);
         rows.add("Saboteur active/inserted/planned " + role(view, "SABOTEUR"));
         rows.add("Skelebird " + role(view, "SKELEBIRD") + " | " + view.aerialStatus);
+        rows.add("Recent site " + view.censusSite + " | " + view.censusInserted + " inserted / " + view.censusDead + " confirmed dead");
+        rows.add(view.censusLoaded + " observed loaded | " + view.censusUnloaded + " unloaded | " + view.censusUnknown + " unknown");
+        rows.add(view.censusReleased + " tactical releases" + (view.censusTruncated ? " | history incomplete" : ""));
         rows.add("Industry " + view.industry);
         rows.add("Target " + view.objectiveTarget + " | " + view.specialist);
         rows.add("Structural " + view.structuralChanges + "/" + view.structuralBudget + " removed | "

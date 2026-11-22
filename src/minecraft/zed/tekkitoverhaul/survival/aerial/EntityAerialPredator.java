@@ -13,11 +13,20 @@ import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.survival.Shoreline;
 import zed.tekkitoverhaul.survival.weather.JetpackWeather;
 
 /** A single predator with server-owned steering, commitment and contact. */
-public class EntityAerialPredator extends EntityFlying implements IMob {
+public class EntityAerialPredator extends EntityFlying implements IMob, SiegeCensus.Participant {
+    private final SiegeCensus.Actor siegeActor = new SiegeCensus.Actor();
+
+    @Override public final SiegeCensus.Actor siegeActor() { return siegeActor; }
+
+    @Override public void onUpdate() {
+        super.onUpdate();
+        if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
     public enum Flight {
         CRUISE, GLIDE, CIRCLE, PREPARE, DIVE, RECOVER, DISENGAGE, FALL
     }
@@ -774,6 +783,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         tag.setInteger("ZtoAerialScanDelay", delay);
         if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
         else if (natural) tag.setInteger("ZtoAerialWildTicks", Math.max(1, Math.min(240, wildTicks)));
+        siegeActor.write(tag);
     }
 
     @Override
@@ -783,6 +793,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         encounter = null;
         approaching = false;
         siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
+        siegeActor.read(tag, siegeSite);
         wildTicks = siegeSite > 0 ? 0 : Math.max(0, Math.min(240, tag.getInteger("ZtoAerialWildTicks")));
         natural = wildTicks > 0;
         enter(Flight.CRUISE);

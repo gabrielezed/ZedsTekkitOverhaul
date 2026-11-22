@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import net.minecraft.src.AxisAlignedBB;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
@@ -61,6 +62,8 @@ public final class SiteSiege {
     private final List<Candidate> candidates = new ArrayList<Candidate>();
     private World world;
     private AssaultWorldState storage;
+    private SiegeCensus census;
+    private UUID mobilization;
     private AerialEcology aerial;
     private EntitySkelebird siteBird;
     private String aerialStatus = "NO_SLOT";
@@ -115,6 +118,7 @@ public final class SiteSiege {
     void bind(World world, AssaultWorldState storage) {
         this.world = world;
         this.storage = storage;
+        census = storage == null ? null : SiegeCensus.load(world);
         resetPlan();
         origin = Origin.NATURAL;
         profile = Profile.AUTO;
@@ -225,6 +229,7 @@ public final class SiteSiege {
             if (approach.connected && force.reserves(Role.TANK))
                 heavySearch = new TerrainApproachSearch(part, observed.envelope, approach);
             if (!manual()) storage.startSite(force.siteId, boundary);
+            mobilization = UUID.randomUUID();
             observer = player;
             phase = "ACTIVE";
             tacticalPhase = TacticalPhase.APPROACHING;
@@ -700,6 +705,7 @@ public final class SiteSiege {
                 rejectWave(role, rejection);
                 return;
             }
+            if (census != null) census.inserted(mob, force.siteId, mobilization, manual());
             insertionPositions.add(lane.start());
             deployedSectors.add(lane.sector());
             wave.inserted[slot] = true;
@@ -733,6 +739,7 @@ public final class SiteSiege {
             return;
         }
         aerialStatus = "PERSISTENT_SIEGE_MEMBER";
+        if (census != null) census.inserted(siteBird, force.siteId, mobilization, manual());
         wave.inserted[slot] = true;
         wave.deployed++;
         inserted++;
@@ -747,6 +754,7 @@ public final class SiteSiege {
 
     private void releaseSiteBird(String reason) {
         if (siteBird == null) return;
+        if (census != null) census.released(siteBird);
         if (siteBird.getHealth() <= 0) {
             defeated++;
             aerialStatus = "CONFIRMED_DEAD";
@@ -985,6 +993,7 @@ public final class SiteSiege {
     }
 
     private void release(Attacker attacker, String cause) {
+        if (census != null) census.released(attacker.mob);
         count(failures, "TACTICAL_RELEASE/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE" : "/DEAD"));
         attacker.task.release();
         maxLifetime = Math.max(maxLifetime, elapsed - attacker.insertedAt);
@@ -1147,7 +1156,8 @@ public final class SiteSiege {
         public final String sectors, industry, aerialStatus;
         public final int activeAerial;
         public final String tacticalPhase, objectiveOutcome, specialist, objectiveTarget;
-        public final boolean opportunity, dormant, destructive;
+        public final boolean opportunity, dormant, destructive, naturalEnabled, censusTruncated;
+        public final int censusSite, censusInserted, censusLoaded, censusUnloaded, censusUnknown, censusDead, censusReleased;
         public final int breachChecks, structuralChanges, entranceChanges, structuralBudget;
         public final Intensity intensity;
         public final boolean overridden;
@@ -1179,6 +1189,16 @@ public final class SiteSiege {
             outcome = siege.outcome;
             SiteSnapshot siteView = siege.observed;
             site = siege.selected != null ? siege.selected.id : !siege.manual() && siege.storage != null ? siege.storage.lastSite : 0;
+            censusSite = site > 0 ? site : siege.census == null ? 0 : siege.census.lastSite();
+            SiegeCensus.Snapshot survivors = siege.census == null ? new SiegeCensus.Snapshot(false)
+                    : siege.census.snapshot(siege.world, censusSite);
+            censusTruncated = survivors.truncated;
+            censusInserted = survivors.inserted;
+            censusLoaded = survivors.loaded;
+            censusUnloaded = survivors.unloaded;
+            censusUnknown = survivors.unknown;
+            censusDead = survivors.dead;
+            censusReleased = survivors.released;
             coverage = siteView == null ? "UNAVAILABLE" : siteView.coverage.name();
             dimension = siteView == null ? Integer.MIN_VALUE : siteView.dimension;
             siteSession = siteView == null ? 0 : siteView.worldSession;
@@ -1206,6 +1226,7 @@ public final class SiteSiege {
             structuralChanges = siege.structuralChanges;
             entranceChanges = siege.entranceChanges;
             opportunity = siege.opportunity;
+            naturalEnabled = siege.enabled;
             nextOpportunityCycle = siege.enabled && siege.storage != null && lunar != null
                     ? SiteSiegePolicy.nextOpportunity(siege.world.getSeed(), lunar) : Long.MIN_VALUE;
             boundary = siege.boundary != Long.MIN_VALUE ? siege.boundary

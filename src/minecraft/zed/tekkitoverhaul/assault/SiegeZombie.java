@@ -6,7 +6,15 @@ import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
 
 /** Keeps native infantry combat and leaves entrance changes to the encounter objective. */
-public final class SiegeZombie extends EntityZombie {
+public final class SiegeZombie extends EntityZombie implements SiegeCensus.Participant {
+    private final SiegeCensus.Actor siegeActor = new SiegeCensus.Actor();
+
+    @Override public final SiegeCensus.Actor siegeActor() { return siegeActor; }
+
+    @Override public void onUpdate() {
+        super.onUpdate();
+        if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
     private final boolean daylightTest;
     private boolean checkingSun;
     private int siegeSite;
@@ -51,11 +59,13 @@ public final class SiegeZombie extends EntityZombie {
     @Override public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
+        siegeActor.write(tag);
     }
 
     @Override public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
         siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt
                 ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
+        siegeActor.read(tag, siegeSite);
     }
 }

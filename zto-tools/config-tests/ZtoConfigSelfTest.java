@@ -21,7 +21,7 @@ public final class ZtoConfigSelfTest {
         check(defaults.naturalAerialEncounters && defaults.electricJetpackWeather && defaults.lunarAerialEncounters
                 && defaults.aerialEncounterCooldownSeconds == 180,
                 "natural aerial ecology defaults and cooldown");
-        check(defaults.playerAssault && !defaults.experimentalSiteSieges && !defaults.siteSiegeStructuralBreaching
+        check(defaults.playerAssault && defaults.experimentalSiteSieges && !defaults.siteSiegeStructuralBreaching
                 && defaults.lunarPatrols && defaults.lunarOutdoorLightPressure
                 && defaults.disableNightSkipping && !defaults.experimentalEnderkinEncounters
                 && !defaults.experimentalTerritorialThreat, "survival flags");
@@ -51,16 +51,16 @@ public final class ZtoConfigSelfTest {
         check(ZtoConfigLoader.load(fresh, false, LOG).hopper == 3030, "retain Hopper ID without assets");
 
         Path breachTest = Files.createDirectory(root.resolve("structural-breach-opt-in"));
-        write(breachTest, ZtoConfigLoader.FILE_NAME, "siteSiegeStructuralBreaching=true\n");
+        write(breachTest, ZtoConfigLoader.FILE_NAME, "siteSiegeStructuralBreaching=true\nexperimentalSiteSieges=false\n");
         ZtoConfig optedIn = ZtoConfigLoader.load(breachTest, false, LOG);
         check(optedIn.siteSiegeStructuralBreaching && !optedIn.experimentalSiteSieges,
-                "damage and natural admission are independent opt-ins");
+                "structural opt-in and explicit natural opt-out are independent");
 
         Path older = Files.createDirectory(root.resolve("legacy"));
         String forge = "# Original comment\nblock {\nfoundry=3074\nunknown=17\n}\n";
         String profile = "# accent: café\r\nzto-emc 1 APPLY\r\nSET name:item.ingotIron 0 12\r\n";
         write(older, ZtoConfigLoader.FILE_NAME, forge);
-        write(older, "mod_ZedsTekkitOverhaul.cfg", "experimentalEnderkinEncounters= TrUE  \nplayerAssault=false\n");
+        write(older, "mod_ZedsTekkitOverhaul.cfg", "experimentalEnderkinEncounters= TrUE  \nplayerAssault=false\nexperimentalSiteSieges=false\n");
         write(older, "mod_ZedsTekkitOverhaul.cfg.bak", "playerAssault=true\nlunarPatrols=false\n");
         write(older, "ZedsTekkitOverhaul-emc.txt", profile);
         write(older, "ZedsTekkitOverhaul-AlchemicalPower.cfg", "block {\nalchemicalConverter=3075\n}\n");
@@ -70,7 +70,8 @@ public final class ZtoConfigSelfTest {
                 + "integration {\nbuildcraftOilBucketItemId=12345\n}\n");
         write(older, "IC2.cfg", "# unrelated\n");
         ZtoConfig migrated = ZtoConfigLoader.load(older, false, LOG);
-        check(migrated.experimentalEnderkinEncounters && !migrated.playerAssault && !migrated.lunarPatrols, "MLProp precedence");
+        check(migrated.experimentalEnderkinEncounters && !migrated.playerAssault && !migrated.lunarPatrols
+                && !migrated.experimentalSiteSieges, "MLProp precedence and site siege opt-out migration");
         check(migrated.foundry == 3074 && migrated.alchemicalConverter == 3075 && migrated.breacherEgg == 23222
                 && migrated.saboteurEgg == 22006,
                 "registry migrations");

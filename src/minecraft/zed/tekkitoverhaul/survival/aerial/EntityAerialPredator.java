@@ -10,6 +10,7 @@ import net.minecraft.src.IMob;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.Material;
 import net.minecraft.src.NBTTagCompound;
+import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
 import zed.tekkitoverhaul.survival.Shoreline;
@@ -34,7 +35,7 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
 
     private Flight flight = Flight.CRUISE;
     private AerialEncounter encounter;
-    private int lane, wildTicks;
+    private int lane, wildTicks, siegeSite;
     private int ambientDelay = 80 + rand.nextInt(61);
     private boolean natural, approaching;
     private double arrivalX, arrivalY, arrivalZ;
@@ -112,6 +113,13 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
 
     boolean belongsTo(AerialEncounter group) { return encounter == group; }
 
+    void markSiegeOrigin(int site) { siegeSite = site; }
+
+    public int siegeSite() { return siegeSite; }
+
+    @Override
+    protected boolean canDespawn() { return siegeSite == 0 && super.canDespawn(); }
+
     void leaveEncounter(String reason) {
         if (encounter == null) return;
         if (isEntityAlive()) {
@@ -127,13 +135,16 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         encounter.releaseDive(this);
         encounter = null;
         approaching = false;
-        wildTicks = Math.min(wildTicks, 240);
+        if (siegeSite > 0) {
+            natural = false;
+            wildTicks = 0;
+        } else wildTicks = Math.min(wildTicks, 240);
     }
 
     @Override
     protected void updateEntityActionState() {
         // A nearby submerged bird stays present for native drowning, including after leaving its encounter.
-        if (worldObj.difficultySetting == 0 || (natural && !isInWater() && --wildTicks <= 0)) {
+        if (worldObj.difficultySetting == 0 || (siegeSite == 0 && natural && !isInWater() && --wildTicks <= 0)) {
             setDead();
             return;
         }
@@ -761,7 +772,8 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         int delay = target != null ? DISENGAGE_TICKS : scanDelay;
         if (flight == Flight.DISENGAGE) delay = Math.max(delay, DISENGAGE_TICKS - stateTicks + 60);
         tag.setInteger("ZtoAerialScanDelay", delay);
-        if (natural) tag.setInteger("ZtoAerialWildTicks", Math.max(1, Math.min(240, wildTicks)));
+        if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
+        else if (natural) tag.setInteger("ZtoAerialWildTicks", Math.max(1, Math.min(240, wildTicks)));
     }
 
     @Override
@@ -770,7 +782,8 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
         target = null;
         encounter = null;
         approaching = false;
-        wildTicks = Math.max(0, Math.min(240, tag.getInteger("ZtoAerialWildTicks")));
+        siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
+        wildTicks = siegeSite > 0 ? 0 : Math.max(0, Math.min(240, tag.getInteger("ZtoAerialWildTicks")));
         natural = wildTicks > 0;
         enter(Flight.CRUISE);
         cruiseTicks = 0;
@@ -786,7 +799,10 @@ public class EntityAerialPredator extends EntityFlying implements IMob {
     }
 
     boolean huntingChicken() { return target instanceof EntityChicken; }
-    public String encounterStatus() { return encounter != null ? "Encounter member" : natural ? "Retiring wildlife" : "Manual"; }
+    public String encounterStatus() {
+        if (siegeSite > 0) return encounter == null ? "Persistent siege survivor" : "Persistent siege member";
+        return encounter != null ? "Encounter member" : natural ? "Retiring wildlife" : "Manual";
+    }
     public double terrainClearance() { return AerialTerrain.skyHeight(this); }
     public double destinationX() { return destinationX; }
     public double destinationY() { return destinationY; }

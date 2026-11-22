@@ -4,6 +4,7 @@ import net.minecraft.src.EntitySkeleton;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
+import net.minecraft.src.DamageSource;
 
 /** An encounter-owned skeleton with an optional daytime test exemption. Its visible brightness and native combat remain intact. */
 public final class DebugSiegeSkeleton extends EntitySkeleton implements SiegeCensus.Participant {
@@ -14,6 +15,11 @@ public final class DebugSiegeSkeleton extends EntitySkeleton implements SiegeCen
     @Override public void onUpdate() {
         super.onUpdate();
         if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
+
+    @Override public void onDeath(DamageSource source) {
+        super.onDeath(source);
+        if (dead && siegeSite > 0) siegeActor.died(this, siegeSite);
     }
     private final boolean daylightTest;
     private boolean checkingSun;

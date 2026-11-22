@@ -4,6 +4,7 @@ import net.minecraft.src.EntityZombie;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.NBTTagInt;
 import net.minecraft.src.World;
+import net.minecraft.src.DamageSource;
 
 /** Keeps native infantry combat and leaves entrance changes to the encounter objective. */
 public final class SiegeZombie extends EntityZombie implements SiegeCensus.Participant {
@@ -14,6 +15,11 @@ public final class SiegeZombie extends EntityZombie implements SiegeCensus.Parti
     @Override public void onUpdate() {
         super.onUpdate();
         if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
+
+    @Override public void onDeath(DamageSource source) {
+        super.onDeath(source);
+        if (dead && siegeSite > 0) siegeActor.died(this, siegeSite);
     }
     private final boolean daylightTest;
     private boolean checkingSun;

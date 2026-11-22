@@ -27,6 +27,11 @@ public class EntityAerialPredator extends EntityFlying implements IMob, SiegeCen
         super.onUpdate();
         if (siegeSite > 0) siegeActor.observe(this, siegeSite);
     }
+
+    @Override public void onDeath(DamageSource source) {
+        super.onDeath(source);
+        if (dead && siegeSite > 0) siegeActor.died(this, siegeSite);
+    }
     public enum Flight {
         CRUISE, GLIDE, CIRCLE, PREPARE, DIVE, RECOVER, DISENGAGE, FALL
     }

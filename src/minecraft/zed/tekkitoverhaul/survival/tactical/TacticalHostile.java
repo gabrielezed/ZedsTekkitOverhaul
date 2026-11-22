@@ -10,6 +10,7 @@ import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import net.minecraft.src.DamageSource;
 import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.survival.Shoreline;
 
@@ -22,6 +23,11 @@ public abstract class TacticalHostile extends EntityMob implements SiegeCensus.P
     @Override public void onUpdate() {
         super.onUpdate();
         if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
+
+    @Override public void onDeath(DamageSource source) {
+        super.onDeath(source);
+        if (dead && siegeSite > 0) siegeActor.died(this, siegeSite);
     }
     private static final float PATH_RANGE = 16.0F;
     private static final int PATH_CACHE_RADIUS = (int) PATH_RANGE + 8;

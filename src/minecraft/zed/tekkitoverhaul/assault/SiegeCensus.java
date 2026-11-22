@@ -35,11 +35,10 @@ public final class SiegeCensus extends WorldSavedData {
 
     void inserted(EntityLiving mob, int site, UUID mobilization, boolean manual) {
         Actor actor = ((Participant) mob).siegeActor();
-        actor.id = UUID.randomUUID();
+        if (actor.id != null) return;
+        do { actor.id = UUID.randomUUID(); } while (recent.containsKey(actor.id));
         Record row = new Record(site, mobilization, manual);
         row.live = new WeakReference<EntityLiving>(mob);
-        actor.record = row;
-        actor.census = this;
         actor.reconciled = true;
         if (recent.size() == LIMIT) {
             Iterator<UUID> records = recent.keySet().iterator();
@@ -52,20 +51,39 @@ public final class SiegeCensus extends WorldSavedData {
     }
 
     void released(EntityLiving mob) {
-        Record row = ((Participant) mob).siegeActor().record;
-        if (row == null) return;
-        observeDeath(mob, row);
-        if (!row.dead && !row.released) {
+        Record row = recent.get(((Participant) mob).siegeActor().id);
+        if (row != null && !row.dead && !row.released && row.observed() == mob) {
             row.released = true;
             markDirty();
         }
     }
 
-    private void observeDeath(EntityLiving mob, Record row) {
-        if (mob.getHealth() > 0 || row.dead) return;
-        row.dead = true;
-        row.live = null;
-        markDirty();
+    private Record claim(EntityLiving mob, int site, UUID id) {
+        Record row = recent.get(id);
+        if (row == null || row.site != site || row.dead) return null;
+        EntityLiving previous = row.observed();
+        if (previous != null && previous != mob && previous.worldObj == mob.worldObj
+                && previous.isEntityAlive() && previous.addedToChunk && chunkAvailable(previous)
+                && presentInAvailableChunk(previous)) {
+            if (!truncated) {
+                truncated = true;
+                markDirty();
+            }
+            return null;
+        }
+        row.live = new WeakReference<EntityLiving>(mob);
+        return row;
+    }
+
+    private static boolean chunkAvailable(EntityLiving mob) {
+        return mob.worldObj.blockExists(mob.chunkCoordX << 4, 0, mob.chunkCoordZ << 4);
+    }
+
+    private static boolean presentInAvailableChunk(EntityLiving mob) {
+        Chunk chunk = mob.worldObj.getChunkFromChunkCoords(mob.chunkCoordX, mob.chunkCoordZ);
+        int section = mob.chunkCoordY;
+        return chunk.isChunkLoaded && section >= 0 && section < chunk.entityLists.length
+                && chunk.entityLists[section].contains(mob);
     }
 
     Snapshot snapshot(World world, int site) {
@@ -78,16 +96,13 @@ public final class SiegeCensus extends WorldSavedData {
                 ++result.dead;
                 continue;
             }
-            EntityLiving mob = row.live == null ? null : row.live.get();
+            EntityLiving mob = row.observed();
             if (mob == null || mob.worldObj != world || !mob.isEntityAlive() || !mob.addedToChunk) {
                 ++result.unknown;
-            } else if (!world.blockExists(mob.chunkCoordX << 4, 0, mob.chunkCoordZ << 4)) {
+            } else if (!chunkAvailable(mob)) {
                 ++result.unloaded;
-            } else {
-                Chunk chunk = world.getChunkFromChunkCoords(mob.chunkCoordX, mob.chunkCoordZ);
-                if (chunk.isChunkLoaded && chunk.entityLists[mob.chunkCoordY].contains(mob)) ++result.loaded;
-                else ++result.unknown;
-            }
+            } else if (presentInAvailableChunk(mob)) ++result.loaded;
+            else ++result.unknown;
         }
         return result;
     }
@@ -165,6 +180,8 @@ public final class SiegeCensus extends WorldSavedData {
         boolean dead, released;
         WeakReference<EntityLiving> live;
 
+        EntityLiving observed() { return live == null ? null : live.get(); }
+
         Record(int site, UUID mobilization, boolean manual) {
             this.site = site;
             this.mobilization = mobilization;
@@ -184,9 +201,9 @@ public final class SiegeCensus extends WorldSavedData {
     /** Optional versioned identity for ZTO-owned siege actors. Legacy site NBT remains independent. */
     public static final class Actor {
         private UUID id;
-        private Record record;
-        private SiegeCensus census;
-        private boolean reconciled;
+        private boolean reconciled, confirmedDeath;
+
+        boolean confirmedDeath() { return confirmedDeath; }
 
         public void write(NBTTagCompound tag) {
             if (id == null) return;
@@ -203,22 +220,29 @@ public final class SiegeCensus extends WorldSavedData {
                 if (identity.getTag("Version") instanceof NBTTagInt && identity.getInteger("Version") == VERSION)
                     id = readId(identity, "Actor");
             }
-            census = null;
-            record = null;
             reconciled = false;
+            confirmedDeath = false;
         }
 
         public void observe(EntityLiving mob, int site) {
-            if (id == null || mob.worldObj.isRemote) return;
-            if (!reconciled) {
-                reconciled = true;
-                census = load(mob.worldObj);
-                record = census == null ? null : census.recent.get(id);
-                if (record != null && record.site == site && !record.dead)
-                    record.live = new WeakReference<EntityLiving>(mob);
-                else record = null;
+            if (reconciled || id == null || mob.worldObj.isRemote) return;
+            reconciled = true;
+            SiegeCensus census = load(mob.worldObj);
+            if (census != null) census.claim(mob, site, id);
+        }
+
+        /** Called after the native death callback has committed the death. */
+        public void died(EntityLiving mob, int site) {
+            if (confirmedDeath || mob.worldObj.isRemote) return;
+            confirmedDeath = true;
+            if (id == null) return;
+            SiegeCensus census = load(mob.worldObj);
+            Record row = census == null ? null : census.claim(mob, site, id);
+            if (row != null) {
+                row.dead = true;
+                row.live = null;
+                census.markDirty();
             }
-            if (record != null && mob.getHealth() <= 0) census.observeDeath(mob, record);
         }
     }
 }

@@ -124,7 +124,7 @@ public final class SiteSiege {
     void bind(World world, AssaultWorldState storage) {
         this.world = world;
         this.storage = storage;
-        census = storage == null ? null : SiegeCensus.load(world);
+        census = SiegeCensus.load(world);
         resetPlan();
         origin = Origin.NATURAL;
         profile = Profile.AUTO;
@@ -870,12 +870,12 @@ public final class SiteSiege {
     private void releaseSiteBird(String reason) {
         if (siteBird == null) return;
         if (census != null) census.released(siteBird);
-        if (siteBird.getHealth() <= 0) {
+        if (siteBird.siegeActor().confirmedDeath()) {
             defeated++;
             aerialStatus = "CONFIRMED_DEAD";
         } else {
             withdrawn++;
-            aerialStatus = "PERSISTENT_RELEASED";
+            aerialStatus = siteBird.isEntityAlive() ? "PERSISTENT_RELEASED" : "RELEASED_UNCONFIRMED";
         }
         aerial.endSiteSiege(siteBird, reason);
         siteBird = null;
@@ -906,11 +906,12 @@ public final class SiteSiege {
             boolean loaded = alive && mob.worldObj == world && world.blockExists(x, 64, z)
                     && mob.addedToChunk;
             if (!loaded) {
-                if (!alive && mob.getHealth() <= 0) defeated++;
+                boolean confirmedDeath = ((SiegeCensus.Participant) mob).siegeActor().confirmedDeath();
+                if (confirmedDeath) defeated++;
                 boolean despawn = mob instanceof TacticalHostile ? ((TacticalHostile) mob).nativeSiteDespawn()
                         : attacker.task.nativeDespawn;
                 if (despawn) nativeDespawns++;
-                withdraw(attacker, mob.getHealth() <= 0 ? "DEATH" : despawn ? "NATIVE_DESPAWN"
+                withdraw(attacker, confirmedDeath ? "DEATH" : despawn ? "NATIVE_DESPAWN"
                         : mob.isDead ? "EXTERNAL_REMOVAL" : "ENTITY_UNLOADED");
                 iterator.remove();
                 continue;
@@ -954,7 +955,7 @@ public final class SiteSiege {
     }
 
     private void withdraw(Attacker attacker, String cause) {
-        if (attacker.mob.getHealth() > 0) withdrawn++;
+        if (!((SiegeCensus.Participant) attacker.mob).siegeActor().confirmedDeath()) withdrawn++;
         if (attacker == specialist) {
             if (objectivePending()) endObjective(cause);
             specialist = null;
@@ -1105,7 +1106,7 @@ public final class SiteSiege {
         releaseSiteBird(cause);
         if (force != null) abandoned = force.total - inserted;
         for (Attacker attacker : attackers) {
-            if (attacker.mob.getHealth() <= 0) defeated++;
+            if (((SiegeCensus.Participant) attacker.mob).siegeActor().confirmedDeath()) defeated++;
             else withdrawn++;
             release(attacker, cause);
         }
@@ -1126,7 +1127,9 @@ public final class SiteSiege {
 
     private void release(Attacker attacker, String cause) {
         if (census != null) census.released(attacker.mob);
-        count(failures, "TACTICAL_RELEASE/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE" : "/DEAD"));
+        boolean confirmedDeath = ((SiegeCensus.Participant) attacker.mob).siegeActor().confirmedDeath();
+        count(failures, "TACTICAL_RELEASE/" + cause + (attacker.mob.isEntityAlive() ? "/ALIVE"
+                : confirmedDeath ? "/DEAD" : "/UNCONFIRMED"));
         attacker.task.release();
         maxLifetime = Math.max(maxLifetime, elapsed - attacker.insertedAt);
         if (attacker.mob instanceof TacticalHostile) {

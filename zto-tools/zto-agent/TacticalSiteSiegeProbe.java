@@ -3,9 +3,11 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.UUID;
 import zed.tekkitoverhaul.assault.AssaultWorldState;
 import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.assault.SiegeDirector;
+import zed.tekkitoverhaul.assault.SiegeZombie;
 import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
@@ -33,6 +35,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
             probe.sideEntrance();
             probe.breacherAlternateEntrance();
             probe.battlefieldHistory();
+            probe.releasedInfantryCensus();
             if (args.length < 2) {
                 probe.tacticalSieges();
                 probe.naturalEntrance();
@@ -320,9 +323,8 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         for (int i = 0; i < 45 && bird.flight() == Flight.DIVE; ++i) world.a(bird, true);
         check(player.bb() < 20, "restored siege bird retains native slashing contact", here());
         bird.a(md.a(player), 100);
-        world.a(bird, true);
         check(bird.bb() <= 0 && director.siteSiegeSnapshot(world).censusDead == deathsBeforeEviction + 1,
-                "native death after Save/Quit closes exactly one retained record", here());
+                "native death after Save/Quit closes exactly one retained record before another tick", here());
         System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");
     }
 
@@ -456,6 +458,73 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         malformed.b(new ady());
         System.out.printf(Locale.ROOT, "PASS recent history two sites, four manual mobilizations, two reopens, %d actors, census %d bytes, native save %d us, natural admission and no replay%n",
                 total, bytes, saveMicros);
+    }
+
+    private void releasedInfantryCensus() throws Exception {
+        String name = "siege-census-retention";
+        int site = tacticalHouse(name, 64, false);
+        toggle(X, Y, Z + 2);
+        long dusk = siegeDusk(0);
+        LunarCalendar calendar = siegeCalendar(86, dusk - 1, Long.MIN_VALUE);
+        SiegeDirector director = new SiegeDirector(false, 15, 900, 8, 16, false, true, false);
+        director.attachSites(true, settlements);
+        director.bind(world, calendar.view());
+        siegeTicks(director, calendar, dusk, 20);
+        check(director.snapshot(world).starts == 0 && !director.siteSiegeSnapshot(world).naturalEnabled,
+                "disabling the major authority suppresses both natural encounters", here());
+        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.LOW);
+        siegeTicks(director, calendar, dusk + 20, 105);
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, dusk + 125, 1);
+        SiteSiege.Snapshot released = director.siteSiegeSnapshot(world);
+        check(released.active == 0 && released.censusReleased >= 3 && released.censusDead == 0,
+                "manual siege and census remain available with major admission disabled", here());
+        yy[] survivors = world.b.stream().filter(TacticalSiteSiegeProbe::infantry).toArray(yy[]::new);
+        yy oldest = survivors[0];
+        ady ticket = new ady();
+        check(oldest.c(ticket), "save oldest living infantry identity", here());
+        yy duplicate = (yy) aao.a(ticket, world);
+        duplicate.c(X - 4, Y, Z + 2, 0, 0);
+        check(world.a(duplicate), "insert intentionally duplicated optional identity", here());
+        world.a(duplicate, true);
+        SiteSiege.Snapshot conflict = director.siteSiegeSnapshot(world);
+        check(conflict.censusTruncated && conflict.censusLoaded == released.censusLoaded,
+                "an injected duplicate leaves the original observation intact", here());
+        duplicate.a(md.a(player), 100);
+        check(oldest.bb() > 0 && director.siteSiegeSnapshot(world).censusDead == 0,
+                "death of a conflicting copy does not mark the surviving original dead", here());
+
+        survivors[1].a(md.a(player), 100);
+        check(director.siteSiegeSnapshot(world).censusDead == 1,
+                "released infantry death is recorded before another native tick", here());
+        survivors[2].l(0);
+        world.a(survivors[2], true);
+        world.e(survivors[2]);
+        check(director.siteSiegeSnapshot(world).censusDead == 1 && director.siteSiegeSnapshot(world).censusUnknown > 0,
+                "zero-health disappearance without a committed death stays unknown", here());
+
+        SiegeCensus census = (SiegeCensus) world.a(SiegeCensus.class, "zto_siege_census");
+        Method insert = SiegeCensus.class.getDeclaredMethod("inserted", acq.class, int.class, UUID.class, boolean.class);
+        insert.setAccessible(true);
+        UUID mobilization = UUID.randomUUID();
+        // Exercise the retention boundary without increasing any real siege force budget.
+        for (int i = 0; i < 256; ++i) {
+            insert.invoke(census, new SiegeZombie(world), site, mobilization, true);
+        }
+        SiteSiege.Snapshot retained = director.siteSiegeSnapshot(world);
+        check(retained.censusInserted == 256 && retained.censusTruncated && !oldest.G && oldest.bb() > 0,
+                "evicting the oldest diagnostic row leaves its native actor alive", here());
+        save();
+        director.bind(null, null);
+        open(name, false);
+        prepare(X, Z);
+        world.d.add(player);
+        long matching = world.b.stream().filter(TacticalSiteSiegeProbe::infantry).map(actor -> {
+            ady saved = new ady();
+            return ((yy) actor).c(saved) ? saved.m("ZTOSiegeCensus") : new ady();
+        }).filter(ticket.m("ZTOSiegeCensus")::equals).count();
+        check(matching == 1, "native reopen restores the oldest living identity once despite census eviction", here());
+        System.out.println("PASS manual census with major admission disabled, immediate released deaths, conflicting identity, unknown disappearance and 256-row eviction");
     }
 
     private void breacherAlternateEntrance() throws Exception {

@@ -13,15 +13,27 @@ The [fortress warfare specification](survival-040-spec.md#26-acceptance-test-mat
 
 The census retains the newest 256 successful actor insertions in the Overworld. Each record has a ZTO-generated identity, mobilization identity, site and manual/natural origin. Native entity NBT carries the optional actor identity. Restoration reconciles on its first native update and adds zero insertions. Loaded counts require the observed native entity in its loaded chunk list. An observed actor in a missing chunk is last-known unloaded. A missing or stale observation is unknown. Only observed health depletion establishes death. Retention eviction affects history and leaves native actors intact. Older actors with only `ZTOSiegeSite` remain persistent and contribute to the existing loaded population caps. Optional census data does not gate natural admission or change the lunar save record.
 
-The Skelebird keeps its native type, health, position and movement in the chunk save. Restoring begins with safe cruise steering and clears transient target and flock state. Tactical release preserves the siege origin, suppresses ordinary wildlife expiration and distance despawn, and returns the bird to its local hostile behavior. Native death, bone drops and Peaceful behavior use the established species code. Ordinary Fugl and Skelebird lifecycle and player-assault allocations keep their existing rules. Structural damage remains opt-in.
+The Skelebird keeps its native type, health, position and movement in the chunk save. Restoring begins with safe cruise steering and clears transient target and flock state. Tactical release preserves the siege origin, suppresses ordinary wildlife expiration and distance despawn, and returns the bird to its local hostile behavior. Native death, bone drops and Peaceful behavior use the established species code. Ordinary Fugl and Skelebird lifecycle and player-assault allocations keep their existing rules. The Fugl continues its wildlife and chicken-hunting role. Structural damage remains opt-in.
+
+The natural warning uses the existing cave ambience at a verified exterior staging column. The warning window precedes the first deployment and later successful waves have a single arrival cue. The role-specific wood, Tank, Saboteur and flight sounds still come from their existing implementations. The monitor distinguishes the live site threat sample from the admission assessment and reports reinforcement exhaustion separately from tactical control and physical casualties. Audible clarity awaits the owner pass.
 
 ## Native evidence and build identity
 
-Clean source build `2b5a2e7d69652da139a5651d7c7e9774f09f21a5` used MCP 6.2 and compile Forge 3.4.9.171. The mod JAR SHA-256 is `f38f2eb4bd943b388f1eb35d2ac3f569eee224e39a7c7583055da26b16f6edbd`. The ZTOAgent hash is `ebcb591cb6085c6a2990d2bae981faf48f6243d3121b4125eaa2a91541a4acb8`. MCP client compilation, reobfuscation and streaming verification of all 492 entries passed. The isolated headless runtime used Java 8u51 and the pinned pack overlay with Forge 3.3.8.164 and FML 2.2.106.176.
+Clean source build `01c4d8fccb4f6401f2e13a9c8d36d04da97df94e` used MCP 6.2 and compile Forge 3.4.9.171. The mod JAR SHA-256 is `98fd4263da1dbb18a6d828940731404c52ee2200585b4353adcaa5f0cfd79640`. The ZTOAgent hash is `f23e71c3c30f0c6b3c7e43bbc9daa152387de3b2d4fcb5289371b94e02df2ffc`. MCP client compilation, reobfuscation and streaming verification of all 492 entries passed. The isolated headless runtime used Java 8u51 and the pinned pack overlay with Forge 3.3.8.164 and FML 2.2.106.176.
 
 Portable checks passed for configuration and migration, calendar and major scheduling, outdoor approaches, Territorial Activity, force selection, Dev Bridge transport, documentation links, distillation and alchemical conversion. These results exercise the typed settings, including fresh defaults and explicit legacy choices. Native pack fixtures test admission and fallback separately from the settings parser.
 
-The history fixture ran four finite manual mobilizations across two recognized workshops. It retained 16 native infantry through two Save/Quit cycles, checked the 580-byte compressed census, admitted a natural siege near the residual population and reopened it without replay. Its first full native save and flush took 270 ms. The Skelebird fixture checked tactical release, native motion beyond 1,100 ticks, native chunk eviction, a single restoration at the saved health, and one confirmed death after reopening. The wooden entrance fixture replaced a closed door during windup and observed the same Breacher walk to and open the second door.
+| Native campaign | Result on the recorded artifact |
+| --- | --- |
+| Full `-Pack` | **PASS on retry.** The first run passed the siege, settlement and industrial probes, then failed the existing PLAYER_ASSAULT wetland floor. The two swamps yielded 2 + 2 insertions against a minimum of 5. The identical JAR yielded 2 + 4 and the full suite completed on retry. The fixture seeds the director, and native per-entity light rolls still vary. Both runs retain the original threshold. |
+| Site siege, escalation, terrain, industrial, persistence and completion cases | **PASS** within `-Pack`, including the restored bird's slashing contact and a bridge disconnected after staging. |
+| Settlement, provenance, partial footprints and protected interiors | **PASS** within `-Pack`, including the independent workshops and clipped compound. |
+| Existing Enderkin, Thief cargo, aerial ecology, PLAYER_ASSAULT arbitration and recovery | **PASS** within the completed pack run, subject to the wetland repeatability issue above. |
+| Resource conservation and third-party compatibility | **PASS** for the tested IC2, BuildCraft, RedPower and ZTO transport, energy, inventory, cargo and fluid paths. The pack ran the installed and reduced compatibility overlays. |
+| `-Focus modded-profile` | **PASS.** The native mixed equipment probe associated all 19 fixtures at a peak of 169 detail reads with the IC2 adapter unavailable. |
+| Graphical and owner acceptance | **NOT RUN.** Host automation is prohibited by the repository policy. The separate graphical campaign remains open. |
+
+The history fixture ran four finite manual mobilizations across two recognized workshops. It retained 16 native infantry through two Save/Quit cycles, checked the 579-byte compressed census, admitted a natural siege near the residual population and reopened it without replay. Its first full native save and flush took 250 ms. The Skelebird fixture checked tactical release, native motion beyond 1,100 ticks, native chunk eviction, a single restoration at the saved health, a successful slashing contact after reopening, malformed optional actor metadata and one confirmed death. The entrance fixture replaced a closed door during windup and observed the same Breacher walk to and open the second door. The waterfront fixture severed a bridge after deployment and observed a living vanguard with further insertions blocked.
 
 ### Performance samples
 
@@ -29,18 +41,22 @@ Times are microseconds from the headless simulation on the same workstation. The
 
 | Workload | Samples | p50 | p95 | p99 | Max |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Two-site history fixture before mobilization | 256 | 0.80 | 8.30 | 19.90 | 120.10 |
-| Same fixture after four mobilizations | 256 | 99.60 | 165.60 | 515.90 | 540.50 |
-| Same fixture after first reopen | 256 | 67.10 | 207.40 | 516.90 | 809.10 |
-| Same fixture after second reopen | 256 | 67.70 | 117.10 | 773.00 | 2198.90 |
-| History snapshot after four mobilizations | 256 | 7.10 | 10.40 | 23.00 | 29.40 |
-| History snapshot after first reopen | 256 | 1.90 | 4.80 | 7.00 | 26.60 |
-| Hard/MAXIMUM director ticks | 1690 | 0.60 | 5.00 | 69.90 | 10898.50 |
-| Hard/MAXIMUM planner samples | 290 | 1.30 | 72.30 | 171.30 | 10878.70 |
-| Combined force native hostile ticks, peak seven actors | 96 | 132.10 | 255.20 | — | 709.70 |
-| Skelebird native update within the combined fixture | 96 | 28.80 | 63.10 | — | 491.40 |
+| Two-site history fixture before mobilization | 256 | 0.50 | 4.90 | 9.80 | 57.40 |
+| Same fixture after four mobilizations | 256 | 88.40 | 155.70 | 593.00 | 622.20 |
+| Same fixture after first reopen | 256 | 48.70 | 99.30 | 305.20 | 361.90 |
+| Same fixture after second reopen | 256 | 49.90 | 83.50 | 302.00 | 1834.10 |
+| History snapshot after four mobilizations | 256 | 6.30 | 10.00 | 19.70 | 32.90 |
+| History snapshot after first reopen | 256 | 1.60 | 2.40 | 6.40 | 26.90 |
+| Hard/MODERATE director ticks | 1690 | 1.60 | 5.30 | 15.70 | 388.50 |
+| Hard/MAXIMUM director ticks | 1690 | 1.00 | 7.90 | 85.50 | 777.80 |
+| Hard/MAXIMUM planner samples | 284 | 1.90 | 95.20 | 176.20 | 773.00 |
+| Combined force native hostile ticks, peak seven actors | 96 | 194.50 | 275.90 | — | 760.70 |
+| Skelebird native update within the combined fixture | 96 | 27.60 | 53.00 | — | 572.00 |
+| Unavailable bridge terrain planner samples | 55 | 17.40 | 200.20 | — | 588.20 |
+| Mixed equipment recognition, generic-only idle | 3240 | 0.10 | 0.20 | 0.30 | 23.40 |
+| Mixed equipment recognition, generic-only sampled | 360 | 7.20 | 53.70 | 78.50 | 96.40 |
 
-The narrow waterfront fixture used the same shape and pinned runtime on the baseline and candidate. Across 1,690 active director ticks in each run, baseline → candidate p50 was 2.30 → 2.40 µs, p95 was 11.80 → 11.00 µs, and p99 was 127.10 → 119.50 µs. Native hostile p95 was 151.70 → 127.20 µs and p99 was 473.60 → 751.30 µs, with peaks of eight and nine loaded actors respectively. Native paths took 9.66 ms across 123 calls and 18.37 ms across 44 calls. These single-run distributions describe the matched fixtures. Long-run memory growth and wall-clock frequency in representative player worlds remain unmeasured.
+The narrow waterfront fixture used the same shape and pinned runtime on the baseline and candidate. Across 1,690 active director ticks in each run, baseline → candidate p50 was 2.30 → 1.80 µs, p95 was 11.80 → 9.30 µs, and p99 was 127.10 → 94.40 µs. Native hostile p95 was 151.70 → 101.10 µs and p99 was 473.60 → 210.30 µs, with a peak of eight loaded actors in each run. Native paths took 9.66 ms across 123 calls and 3.89 ms across 106 calls. These single-run distributions describe the matched fixtures. Long-run memory growth and wall-clock frequency in representative player worlds remain unmeasured.
 
 ### Milestone definition of done
 
@@ -92,4 +108,4 @@ Use a disposable Tekkit Dev copy, Minecraft 1.2.5 and Tekkit Classic 3.1.2. Star
 
 ## Release boundaries
 
-Balance remains provisional for frequency, aerial selection, exposure, relative role distribution and timing. Dedicated multiplayer certification, Survival 0.5 exploration, End progression and additional machines remain deferred by the milestone scope. A beta decision requires the outstanding mandatory behavior and verification, followed by owner acceptance.
+Balance remains provisional for frequency, aerial selection, exposure, relative role distribution and timing. Dedicated multiplayer certification, Survival 0.5 exploration, End progression and additional machines remain deferred by the milestone scope. The remaining beta gates include the exact open layout and combat cases in the matrix, repeatability of the wetland acceptance threshold, sustained heap measurements, natural frequency in representative worlds and owner acceptance.

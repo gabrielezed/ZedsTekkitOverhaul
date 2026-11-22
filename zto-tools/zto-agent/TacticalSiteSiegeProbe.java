@@ -1,6 +1,10 @@
 import java.io.File;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.Locale;
 import zed.tekkitoverhaul.assault.AssaultWorldState;
+import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.assault.SiegeDirector;
 import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
@@ -13,18 +17,26 @@ import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Exercises the exact local command mailbox and native tactical execution without rendering. */
 public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
-    TacticalSiteSiegeProbe(File root) throws Exception { super(root); }
+    private final File root;
+
+    TacticalSiteSiegeProbe(File root) throws Exception {
+        super(root);
+        this.root = root;
+    }
 
     public static void main(String[] args) {
         try {
             TacticalSiteSiegeProbe probe = new TacticalSiteSiegeProbe(new File(args[0]));
             probe.manualSiege();
             probe.aerialSurvivor();
-            probe.tacticalSieges();
             probe.sideEntrance();
-            probe.naturalEntrance();
-            probe.naturalArbitration();
-            probe.undergroundAndPopulation();
+            probe.battlefieldHistory();
+            if (args.length < 2) {
+                probe.tacticalSieges();
+                probe.naturalEntrance();
+                probe.naturalArbitration();
+                probe.undergroundAndPopulation();
+            }
         } catch (Throwable failure) {
             failure.printStackTrace();
             System.exit(1);
@@ -296,7 +308,113 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 "east door takes priority over western frontage", here());
         siegeTicks(director, calendar, windup, 70);
         check((world.e(x, Y, z) & 4) != 0, "Breacher opens the offset east door", here());
+        world.d(x, Y, z, 64, 0);
+        world.d(X, Y, Z + 2, 64, 4);
+        world.d(X, Y + 1, Z + 2, 64, 8);
+        siegeTicks(director, calendar, windup + 70, 75);
+        SiteSiege.Snapshot after = director.siteSiegeSnapshot(world);
+        check(after.reassessments > 0 && after.reassessments <= 8 && after.reassessment.startsWith("ALTERNATE_")
+                && (world.e(x, Y, z) & 4) == 0 && (world.e(X, Y, Z + 2) & 4) != 0,
+                "reclosed east door triggers bounded reassessment with the west door open: " + after.reassessment, here());
         director.bind(null, null);
+    }
+
+    private void battlefieldHistory() throws Exception {
+        String name = "siege-battlefield-history";
+        int outpost = X + 80;
+        open(name, false);
+        int[] sites = new int[2];
+        int[] starts = {X, outpost};
+        for (int i = 0; i < starts.length; ++i) {
+            int x = starts[i];
+            prepare(x, Z);
+            room(x, Y, Z, true);
+            world.g(x + 1, Y, Z + 1, 61);
+            position(x + 2, Y, Z + 2);
+            walk();
+            ticks(560);
+            sites[i] = recognized("battlefield history workshop " + (i + 1), true).id;
+            toggle(x, Y, Z + 2);
+        }
+        check(sites[0] != sites[1], "history uses two independent workshops", here());
+        world.d.add(player);
+        long time = 14000;
+        LunarCalendar calendar = siegeCalendar(81, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        profileHistory("no previous sieges", director, calendar, time);
+        time += 320;
+        int[] expected = new int[2];
+        for (int run = 0; run < 4; ++run) {
+            int index = run % sites.length;
+            position(starts[index] + 2, Y, Z + 2);
+            director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.LOW);
+            siegeTicks(director, calendar, time, 80);
+            time += 80;
+            SiteSiege.Snapshot active = director.siteSiegeSnapshot(world);
+            expected[index] += active.inserted;
+            check(active.site == sites[index] && active.inserted > 0 && active.censusInserted == expected[index]
+                    && active.peak <= active.activeCap, "bounded independent site accounting: " + siegeDetails(active), here());
+            director.cancelTestSiege(world);
+            siegeTicks(director, calendar, time++, 1);
+            SiteSiege.Snapshot released = director.siteSiegeSnapshot(world);
+            check(released.active == 0 && released.censusReleased > 0 && released.censusLoaded > 0,
+                    "history records actual surviving actors after tactical release", here());
+        }
+        int total = expected[0] + expected[1];
+        profileHistory("four mobilizations across two sites", director, calendar, time);
+        long saveStart = System.nanoTime();
+        save();
+        long saveMicros = (System.nanoTime() - saveStart) / 1000;
+        long bytes = Files.size(new File(root, name + "/data/zto_siege_census.dat").toPath());
+        check(bytes < 32768, "recent native census stays compact", here());
+        director.bind(null, null);
+        for (int round = 0; round < 2; ++round) {
+            open(name, false);
+            prepare(X, Z);
+            prepare(outpost, Z);
+            position(outpost + 2, Y, Z + 2);
+            world.d.add(player);
+            calendar = siegeCalendar(82 + round, time, Long.MIN_VALUE);
+            director = siegeDirector(false, calendar);
+            SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+            check(reopened.censusSite == sites[1] && reopened.censusInserted == expected[1]
+                    && world.b.stream().filter(TacticalSiteSiegeProbe::infantry).count() == total,
+                    "repeat native reopen preserves exact infantry and retained records", here());
+            profileHistory("reopened " + (round + 1), director, calendar, time);
+            save();
+            director.bind(null, null);
+        }
+        check(Files.size(new File(root, name + "/data/zto_siege_census.dat").toPath()) == bytes,
+                "unchanged census does not grow from reopening", here());
+        SiegeCensus malformed = new SiegeCensus("fixture");
+        ady bad = new ady();
+        bad.a("Version", 1);
+        bad.a("Records", 7);
+        malformed.a(bad);
+        malformed.b(new ady());
+        System.out.printf(Locale.ROOT, "PASS recent history two sites, four mobilizations, two reopens, %d actors, census %d bytes, native save %d us%n",
+                total, bytes, saveMicros);
+    }
+
+    private void profileHistory(String label, SiegeDirector director, LunarCalendar calendar, long time) {
+        long[] nativeTicks = new long[256], snapshots = new long[256];
+        siegeTicks(director, calendar, time, 64);
+        for (int i = 0; i < nativeTicks.length; ++i) {
+            long start = System.nanoTime();
+            siegeTicks(director, calendar, time + i + 64, 1);
+            nativeTicks[i] = System.nanoTime() - start;
+            start = System.nanoTime();
+            director.siteSiegeSnapshot(world);
+            snapshots[i] = System.nanoTime() - start;
+        }
+        System.out.println("PROFILE history " + label + " | fixture " + percentiles(nativeTicks)
+                + " | census and director snapshot " + percentiles(snapshots));
+    }
+
+    private static String percentiles(long[] samples) {
+        Arrays.sort(samples);
+        return String.format(Locale.ROOT, "n=%d us median=%.2f p95=%.2f p99=%.2f max=%.2f", samples.length,
+                samples[127] / 1000.0, samples[243] / 1000.0, samples[253] / 1000.0, samples[255] / 1000.0);
     }
 
     private void tacticalSieges() throws Exception {

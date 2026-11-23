@@ -1,4 +1,3 @@
-import java.lang.reflect.Method;
 import zed.tekkitoverhaul.BuildIdentity;
 
 /** Run in a fresh JVM for each code source. */
@@ -9,31 +8,5 @@ public final class BuildIdentityProbe {
             throw new AssertionError("Expected [" + args[0] + "], got [" + label + "]");
         }
         System.out.println("PASS " + label);
-        if (args.length > 1) verifyTitlePlacement();
-    }
-
-    private static void verifyTitlePlacement() throws Exception {
-        Method titleY = Class.forName("zed.tekkitoverhaul.client.BuildWatermark")
-                .getDeclaredMethod("titleY", int.class, int.class, int.class);
-        titleY.setAccessible(true);
-        Method titleScale = titleY.getDeclaringClass().getDeclaredMethod("titleScale",
-                int.class, int.class, int.class, int.class, int.class);
-        titleScale.setAccessible(true);
-        int[][] profiles = {
-            // Scaled width and height, FML line count, expected label y.
-            {854, 480, 5, 420},
-            {640, 360, 4, 310},
-            {427, 240, 5, 180},
-            {320, 240, 4, 190},
-            {1280, 240, 5, 180}
-        };
-        for (int[] profile : profiles) {
-            int y = (Integer) titleY.invoke(null, profile[1], profile[2], 9);
-            float scale = (Float) titleScale.invoke(null, profile[0], profile[1], y, 9, 154);
-            if (profile[0] <= 427 && scale * 155F > profile[0] / 2 - 127)
-                throw new AssertionError("Title exceeds the button gutter");
-            if (y != profile[3]) throw new AssertionError("Title placement at " + profile[0] + "x" + profile[1]);
-        }
-        System.out.println("PASS title placement above the native stack or clear of the buttons at five scaled sizes");
     }
 }

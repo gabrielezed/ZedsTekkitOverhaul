@@ -26,6 +26,16 @@ public final class AgentProbe {
                 "underwater hooks delegate without callbacks");
         if ("archive".equals(args[0])) {
             try (ZipFile game = new ZipFile(args[1])) {
+                byte[] title = bytes(game.getInputStream(game.getEntry("xt.class")));
+                check(ZTOAgent.patchKnownClass("xt", title, null, false, false) != null, "pinned native title patch");
+                rejectFingerprint("xt", title, null, false);
+                String[] branding = {"44 mods loaded", "Optifine", "Forge", "Minecraft"};
+                check(ZTOAgent.titleBranding(branding) == branding, "native branding without registration");
+                ZTOAgent.registerTitleBuild("ZTO test");
+                check(java.util.Arrays.equals(ZTOAgent.titleBranding(branding),
+                        new String[] {"44 mods loaded", "ZTO test", "Optifine", "Forge", "Minecraft"}),
+                        "ZTO follows OptiFine and precedes the mod count in draw order");
+                ZTOAgent.registerTitleBuild(null);
                 byte[] renderer = bytes(game.getInputStream(game.getEntry("l.class")));
                 checkMoonPatch(renderer);
                 rejectFingerprint("l", renderer, null, true);

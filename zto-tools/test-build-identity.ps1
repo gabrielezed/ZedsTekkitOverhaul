@@ -15,9 +15,8 @@ try {
     $base = "ZTO $versionText"
     $separator = ' ' + [char]0x00b7 + ' '
     $run = {
-        param($path, $expected, [switch]$Title)
+        param($path, $expected)
         $arguments = @($expected)
-        if ($Title) { $arguments += 'title' }
         & java -cp "${path};$out" BuildIdentityProbe @arguments
         if ($LASTEXITCODE) { throw 'Build identity assertion failed.' }
     }
@@ -41,8 +40,7 @@ try {
         $hash = (Get-FileHash -LiteralPath $real).Hash.ToLowerInvariant()
         if ($hash -cne $sidecar.jarSha256) { throw 'Candidate sidecar hash mismatch.' }
         $suffix = if ($sidecar.sourceDirty -eq 'true') { ' *' } else { '' }
-        $overlay = Join-Path $root 'dist-zto/survival-hud-runtime/Tekkit Dev/minecraft/bin/minecraft.jar'
-        & $run "$real;$overlay" "$base${separator}b$($hash.Substring(0, 8))$suffix" -Title
+        & $run $real "$base${separator}b$($hash.Substring(0, 8))$suffix"
     }
 } finally {
     $parent = (Resolve-Path -LiteralPath (Join-Path $root 'temp')).Path

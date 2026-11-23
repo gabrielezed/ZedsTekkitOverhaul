@@ -76,6 +76,7 @@ public final class UnderwaterEquipmentProbe {
         verifyMask(client, world);
         yw diver = NaturalSpawnProbe.join(world);
         verifyBreathing(world, diver);
+        verifyTankRecovery(world);
         verifySwimming(world, diver);
         verifyMachine(root, world, diver);
     }
@@ -190,6 +191,41 @@ public final class UnderwaterEquipmentProbe {
         System.out.println("PASS native air, flowing water, final charge, drowning, swaps, creative and player NBT");
     }
 
+    private static void verifyTankRecovery(Fixture world) {
+        yw diver = NaturalSpawnProbe.join(world);
+        diver.aA = "UnderwaterRecovery";
+        diver.c(288.5, 9, 288.5, 0, 0);
+        aan worn = tank(120);
+        diver.ap.b[2] = worn;
+        diver.B();
+        check(diver.Y() == 300 && charge(worn) == 120, "water below the eyes does not use oxygen");
+        diver.c(288.5, 6, 288.5, 0, 0);
+        diver.b(new alg(13, 60, 0)); // Native Water Breathing.
+        diver.B();
+        check(diver.Y() == 300 && charge(worn) == 120, "native Water Breathing does not use oxygen");
+
+        yw survivor = NaturalSpawnProbe.join(world);
+        survivor.c(288.5, 6, 288.5, 0, 0);
+        aan malformed = tank(-1);
+        survivor.ap.b[2] = malformed;
+        survivor.B();
+        check(survivor.Y() == 299, "negative oxygen behaves like an empty tank");
+        malformed.d.a(OXYGEN, "120");
+        survivor.B();
+        check(survivor.Y() == 298, "mistyped oxygen behaves like an empty tank");
+        survivor.ap.b[2] = tank(Integer.MAX_VALUE);
+        survivor.B();
+        check(survivor.Y() == 298 && charge(survivor.ap.b[2]) == 5999, "excess oxygen is clamped before use");
+
+        diver.a(md.k);
+        int recovered = 0;
+        for (Object entry : world.b) {
+            if (entry instanceof fq && ((fq) entry).a.c == TANK && charge(((fq) entry).a) == 120) recovered++;
+        }
+        check(diver.ap.b[2] == null && recovered == 1, "native death drops exactly one charged tank");
+        System.out.println("PASS shallow water, Water Breathing, malformed oxygen NBT and charged death drop");
+    }
+
     private static void verifySwimming(Fixture world, yw diver) {
         for (int x = 290; x <= 305; x++) {
             for (int z = 288; z <= 294; z++) {
@@ -209,6 +245,9 @@ public final class UnderwaterEquipmentProbe {
                 "stationary water drift is unchanged");
         check(Math.abs(swim(diver, 10, false, 1) - ordinary) < 1E-6,
                 "unequipping restores native thrust");
+        for (int y = 5; y <= 12; y++) world.g(299, y, 290, 1);
+        double wall = swim(diver, 10, true, 1);
+        check(wall > 0.5D && wall <= 1.21D, "flippers remain bounded by native wall collision: " + wall);
         System.out.printf("PASS 20-tick native travel: %.4f blocks vanilla, %.4f with flippers%n", ordinary, flippers);
     }
 
@@ -237,6 +276,17 @@ public final class UnderwaterEquipmentProbe {
                 .getDeclaredConstructor(aak.class, TileAirCompressor.class);
         ctor.setAccessible(true);
         dd container = (dd) ctor.newInstance(diver.ap, tile);
+        aan stone = new aan(1, 1, 0);
+        diver.ap.b(stone);
+        container.a(0, 0, false, diver);
+        check(tile.k_(0) == null && diver.ap.k() == stone, "normal click rejects unrelated items");
+        diver.ap.b(other);
+        container.a(0, 0, false, diver);
+        check(charge(tile.k_(0)) == 276 && diver.ap.k() == null, "normal click inserts a charged tank");
+        container.a(0, 1, false, diver);
+        other = diver.ap.k();
+        check(tile.k_(0) == null && charge(other) == 276, "right-click recovers one charged tank");
+        diver.ap.b((aan) null);
         check(container.a(1, 0, true, diver) != null && tile.k_(0) == tank && diver.ap.a[9] == null, "shift-click inserts one tank");
         diver.ap.a[10] = other;
         check(container.a(2, 0, true, diver) == null && diver.ap.a[10] == other && tile.k_(0) == tank,
@@ -289,7 +339,19 @@ public final class UnderwaterEquipmentProbe {
             if (entry instanceof fq && ((fq) entry).a.c == TANK && charge(((fq) entry).a) == 1104) drops++;
         }
         check(drops == 1 && restored.k_(0) == null && !restored.isAddedToEnergyNet(), "break drops the charged tank once");
-        System.out.println("PASS native IC2 EU through copper, slot transfers, clamped charging, disk reload and one break drop");
+        check(reopened.g(x, y, z, COMPRESSOR), "compressor can be placed again after removal");
+        TileAirCompressor replacement = (TileAirCompressor) reopened.b(x, y, z);
+        replacement.n_();
+        check(replacement != restored && replacement.k_(0) == null && buffered(replacement) == 0,
+                "replacement starts empty and unpowered");
+        for (int packet = 0; packet < 124; packet++) {
+            check(replacement.injectEnergy(Direction.XN, 32) == 0, "buffer accepts a full LV packet");
+        }
+        check(replacement.injectEnergy(Direction.XN, 27) == 0 && buffered(replacement) == 3995,
+                "buffer approaches capacity");
+        check(replacement.injectEnergy(Direction.XN, 32) == 27 && buffered(replacement) == 4000
+                && !replacement.demandsEnergy(), "buffer returns unused EU at capacity");
+        System.out.println("PASS native IC2 EU through copper, normal and Shift-click transfers, bounded charging, disk reload, break and replacement");
     }
 
     private static aan tank(int ticks) {

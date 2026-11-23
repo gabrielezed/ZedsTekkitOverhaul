@@ -48,6 +48,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | --- | --- |
 | `block.advancedCraftingTable`, `block.foundry` | 3000, 3001 |
 | `block.hopper` | 3030 with Hopper assets. An existing entry requires the assets. |
+| `block.airCompressor` | 3031 |
 | `block.alchemicalConverter` | 3024 |
 | `block.boiler`, `block.heater`, `block.column`, `block.condenser`, `block.receiver`, `block.thermometer` | 3010–3015 in this order |
 | `block.gasolineFlowing`, `block.keroseneFlowing`, `block.dieselFlowing`, `block.heavygasoilFlowing` | 3016, 3018, 3020, 3022. The still block uses the next ID. |
@@ -58,6 +59,7 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `item.aerialPredatorEgg` | 22009 (stack ID 22265). Creative Fugl Spawn Egg in the Overworld. |
 | `item.skelebirdEgg` | 22010 (stack ID 22266). Creative Skelebird Spawn Egg in the Overworld. |
 | `item.magpieEgg` | 22011 (stack ID 22267). Magpie Spawn Egg for safe Overworld placement. Older configurations use this default when the key is absent. |
+| `item.underwaterMask`, `item.oxygenTank`, `item.flippers` | 22012–22014 (stack IDs 22268–22270). Existing configurations receive missing keys. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 

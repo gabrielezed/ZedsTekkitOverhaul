@@ -1,0 +1,56 @@
+{
+  "samples": [
+    "artwork/references/buildcraft-core/net/minecraft/src/buildcraft/core/gui/block_textures.png@3,6",
+    "artwork/references/buildcraft-core/net/minecraft/src/buildcraft/core/gui/block_textures.png@4,6"
+  ],
+  "colors": [
+    [
+      "#cccccc",
+      208
+    ],
+    [
+      "#4a4a4a",
+      69
+    ],
+    [
+      "#cbb04f",
+      69
+    ],
+    [
+      "#4c4c4c",
+      46
+    ],
+    [
+      "#827f00",
+      36
+    ],
+    [
+      "#939022",
+      4
+    ],
+    [
+      "#949225",
+      4
+    ],
+    [
+      "#ffffff",
+      4
+    ],
+    [
+      "#aaa851",
+      2
+    ],
+    [
+      "#97952c",
+      2
+    ],
+    [
+      "#8e8b17",
+      2
+    ],
+    [
+      "#a19f40",
+      2
+    ]
+  ]
+}

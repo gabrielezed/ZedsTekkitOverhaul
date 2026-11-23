@@ -4,8 +4,8 @@ import net.minecraft.src.Block;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
+import net.minecraft.src.forge.MinecraftForgeClient;
 import zed.tekkitoverhaul.config.ZtoConfig;
-import zed.tekkitoverhaul.distillation.client.RenderDistillationComponent;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
 
 /**
@@ -20,6 +20,10 @@ public final class DistillationRegistry {
     private static int oilBucketIdOverride = -1;
 
     private DistillationRegistry() { }
+
+    public static void preloadTextures() {
+        MinecraftForgeClient.preloadTexture(DistillationTextures.SHEET);
+    }
 
     public static int blockId(DistillationPartType type) {
         Block block = BLOCKS[type.index];
@@ -100,16 +104,11 @@ public final class DistillationRegistry {
                     throw new IllegalStateException("ZTO: Duplicate distillate item ID " + shifted);
         }
 
-        ModLoader.registerTileEntity(TileEntityDistillationBoiler.class,
-                "ZTODistillationBoiler", new RenderDistillationComponent());
-        ModLoader.registerTileEntity(TileEntityDistillationPart.class,
-                "ZTODistillationPart", new RenderDistillationComponent());
-        ModLoader.registerTileEntity(TileEntityDistillationHeater.class,
-                "ZTODistillationLVHeater", new RenderDistillationComponent());
-        ModLoader.registerTileEntity(TileEntityDistillationReceiver.class,
-                "ZTODistillationReceiver", new RenderDistillationComponent());
-        ModLoader.registerTileEntity(TileEntityDistillationCondenser.class,
-                "ZTODistillationCondenser", new RenderDistillationComponent());
+        ModLoader.registerTileEntity(TileEntityDistillationBoiler.class, "ZTODistillationBoiler");
+        ModLoader.registerTileEntity(TileEntityDistillationPart.class, "ZTODistillationPart");
+        ModLoader.registerTileEntity(TileEntityDistillationHeater.class, "ZTODistillationLVHeater");
+        ModLoader.registerTileEntity(TileEntityDistillationReceiver.class, "ZTODistillationReceiver");
+        ModLoader.registerTileEntity(TileEntityDistillationCondenser.class, "ZTODistillationCondenser");
 
         for (DistillationPartType type : DistillationPartType.values()) {
             Block block = type == DistillationPartType.BOILER ?

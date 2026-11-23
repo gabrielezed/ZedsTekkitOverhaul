@@ -1,0 +1,36 @@
+{
+  "vanilla": {
+    "version": "1.2.5",
+    "manifest": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+    "sha1": "4a2fac7504182a97dcbcd7560c6392d7c8139928",
+    "resources": ["terrain.png", "gui/", "armor/"],
+    "policy": "https://www.minecraft.net/en-us/usage-guidelines"
+  },
+  "mods": {
+    "ic2": {
+      "archive": "industrialcraft-2-client_1.97.jar",
+      "resources": ["ic2/sprites/", "armor/ic2/"],
+      "policy": "https://forum.industrial-craft.net/user-post-list/18-alblaka/?pageNo=3"
+    },
+    "buildcraft-core": {
+      "archive": "buildcraft-client-A-core-2.2.14.zip",
+      "resources": ["net/minecraft/src/buildcraft/"],
+      "policy": "https://modrinth.com/mod/buildcraft"
+    },
+    "buildcraft-transport": {
+      "archive": "buildcraft-client-B-transport-2.2.14.zip",
+      "resources": ["net/minecraft/src/buildcraft/"],
+      "sharedImages": "buildcraft-core"
+    },
+    "buildcraft-factory": {
+      "archive": "buildcraft-client-B-factory-2.2.14.zip",
+      "resources": ["net/minecraft/src/buildcraft/"],
+      "sharedImages": "buildcraft-core"
+    },
+    "buildcraft-energy": {
+      "archive": "buildcraft-client-B-energy-2.2.14.zip",
+      "resources": ["net/minecraft/src/buildcraft/"],
+      "sharedImages": "buildcraft-core"
+    }
+  }
+}

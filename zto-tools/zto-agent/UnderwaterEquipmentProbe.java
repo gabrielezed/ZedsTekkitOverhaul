@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.logging.Logger;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.config.ZtoConfigLoader;
+import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.agent.ZTOAgent;
 import zed.tekkitoverhaul.exploration.underwater.TileAirCompressor;
 import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
@@ -29,7 +30,7 @@ public final class UnderwaterEquipmentProbe {
 
     public static void main(String[] args) {
         try {
-            run(new File(args[0]));
+            run(new File(args[0]), args.length > 1 && "distillation".equals(args[1]));
             System.exit(0); // The native region I/O thread otherwise keeps the fixture alive.
         } catch (Throwable failure) {
             failure.printStackTrace();
@@ -37,16 +38,17 @@ public final class UnderwaterEquipmentProbe {
         }
     }
 
-    private static void run(File root) throws Exception {
+    private static void run(File root, boolean distillation) throws Exception {
         Files.createDirectories(new File(root, "config").toPath());
         Field directory = Minecraft.class.getDeclaredField("aj");
         directory.setAccessible(true);
         directory.set(null, root);
         FMLClientHandler handler = FMLClientHandler.instance();
-        Fixture world = new Fixture(root);
+        String name = distillation ? "distillation" : "underwater";
+        Fixture world = new Fixture(root, name);
         FMLCommonHandler.instance().beginLoading(handler);
         FMLRegistry.registerRegistry(new ClientRegistry());
-        Files.createFile(new File(root, "underwater/.zto-disposable").toPath());
+        Files.createFile(new File(root, name + "/.zto-disposable").toPath());
         HeadlessClient client = new HeadlessClient();
         client.F = root;
         client.f = world;
@@ -64,6 +66,12 @@ public final class UnderwaterEquipmentProbe {
         ModLoader.registerTileEntity(TileEntityCable.class, "Cable");
         ModLoader.registerTileEntity(TileEntityGenerator.class, "Generator");
         BuildCraftCore.initialize();
+        if (distillation) {
+            DistillationRegistry.register(ZtoConfigLoader.load(new File(root, "config").toPath(), false,
+                    Logger.getLogger("distillation-fixture")));
+            DistillationVisualProbe.run(root, world, NaturalSpawnProbe.join(world));
+            return;
+        }
         // Use BuildCraft's own item registration without constructing its OpenGL pipe renderer.
         Method createPipe = BuildCraftTransport.class.getDeclaredMethod("createPipe", int.class, Class.class,
                 String.class, Object.class, Object.class, Object.class);
@@ -373,9 +381,13 @@ public final class UnderwaterEquipmentProbe {
         if (!value) throw new AssertionError(message);
     }
 
-    private static final class Fixture extends xd {
+    static final class Fixture extends xd {
         Fixture(File root) {
-            super(new aia(root, "underwater", false), "underwater", NaturalSpawnProbe.SETTINGS);
+            this(root, "underwater");
+        }
+
+        Fixture(File root, String name) {
+            super(new aia(root, name, false), name, NaturalSpawnProbe.SETTINGS);
             q = 2;
             for (int x = 17; x <= 20; x++) for (int z = 17; z <= 20; z++) d(x, z);
         }

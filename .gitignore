@@ -8,6 +8,7 @@
 !/AGENTS.md
 !/.github/
 !/docs/
+!/artwork/
 !/zto-tools/
 !/src/
 
@@ -30,3 +31,7 @@
 
 # Local Tekkit research artifacts.
 /tekkit-mods-decompiles/
+/artwork/references/
+/artwork/previews/
+/artwork/.venv/
+__pycache__/

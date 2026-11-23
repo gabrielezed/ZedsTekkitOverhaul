@@ -1,0 +1,57 @@
+{
+  "samples": [
+    "artwork/references/ic2/ic2/sprites/block_machine.png@5,3",
+    "artwork/references/ic2/ic2/sprites/block_machine.png@3,3",
+    "artwork/references/ic2/ic2/sprites/block_machine.png@5,1"
+  ],
+  "colors": [
+    [
+      "#dbedee",
+      45
+    ],
+    [
+      "#e0f3f3",
+      29
+    ],
+    [
+      "#dceeef",
+      27
+    ],
+    [
+      "#daeced",
+      26
+    ],
+    [
+      "#dff1f2",
+      22
+    ],
+    [
+      "#d9ebec",
+      16
+    ],
+    [
+      "#222525",
+      16
+    ],
+    [
+      "#000000",
+      16
+    ],
+    [
+      "#ddeff0",
+      14
+    ],
+    [
+      "#3f4242",
+      14
+    ],
+    [
+      "#def0f1",
+      12
+    ],
+    [
+      "#e2f2f3",
+      12
+    ]
+  ]
+}

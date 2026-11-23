@@ -1,0 +1,57 @@
+{
+  "samples": [
+    "artwork/references/vanilla/terrain.png@12,2",
+    "artwork/references/vanilla/terrain.png@14,2",
+    "artwork/references/vanilla/terrain.png@13,2"
+  ],
+  "colors": [
+    [
+      "#b0b0b0",
+      66
+    ],
+    [
+      "#000000",
+      32
+    ],
+    [
+      "#c5c5c5",
+      30
+    ],
+    [
+      "#7f7f7f",
+      29
+    ],
+    [
+      "#a8a8a8",
+      29
+    ],
+    [
+      "#303030",
+      26
+    ],
+    [
+      "#797979",
+      26
+    ],
+    [
+      "#323232",
+      24
+    ],
+    [
+      "#292929",
+      24
+    ],
+    [
+      "#a3a3a3",
+      23
+    ],
+    [
+      "#2d2d2d",
+      19
+    ],
+    [
+      "#616161",
+      17
+    ]
+  ]
+}

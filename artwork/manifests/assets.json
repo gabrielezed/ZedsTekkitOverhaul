@@ -1,0 +1,282 @@
+[
+  {
+    "id": "distillation-blocks",
+    "source": "source/distillation/distillation_blocks.png",
+    "runtime": "zed/textures/distillation_blocks.png",
+    "size": [
+      256,
+      256
+    ],
+    "alpha": "cutout",
+    "role": "Type-zero block faces and native cube item render",
+    "palette": "industrial",
+    "origin": "zto-reference-inspired",
+    "jar": true,
+    "opaqueCells": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        4
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        0
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        5,
+        4
+      ],
+      [
+        2,
+        5
+      ]
+    ]
+  },
+  {
+    "id": "compressor-cap",
+    "source": "source/underwater/compressor_cap.png",
+    "runtime": "zed/textures/underwater/compressor_cap.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "opaque",
+    "role": "Air Compressor cap",
+    "palette": "industrial",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "compressor-side",
+    "source": "source/underwater/compressor_side.png",
+    "runtime": "zed/textures/underwater/compressor_side.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "opaque",
+    "role": "Air Compressor side",
+    "palette": "industrial",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "compressor-grille",
+    "source": "source/underwater/compressor_grille.png",
+    "runtime": "zed/textures/underwater/compressor_grille.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "opaque",
+    "role": "Air Compressor grille",
+    "palette": "industrial",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "mask",
+    "source": "source/underwater/mask.png",
+    "runtime": "zed/textures/underwater/mask.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "cutout",
+    "role": "Inventory equipment sprite",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "oxygen_tank",
+    "source": "source/underwater/oxygen_tank.png",
+    "runtime": "zed/textures/underwater/oxygen_tank.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "cutout",
+    "role": "Inventory equipment sprite",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "flippers",
+    "source": "source/underwater/flippers.png",
+    "runtime": "zed/textures/underwater/flippers.png",
+    "size": [
+      16,
+      16
+    ],
+    "alpha": "cutout",
+    "role": "Inventory equipment sprite",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "mask-worn",
+    "source": "source/underwater/mask_armor.png",
+    "runtime": "zed/textures/underwater/mask_armor.png",
+    "size": [
+      64,
+      32
+    ],
+    "alpha": "cutout",
+    "role": "Legacy 64x32 biped layer",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "oxygen_tank-worn",
+    "source": "source/underwater/oxygen_tank_armor.png",
+    "runtime": "zed/textures/underwater/oxygen_tank_armor.png",
+    "size": [
+      64,
+      32
+    ],
+    "alpha": "cutout",
+    "role": "Legacy 64x32 biped layer",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "flippers-worn",
+    "source": "source/underwater/flippers_armor.png",
+    "runtime": "zed/textures/underwater/flippers_armor.png",
+    "size": [
+      64,
+      32
+    ],
+    "alpha": "cutout",
+    "role": "Legacy 64x32 biped layer",
+    "palette": "diving",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  },
+  {
+    "id": "air-compressor-gui",
+    "source": "source/interfaces/air_compressor.png",
+    "runtime": "zed/gui/air_compressor.png",
+    "size": [
+      256,
+      256
+    ],
+    "alpha": "cutout",
+    "role": "176x169 GuiContainer panel and 120x6 oxygen bar",
+    "palette": "classic-gui",
+    "origin": "zto-reference-inspired",
+    "jar": true
+  }
+]

@@ -12,6 +12,7 @@ Start with the [current implementation map](docs/agents/current-state.md), then 
 - Read the [Dev Bridge guide](docs/agents/dev-bridge.md) before extending the protocol. Keep reads bounded and allowlisted, run them on the owning thread and keep credentials out of Git and logs.
 - Preserve established behavior and its activation when changing packaging or tests. Use the single ZTOAgent for justified, version-pinned compatibility hooks. Check the [feature-preservation matrix](docs/agents/compatibility-acceptance.md) and treat a missing mandatory feature or behavioral check as a merge blocker.
 - When checking how a Tekkit Classic mod works, consult `tekkit-mods-decompiles/` first. This directory lives beside `AGENTS.md` at the repository root and is kept local, outside GitHub.
+- Before creating or editing textures, consult the [artwork suite and style guides](artwork/README.md). Edit the owned source PNGs, then export and validate the runtime copies against the artwork manifest.
 
 ## Workflow
 

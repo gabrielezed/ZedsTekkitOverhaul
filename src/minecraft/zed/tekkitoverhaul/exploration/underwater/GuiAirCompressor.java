@@ -6,7 +6,7 @@ import net.minecraft.src.ItemStack;
 import org.lwjgl.opengl.GL11;
 
 final class GuiAirCompressor extends GuiContainer {
-    private static final int TEXT_COLOR = 0x30363A;
+    private static final int TEXT_COLOR = 0x383838;
     private final TileAirCompressor machine;
 
     GuiAirCompressor(InventoryPlayer player, TileAirCompressor machine) {
@@ -24,7 +24,9 @@ final class GuiAirCompressor extends GuiContainer {
         fontRenderer.drawString("Buffer " + machine.storedEU() + "/" + UnderwaterBalance.EU_CAPACITY + " EU", 42, 44, TEXT_COLOR);
         String status = tank == null ? "Insert an Oxygen Tank" : charge == UnderwaterBalance.OXYGEN_CAPACITY
                 ? "Tank full" : machine.canCharge() ? "Charging" : "Connect an LV EU supply";
-        fontRenderer.drawString(status, 8, 59, TEXT_COLOR);
+        int statusColor = machine.canCharge() ? 0x385326
+                : tank != null && charge < UnderwaterBalance.OXYGEN_CAPACITY ? 0x743829 : TEXT_COLOR;
+        fontRenderer.drawString(status, 8, 59, statusColor);
         fontRenderer.drawString("Inventory", 8, 76, TEXT_COLOR);
     }
 

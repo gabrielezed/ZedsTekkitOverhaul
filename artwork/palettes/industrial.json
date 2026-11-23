@@ -1,0 +1,13 @@
+{
+  "references": ["vanilla.json", "ic2-machinery.json", "buildcraft-machinery.json"],
+  "zto": {
+    "steel": ["#465052", "#657173", "#8e9a9b", "#b4bdbb", "#cad0cc"],
+    "reinforced": ["#33393b", "#4b5254", "#626c6d", "#8d9997", "#a5afac"],
+    "brass": ["#554033", "#795644", "#a47851", "#c49b65", "#debb80"],
+    "coolant": ["#263a48", "#3a5463", "#516e7c", "#799aa4", "#b0c5c8"],
+    "rubber": ["#242521", "#363b37", "#4c514a", "#696f67"],
+    "glass": ["#567581", "#7e9ea6", "#a5bebf", "#c6d9d7"],
+    "heat": ["#302b28", "#a95c40", "#c37a46", "#d68e58"],
+    "gui": ["#383838", "#575954", "#8e9089", "#c4c4be", "#f1f1ea"]
+  }
+}

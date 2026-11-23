@@ -33,31 +33,50 @@ public final class BuildWatermark implements ITickHandler {
         ScaledResolution scale = new ScaledResolution(game.gameSettings, game.displayWidth, game.displayHeight);
         int width = scale.getScaledWidth();
         String text = font.trimStringToWidth(label, width - 6);
+        int x = title ? 2 : 3;
         int y = 3;
+        float textScale = 1F;
         if (title) {
             if (brandingLines < 0) {
                 brandingLines = FMLCommonHandler.instance().getBrandingStrings("Minecraft 1.2.5").length;
             }
-            y = titleY(width, scale.getScaledHeight(), brandingLines, font.FONT_HEIGHT, font.getStringWidth(text));
+            int height = scale.getScaledHeight();
+            y = titleY(height, brandingLines, font.FONT_HEIGHT);
+            textScale = titleScale(width, height, y, font.FONT_HEIGHT, font.getStringWidth(text));
         }
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT | GL11.GL_TEXTURE_BIT);
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT
+                | GL11.GL_TEXTURE_BIT | GL11.GL_TRANSFORM_BIT);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glPushMatrix();
         try {
             GL11.glDisable(GL11.GL_DEPTH_TEST);
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDisable(GL11.GL_FOG);
-            font.drawStringWithShadow(text, 3, y, 0xDDDDDD);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+            GL11.glDisable(GL11.GL_COLOR_LOGIC_OP);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glTranslatef(x, y, 0F);
+            GL11.glScalef(textScale, textScale, 1F);
+            font.drawStringWithShadow(text, 0, 0, 0xFFFFFF);
         } finally {
+            GL11.glPopMatrix();
             GL11.glPopAttrib();
         }
     }
 
-    static int titleY(int width, int height, int lines, int fontHeight, int textWidth) {
-        // FML draws its stack upward from height - 10. The last row has no room below.
-        int y = height - 10 - lines * (fontHeight + 1);
-        // The pinned title screen's last row includes the 24-pixel language button.
-        boolean overlapsButtons = y + fontHeight > height / 4 + 48 && y < height / 4 + 152
-                && 3 + textWidth >= width / 2 - 124;
-        return y < 3 || overlapsButtons ? 3 : y;
+    static int titleY(int height, int lines, int fontHeight) {
+        // FML draws its stack upward from height - 10.
+        return Math.max(3, height - 10 - lines * (fontHeight + 1));
+    }
+
+    static float titleScale(int width, int height, int y, int fontHeight, int textWidth) {
+        if (y + fontHeight <= height / 4 + 48 || y >= height / 4 + 152) return 1F;
+        // Leave two pixels of padding on both sides of the left gutter.
+        int gutter = Math.max(1, width / 2 - 124 - 4);
+        return Math.min(1F, (float) gutter / (textWidth + 1));
     }
 
     public EnumSet<TickType> ticks() { return EnumSet.of(TickType.RENDER); }

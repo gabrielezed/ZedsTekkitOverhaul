@@ -1,0 +1,780 @@
+{
+  "references": {
+    "ic2": {
+      "mod": "IndustrialCraft 2",
+      "version": "1.97",
+      "archive": "industrialcraft-2-client_1.97.jar",
+      "atlases": {
+        "ic2/sprites/block_machine.png": "21cb5666537664ea76a9d24bc696015d1a8914987da2aebd2fce462b2af08c05"
+      }
+    },
+    "buildcraft-core": {
+      "mod": "BuildCraft",
+      "version": "2.2.14",
+      "archive": "buildcraft-client-A-core-2.2.14.zip",
+      "atlases": {
+        "net/minecraft/src/buildcraft/core/gui/block_textures.png": "4b6cae2b400369266d81e0042029f056a8d68eea5a26c63d1f37ea010beefd30",
+        "net/minecraft/src/buildcraft/factory/gui/refinery.png": "db833e4a0c9950408c6ff3e6a172ede3189e3c333e20a7feae7112bb558e07c5"
+      }
+    }
+  },
+  "outputs": {
+    "underwater/compressor_grille.png": {
+      "image": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            3
+          ],
+          "rgbaSha256": "b8a63109135408c34a514ae35cea49317ee0adbb027a83e3e2bd56e8fab8c786"
+        },
+        "overlays": [],
+        "operations": "Keep the compressor bezel and shaded shell. Replace the inner drive with three air louvers and add a six-pixel-wide pressure dial above it.",
+        "retainedBasePixels": 204,
+        "editedBounds": [
+          5,
+          1,
+          11,
+          14
+        ],
+        "outputRgbaSha256": "67171572304cc857909af343fc7b8504d83c4de25801a84fe16a5cf28be32021"
+      }
+    },
+    "underwater/compressor_side.png": {
+      "image": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Keep the original shell. Add a three-pixel service witness mark near the lower right.",
+        "retainedBasePixels": 253,
+        "editedBounds": [
+          11,
+          11,
+          14,
+          12
+        ],
+        "outputRgbaSha256": "50260b4a7bd3ddfd7fb1954a49ae81a8577330bc3820c4738227815e3bc3f353"
+      }
+    },
+    "underwater/compressor_cap.png": {
+      "image": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            1
+          ],
+          "rgbaSha256": "8bfc3a122187c094f3a220052cc48020da144402b6747104b93aa9b6061403f6"
+        },
+        "overlays": [],
+        "operations": "Keep the original socket and cap. Color just the outer socket rim blue-grey.",
+        "retainedBasePixels": 248,
+        "editedBounds": [
+          4,
+          4,
+          12,
+          12
+        ],
+        "outputRgbaSha256": "ac52d128770ae49af055f2819102a28227f3b883473a9a284398f16115d6ebeb"
+      }
+    },
+    "distillation/distillation_blocks.png": {
+      "0,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            3,
+            3
+          ],
+          "rgbaSha256": "fc0fc5023b2da8bc3e9513bf03fbf17c33b132cf00e13a61076d0d474b258481"
+        },
+        "overlays": [],
+        "operations": "Keep the Macerator hatch and frame. Add a copper latch and a dark petroleum sight slot inside the hatch.",
+        "retainedBasePixels": 244,
+        "editedBounds": [
+          5,
+          9,
+          11,
+          12
+        ],
+        "outputRgbaSha256": "5e982f0cdd0d60bee81f94aeb8876cfcb9731d5a67b59267d584582a0f9bae54"
+      },
+      "0,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            3,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+      },
+      "0,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            3,
+            1
+          ],
+          "rgbaSha256": "0cd770ce2b81d55636561758c81364a10b20d8927eb86208f826ba649beac1f1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "0cd770ce2b81d55636561758c81364a10b20d8927eb86208f826ba649beac1f1"
+      },
+      "0,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            3,
+            0
+          ],
+          "rgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+      },
+      "0,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            3,
+            2
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+      },
+      "1,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            2,
+            3
+          ],
+          "rgbaSha256": "4bd47231b3d84d9667fed8af71234e49ddfd8bfb8a64be648f0da284eea50aa9"
+        },
+        "overlays": [],
+        "operations": "Keep the Electric Furnace intake and lower vent. Add a short copper heating strip inside the intake.",
+        "retainedBasePixels": 247,
+        "editedBounds": [
+          5,
+          4,
+          11,
+          6
+        ],
+        "outputRgbaSha256": "2e83308963d63dcff129a87ef0c6f8d7f1f2c7d8f8748c6953e51af4d5f9c590"
+      },
+      "1,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            2,
+            4
+          ],
+          "rgbaSha256": "98f906bf55194e3bf65181db8fa13681c09026caa212ab9420184fbab48c041b"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "98f906bf55194e3bf65181db8fa13681c09026caa212ab9420184fbab48c041b"
+      },
+      "1,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            2,
+            1
+          ],
+          "rgbaSha256": "2e40308372fb51fc71bf0b2ccedbce0a23e073ef269cee9fbcafdd279d86646c"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "2e40308372fb51fc71bf0b2ccedbce0a23e073ef269cee9fbcafdd279d86646c"
+      },
+      "1,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            2,
+            0
+          ],
+          "rgbaSha256": "98f906bf55194e3bf65181db8fa13681c09026caa212ab9420184fbab48c041b"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "98f906bf55194e3bf65181db8fa13681c09026caa212ab9420184fbab48c041b"
+      },
+      "1,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            2,
+            2
+          ],
+          "rgbaSha256": "aae4785e35ea67e81b89a745ffb2dae93df13cb4fc4dfc7f3b79c60561b22ee7"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "aae4785e35ea67e81b89a745ffb2dae93df13cb4fc4dfc7f3b79c60561b22ee7"
+      },
+      "2,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              0,
+              6
+            ],
+            "rgbaSha256": "8b5f5fc376db387e030ec730e27d919d6d8ae07cdb8b140200639c9bbf08cb65"
+          },
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              7
+            ],
+            "rgbaSha256": "ac843fa025ffd2d7c875dc614e07d767ba4895c79603b28c0ba8604706eb9e36"
+          }
+        ],
+        "operations": "Darken the central IC2 steel into a vessel recess. Overlay the BuildCraft Tank frame in dark steel and splice in Iron Waterproof Pipe ribs as collars.",
+        "retainedBasePixels": 48,
+        "editedBounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "outputRgbaSha256": "0daabfc60e73c8da67d67fc914c12db5716da530bc422a91c968a05355526a04"
+      },
+      "2,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              1,
+              6
+            ],
+            "rgbaSha256": "3e5d3097663da058de54418482d681eebbc2bf621f253a6c22a59447841a216a"
+          },
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              7
+            ],
+            "rgbaSha256": "ac843fa025ffd2d7c875dc614e07d767ba4895c79603b28c0ba8604706eb9e36"
+          },
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              6
+            ],
+            "rgbaSha256": "a66a5e8d973965377ea7448602639eae4d4a3c8a8ece57a2c62725c7f025b097"
+          }
+        ],
+        "operations": "Darken the central IC2 steel into a vessel recess. Overlay the BuildCraft Tank frame in dark steel and splice in Iron Waterproof Pipe ribs as collars. Copy the BuildCraft Pump boss onto the centerline. Omit the flat field and lower pipe, and desaturate the olive ring to aged brass.",
+        "retainedBasePixels": 48,
+        "editedBounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "outputRgbaSha256": "39bf57301b7f02e93e8911928788213077c777652c885316bafc8fbd28e09658"
+      },
+      "2,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            1
+          ],
+          "rgbaSha256": "8bfc3a122187c094f3a220052cc48020da144402b6747104b93aa9b6061403f6"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "8bfc3a122187c094f3a220052cc48020da144402b6747104b93aa9b6061403f6"
+      },
+      "2,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            0
+          ],
+          "rgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+      },
+      "2,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              1,
+              6
+            ],
+            "rgbaSha256": "3e5d3097663da058de54418482d681eebbc2bf621f253a6c22a59447841a216a"
+          },
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              7
+            ],
+            "rgbaSha256": "ac843fa025ffd2d7c875dc614e07d767ba4895c79603b28c0ba8604706eb9e36"
+          }
+        ],
+        "operations": "Darken the central IC2 steel into a vessel recess. Overlay the BuildCraft Tank frame in dark steel and splice in Iron Waterproof Pipe ribs as collars.",
+        "retainedBasePixels": 48,
+        "editedBounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "outputRgbaSha256": "a9446e6c22e4f10c70ad55d03267e6773fab9ff3e5595bfd0c2badc5502a4d44"
+      },
+      "2,5": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            5,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              1,
+              6
+            ],
+            "rgbaSha256": "3e5d3097663da058de54418482d681eebbc2bf621f253a6c22a59447841a216a"
+          },
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              7
+            ],
+            "rgbaSha256": "ac843fa025ffd2d7c875dc614e07d767ba4895c79603b28c0ba8604706eb9e36"
+          }
+        ],
+        "operations": "Darken the central IC2 steel into a vessel recess. Overlay the BuildCraft Tank frame in dark steel and splice in Iron Waterproof Pipe ribs as collars. Add a small upper sampling tap.",
+        "retainedBasePixels": 48,
+        "editedBounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "outputRgbaSha256": "5315cc6e2c174386dcfab5dd0cf3babcceb37189f68bf6cff0b6b467636e0566"
+      },
+      "3,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            8,
+            3
+          ],
+          "rgbaSha256": "9cc0bfe76b7a9fec5c0bef7cb244f70264bf120ef88a927ff155ffa04dabc0fe"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/factory/gui/refinery.png",
+            "cell": [
+              2,
+              1
+            ],
+            "rgbaSha256": "47bb0020f18a30ca974cd5d951bf7f5b93cc82dbca3207ed579fb703e1b93981"
+          }
+        ],
+        "operations": "Keep the two IC2 Pump chambers. Soften their blue fill and add a cyan BuildCraft Refinery magnet strip above the chambers.",
+        "retainedBasePixels": 222,
+        "editedBounds": [
+          3,
+          1,
+          14,
+          11
+        ],
+        "outputRgbaSha256": "36cb6025a64c80926d76facf1bdf86cc198fef9569c47dbc1a88fa0f7e403bd2"
+      },
+      "3,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            8,
+            4
+          ],
+          "rgbaSha256": "fdb26f86e43da0109d29d37249507615019ab81f9ae92aeedd395e4ac0728dc2"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              6
+            ],
+            "rgbaSha256": "a66a5e8d973965377ea7448602639eae4d4a3c8a8ece57a2c62725c7f025b097"
+          }
+        ],
+        "operations": "Copy the BuildCraft Pump boss onto the centerline. Omit the flat field and lower pipe, and desaturate the olive ring to aged brass.",
+        "retainedBasePixels": 176,
+        "editedBounds": [
+          3,
+          3,
+          13,
+          12
+        ],
+        "outputRgbaSha256": "1dda0da81c29fa7da1f80d4ccbc0d22643c31d69dc8ee00f3599c40d747dd92e"
+      },
+      "3,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            8,
+            1
+          ],
+          "rgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+      },
+      "3,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            8,
+            0
+          ],
+          "rgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+      },
+      "3,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            8,
+            2
+          ],
+          "rgbaSha256": "fdb26f86e43da0109d29d37249507615019ab81f9ae92aeedd395e4ac0728dc2"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "fdb26f86e43da0109d29d37249507615019ab81f9ae92aeedd395e4ac0728dc2"
+      },
+      "4,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            2
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              0,
+              6
+            ],
+            "rgbaSha256": "8b5f5fc376db387e030ec730e27d919d6d8ae07cdb8b140200639c9bbf08cb65"
+          }
+        ],
+        "operations": "Recess the Canner shell and overlay the original Tank glass highlights and graduated frame. Tint the frame to copper and add a low amber fill behind the glass.",
+        "retainedBasePixels": 64,
+        "editedBounds": [
+          2,
+          0,
+          14,
+          16
+        ],
+        "outputRgbaSha256": "c70e7e0e5a18c1fc385a67c158f35e8740225cd2bc774f105890d7fddaa5e8d4"
+      },
+      "4,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "buildcraft-core",
+            "atlas": "net/minecraft/src/buildcraft/core/gui/block_textures.png",
+            "cell": [
+              3,
+              6
+            ],
+            "rgbaSha256": "a66a5e8d973965377ea7448602639eae4d4a3c8a8ece57a2c62725c7f025b097"
+          }
+        ],
+        "operations": "Copy the BuildCraft Pump boss onto the centerline. Omit the flat field and lower pipe, and desaturate the olive ring to aged brass.",
+        "retainedBasePixels": 176,
+        "editedBounds": [
+          3,
+          3,
+          13,
+          12
+        ],
+        "outputRgbaSha256": "7204c98fc2fe92d263bf6d313860e108e8777faa11409bcd28b75b9d3137d567"
+      },
+      "4,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            1
+          ],
+          "rgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+      },
+      "4,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            0
+          ],
+          "rgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+      },
+      "4,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            2
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+      },
+      "5,0": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            2
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [
+          {
+            "reference": "ic2",
+            "atlas": "ic2/sprites/block_machine.png",
+            "cell": [
+              5,
+              1
+            ],
+            "rgbaSha256": "8bfc3a122187c094f3a220052cc48020da144402b6747104b93aa9b6061403f6"
+          }
+        ],
+        "operations": "Keep the Canner shell. Transfer the Compressor cap socket as the instrument bezel and inset an ivory dial with a red needle.",
+        "retainedBasePixels": 216,
+        "editedBounds": [
+          4,
+          4,
+          12,
+          12
+        ],
+        "outputRgbaSha256": "041715e0e8c37c6e38eb86b4d2676893da545ef989b67b0af4eb4939bc9c38fc"
+      },
+      "5,1": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            4
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+      },
+      "5,2": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            1
+          ],
+          "rgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "4913663201f6886fd938d2efbc23f0a459429172c1b656390a211d2f5f3b1cf4"
+      },
+      "5,3": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            0
+          ],
+          "rgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "d9f9917f3e9d0ed62b7b492748aa56b983d026ceb74b30803b25af9df39782e1"
+      },
+      "5,4": {
+        "base": {
+          "reference": "ic2",
+          "atlas": "ic2/sprites/block_machine.png",
+          "cell": [
+            6,
+            2
+          ],
+          "rgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+        },
+        "overlays": [],
+        "operations": "Reuse the original IC2 casing face as-is.",
+        "retainedBasePixels": 256,
+        "editedBounds": null,
+        "outputRgbaSha256": "f7e12ea76e326de753149dfdd41a8827ca9d68ad59d731b41b53868cd8daa0cf"
+      }
+    }
+  }
+}

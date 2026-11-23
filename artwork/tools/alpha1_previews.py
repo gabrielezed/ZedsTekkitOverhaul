@@ -73,7 +73,7 @@ def main():
         ("Dispenser", machine(VANILLA, (14, 2), (13, 2), (14, 3))),
         ("IC2 Compressor", machine(IC2, (5, 3), (5, 4), (5, 1))),
         ("IC2 Macerator", machine(IC2, (3, 3), (3, 4), (3, 1))),
-        ("BuildCraft Pump", machine(BC, (3, 6), (3, 6), (4, 6))),
+        ("BuildCraft Pump", machine(BC, (3, 6), (3, 6), (5, 6))),
     ]
     sheet("distillation-icons-native.png", new + references, 1, 6)
     sheet("distillation-icons-8x.png", new + references, 8, 6)

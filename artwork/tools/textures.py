@@ -232,10 +232,12 @@ def validate_assets(manifest, base=ART, runtime=RUNTIME, export=False, jar=None)
                 or not target.startswith(("zed/textures/", "zed/gui/")) or not target.endswith(".png")
                 or not entry["source"].startswith("source/")):
             raise ValueError(f"Invalid or duplicate asset mapping: {identifier} -> {target}")
-        if entry["origin"] not in ("zto-original", "zto-reference-inspired", "licensed-derivative"):
+        if entry["origin"] not in ("zto-original", "zto-reference-inspired", "licensed-derivative", "local-derivative"):
             raise ValueError(f"Unapproved artwork origin for {identifier}")
         if entry["origin"] == "licensed-derivative" and not entry.get("permission"):
             raise ValueError(f"Missing derivative permission for {identifier}")
+        if entry["origin"] == "local-derivative" and not relative_to(base, entry.get("derivation", "")).is_file():
+            raise ValueError(f"Missing local derivation record for {identifier}")
         if not entry["role"] or not entry["palette"]:
             raise ValueError(f"Missing asset description for {identifier}")
         ids.add(identifier)

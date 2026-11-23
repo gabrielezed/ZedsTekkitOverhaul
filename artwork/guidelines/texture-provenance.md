@@ -1,11 +1,12 @@
 # Texture provenance
 
-The distributable assets in [assets.json](../manifests/assets.json) are original ZTO pixels informed by the historical material and interface conventions in the local references. The exported PNG bytes can be traced to their authoring PNGs. The old Distillation items, meshes and material atlas are historical ZTO experiments available in Git history.
+The [asset manifest](../manifests/assets.json) records the origin of each packaged PNG. Public baseline textures are original ZTO pixels informed by the local references. The exported PNG bytes can be traced to their authoring PNGs. The old Distillation items, meshes and material atlas are historical ZTO experiments available in Git history.
 
 | Origin | Where to store it |
 | --- | --- |
 | ZTO original or reference-inspired artwork | `source/` plus an explicit runtime path in the manifest |
 | Artwork derived under documented permission | `source/` plus the original source, permission and attribution in its manifest entry |
+| Local machine variants derived from installed Tekkit sprites | Editable PNGs in `source/` and matching runtime copies for a local build. Mark the entries `local-derivative` and link the derivation manifest. Keep the PNGs and packaged variant out of public distribution pending documented permission. |
 | Third-party texture, extracted sprite, original atlas or mixed comparison | Ignored local reference and preview directories |
 | Experimental ZTO art awaiting replacement | Existing owned source or Git history, with its status documented |
 

@@ -1,6 +1,8 @@
 # Industrial machinery
 
-Start with an IC2-style pale steel shell and a single identifiable mechanical feature. The IC2 Macerator has a framed opening, the Compressor has a dark grille, and the BuildCraft tank and pump use simple centered mechanical fittings. See the sampled colors and original ZTO ramps in [industrial.json](../palettes/industrial.json).
+When extending an existing IC2 or BuildCraft machine family, prefer direct derivation from the matching pack sprite. Crop the original 16×16 face into an editable copy and preserve its casing, bevel and material shading. Keep edits focused on the new machine's functional parts. Inspect the front, side and cap together at native size and review a pixel difference overlay. Record the source versions, coordinates, sprite hashes and operations in the [machine derivation manifest](../manifests/machine-derivations.json). Follow the [provenance policy](texture-provenance.md) before distributing the result.
+
+Use the Macerator's framed opening, the Compressor's dark bezel and BuildCraft's centered fittings where they fit the machine's function. For new artwork, see the original ZTO ramps and sampled colors in [industrial.json](../palettes/industrial.json).
 
 | Surface | Treatment |
 | --- | --- |
@@ -14,4 +16,4 @@ Start with an IC2-style pale steel shell and a single identifiable mechanical fe
 
 ### Distillation sheet
 
-The 256×256 Forge sheet is a 16-column grid of 16×16 cells. Columns 0–5 are Boiler, Heater, Column, Condenser, Receiver and Thermometer. Rows 0–4 are front, lateral side, top, bottom and rear. Cell (2,5) is the upper column front. The tank inspection strips and brass pipe bands read vertically in the seven-place stack. Facing metadata selects the front. The lateral pipe band recurs on both sides to support any of the four layouts. The grid coordinates are part of the Java texture contract.
+The 256×256 Forge sheet is a 16-column grid of 16×16 cells. Columns 0–5 are Boiler, Heater, Column, Condenser, Receiver and Thermometer. Rows 0–4 are front, lateral side, top, bottom and rear. Cell (2,5) is the upper column front. Align the chamber and collar edges through the stacked column and put lateral fittings on the same centerline across adjacent machines. Facing metadata selects the front. The grid coordinates are part of the Java texture contract.

@@ -86,6 +86,8 @@ findstr /L /C:"== ERRORS FOUND ==" /C:"FATAL ERROR" "dist-zto\mcp-compile.log" >
 if not errorlevel 1 goto :compile_failed
 findstr /B /L /C:"- Done in " "dist-zto\mcp-compile.log" >nul
 if errorlevel 1 goto :compile_failed
+copy /y "%BUILD_METADATA%" "bin\minecraft\zto-build.properties" >nul
+if errorlevel 1 goto :fail
 
 rem Remove only previously reobfuscated ZTO classes, never vanilla/Forge code.
 if exist "reobf\minecraft\zed\" (

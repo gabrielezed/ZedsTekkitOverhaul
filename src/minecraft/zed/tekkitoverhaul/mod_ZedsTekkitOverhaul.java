@@ -20,6 +20,7 @@ import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
 import zed.tekkitoverhaul.devbridge.DevBridge;
 import zed.tekkitoverhaul.devbridge.MobEquipmentFixture;
+import zed.tekkitoverhaul.client.BuildWatermark;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.emc.EmcIntegration;
@@ -92,6 +93,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
+        cpw.mods.fml.common.FMLCommonHandler.instance().registerTickHandler(
+                new BuildWatermark(ModLoader.getMinecraftInstance()));
         LUNAR.register(this, settings.lunarDebugKey, settings.lunarVerboseLogging,
                 new SiegeDirector(settings.playerAssault, settings.assaultSpawnBudget, settings.assaultWaveInterval,
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,

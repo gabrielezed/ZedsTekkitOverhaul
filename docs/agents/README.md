@@ -6,6 +6,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | --- | --- |
 | Settings, build and deploy | [Configuration](configuration.md), [environment](environment.md), [build provenance](VERSIONING_POLICY.md) |
 | Diving equipment and the LV Air Compressor | [Survival 0.5.1-alpha.1](survival-051-alpha1.md) |
+| Art and build identity | [Artwork suite and style guides](../../artwork/README.md), [cube renderer](../engineering/distillation-cube-rendering.md), [build watermark](../engineering/build-watermark.md) |
 | Selecting checks and managing fixtures | [Test tiers and host launch restriction](testing.md), [Dev Bridge lifecycle](test-automation.md), [workspace hygiene](workspace-hygiene.md) |
 | Calendar, world ownership or rendering | [Lunar implementation](lunar-cycle-implementation.md), [lunar specification](lunar-cycle-system.md) |
 | Natural encounters and replay | [Current implementation](survival-021-implementation.md), [integration evidence](survival-021-integration.md), [Survival contract](SURVIVAL_SIEGE_SPEC.md) |

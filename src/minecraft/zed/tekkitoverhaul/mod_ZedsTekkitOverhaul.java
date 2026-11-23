@@ -31,6 +31,7 @@ import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.inventory.DragDistributionIntegration;
 import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
+import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
@@ -65,6 +66,9 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public String getVersion() { return BuildVersion.VERSION; }
+
+    @Override
+    public String getPriorities() { return "after:mod_IC2;after:mod_BuildCraftTransport"; }
 
     @Override
     public void load() {
@@ -106,6 +110,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AerialPredators.registerEgg(settings.aerialPredatorEgg);
         AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
         AerialPredators.registerMagpieEgg(settings.magpieEgg);
+        UnderwaterRegistry.register(settings);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }

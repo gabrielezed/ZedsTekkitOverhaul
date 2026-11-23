@@ -184,6 +184,25 @@ if errorlevel 1 (
 )
 jar uf "%BUILD_JAR%" -C "dist-zto" zto-build.properties
 if errorlevel 1 goto :fail
+for %%U in (mask oxygen_tank flippers mask_armor oxygen_tank_armor flippers_armor compressor_side compressor_cap compressor_grille) do (
+    jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/textures/underwater/%%U.png" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Missing underwater texture %%U.png in the archive.
+        goto :fail
+    )
+)
+jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/gui/air_compressor.png" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Missing Air Compressor GUI texture in the archive.
+    goto :fail
+)
+for %%U in (UnderwaterRegistry ItemOxygenTank TileAirCompressor ContainerAirCompressor GuiAirCompressor UnderwaterHooks) do (
+    jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/tekkitoverhaul/exploration/underwater/%%U.class" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Missing underwater feature class %%U in the archive.
+        goto :fail
+    )
+)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.

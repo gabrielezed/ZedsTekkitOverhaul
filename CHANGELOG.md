@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.5.1-alpha.1 — Underwater equipment and Air Compressor
+
+- Explore ordinary water with an Underwater Mask, a rechargeable Oxygen Tank and Flippers in vanilla armor slots.
+- Recharge tanks at an LV IC2 Air Compressor with a tank slot and visible oxygen and EU readings.
+- Preserve oxygen in each tank's item data and buffered EU in the compressor's world data.
+- Include original pixel-art sprites, worn textures and a machine interface.
+
 ## 0.4.0-alpha.2 — Tactical site objectives and manual siege testing
 
 - Call or cancel a local Site Siege from the Debug Hub, including daytime tests on a recognized site.

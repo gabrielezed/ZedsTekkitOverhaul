@@ -6,8 +6,8 @@ Edit `minecraft/config/ZedsTekkitOverhaul.cfg` inside the instance while Minecra
 
 | Key | Default | Supported values and effect |
 | --- | --- | --- |
-| `playerAssault` | true | Enables major full-moon encounter admission |
-| `experimentalSiteSieges` | false | Allows an eligible site siege to take the same major admission. Requires `playerAssault`. |
+| `playerAssault` | true | Enables the natural full-moon admission shared by PLAYER_ASSAULT and SITE_SIEGE. Setting it to false disables both natural encounters. |
+| `experimentalSiteSieges` | true | Allows an eligible site siege to take the same major admission. Requires `playerAssault`. The existing key and explicit choices are preserved. Manual test sieges and their census are available independently of both flags. |
 | `siteSiegeStructuralBreaching` | false | Allows a siege Tank on Hard to remove up to two verified vanilla blocks from one frontage. Applies to natural and manual sieges. Wooden entrance pressure has a separate, non-destructive path on Normal and Hard. |
 | `lunarPatrols` | true | First-quarter and waxing-gibbous patrols |
 | `lunarOutdoorLightPressure` | true | Allow the limited artificial-light exception for open lunar encounters. Set false to use ordinary light checks. |

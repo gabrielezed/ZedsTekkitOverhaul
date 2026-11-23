@@ -2,13 +2,23 @@
 ## SITE_SIEGE & Fortress Warfare
 
 **Document type:** Major Gameplay and Technical Design Specification  
-**Status:** Strategic direction and alpha.1 boundary approved. Later phases require separate authorization. Gameplay values remain provisional until owner playtesting.
+**Status:** Survival 0.4 completion campaign. The approved design below remains the acceptance contract. Gameplay values remain provisional until owner playtesting.
 
 **Target:** Minecraft Java 1.2.5 / Tekkit Classic 3.1.2  
 **Prerequisite milestone:** Survival 0.3 — Settlement Recognition  
 **Strategic milestone:** Survival 0.4 — SITE_SIEGE & Fortress Warfare  
 
 ---
+
+## Completion baseline
+
+- **Implemented and previously verified in the pinned pack:** Site-bound lunar and manual admission, loaded exterior routes including supported bridge crossings, bounded ground waves, entrance forcing, opt-in structural breaching, reversible industrial interference, and ground survivor persistence through tactical release, chunk eviction and Save/Quit. The [alpha.4 evidence](survival-040-alpha4.md) identifies the exact tested artifact.
+- **Implemented and awaiting owner acceptance:** The range of fortress layouts that can be defended in ordinary Survival, the readability of ground specialists and reinforcement pacing, and the effectiveness of advanced Tekkit equipment during an encounter.
+- **Required for completion:** Bounded tactical reassessment when routes and specialists change, limited persistent aerial pressure through verified exposed airspace, bounded survivor accounting with explicit unknown states, natural enablement that preserves explicit settings, observable lunar eligibility and recovery, and the acceptance and performance evidence in sections 26–31.
+- **Deferred:** New enemies and defensive machines, Survival 0.5 exploration and End progression, and dedicated multiplayer certification. Existing pack abilities and native world ownership remain the integration points for later work.
+- **Provisional balance:** One natural opportunity per three full moons is the alpha.4 baseline. Compare a two-cycle cadence with the same physical admission and cooldown rules before choosing a release cadence. Higher-threat air pressure may replace a small number of planned ground slots. Geometry, arbitration and local caps can yield zero aerial insertions.
+
+The director owns mobilization and tactical assignments. Every inserted siege actor belongs to the native world after insertion. Tactical release, save, chunk eviction, player absence and elapsed time preserve living siege actors. Native death and Peaceful behavior still apply. A tactical release never establishes a casualty or a cleared battlefield.
 
 # 1. Executive Vision
 
@@ -351,7 +361,7 @@ The encounter ends through success, repulsion, exhaustion, disengagement, player
 
 The system records the outcome and enters a meaningful cooldown.
 
-Remaining owned enemies are cleaned up or released according to documented rules.
+The director releases tactical control of surviving enemies. The native world preserves their bodies and saves them with their chunks.
 
 Temporary sabotage must expire safely.
 
@@ -958,11 +968,7 @@ Save authoritative encounter identity, target site, admission key, consumed even
 
 ## 20.2 Reload
 
-Do not duplicate a consumed lunar event or resurrect an already resolved siege.
-
-Define whether a paused siege resumes or terminates after reopening.
-
-Prefer a conservative policy for the first release.
+Reopening ends the previous tactical session. The natural admission remains consumed, prior waves do not replay, and surviving siege actors restore through native chunk saves.
 
 ## 20.3 Chunk unloading
 
@@ -1169,7 +1175,7 @@ The owner approved moving foundational combined roles and staged reinforcements 
 
 Vanguard, main body and heavy reserve have independent deployment windows. Successful insertions deplete their role slots. Terrain, spawning and the active cap can delay or prevent deployment, and removing the vanguard leaves the reserves eligible. The plan tracks attempts, actual roles, eliminations, withdrawals and undeployed slots. Native Zombies and Skeletons supply infantry. Skirmishers use exterior firing positions and visible defenders. Breachers approach a verified closed entrance. A Tank can deploy late on wide ground and uses its regular sweep against exposed defenders. Occasional single Thieves use visible, physical opportunities and existing recovery. The roster can represent Saboteurs for the future industrial phase.
 
-Specialists retain a site-directed approach and bounded combat. The existing telegraphed objective permits one entrance opening or one opt-in Tank impact with at most two eligible vanilla structural removals. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Counterplay can stop a windup or leave a second barrier intact while reserves continue the encounter. Attackers and waves have finite lifetimes. Reopening a save preserves natural cooldown and Thief recovery without replaying the force.
+Specialists retain a site-directed approach and bounded tactical control. The existing telegraphed objective permits one entrance opening or one opt-in Tank impact with at most two eligible vanilla structural removals. Furniture, modded blocks, TileEntities, inventory and machinery are outside the structural target set. Counterplay can stop a windup or leave a second barrier intact while reserves continue the encounter. Force slots, reinforcement windows and tactical control are finite. Living actors persist in the native world after release. Reopening a save preserves survivors, natural cooldown and Thief recovery without replaying the force.
 
 The owner's waterfront playtest approved a corrective deployment policy for alpha.2. An admitted siege uses loaded physical insertion, exterior connection, collision, footing and population checks. Artificial light and a covered exterior route are compatible with those checks. Ordinary native hostile spawning retains its light policy. The natural encounter remains bound to lunar admission and nighttime execution.
 

@@ -2,6 +2,14 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
+## Survival 0.4.0-alpha.4 · Fortress warfare
+
+- **Site sieges.** Eligible full moons can bring a limited force to a recognized settlement. Walls, cover and bridges shape its approach. Infantry can try another route, and Breachers can switch to a nearby wooden entrance. Structural breaching is opt-in.
+- **Ground and aerial survivors.** High-intensity sieges can send a Skelebird into exposed airspace. Living attackers remain in the world after reinforcements end and can survive chunk unload and Save/Quit.
+- **Natural encounters and manual tests.** Natural site sieges are enabled by default when `playerAssault` is on. Set `experimentalSiteSieges=false` to opt out and keep ordinary lunar assaults eligible. In singleplayer, open **Numpad 1 → SITE_SIEGE** to call or cancel a manual test and inspect the approach, reinforcements and battlefield census.
+
+[Playtest walkthrough](docs/agents/survival-040-acceptance.md#owner-playtest) · [Acceptance and native pack results](docs/agents/survival-040-acceptance.md#final-stabilization-evidence) · [Settings](docs/agents/configuration.md)
+
 ## Survival 0.3.0-alpha.4 · Settlements and shelter
 
 - **Settlement Recognition.** Construction, movement and utility use can establish a persistent site. Connected evidence can link a house and workshop across a short courtyard while keeping a nearby independent outpost separate. Existing site IDs carry forward from alpha.3 saves.

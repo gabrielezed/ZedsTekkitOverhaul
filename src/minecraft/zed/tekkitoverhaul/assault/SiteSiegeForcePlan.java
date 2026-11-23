@@ -8,14 +8,13 @@ import zed.tekkitoverhaul.territory.ThreatAssessment;
 
 /** Frozen admission and roster. A slot has at most one successful insertion. */
 final class SiteSiegeForcePlan {
-    enum Role { ZOMBIE, SKELETON, SKIRMISHER, BREACHER, TANK, THIEF, SABOTEUR }
+    enum Role { ZOMBIE, SKELETON, SKIRMISHER, BREACHER, TANK, THIEF, SABOTEUR, SKELEBIRD }
 
     static final int RETRY_INTERVAL = 8, ATTEMPTS_PER_SLOT = 9, POST_DEPLOYMENT_TACTICS_TICKS = 560;
     final int siteId, difficulty, total, activeCap, tacticsEnd, structuralBudget;
     final ThreatAssessment threat;
     final SiteSiege.Intensity intensity;
     final boolean overridden;
-    final SiteApproach objective;
     final Wave[] waves;
 
     SiteSiegeForcePlan(int siteId, int difficulty, ThreatAssessment threat, SiteSiege.Intensity requested,
@@ -25,7 +24,6 @@ final class SiteSiegeForcePlan {
         this.threat = threat;
         overridden = requested != SiteSiege.Intensity.NATURAL;
         intensity = overridden ? requested : classify(threat);
-        this.objective = objective;
         boolean hard = difficulty >= 3;
         int tier = intensity.ordinal() - SiteSiege.Intensity.LOW.ordinal();
         int[] totals = hard ? new int[] {8, 10, 14, 18}
@@ -66,6 +64,16 @@ final class SiteSiegeForcePlan {
         return false;
     }
 
+    void reserveAerialSlot() {
+        Wave reinforcement = waves[1];
+        for (int i = reinforcement.roles.length - 1; i >= 0; --i) {
+            Role role = reinforcement.roles[i];
+            if (role != Role.ZOMBIE && role != Role.SKELETON) continue;
+            reinforcement.roles[i] = Role.SKELEBIRD;
+            return;
+        }
+    }
+
     private static SiteSiege.Intensity classify(ThreatAssessment assessment) {
         int threat = assessment == null ? 0 : assessment.threat;
         if (threat >= ThreatAssessment.MAX - 5) return SiteSiege.Intensity.MAXIMUM;
@@ -96,7 +104,7 @@ final class SiteSiegeForcePlan {
             if (headroom == 1) {
                 for (int slot = 0; slot < roles.length; slot++) {
                     Role role = roles[slot];
-                    if ((role == Role.TANK || role == Role.BREACHER) && pending(slot)) return slot;
+                    if ((role == Role.TANK || role == Role.BREACHER || role == Role.SKELEBIRD) && pending(slot)) return slot;
                 }
             }
             for (int i = 0; i < roles.length; i++) {

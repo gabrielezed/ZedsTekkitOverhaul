@@ -35,7 +35,7 @@ public final class ZtoConfig {
         Values values = new Values(primary, legacy, log, entries);
         values.section("Survival");
         playerAssault = values.flag("playerAssault", true);
-        experimentalSiteSieges = values.flag("experimentalSiteSieges", false);
+        experimentalSiteSieges = values.flag("experimentalSiteSieges", true);
         siteSiegeStructuralBreaching = values.flag("siteSiegeStructuralBreaching", false);
         lunarPatrols = values.flag("lunarPatrols", true);
         lunarOutdoorLightPressure = values.flag("lunarOutdoorLightPressure", true);

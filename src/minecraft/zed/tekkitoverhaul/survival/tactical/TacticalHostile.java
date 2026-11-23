@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.survival.tactical;
 
+import net.minecraft.src.DamageSource;
 import net.minecraft.src.EntityAISwimming;
 import net.minecraft.src.EntityMob;
 import net.minecraft.src.EntityPlayer;
@@ -10,10 +11,24 @@ import net.minecraft.src.PathEntity;
 import net.minecraft.src.PathPoint;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.survival.Shoreline;
 
 /** Shared local-world lifecycle and bounded access to legacy navigation. */
-public abstract class TacticalHostile extends EntityMob {
+public abstract class TacticalHostile extends EntityMob implements SiegeCensus.Participant {
+    private final SiegeCensus.Actor siegeActor = new SiegeCensus.Actor();
+
+    @Override public final SiegeCensus.Actor siegeActor() { return siegeActor; }
+
+    @Override public void onUpdate() {
+        super.onUpdate();
+        if (siegeSite > 0) siegeActor.observe(this, siegeSite);
+    }
+
+    @Override public void onDeath(DamageSource source) {
+        super.onDeath(source);
+        if (dead && siegeSite > 0) siegeActor.died(this, siegeSite);
+    }
     private static final float PATH_RANGE = 16.0F;
     private static final int PATH_CACHE_RADIUS = (int) PATH_RANGE + 8;
     private static final double TARGET_RANGE = 16.0D;
@@ -97,12 +112,14 @@ public abstract class TacticalHostile extends EntityMob {
     @Override public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         if (siegeSite > 0) tag.setInteger("ZTOSiegeSite", siegeSite);
+        siegeActor.write(tag);
     }
 
     @Override public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
         siegeSite = tag.getTag("ZTOSiegeSite") instanceof NBTTagInt
                 ? Math.max(0, tag.getInteger("ZTOSiegeSite")) : 0;
+        siegeActor.read(tag, siegeSite);
     }
 
     @Override

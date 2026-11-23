@@ -1,25 +1,49 @@
 import java.io.File;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import zed.tekkitoverhaul.assault.AssaultWorldState;
+import zed.tekkitoverhaul.assault.SiegeCensus;
 import zed.tekkitoverhaul.assault.SiegeDirector;
+import zed.tekkitoverhaul.assault.SiegeZombie;
 import zed.tekkitoverhaul.assault.SiteSiege;
 import zed.tekkitoverhaul.lunar.LunarCalendar;
 import zed.tekkitoverhaul.lunar.LunarSnapshot;
 import zed.tekkitoverhaul.settlement.SiteSnapshot.Coverage;
+import zed.tekkitoverhaul.survival.aerial.AerialEcology;
+import zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.Flight;
+import zed.tekkitoverhaul.survival.aerial.EntitySkelebird;
+import zed.tekkitoverhaul.territory.NaturalSpawnPressure;
+import zed.tekkitoverhaul.territory.TerritorialActivityService;
 
 /** Exercises the exact local command mailbox and native tactical execution without rendering. */
 public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
-    TacticalSiteSiegeProbe(File root) throws Exception { super(root); }
+    private final File root;
+
+    TacticalSiteSiegeProbe(File root) throws Exception {
+        super(root);
+        this.root = root;
+    }
 
     public static void main(String[] args) {
         try {
             TacticalSiteSiegeProbe probe = new TacticalSiteSiegeProbe(new File(args[0]));
             probe.manualSiege();
-            probe.tacticalSieges();
+            probe.aerialSurvivor();
             probe.sideEntrance();
-            probe.naturalEntrance();
-            probe.naturalArbitration();
-            probe.undergroundAndPopulation();
+            probe.breacherAlternateEntrance();
+            probe.battlefieldHistory();
+            probe.releasedInfantryCensus();
+            if (args.length < 2) {
+                probe.tacticalSieges();
+                probe.naturalEntrance();
+                probe.naturalArbitration();
+                probe.undergroundAndPopulation();
+            }
         } catch (Throwable failure) {
             failure.printStackTrace();
             System.exit(1);
@@ -137,8 +161,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         SiteSiege.Snapshot absent = director.siteSiegeSnapshot(world);
         check("PLAYER_ABSENT".equals(absent.outcome) && absent.inserted == inserted,
                 "retreat stops further reinforcements", here());
-        long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
-                .filter(entity -> !((yy) entity).G).count();
+        long surviving = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count();
         check(surviving > 0, "live siege infantry available for native chunk eviction", here());
         world.auditChunks = false;
         world.a(new uh(0, Y, 0));
@@ -153,13 +176,14 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         }
         provider.a();
         world.n();
+        ce.a.a();
         check(world.b.stream().noneMatch(TacticalSiteSiegeProbe::infantry),
                 "evicted infantry leave the loaded world list", here());
         position(X + 2, Y, Z + 2);
         prepare(X, Z);
-        check(world.b.stream().filter(TacticalSiteSiegeProbe::infantry)
-                        .filter(entity -> !((yy) entity).G).count() == surviving,
-                "native chunk reload restores the infantry once", here());
+        long restoredInfantry = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count();
+        check(restoredInfantry == surviving,
+                "native chunk reload restores the infantry once (" + surviving + " -> " + restoredInfantry + ")", here());
         save();
         director.bind(null, null);
         open("siege-debug", false);
@@ -172,7 +196,7 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         ady reopened = new ady();
         ((AssaultWorldState) world.a(AssaultWorldState.class, "zto_player_assault")).b(reopened);
         check(original.equals(reopened) && director.siteSiegeSnapshot(world).kind == SiegeDirector.EncounterKind.NONE
-                        && world.b.stream().filter(TacticalSiteSiegeProbe::infantry).count() == surviving
+                        && world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).count() == surviving
                         && settlements.resolve(world, site).coverage == Coverage.PARTIAL,
                 "save/reopen restores infantry and preserves natural records | records match "
                         + original.equals(reopened) + " | " + siegeDetails(director.siteSiegeSnapshot(world))
@@ -194,6 +218,132 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
         return type.equals("DebugSiegeSkeleton") || type.equals("SiegeZombie");
     }
 
+    private static boolean livingInfantry(Object entity) {
+        return infantry(entity) && !((yy) entity).G && ((yy) entity).bb() > 0;
+    }
+
+    private void aerialSurvivor() throws Exception {
+        Method register = aao.class.getDeclaredMethod("a", Class.class, String.class, int.class);
+        register.setAccessible(true);
+        register.invoke(null, EntitySkelebird.class, "ZTO.Skelebird", 218);
+        open("siege-aerial-survivor", false);
+        prepare(X, Z);
+        room(X, Y, Z, true);
+        position(X + 2, Y, Z + 2);
+        walk();
+        ticks(560);
+        int site = recognized("aerial siege cabin", true).id;
+        toggle(X, Y, Z + 2);
+        position(X - 1, Y, Z + 2);
+        world.d.add(player);
+        world.q = 3;
+        long day = 6000;
+        LunarCalendar calendar = siegeCalendar(73, day, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        TerritorialActivityService territory = new TerritorialActivityService();
+        NaturalSpawnPressure spawning = new NaturalSpawnPressure(territory, 70, true);
+        AerialEcology air = new AerialEcology(false, true, 90, territory, spawning);
+        territory.bind(world);
+        spawning.bind(world);
+        air.bind(world);
+        director.attachAerialEcology(air);
+        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.MAXIMUM);
+        long tick = day;
+        while (tick < day + 720 && siteBird() == null) {
+            siegeTicks(director, calendar, ++tick, 1);
+            air.tick(player, false);
+        }
+        EntitySkelebird bird = siteBird();
+        SiteSiege.Snapshot deployed = director.siteSiegeSnapshot(world);
+        check(bird != null && bird.siegeSite() == site && deployed.activeAerial == 1
+                && deployed.inserted <= deployed.planned && deployed.censusInserted == deployed.inserted
+                && deployed.censusLoaded > 0, "siege spends one reserved air slot: "
+                + deployed.aerialStatus + " | " + siegeDetails(deployed), here());
+        beginSamples();
+        siegeTicks(director, calendar, tick + 1, 96);
+        tick += 96;
+        endSamples("combined siege air and ground");
+        bird.l(9);
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, ++tick, 1);
+        check(director.siteSiegeSnapshot(world).activeAerial == 0
+                && bird.encounterStatus().equals("Persistent siege survivor"), "release clears tactical control", here());
+        double departureX = bird.o, departureZ = bird.q;
+        siegeTicks(director, calendar, tick + 1, 1100);
+        check(!bird.G && bird.bb() == 9 && (bird.o != departureX || bird.q != departureZ),
+                "bird flies beyond the former wild lifetime", here());
+        int cx = (int) Math.floor(bird.o) >> 4, cz = (int) Math.floor(bird.q) >> 4;
+        int deathsBeforeEviction = director.siteSiegeSnapshot(world).censusDead;
+        world.a(new uh(0, Y, 0));
+        position(X + 512, Y, Z + 2);
+        ko provider = (ko) world.z();
+        provider.d(cx, cz);
+        provider.a();
+        world.n();
+        SiteSiege.Snapshot evicted = director.siteSiegeSnapshot(world);
+        check(siteBird() == null && evicted.censusUnloaded + evicted.censusUnknown > 0 && evicted.censusDead == deathsBeforeEviction,
+                "native eviction removes the loaded observation without confirming death: bird still loaded " + (siteBird() != null)
+                        + " | unloaded " + evicted.censusUnloaded + " | unknown " + evicted.censusUnknown
+                        + " | dead " + deathsBeforeEviction + " -> " + evicted.censusDead, here());
+        world.d(cx, cz);
+        check(siteBird() != null && siteBird() != bird, "native chunk loading reconstructs the bird", here());
+        save();
+        director.bind(null, null);
+        open("siege-aerial-survivor", false);
+        world.d(cx, cz);
+        bird = siteBird();
+        check(bird != null && bird.siegeSite() == site && bird.bb() == 9
+                && bird.encounterStatus().equals("Persistent siege survivor")
+                && world.b.stream().filter(EntitySkelebird.class::isInstance).count() == 1,
+                "Save/Quit reconstructs exactly one healthy, released siege bird", here());
+        world.d.add(player);
+        calendar = siegeCalendar(74, day, Long.MIN_VALUE);
+        director = siegeDirector(false, calendar);
+        SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+        check(reopened.censusSite == site && reopened.censusInserted == deployed.censusInserted
+                && reopened.censusDead == deathsBeforeEviction && reopened.censusUnknown > 0 && reopened.censusReleased > 0,
+                "recent insertions and releases persist across reopening before new observations", here());
+        ady savedBird = new ady();
+        check(bird.c(savedBird), "save restored native Skelebird", here());
+        savedBird.a("ZTOSiegeCensus", -1);
+        EntitySkelebird legacyBird = (EntitySkelebird) aao.a(savedBird, world);
+        check(legacyBird != null && legacyBird.siegeSite() == site && legacyBird.bb() == bird.bb(),
+                "malformed optional actor census preserves the native body and site origin", here());
+        prepare(X + 40, Z + 16);
+        world.a(18000L);
+        player.c(X + 40.5, 26, Z + 16.5, 0, 0);
+        player.z = false;
+        player.l(20);
+        player.r = player.s = player.t = 0;
+        bird.c(X + 24, 32, Z + 16.5, -90, 0);
+        bird.r = bird.s = bird.t = 0;
+        java.lang.reflect.Field random = nn.class.getDeclaredField("U");
+        random.setAccessible(true);
+        random.set(bird, new java.util.Random(3865L));
+        // Start the combat probe after the variable post-reload search delay has elapsed.
+        java.lang.reflect.Field scanDelay = zed.tekkitoverhaul.survival.aerial.EntityAerialPredator.class
+                .getDeclaredField("scanDelay");
+        scanDelay.setAccessible(true);
+        scanDelay.setInt(bird, 1);
+        boolean committed = false;
+        for (int i = 0; i < 300 && !committed; ++i) {
+            world.a(bird, true);
+            committed = bird.flight() == Flight.DIVE;
+        }
+        check(committed, "restored bird reacquires a pilot and commits a real dive: " + bird.diveStatus(), here());
+        for (int i = 0; i < 45 && bird.flight() == Flight.DIVE; ++i) world.a(bird, true);
+        check(player.bb() < 20, "restored siege bird retains native slashing contact", here());
+        bird.a(md.a(player), 100);
+        check(bird.bb() <= 0 && director.siteSiegeSnapshot(world).censusDead == deathsBeforeEviction + 1,
+                "native death after Save/Quit closes exactly one retained record before another tick", here());
+        System.out.println("PASS native siege Skelebird slot, release, lifetime, flight, chunk eviction and saved identity");
+    }
+
+    private EntitySkelebird siteBird() {
+        for (Object entity : world.b) if (entity instanceof EntitySkelebird) return (EntitySkelebird) entity;
+        return null;
+    }
+
     private void sideEntrance() throws Exception {
         tacticalHouse("siege-offset-east-door", 4, false);
         int x = X + 4, z = Z + 1;
@@ -208,7 +358,237 @@ public class TacticalSiteSiegeProbe extends SiteSiegeProbe {
                 "east door takes priority over western frontage", here());
         siegeTicks(director, calendar, windup, 70);
         check((world.e(x, Y, z) & 4) != 0, "Breacher opens the offset east door", here());
+        world.d(x, Y, z, 64, 0);
+        world.d(X, Y, Z + 2, 64, 4);
+        world.d(X, Y + 1, Z + 2, 64, 8);
+        siegeTicks(director, calendar, windup + 70, 75);
+        SiteSiege.Snapshot after = director.siteSiegeSnapshot(world);
+        check(after.reassessments > 0 && after.reassessments <= 8 && after.reassessment.startsWith("ALTERNATE_")
+                && (world.e(x, Y, z) & 4) == 0 && (world.e(X, Y, Z + 2) & 4) != 0,
+                "reclosed east door triggers bounded reassessment with the west door open: " + after.reassessment, here());
+        System.out.println("PASS east entrance reclosed, alternate west approach reassessed in " + after.reassessments + " samples");
         director.bind(null, null);
+    }
+
+    private void battlefieldHistory() throws Exception {
+        String name = "siege-battlefield-history";
+        int outpost = X + 80;
+        open(name, false);
+        int[] sites = new int[2];
+        int[] starts = {X, outpost};
+        for (int i = 0; i < starts.length; ++i) {
+            int x = starts[i];
+            prepare(x, Z);
+            room(x, Y, Z, true);
+            world.g(x + 1, Y, Z + 1, 61);
+            position(x + 2, Y, Z + 2);
+            walk();
+            ticks(560);
+            sites[i] = recognized("battlefield history workshop " + (i + 1), true).id;
+            toggle(x, Y, Z + 2);
+        }
+        check(sites[0] != sites[1], "history uses two independent workshops", here());
+        world.d.add(player);
+        long time = 14000;
+        LunarCalendar calendar = siegeCalendar(81, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        profileHistory("no previous sieges", director, calendar, time);
+        time += 320;
+        int[] expected = new int[2];
+        for (int run = 0; run < 4; ++run) {
+            int index = run % sites.length;
+            position(starts[index] + 2, Y, Z + 2);
+            director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.LOW);
+            siegeTicks(director, calendar, time, 80);
+            time += 80;
+            SiteSiege.Snapshot active = director.siteSiegeSnapshot(world);
+            expected[index] += active.inserted;
+            check(active.site == sites[index] && active.inserted > 0 && active.censusInserted == expected[index]
+                    && active.peak <= active.activeCap, "bounded independent site accounting: " + siegeDetails(active), here());
+            director.cancelTestSiege(world);
+            siegeTicks(director, calendar, time++, 1);
+            SiteSiege.Snapshot released = director.siteSiegeSnapshot(world);
+            check(released.active == 0 && released.censusReleased > 0 && released.censusLoaded > 0,
+                    "history records actual surviving actors after tactical release", here());
+        }
+        int total = expected[0] + expected[1];
+        profileHistory("four mobilizations across two sites", director, calendar, time);
+        long saveStart = System.nanoTime();
+        save();
+        long saveMicros = (System.nanoTime() - saveStart) / 1000;
+        long bytes = Files.size(new File(root, name + "/data/zto_siege_census.dat").toPath());
+        check(bytes < 32768, "recent native census stays compact", here());
+        director.bind(null, null);
+        for (int round = 0; round < 2; ++round) {
+            open(name, false);
+            prepare(X, Z);
+            prepare(outpost, Z);
+            position(outpost + 2, Y, Z + 2);
+            world.d.add(player);
+            calendar = siegeCalendar(82 + round, time, Long.MIN_VALUE);
+            director = siegeDirector(false, calendar);
+            SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+            check(reopened.censusSite == sites[1] && reopened.censusInserted == expected[1]
+                    && world.b.stream().filter(TacticalSiteSiegeProbe::infantry).count() == total,
+                    "repeat native reopen preserves exact infantry and retained records", here());
+            profileHistory("reopened " + (round + 1), director, calendar, time);
+            save();
+            director.bind(null, null);
+        }
+        check(Files.size(new File(root, name + "/data/zto_siege_census.dat").toPath()) == bytes,
+                "unchanged census does not grow from reopening", here());
+        long dusk = siegeDusk(0);
+        calendar = siegeCalendar(84, dusk - 1, Long.MIN_VALUE);
+        walk();
+        ticks(150);
+        director = siegeDirector(true, calendar);
+        world.auditChunks = true;
+        long afterAdmission = waitForSiege(director, calendar, dusk);
+        SiteSiege.Snapshot natural = director.siteSiegeSnapshot(world);
+        check(natural.kind == SiegeDirector.EncounterKind.SITE_SIEGE && natural.site == sites[1] && natural.inserted > 0
+                && natural.censusInserted == expected[1] + natural.inserted && natural.censusLoaded > natural.active
+                && world.chunkMisses == 0,
+                "natural admission budgets the residual population on a previously besieged site: " + siegeDetails(natural), here());
+        save();
+        director.bind(null, null);
+        open(name, false);
+        prepare(outpost, Z);
+        position(outpost + 2, Y, Z + 2);
+        world.d.add(player);
+        calendar = siegeCalendar(85, afterAdmission, Long.MIN_VALUE);
+        director = siegeDirector(true, calendar);
+        siegeTicks(director, calendar, afterAdmission + 1, 100);
+        check(director.siteSiegeSnapshot(world).censusInserted == natural.censusInserted
+                && director.siteSiegeSnapshot(world).inserted == 0 && director.snapshot(world).starts == 0,
+                "reopening the natural mobilization adds zero reinforcements", here());
+        SiegeCensus malformed = new SiegeCensus("fixture");
+        ady bad = new ady();
+        bad.a("Version", 1);
+        bad.a("Records", 7);
+        malformed.a(bad);
+        malformed.b(new ady());
+        System.out.printf(Locale.ROOT, "PASS recent history two sites, four manual mobilizations, two reopens, %d actors, census %d bytes, native save %d us, natural admission and no replay%n",
+                total, bytes, saveMicros);
+    }
+
+    private void releasedInfantryCensus() throws Exception {
+        String name = "siege-census-retention";
+        int site = tacticalHouse(name, 64, false);
+        toggle(X, Y, Z + 2);
+        long dusk = siegeDusk(0);
+        LunarCalendar calendar = siegeCalendar(86, dusk - 1, Long.MIN_VALUE);
+        SiegeDirector director = new SiegeDirector(false, 15, 900, 8, 16, false, true, false);
+        director.attachSites(true, settlements);
+        director.bind(world, calendar.view());
+        siegeTicks(director, calendar, dusk, 20);
+        check(director.snapshot(world).starts == 0 && !director.siteSiegeSnapshot(world).naturalEnabled,
+                "disabling the major authority suppresses both natural encounters", here());
+        director.requestTestSiege(world, player, SiteSiege.Profile.PERIMETER, SiteSiege.Intensity.LOW);
+        siegeTicks(director, calendar, dusk + 20, 105);
+        director.cancelTestSiege(world);
+        siegeTicks(director, calendar, dusk + 125, 1);
+        SiteSiege.Snapshot released = director.siteSiegeSnapshot(world);
+        check(released.active == 0 && released.censusReleased >= 3 && released.censusDead == 0,
+                "manual siege and census remain available with major admission disabled", here());
+        List<yy> survivors = new ArrayList<yy>();
+        for (Object entity : world.b) if (infantry(entity)) survivors.add((yy) entity);
+        yy oldest = survivors.get(0);
+        ady ticket = new ady();
+        check(oldest.c(ticket), "save oldest living infantry identity", here());
+        yy duplicate = (yy) aao.a(ticket, world);
+        duplicate.c(X - 4, Y, Z + 2, 0, 0);
+        check(world.a(duplicate), "insert intentionally duplicated optional identity", here());
+        world.a(duplicate, true);
+        SiteSiege.Snapshot conflict = director.siteSiegeSnapshot(world);
+        check(conflict.censusTruncated && conflict.censusLoaded == released.censusLoaded,
+                "an injected duplicate leaves the original observation intact", here());
+        duplicate.a(md.a(player), 100);
+        check(oldest.bb() > 0 && director.siteSiegeSnapshot(world).censusDead == 0,
+                "death of a conflicting copy does not mark the surviving original dead", here());
+
+        survivors.get(1).a(md.a(player), 100);
+        check(director.siteSiegeSnapshot(world).censusDead == 1,
+                "released infantry death is recorded before another native tick", here());
+        yy missing = survivors.get(2);
+        missing.l(0);
+        world.a(missing, true);
+        world.e(missing);
+        check(director.siteSiegeSnapshot(world).censusDead == 1 && director.siteSiegeSnapshot(world).censusUnknown > 0,
+                "zero-health disappearance without a committed death stays unknown", here());
+
+        SiegeCensus census = (SiegeCensus) world.a(SiegeCensus.class, "zto_siege_census");
+        Method insert = SiegeCensus.class.getDeclaredMethod("inserted", acq.class, int.class, UUID.class, boolean.class);
+        insert.setAccessible(true);
+        UUID mobilization = UUID.randomUUID();
+        // Exercise the retention boundary without increasing any real siege force budget.
+        for (int i = 0; i < 256; ++i) {
+            insert.invoke(census, new SiegeZombie(world), site, mobilization, true);
+        }
+        SiteSiege.Snapshot retained = director.siteSiegeSnapshot(world);
+        check(retained.censusInserted == 256 && retained.censusTruncated && !oldest.G && oldest.bb() > 0,
+                "evicting the oldest diagnostic row leaves its native actor alive", here());
+        save();
+        director.bind(null, null);
+        open(name, false);
+        prepare(X, Z);
+        world.d.add(player);
+        calendar = siegeCalendar(87, dusk + 125, Long.MIN_VALUE);
+        director.bind(world, calendar.view());
+        SiteSiege.Snapshot reopened = director.siteSiegeSnapshot(world);
+        check(reopened.censusInserted == 256 && reopened.censusUnknown == 256 && reopened.censusTruncated,
+                "native save preserves the bounded history independently of restored actors", here());
+        long matching = world.b.stream().filter(TacticalSiteSiegeProbe::livingInfantry).map(actor -> {
+            ady saved = new ady();
+            return ((yy) actor).c(saved) ? saved.m("ZTOSiegeCensus") : new ady();
+        }).filter(ticket.m("ZTOSiegeCensus")::equals).count();
+        check(matching == 1, "native reopen restores the oldest living identity once despite census eviction (" + matching + ")", here());
+        System.out.println("PASS manual census with major admission disabled, immediate released deaths, conflicting identity, unknown disappearance and 256-row eviction");
+    }
+
+    private void breacherAlternateEntrance() throws Exception {
+        int site = tacticalHouse("siege-breacher-alternate", 64, false);
+        int firstDoor = Z + 2, alternateDoor = Z + 1;
+        world.d(X, Y, alternateDoor, 64, 0);
+        world.d(X, Y + 1, alternateDoor, 64, 8);
+        long time = 6000;
+        LunarCalendar calendar = siegeCalendar(75, time, Long.MIN_VALUE);
+        SiegeDirector director = siegeDirector(false, calendar);
+        director.requestTestSiege(world, player, SiteSiege.Profile.BREACH, SiteSiege.Intensity.MAXIMUM);
+        time = waitForPhase(director, calendar, time, "PRESSURING");
+        check(director.siteSiegeSnapshot(world).objectiveTarget.equals(X + "," + Y + "," + firstDoor),
+                "original door selected before change", here());
+        world.g(X, Y + 1, firstDoor, 4);
+        world.g(X, Y, firstDoor, 4);
+        siegeTicks(director, calendar, time, 180);
+        SiteSiege.Snapshot finalView = director.siteSiegeSnapshot(world);
+        check(finalView.site == site && finalView.reassessment.equals("ALTERNATE_ENTRANCE_ASSIGNED")
+                && finalView.objectiveTarget.equals(X + "," + Y + "," + alternateDoor)
+                && (world.e(X, Y, alternateDoor) & 4) != 0 && world.a(X, Y, firstDoor) == 4
+                && finalView.entranceChanges == 1 && Integer.valueOf(1).equals(finalView.insertedRoles.get("BREACHER")),
+                "existing Breacher walks to the alternate door and opens it: " + siegeDetails(finalView), here());
+        director.bind(null, null);
+        System.out.println("PASS one Breacher changes physical objective without a replacement spawn");
+    }
+
+    private void profileHistory(String label, SiegeDirector director, LunarCalendar calendar, long time) {
+        long[] nativeTicks = new long[256], snapshots = new long[256];
+        siegeTicks(director, calendar, time, 64);
+        for (int i = 0; i < nativeTicks.length; ++i) {
+            long start = System.nanoTime();
+            siegeTicks(director, calendar, time + i + 64, 1);
+            nativeTicks[i] = System.nanoTime() - start;
+            start = System.nanoTime();
+            director.siteSiegeSnapshot(world);
+            snapshots[i] = System.nanoTime() - start;
+        }
+        System.out.println("PROFILE history " + label + " | fixture " + percentiles(nativeTicks)
+                + " | census and director snapshot " + percentiles(snapshots));
+    }
+
+    private static String percentiles(long[] samples) {
+        Arrays.sort(samples);
+        return String.format(Locale.ROOT, "n=%d us median=%.2f p95=%.2f p99=%.2f max=%.2f", samples.length,
+                samples[127] / 1000.0, samples[243] / 1000.0, samples[253] / 1000.0, samples[255] / 1000.0);
     }
 
     private void tacticalSieges() throws Exception {

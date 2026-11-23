@@ -32,6 +32,7 @@ public final class AerialEcology {
     private AerialEcologyState state;
     private AerialEncounter encounter;
     private boolean lunar;
+    private boolean siteSiege;
     private double lunarX, lunarZ;
     private String lunarStatus = "No lunar request";
     private AerialExposure exposure = new AerialExposure();
@@ -165,6 +166,51 @@ public final class AerialEcology {
     }
 
     public String lunarStatus() { return lunarStatus; }
+
+    public boolean siteSiegeAvailable() { return state != null; }
+
+    /** Attempts one already-reserved slot, from a verified exterior column of the selected site. */
+    public EntitySkelebird admitSiteSiege(World context, EntityPlayer player, int site,
+            int x, int y, int z, int goalX, int goalZ) {
+        if (context != world || state == null || encounter != null || state.cooldownSeconds > 0
+                || !eligible(player) || JetpackWeather.LOCAL.protects(player)) return null;
+        AerialExposure sample = new AerialExposure();
+        sample.sample(player);
+        if (sample.band == AerialExposure.Band.COVERED) return null;
+        NaturalSpawnPressure.Snapshot nativePass = naturalSpawning.snapshot(world);
+        if (nativePass != null && nativePass.hookActive && !nativePass.hostileEnabled) return null;
+        if (populationRoom(player, ordinaryCap(nativePass)) == 0) return null;
+
+        double dx = goalX - x, dz = goalZ - z;
+        double length = Math.sqrt(dx * dx + dz * dz);
+        if (length < 5) return null;
+        double sx = x + 0.5, sz = z + 0.5;
+        if (!AerialTerrain.loaded(world, sx, sz, goalX + 0.5, goalZ + 0.5)) return null;
+        double altitude = Math.max(y + 9, world.getPrecipitationHeight(x, z) + 5);
+        EntitySkelebird bird = new EntitySkelebird(world);
+        bird.setLocationAndAngles(sx, altitude, sz, (float) Math.toDegrees(Math.atan2(-dx, dz)), 0);
+        double dy = altitude - player.posY;
+        if (Math.abs(dy) > 22 || bird.getDistanceSqToEntity(player) < 12 * 12
+                || bird.getDistanceSqToEntity(player) > 36 * 36 || !siteClear(bird, -dx / length, -dz / length))
+            return null;
+        bird.markSiegeOrigin(site);
+        if (!world.spawnEntityInWorld(bird)) return null;
+        encounter = new AerialEncounter(player, !player.onGround && sample.height >= 8, true, false,
+                goalX + 0.5, goalZ + 0.5);
+        encounter.add(bird, 0);
+        siteSiege = true;
+        state.reserve(cooldownSeconds);
+        ++admissions;
+        return bird;
+    }
+
+    public boolean controlsSiteBird(EntitySkelebird bird) {
+        return siteSiege && encounter != null && bird.belongsTo(encounter);
+    }
+
+    public void endSiteSiege(EntitySkelebird bird, String reason) {
+        if (controlsSiteBird(bird)) finish(reason);
+    }
 
     private int ordinaryCap(NaturalSpawnPressure.Snapshot nativePass) {
         return nativePass != null && nativePass.hookActive && nativePass.effectiveCap > 0
@@ -309,6 +355,7 @@ public final class AerialEcology {
         encounter = null;
         if (lunar) lunarStatus = "Ended: " + reason;
         lunar = false;
+        siteSiege = false;
         status = "Encounter cooldown";
         lastEnd = reason;
     }

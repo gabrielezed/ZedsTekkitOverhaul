@@ -1,8 +1,10 @@
 # Current implementation
 
+The `0.5.1-alpha.1` candidate adds underwater equipment and an IC2 Air Compressor for ordinary water. [Implementation and owner walkthrough](survival-051-alpha1.md).
+
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)
 
-The current candidate identifies itself as `0.4.0-alpha.4`. Ground siege actors persist across tactical release and native saves. [Battlefield lifecycle and owner walkthrough](survival-040-alpha4.md). [Industrial infiltration and siege lifecycle](survival-040-alpha3.md). Natural site sieges and the local Debug Hub use the same site-based tactics. A force scales with threat at the selected site and admission difficulty. Infantry and Enderkin deploy in bounded waves around one verified site objective. Lit and covered exterior routes, supported bridge turns and one-block steps can connect the force to a recognized waterfront site. The monitor can call and cancel a test siege in daylight with a separate intensity override. [Architecture and owner walkthrough](survival-040-alpha2.md)
+Survival `0.4.0-alpha.4` made ground siege actors persist across tactical release and native saves. [Battlefield lifecycle and owner walkthrough](survival-040-alpha4.md). [Industrial infiltration and siege lifecycle](survival-040-alpha3.md). Natural site sieges and the local Debug Hub use the same site-based tactics. A force scales with threat at the selected site and admission difficulty. Infantry and Enderkin deploy in bounded waves around one verified site objective. Lit and covered exterior routes, supported bridge turns and one-block steps can connect the force to a recognized waterfront site. The monitor can call and cancel a test siege in daylight with a separate intensity override. [Architecture and owner walkthrough](survival-040-alpha2.md)
 
 The completion candidate adds bounded route reassessment, limited persistent Skelebird support, a recent battlefield census and default natural admission for configurations without an explicit setting. The version remains alpha pending the [completion acceptance matrix and owner campaign](survival-040-acceptance.md).
 
@@ -25,6 +27,7 @@ Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a w
 | `survival.aerial` | Fugl wildlife and staggered dives, Skelebird nocturnal crossing passes, bounded full-moon air slots and Electric Jetpack weather faults. [Fugl and jetpack](survival-022-aerial-predator.md) · [Skelebird](survival-022-skelebird.md) |
 | `creative`, `crafting`, `integration.inventory` | Asset-backed Creative UI, crafting assistance and legacy mouse dispatch. [Creative guide](../engineering/creative-inventory-backport.md) |
 | `hopper`, `render`, `power`, `distillation`, `fluids`, `emc` | Experimental machines, Foundry visuals and pack adapters. Preserve IDs, NBT and economic behavior. [Integration boundaries](integrations.md) |
+| `exploration.underwater` | Diving equipment, persistent item oxygen, water-specific hooks and the LV Air Compressor. [Underwater equipment](survival-051-alpha1.md) |
 | `devbridge`, lunar debug views | Numpad 1 opens the local Debug Hub. Dev Bridge provides optional observations and gated disposable-world tools. [Diagnostics protocol](dev-bridge.md) |
 
 Run `zto-tools/test-config.ps1` and `zto-tools/test-lunar-calendar.bat` for fast settings and lunar checks. Use `zto-tools/build-and-deploy.bat` for compilation, reobfuscation and packaging. Select the relevant silent Tekkit Dev probes from the [test map](testing.md).

@@ -9,7 +9,7 @@ param(
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
         'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain',
-        'site-siege-completion')][string]$Focus
+        'site-siege-completion','underwater')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,6 +65,7 @@ try {
         $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -in 'site-siege-terrain','site-siege-completion')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
+        if ($Focus -eq 'underwater') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/UnderwaterEquipmentProbe.java' }
         if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSettlementProbe.java'
             $compileClasspath = $moddedClasspath
@@ -92,6 +93,16 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
+            if ($Focus -eq 'underwater') {
+                $fixture = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'underwater-fixture')
+                $config = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'config')
+                Copy-Item -LiteralPath (Join-Path $game 'config/IC2.cfg') -Destination $config.FullName
+                $buildcraftConfig = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'buildcraft/config')
+                Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
+                & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath UnderwaterEquipmentProbe $fixture.FullName
+                if ($LASTEXITCODE) { throw 'Native underwater fixture failed.' }
+                return
+            }
             if ($Focus -eq 'biome') {
                 & $PackJava '-Xverify:all' "-javaagent:$agent" -cp ($headless -join ';') BiomeEcologyProbe $out.FullName
                 if ($LASTEXITCODE) { throw 'Biome ecology probe failed.' }

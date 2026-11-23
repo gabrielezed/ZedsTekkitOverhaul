@@ -15,6 +15,7 @@ Evidence levels are `SOURCE_PRESENT`, `HOOK_ACTIVE` (transformation and callback
 | IC2 BatBox/MFE/MFSU and CompactSolars LV/MV/HV (IC2/CompactSolars) | Historical EU offer gates | Historical live EU measurements passed. Direct hooks were removed. | Restore the exact offers and exercise direct native EU receivers. | Yes when installed |
 | RedPower Relay and EE2 Collectors Mk1–Mk3 (RedPower/EE2) | Historical Relay extraction and Collector tick gates | Historical native output and conservation passed. Direct hooks were removed. | Restore and repeat the Relay and Collector fixtures. | Yes when installed |
 | Hopper, Receiver, Transposer and Alchemical Converter (ZTO/pack) | Existing sided slots, liquid, EE2 and IC2 APIs | BEHAVIOR_VERIFIED with the preceding candidate. | Keep the native gates, check isolated throughput, recovery and shared target ownership. | Yes when installed |
+| Diving equipment and Air Compressor (ZTO, IC2) | Native air, swim thrust and OptiFine water fog with the matching agent. Native container and EnergyNet. | The new headless probe checks native recipes, movement, finite air, EU through a Copper Cable and save/reload. | Observe worn textures and the mask's visible underwater effect, and complete the [owner walkthrough](survival-051-alpha1.md#validation-and-owner-walkthrough). | Yes for 0.5.1 |
 
 ## Survival 0.2.1 acceptance evidence
 

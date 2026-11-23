@@ -21,6 +21,9 @@ public final class AgentProbe {
         check(agents == 1, "exactly one startup agent");
         check(!ZTOAgent.paused(new Object()) && ZTOAgent.selectMoon(null, 0, 6) == 6,
                 "unregistered hooks delegate");
+        check(ZTOAgent.underwaterAir(null, 12, 11) == 11
+                && ZTOAgent.underwaterThrust(.02F, null) == .02F && ZTOAgent.underwaterFog(.1F, null) == .1F,
+                "underwater hooks delegate without callbacks");
         if ("archive".equals(args[0])) {
             try (ZipFile game = new ZipFile(args[1])) {
                 byte[] renderer = bytes(game.getInputStream(game.getEntry("l.class")));
@@ -31,6 +34,12 @@ public final class AgentProbe {
                 byte[] spawner = bytes(game.getInputStream(game.getEntry("vf.class")));
                 check(ZTOAgent.patchKnownClass("vf", spawner, null, false, false) != null, "pinned natural spawner");
                 rejectFingerprint("vf", spawner, null, false);
+                for (String target : new String[] {UnderwaterHook.LIVING, UnderwaterHook.RENDERER}) {
+                    byte[] underwater = bytes(game.getInputStream(game.getEntry(target + ".class")));
+                    check(ZTOAgent.patchKnownClass(target, underwater, null, false, false) != null,
+                            "pinned underwater transformation for " + target);
+                    rejectFingerprint(target, underwater, null, false);
+                }
             }
             System.out.println("PASS standalone startup and pinned bytecode transformation on Java " + System.getProperty("java.version"));
             return;

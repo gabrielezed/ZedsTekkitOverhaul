@@ -60,10 +60,12 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `item.skelebirdEgg` | 22010 (stack ID 22266). Creative Skelebird Spawn Egg in the Overworld. |
 | `item.magpieEgg` | 22011 (stack ID 22267). Magpie Spawn Egg for safe Overworld placement. Older configurations use this default when the key is absent. |
 | `item.underwaterMask`, `item.oxygenTank`, `item.flippers` | 22012–22014 (stack IDs 22268–22270). Existing configurations receive missing keys. |
+| `item.outboardMotor`, `item.motorboat` | 22015, 22016 (stack IDs 22271, 22272). |
+| `entity.motorboat` | 240 (range 1–254). The entity saves under `ZTO.Motorboat`. |
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 
-Keep assigned IDs stable for existing worlds. Block IDs use 1–4095, flowing IDs use 1–4094, and item constructor IDs use 0–31743. Inventory item IDs are constructor IDs plus 256. Registry collisions still fail with a diagnostic. Restore the original assignment before opening saves after an ID error.
+Keep assigned IDs stable for existing worlds. Block IDs use 1–4095, flowing IDs use 1–4094, and item constructor IDs use 0–31743. Inventory item IDs are constructor IDs plus 256. Registry collisions still fail with a diagnostic. Restore the original assignment before opening saves after an ID error. Existing configurations receive missing Motorboat registry keys. The Motorboat saves its own fuel and bucket slots.
 
 ## Legacy ownership inventory
 

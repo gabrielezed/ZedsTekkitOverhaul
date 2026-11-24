@@ -174,6 +174,11 @@ for %%S in (start running complete) do (
         goto :fail
     )
 )
+jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/sounds/motorboat/running.wav" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Missing Motorboat engine sound in the archive.
+    goto :fail
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" mcmod.info
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.

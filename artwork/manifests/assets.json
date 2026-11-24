@@ -308,5 +308,49 @@
     "palette": "classic-gui",
     "origin": "zto-reference-inspired",
     "jar": true
+  },
+  {
+    "id": "motorboat-gui",
+    "source": "source/interfaces/motorboat.png",
+    "runtime": "zed/gui/motorboat.png",
+    "size": [256, 256],
+    "alpha": "cutout",
+    "role": "176x169 fueling panel and 80x6 fuel bar",
+    "palette": "classic-gui",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "outboard-icon",
+    "source": "source/motorboat/outboard.png",
+    "runtime": "zed/textures/motorboat/outboard.png",
+    "size": [16, 16],
+    "alpha": "cutout",
+    "role": "Outboard Motor inventory sprite with installed metal samples applied at runtime",
+    "palette": "industrial",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "motorboat-overlay",
+    "source": "source/motorboat/motorboat_overlay.png",
+    "runtime": "zed/textures/motorboat/motorboat_overlay.png",
+    "size": [16, 16],
+    "alpha": "cutout",
+    "role": "Outboard pixels composited over the native vanilla inventory boat at runtime",
+    "palette": "industrial",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "motorboat-engine",
+    "source": "source/motorboat/engine.png",
+    "runtime": "zed/textures/motorboat/engine.png",
+    "size": [64, 32],
+    "alpha": "cutout",
+    "role": "Native ModelRenderer UVs for the housing, clamp, shaft, gear case and propeller",
+    "palette": "industrial",
+    "origin": "zto-original",
+    "jar": true
   }
 ]

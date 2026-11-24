@@ -51,15 +51,18 @@ public final class ZtoConfigSelfTest {
         check(ZtoConfigLoader.load(fresh, false, LOG).hopper == 3030, "retain Hopper ID without assets");
 
         Path underwater = Files.createDirectory(root.resolve("underwater-ids"));
-        String previous = "# retain the installed IDs\r\nconfigVersion=1\r\nblock.hopper=3030\r\nitem.oxygenTank=23223\r\n";
+        String previous = "# retain the installed IDs\r\nconfigVersion=1\r\nblock.hopper=3030\r\nitem.oxygenTank=23223\r\nentity.motorboat=242\r\n";
         write(underwater, ZtoConfigLoader.FILE_NAME, previous);
         ZtoConfig diving = ZtoConfigLoader.load(underwater, true, LOG);
         check(diving.airCompressor == 3031 && diving.underwaterMask == 22012 && diving.oxygenTank == 23223
                 && diving.flippers == 22014 && diving.hopper == 3030, "append diving IDs and preserve existing assignments");
+        check(diving.outboardMotor == 22015 && diving.motorboat == 22016 && diving.motorboatEntity == 242,
+                "append new item defaults and preserve the Motorboat entity override");
         String upgraded = read(underwater, ZtoConfigLoader.FILE_NAME);
         check(upgraded.startsWith(previous) && upgraded.contains("block.airCompressor=3031")
-                && upgraded.contains("item.underwaterMask=22012") && upgraded.contains("item.flippers=22014"),
-                "underwater migration appends only missing entries");
+                && upgraded.contains("item.underwaterMask=22012") && upgraded.contains("item.flippers=22014")
+                && upgraded.contains("item.outboardMotor=22015") && upgraded.contains("item.motorboat=22016"),
+                "append only missing exploration IDs");
         ZtoConfigLoader.load(underwater, true, LOG);
         check(upgraded.equals(read(underwater, ZtoConfigLoader.FILE_NAME)), "underwater migration is idempotent");
 

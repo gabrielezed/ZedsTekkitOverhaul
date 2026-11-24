@@ -61,7 +61,7 @@ public final class ZtoConfigLoader {
             ZtoConfig config = new ZtoConfig(primary, legacy, hopperAssets, log, entries);
             Map<String, String> additions = new LinkedHashMap<String, String>();
             for (String key : new String[] {"block.hopper", "block.airCompressor", "item.underwaterMask",
-                    "item.oxygenTank", "item.flippers"}) {
+                    "item.oxygenTank", "item.flippers", "item.outboardMotor", "item.motorboat", "entity.motorboat"}) {
                 if (entries.containsKey(key) && !primary.containsKey(key)) additions.put(key, entries.get(key));
             }
             if (migrate || !additions.isEmpty()) {

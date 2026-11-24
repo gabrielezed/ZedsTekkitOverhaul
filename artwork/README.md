@@ -67,3 +67,16 @@ Build the Air Compressor and Distillation texture variants from the pinned Tekki
 The [derivation manifest](manifests/machine-derivations.json) pins each original atlas and sprite. Sprite SHA-256 values use 16×16 RGBA bytes in row-major order. Atlas coordinates are zero-based from the upper left. Edited bounds are measured within the face and exclude the right and bottom endpoints. The comparison sheets show exact face colors, orange for edited pixels, and separately labeled static cube projections. The caps, sides and rears intentionally retain complete original faces in some cases.
 
 `previews/industrial-source-sprites.png` identifies the source block faces, pipe cells and refinery UVs. Compare `compressor-original-vs-zto.png`, `distillation-original-vs-zto.png`, `distillation-complete-apparatus.png` and `industrial-machines-comparison.png`. Use the sheets ending in `-native.png` for a one-pixel-per-texel inspection. The inventory, hotbar, held item and placed-block checks in Minecraft still use the owner walkthrough.
+
+## Motorboat
+
+The authored 64×32 engine UV sheet and two 16×16 sprite layers are in [`source/motorboat/`](source/motorboat/). The [asset manifest](manifests/assets.json) maps these PNGs and the fueling panel to their packaged paths. The installed client composes the vanilla boat cell (8,8) under the motor overlay and uses the stock boat hull texture directly.
+
+The engine and sprites sample the installed textures at runtime. Coordinates are zero-based and all sampled pixels are opaque.
+
+| Installed reference | Samples |
+| --- | --- |
+| BuildCraft 2.2.14 Core, `net/minecraft/src/buildcraft/energy/gui/base_iron.png` | Bright iron (20,4), bevel (0,17), dark frame (21,12) |
+| IC2 1.97, `ic2/sprites/block_machine.png` | Compressor casing (94,56), shaded casing (95,62), mechanical panel (82,58) |
+
+Run `python artwork/tools/motorboat_assets.py` to regenerate the editable motor PNGs and the original synthesized running cue. Run `python artwork/tools/machine_panels.py` for the GUI, followed by `python artwork/tools/textures.py export` and `python artwork/tools/textures.py validate`. Keep any composed comparison sheet under ignored `artwork/previews/`.

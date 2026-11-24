@@ -28,6 +28,7 @@ Survival 0.2.3 added physical industrial sabotage, furnace fuel priority and a w
 | `creative`, `crafting`, `integration.inventory` | Asset-backed Creative UI, crafting assistance and legacy mouse dispatch. [Creative guide](../engineering/creative-inventory-backport.md) |
 | `hopper`, `render`, `power`, `distillation`, `fluids`, `emc` | Experimental machines, Foundry visuals and pack adapters. Preserve IDs, NBT and economic behavior. [Integration boundaries](integrations.md) |
 | `exploration.underwater` | Diving equipment, persistent item oxygen, water-specific hooks and the LV Air Compressor. [Underwater equipment](survival-051-alpha1.md) |
+| `exploration.motorboat` | Gasoline-powered travel, recoverable fuel tank, native boat hull and fueling container. [Motorboat](../engineering/motorboat.md) |
 | `devbridge`, lunar debug views | Numpad 1 opens the local Debug Hub. Dev Bridge provides optional observations and gated disposable-world tools. [Diagnostics protocol](dev-bridge.md) |
 
 Run `zto-tools/test-config.ps1` and `zto-tools/test-lunar-calendar.bat` for fast settings and lunar checks. Use `zto-tools/build-and-deploy.bat` for compilation, reobfuscation and packaging. Select the relevant silent Tekkit Dev probes from the [test map](testing.md).

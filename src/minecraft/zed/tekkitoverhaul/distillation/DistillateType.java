@@ -7,6 +7,8 @@ public enum DistillateType {
     DIESEL(2, "Diesel", 300, 260, 60, 14, 0.76D),
     HEAVY_GAS_OIL(3, "Heavy Gas Oil", 380, 320, 80, 22, 0.60D);
 
+    private static final DistillateType[] TYPES = values();
+
     public final int id;
     public final String displayName;
     public final int temperatureCelsius;
@@ -27,7 +29,7 @@ public enum DistillateType {
     }
 
     public static DistillateType fromId(int id) {
-        for (DistillateType kind : values()) {
+        for (DistillateType kind : TYPES) {
             if (kind.id == id) return kind;
         }
         return null;

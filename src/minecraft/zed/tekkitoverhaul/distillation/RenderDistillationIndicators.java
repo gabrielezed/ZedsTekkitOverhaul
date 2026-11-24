@@ -23,6 +23,7 @@ final class RenderDistillationIndicators extends TileEntitySpecialRenderer {
         DistillationLayout.Facing facing = boiler.getVisualFacing();
         int completion = boiler.completionTicks();
         int receiver = DistillationAnimation.receiverFrame(process.getDistillateMB(), state.blocksOutput(), completion);
+        if (state == DistillationState.IDLE && receiver == 0) return;
 
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_TEXTURE_BIT | GL11.GL_CURRENT_BIT);
         try {
@@ -56,7 +57,8 @@ final class RenderDistillationIndicators extends TileEntitySpecialRenderer {
                                int frame, int row) {
         World world = tile.worldObj;
         int bx = tile.xCoord + dx, by = tile.yCoord + dy, bz = tile.zCoord + dz;
-        int side = DistillationLayout.Facing.fromFrontSide(world.getBlockMetadata(bx, by, bz)).frontSide;
+        int side = world.getBlockMetadata(bx, by, bz);
+        if (side < 2 || side > 5) side = DistillationLayout.Facing.EAST.frontSide;
         int nx = DistillationGeometry.DX[side], nz = DistillationGeometry.DZ[side];
         Block block = Block.blocksList[world.getBlockId(bx, by, bz)];
         if (block == null || world.isBlockOpaqueCube(bx + nx, by, bz + nz)) return;

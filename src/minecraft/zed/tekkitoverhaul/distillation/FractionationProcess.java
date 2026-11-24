@@ -74,13 +74,8 @@ public final class FractionationProcess {
      * Returns EU to deduct from the external heater; returns zero when stalled.
      */
     public int tick(boolean formed, int availableEu) {
+        if (readiness(formed, availableEu) != DistillationState.IDLE) return 0;
         DistillateType type = selectedType();
-        if (type == null || !formed || availableEu < EU_PER_TICK ||
-                crudeMB < BATCH_INPUT_MB || coolantMB < type.coolantPerBatchMB ||
-                distillateMB > TANK_CAPACITY_MB - BATCH_OUTPUT_MB ||
-                distillateMB > 0 && outputTypeId != type.id) {
-            return 0;
-        }
         ++progressTicks;
         if (progressTicks >= type.durationTicks) {
             crudeMB -= BATCH_INPUT_MB;
@@ -90,6 +85,16 @@ public final class FractionationProcess {
             progressTicks = 0;
         }
         return EU_PER_TICK;
+    }
+
+    DistillationState readiness(boolean formed, int availableEu) {
+        if (!formed) return DistillationState.INCOMPLETE;
+        DistillateType type = selectedType();
+        if (crudeMB < BATCH_INPUT_MB) return DistillationState.CRUDE_REQUIRED;
+        if (coolantMB < type.coolantPerBatchMB) return DistillationState.COOLANT_REQUIRED;
+        if (distillateMB > 0 && outputTypeId != type.id) return DistillationState.OUTPUT_MISMATCH;
+        if (distillateMB > TANK_CAPACITY_MB - BATCH_OUTPUT_MB) return DistillationState.OUTPUT_FULL;
+        return availableEu < EU_PER_TICK ? DistillationState.POWER_REQUIRED : DistillationState.IDLE;
     }
 
     /** Used only by the TileEntity NBT adapter; all fields are range-checked. */

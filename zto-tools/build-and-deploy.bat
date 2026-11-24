@@ -43,20 +43,8 @@ if not exist "src\minecraft\zed\textures\foundry_rotor.png" (
     echo [ZTO] ERROR: Missing Foundry texture asset.
     goto :fail
 )
-for %%M in (boiler heater column condenser receiver thermometer) do (
-    if not exist "src\minecraft\zed\models\distillation_%%M.obj" (
-        echo [ZTO] ERROR: Missing distillation %%M OBJ model.
-        goto :fail
-    )
-)
-if not exist "src\minecraft\zed\textures\distillation_atlas.png" (
-    echo [ZTO] ERROR: Missing distillation texture atlas.
-    goto :fail
-)
-if not exist "src\minecraft\zed\models\distillation_connections.obj" (
-    echo [ZTO] ERROR: Missing distillation connector OBJ model.
-    goto :fail
-)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1"
+if errorlevel 1 goto :fail
 if not exist "src\minecraft\mcmod.info" (
     echo [ZTO] ERROR: Missing mcmod.info metadata resource.
     goto :fail
@@ -98,6 +86,8 @@ findstr /L /C:"== ERRORS FOUND ==" /C:"FATAL ERROR" "dist-zto\mcp-compile.log" >
 if not errorlevel 1 goto :compile_failed
 findstr /B /L /C:"- Done in " "dist-zto\mcp-compile.log" >nul
 if errorlevel 1 goto :compile_failed
+copy /y "%BUILD_METADATA%" "bin\minecraft\zto-build.properties" >nul
+if errorlevel 1 goto :fail
 
 rem Remove only previously reobfuscated ZTO classes, never vanilla/Forge code.
 if exist "reobf\minecraft\zed\" (
@@ -177,6 +167,13 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add predator sounds to the JAR.
     goto :fail
 )
+for %%S in (start running complete) do (
+    jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/sounds/distillation/%%S.wav" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Missing Distillation sound %%S in the archive.
+        goto :fail
+    )
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" mcmod.info
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
@@ -184,6 +181,15 @@ if errorlevel 1 (
 )
 jar uf "%BUILD_JAR%" -C "dist-zto" zto-build.properties
 if errorlevel 1 goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1" -Archive "%BUILD_JAR%"
+if errorlevel 1 goto :fail
+for %%U in (UnderwaterRegistry ItemOxygenTank TileAirCompressor ContainerAirCompressor GuiAirCompressor UnderwaterHooks) do (
+    jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/tekkitoverhaul/exploration/underwater/%%U.class" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Missing underwater feature class %%U in the archive.
+        goto :fail
+    )
+)
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/mod_ZedsTekkitOverhaul.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: Mod entry point was not found in the JAR.
@@ -204,18 +210,6 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Foundry texture was not found in the JAR.
     goto :fail
 )
-for %%M in (boiler heater column condenser receiver thermometer) do (
-    jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/distillation_%%M.obj" >nul
-    if errorlevel 1 (
-        echo [ZTO] ERROR: Distillation %%M model missing from JAR.
-        goto :fail
-    )
-)
-jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/distillation_atlas.png" >nul
-if errorlevel 1 (
-    echo [ZTO] ERROR: Distillation atlas missing from JAR.
-    goto :fail
-)
 for %%F in (gasoline kerosene diesel heavy_gas_oil) do (
     jar tf "%BUILD_JAR%" | findstr /L /C:"zed/textures/%%F_fluid.png" >nul
     if errorlevel 1 (
@@ -226,11 +220,6 @@ for %%F in (gasoline kerosene diesel heavy_gas_oil) do (
 jar tf "%BUILD_JAR%" | findstr /L /C:"zed/tekkitoverhaul/distillation/TileEntityDistillationReceiver.class" >nul
 if errorlevel 1 (
     echo [ZTO] ERROR: BuildCraft receiver missing from JAR.
-    goto :fail
-)
-jar tf "%BUILD_JAR%" | findstr /L /C:"zed/models/distillation_connections.obj" >nul
-if errorlevel 1 (
-    echo [ZTO] ERROR: Distillation connector model missing from JAR.
     goto :fail
 )
 jar tf "%BUILD_JAR%" | findstr /L /C:"mcmod.info" >nul

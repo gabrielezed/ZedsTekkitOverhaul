@@ -9,17 +9,15 @@ import java.util.List;
  */
 public final class DistillationLayout {
     public enum Facing {
-        EAST(1, 0, 0, 2), SOUTH(0, 1, -90, 5), WEST(-1, 0, 180, 3), NORTH(0, -1, 90, 4);
+        EAST(1, 0, 2), SOUTH(0, 1, 5), WEST(-1, 0, 3), NORTH(0, -1, 4);
 
         public final int dx;
         public final int dz;
-        public final int rotationDegrees;
         public final short frontSide;
 
-        Facing(int dx, int dz, int rotationDegrees, int frontSide) {
+        Facing(int dx, int dz, int frontSide) {
             this.dx = dx;
             this.dz = dz;
-            this.rotationDegrees = rotationDegrees;
             this.frontSide = (short) frontSide;
         }
 

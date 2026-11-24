@@ -1,5 +1,7 @@
 # Distillation integration and visual pass — 0.7.1 draft
 
+Historical visual iteration. See [current cube rendering](distillation-cube-rendering.md) for alpha.1 resources and acceptance.
+
 **Branch:** `feature/fractional-distillation-v1`. This is an unmerged test iteration for Minecraft 1.2.5 / Tekkit Classic 3.1.2.
 
 ## Symptoms reproduced by the project owner

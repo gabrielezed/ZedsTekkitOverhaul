@@ -20,8 +20,11 @@ import zed.tekkitoverhaul.crafting.CraftingUx;
 import zed.tekkitoverhaul.creative.CreativeInventoryHook;
 import zed.tekkitoverhaul.devbridge.DevBridge;
 import zed.tekkitoverhaul.devbridge.MobEquipmentFixture;
+import zed.tekkitoverhaul.client.BuildWatermark;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
+import zed.tekkitoverhaul.distillation.RenderDistillationBlock;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
+import zed.tekkitoverhaul.distillation.client.DistillationSounds;
 import zed.tekkitoverhaul.emc.EmcIntegration;
 import zed.tekkitoverhaul.equipment.MobEquipmentHooks;
 import zed.tekkitoverhaul.equipment.RenderMobEquipment;
@@ -31,6 +34,7 @@ import zed.tekkitoverhaul.integration.ee2.EE2FuelIntegration;
 import zed.tekkitoverhaul.integration.inventory.DragDistributionIntegration;
 import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
+import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
@@ -67,6 +71,9 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public String getVersion() { return BuildVersion.VERSION; }
 
     @Override
+    public String getPriorities() { return "after:mod_IC2;after:mod_BuildCraftTransport"; }
+
+    @Override
     public void load() {
         settings = ZtoConfigLoader.load(ModLoader.getMinecraftInstance().mcDataDir.toPath().resolve("config"),
                 HopperRegistry.hasAssets(), ModLoader.getLogger());
@@ -80,7 +87,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
-        DistillationRegistry.register(settings);
+        DistillationRegistry.register(settings, this);
+        DistillationSounds.register(ModLoader.getMinecraftInstance());
         ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         ModLoader.setInGUIHook(this, true, false);
         System.out.println("[ZTO] v" + getVersion() + " loaded");
@@ -88,6 +96,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
+        cpw.mods.fml.common.FMLCommonHandler.instance().registerTickHandler(
+                new BuildWatermark(ModLoader.getMinecraftInstance()));
         LUNAR.register(this, settings.lunarDebugKey, settings.lunarVerboseLogging,
                 new SiegeDirector(settings.playerAssault, settings.assaultSpawnBudget, settings.assaultWaveInterval,
                         settings.assaultActiveCap, settings.assaultOuterRadius, settings.lunarPatrols,
@@ -106,6 +116,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AerialPredators.registerEgg(settings.aerialPredatorEgg);
         AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
         AerialPredators.registerMagpieEgg(settings.magpieEgg);
+        UnderwaterRegistry.register(settings);
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
@@ -119,6 +130,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     @Override
     public void registerAnimation(Minecraft minecraft) {
         RenderPetroleum.preloadTextures();
+        DistillationRegistry.preloadTextures();
         DistillateBucketTextures.register();
     }
 
@@ -135,7 +147,15 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                                     Block block, int modelId) {
         if (HopperRegistry.block != null && modelId == HopperRegistry.model)
             return RenderHopper.render(renderer, world, x, y, z, block);
+        if (modelId == DistillationRegistry.vesselModel())
+            return RenderDistillationBlock.renderWorld(renderer, world, x, y, z, block);
         return modelId == petroleumModel && RenderPetroleum.render(renderer, world, x, y, z, block);
+    }
+
+    @Override
+    public void renderInvBlock(RenderBlocks renderer, Block block, int metadata, int modelId) {
+        if (modelId == DistillationRegistry.vesselModel())
+            RenderDistillationBlock.renderItem(renderer, block, metadata);
     }
 
     @Override

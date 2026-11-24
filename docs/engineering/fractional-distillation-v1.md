@@ -44,7 +44,7 @@ This layout is deliberately small for prototyping. Final industrial-scale dimens
 
 ### Model dimensions
 
-Each OBJ is authored around the **center** of a corresponding Minecraft block in X/Z, using approximately one model unit per block:
+The V1 OBJ render was superseded by [native cube rendering](distillation-cube-rendering.md). Each original OBJ was authored around the **center** of a corresponding Minecraft block in X/Z, using approximately one model unit per block:
 - Boiler: circular steel body, copper flanges, borosilicate sight glass, top vapor outlet.
 - Heater: steel housing, heating-coil indicator and insulated electrical terminal.
 - Column (two copies): plated vertical shell, bands, sight window and service pipe.

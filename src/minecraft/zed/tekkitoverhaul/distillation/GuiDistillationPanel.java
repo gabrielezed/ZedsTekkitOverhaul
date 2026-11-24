@@ -2,12 +2,20 @@ package zed.tekkitoverhaul.distillation;
 
 import net.minecraft.src.GuiButton;
 import net.minecraft.src.TileEntity;
+import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.client.GuiMachinePanel;
 
 /** Local process overview and part-specific controls. */
 final class GuiDistillationPanel extends GuiMachinePanel {
-    private static final int TEXT = 0xFFD8E4ED;
-    private static final int NOTICE = 0xFFFFD187;
+    private static final int TEXT = 0xFF404040;
+    private static final int WARNING = 0xFF6C3528;
+    private static final int RUNNING = 0xFF284C38;
+    private static final int OIL = 0xFF926844;
+    private static final int WATER = 0xFF5283A3;
+    private static final int PRODUCT = 0xFF64834F;
+    private static final int PROGRESS = 0xFF577D69;
+    private static final int CAPACITY = FractionationProcess.TANK_CAPACITY_MB;
+
     private final DistillationPartType part;
     private final String transferResult;
     private TileEntityDistillationBoiler boiler;
@@ -63,69 +71,114 @@ final class GuiDistillationPanel extends GuiMachinePanel {
     }
 
     @Override
+    protected void drawPanelBackground(String title) {
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        mc.renderEngine.bindTexture(mc.renderEngine.getTexture("/zed/gui/distillation.png"));
+        drawTexturedModalRect(left, top, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+        fontRenderer.drawString(title, left + (PANEL_WIDTH - fontRenderer.getStringWidth(title)) / 2, top + 10, TEXT);
+    }
+
+    @Override
     protected void drawPanel() {
-        if (part == DistillationPartType.HEATER) {
-            TileEntityDistillationHeater heater = (TileEntityDistillationHeater) tile;
-            meter(61, "Stored power", heater.getStoredEnergy(), LvHeaterBuffer.CAPACITY_EU, "EU", 0xFFF0BC58);
-            status(91, "Connect an IC2 cable to a free face. Accepts up to "
-                    + LvHeaterBuffer.MAX_PACKET_EU + " EU per packet.", TEXT);
-            status(123, boiler == null ? "Place the boiler directly above the heater."
-                    : "The boiler draws " + FractionationProcess.EU_PER_TICK + " EU/t while processing.", TEXT);
-            return;
-        }
+        if (transferResult != null)
+            fontRenderer.drawSplitString(transferResult, left + 14, top + 177, 143, TEXT);
         if (boiler == null) {
-            status(44, "Boiler not linked", NOTICE);
-            status(66, "Place this component in the distillation structure. Open the boiler panel to check missing parts.", TEXT);
+            status(32, "Boiler not linked", WARNING);
+            if (part == DistillationPartType.HEATER) drawHeater();
+            status(136, part == DistillationPartType.HEATER ? "Place the boiler directly above the heater."
+                    : "Place this component at its position in the boiler assembly.", WARNING);
             return;
         }
 
+        DistillationState state = boiler.visualState();
         FractionationProcess process = boiler.getProcess();
         DistillateType selected = process.selectedType();
-        status(39, boiler.getProcessStatus(), boiler.isFormed() ? TEXT : NOTICE);
+        boolean assembled = state != DistillationState.INCOMPLETE;
+        status(32, assembled ? "Formed  /  " + state.label : state.label,
+                state == DistillationState.ACTIVE ? RUNNING
+                        : state == DistillationState.IDLE ? TEXT : WARNING);
 
         switch (part) {
             case BOILER:
-                drawBoiler(process);
+                status(48, selected.displayName + "  /  Target " + selected.temperatureCelsius + " C", TEXT);
+                gauge(62, "Crude oil", process.getCrudeMB(), CAPACITY, "mB", OIL);
+                gauge(82, "Cooling water", process.getCoolantMB(), CAPACITY, "mB", WATER);
+                DistillateType contents = DistillateType.fromId(process.getOutputTypeId());
+                gauge(102, contents == null ? "Receiver" : contents.displayName,
+                        process.getDistillateMB(), CAPACITY, "mB", PRODUCT);
+                progress(122, process);
+                diagnostic(142, state);
+                break;
+            case HEATER:
+                drawHeater();
+                diagnostic(132, state);
                 break;
             case COLUMN:
-                status(60, "Selected fraction: " + selected.displayName, TEXT);
-                status(74, "Setpoint: " + selected.temperatureCelsius + " C", TEXT);
-                meter(97, "Batch progress", process.getProgressTicks(), selected.durationTicks, "ticks", 0xFF63BCA0);
-                status(127, "Use the thermometer to select a different fraction.", TEXT);
+                status(52, "Linked to boiler", TEXT);
+                status(69, selected.displayName + "  /  Target " + selected.temperatureCelsius + " C", TEXT);
+                progress(91, process);
+                diagnostic(127, state);
                 break;
             case CONDENSER:
-                meter(66, "Cooling water", process.getCoolantMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFF61A9E3);
-                status(97, "Water per batch: " + selected.coolantPerBatchMB + " mB", TEXT);
-                status(119, "Right-click with a water bucket or connect a BuildCraft liquid pipe.", TEXT);
+                gauge(56, "Cooling water", process.getCoolantMB(), CAPACITY, "mB", WATER);
+                status(81, "Per batch " + selected.coolantPerBatchMB + " mB  /  "
+                        + (process.getCoolantMB() >= selected.coolantPerBatchMB ? "Enough water" : "Refill needed"), TEXT);
+                status(101, "Accepts water buckets and BuildCraft liquid pipes.", TEXT);
+                diagnostic(125, state);
                 break;
             case RECEIVER:
                 DistillateType product = DistillateType.fromId(process.getOutputTypeId());
-                status(58, "Contents: " + (product == null ? "Empty" : product.displayName), TEXT);
-                meter(78, "Stored distillate", process.getDistillateMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFF63BCA0);
-                status(110, "Right-click with an empty bucket or extract through a powered wooden waterproof pipe.", TEXT);
-                if (tile instanceof TileEntityDistillationReceiver) {
-                    int paused = ((TileEntityDistillationReceiver) tile).disruptionTicksRemaining();
-                    if (paused > 0) status(141, "BuildCraft extraction paused (" + paused + " ticks left).", NOTICE);
-                }
+                status(48, product == null ? "Receiver empty" : "Stored fraction  " + product.displayName, TEXT);
+                gauge(63, "Stored distillate", process.getDistillateMB(), CAPACITY, "mB", PRODUCT);
+                status(85, "Free space  " + (CAPACITY - process.getDistillateMB()) + " mB", TEXT);
+                int paused = tile instanceof TileEntityDistillationReceiver
+                        ? ((TileEntityDistillationReceiver)tile).disruptionTicksRemaining() : 0;
+                status(102, paused > 0 ? "BuildCraft extraction disrupted (" + paused + " ticks left)."
+                        : "Extract with a bucket or a powered wooden waterproof pipe.", paused > 0 ? WARNING : TEXT);
+                diagnostic(127, state);
                 break;
             case THERMOMETER:
-                status(57, "Selected: " + selected.displayName + " (" + selected.temperatureCelsius + " C)", NOTICE);
-                meter(132, "Batch progress", process.getProgressTicks(), selected.durationTicks, "ticks", 0xFF63BCA0);
+                status(55, selected.displayName + "  /  Target " + selected.temperatureCelsius + " C", TEXT);
+                progress(130, process);
+                diagnostic(152, state);
                 break;
             default:
                 break;
         }
-        if (transferResult != null) status(164, transferResult, NOTICE);
     }
 
-    private void drawBoiler(FractionationProcess process) {
-        meter(59, "Crude oil", process.getCrudeMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFFBA8B65);
-        meter(83, "Cooling water", process.getCoolantMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFF61A9E3);
-        meter(107, "Distillate", process.getDistillateMB(), FractionationProcess.TANK_CAPACITY_MB, "mB", 0xFF63BCA0);
-        if (!boiler.isFormed()) {
-            status(131, "Missing: " + boiler.getMissingPartNames(), NOTICE);
-        } else {
-            status(131, "Right-click with a BuildCraft oil bucket to load crude.", TEXT);
+    private void drawHeater() {
+        TileEntityDistillationHeater heater = (TileEntityDistillationHeater)tile;
+        gauge(56, "Stored energy", heater.getStoredEnergy(), LvHeaterBuffer.CAPACITY_EU, "EU", OIL);
+        int demand = FractionationProcess.EU_PER_TICK;
+        int draw = boiler != null && boiler.visualState() == DistillationState.ACTIVE ? demand : 0;
+        status(86, "Batch demand  " + demand + " EU/t   /   Last tick  " + draw + " EU", TEXT);
+        status(106, "IC2 LV cable on a free face, max " + LvHeaterBuffer.MAX_PACKET_EU + " EU per packet.", TEXT);
+    }
+
+    private void diagnostic(int y, DistillationState state) {
+        if (state == DistillationState.INCOMPLETE) {
+            status(y, "Missing  " + boiler.getMissingPartNames(), WARNING);
+        } else if (state != DistillationState.ACTIVE) {
+            status(y, state.action, state == DistillationState.IDLE ? TEXT : WARNING);
         }
+    }
+
+    private void progress(int y, FractionationProcess process) {
+        gauge(y, "Batch progress", process.getProgressTicks(), process.selectedType().durationTicks, "ticks", PROGRESS);
+    }
+
+    private void gauge(int y, String label, int amount, int max, String unit, int color) {
+        int start = left + 14;
+        int end = left + PANEL_WIDTH - 14;
+        int textY = top + y;
+        String value = amount + " / " + max + " " + unit;
+        fontRenderer.drawString(label, start, textY, TEXT);
+        fontRenderer.drawString(value, end - fontRenderer.getStringWidth(value), textY, TEXT);
+        drawRect(start, textY + 10, end, textY + 17, 0xFFFFFFFF);
+        drawRect(start, textY + 10, end - 1, textY + 16, 0xFF373737);
+        drawRect(start + 1, textY + 11, end - 1, textY + 16, 0xFF8B8B8B);
+        int fill = Math.min(max, Math.max(0, amount)) * (end - start - 2) / max;
+        if (fill > 0) drawRect(start + 1, textY + 11, start + 1 + fill, textY + 16, color);
     }
 }

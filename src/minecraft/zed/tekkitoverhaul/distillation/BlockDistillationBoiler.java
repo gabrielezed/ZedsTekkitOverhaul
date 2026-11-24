@@ -26,15 +26,6 @@ public final class BlockDistillationBoiler extends BlockDistillationComponent {
     }
 
     @Override
-    public int getRenderType() { return -1; }
-
-    @Override
-    public boolean isOpaqueCube() { return false; }
-
-    @Override
-    public boolean renderAsNormalBlock() { return false; }
-
-    @Override
     public boolean blockActivated(World world, int x, int y, int z, EntityPlayer player) {
         TileEntity te = world.getBlockTileEntity(x, y, z);
         if (!(te instanceof TileEntityDistillationBoiler)) return false;

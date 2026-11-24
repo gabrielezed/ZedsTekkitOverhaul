@@ -59,8 +59,12 @@ public final class ZtoConfigLoader {
             }
 
             ZtoConfig config = new ZtoConfig(primary, legacy, hopperAssets, log, entries);
-            boolean addHopper = !migrate && hopperAssets && !primary.containsKey("block.hopper");
-            if (migrate || addHopper) {
+            Map<String, String> additions = new LinkedHashMap<String, String>();
+            for (String key : new String[] {"block.hopper", "block.airCompressor", "item.underwaterMask",
+                    "item.oxygenTank", "item.flippers"}) {
+                if (entries.containsKey(key) && !primary.containsKey(key)) additions.put(key, entries.get(key));
+            }
+            if (migrate || !additions.isEmpty()) {
                 try {
                     Files.createDirectories(directory);
                     if (forge) {
@@ -77,12 +81,7 @@ public final class ZtoConfigLoader {
                         String saved = read(backup, ENCODING);
                         if (!previous.equals(saved)) throw new IOException("Conflicting legacy backup " + backup);
                     }
-                    Map<String, String> additions = entries;
-                    if (addHopper) {
-                        additions = new LinkedHashMap<String, String>();
-                        additions.put("block.hopper", entries.get("block.hopper"));
-                    }
-                    write(canonical, forge ? null : previous, migrate, primary, additions);
+                    write(canonical, forge ? null : previous, migrate, primary, migrate ? entries : additions);
                     log.info("[ZTO] Configuration ready at " + canonical);
                 } catch (IOException failure) {
                     log.log(Level.WARNING, "[ZTO] Could not save " + canonical + ". Using loaded settings for this session.", failure);

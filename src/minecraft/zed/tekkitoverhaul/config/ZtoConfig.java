@@ -24,6 +24,7 @@ public final class ZtoConfig {
     public final int advancedCraftingTable, foundry, alchemicalConverter, skirmisherEgg, breacherEgg, saboteurEgg;
     public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg, magpieEgg;
     public final Integer hopper;
+    public final int airCompressor, underwaterMask, oxygenTank, flippers;
     public final int buildcraftOilBucketItemId;
     public final String emcProfile;
     private final int[] parts = new int[DistillationPartType.values().length];
@@ -84,6 +85,10 @@ public final class ZtoConfig {
         aerialPredatorEgg = values.item("aerialPredatorEgg", 22009);
         skelebirdEgg = values.item("skelebirdEgg", 22010);
         magpieEgg = values.item("magpieEgg", 22011);
+        airCompressor = values.block("airCompressor", 3031);
+        underwaterMask = values.item("underwaterMask", 22012);
+        oxygenTank = values.item("oxygenTank", 22013);
+        flippers = values.item("flippers", 22014);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);
         }

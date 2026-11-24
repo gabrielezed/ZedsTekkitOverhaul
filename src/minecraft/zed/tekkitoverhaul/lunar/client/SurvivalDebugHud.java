@@ -105,7 +105,7 @@ final class SurvivalDebugHud extends Gui {
             }
             contentWidth = Math.max(contentWidth, width);
         }
-        int x = 5, y = 5;
+        int x = 5, y = 8 + font.FONT_HEIGHT;
         int bottom = y + lines.length * 10 + 8;
         int right = x + contentWidth + 10;
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT | GL11.GL_TEXTURE_BIT);

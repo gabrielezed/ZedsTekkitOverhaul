@@ -12,12 +12,17 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     private static final String[] CLIPS = {"ambient1", "ambient2", "warning", "dive", "hurt", "death"};
     private static final String[] SKELEBIRD = {"ambient1", "ambient2", "warning", "slash", "hurt", "death"};
     private static final String[] JETPACK = {"warning", "fault", "recovery"};
+    private static final String[] DISTILLATION = {"start", "running", "complete"};
+    private static final AerialSoundRegistration HANDLER = new AerialSoundRegistration();
+    private static boolean registered;
     private SoundPool installed;
 
     public static void register(SoundManager manager) {
-        AerialSoundRegistration sounds = new AerialSoundRegistration();
-        MinecraftForgeClient.registerSoundHandler(sounds);
-        sounds.onLoadSoundSettings(manager);
+        if (!registered) {
+            MinecraftForgeClient.registerSoundHandler(HANDLER);
+            registered = true;
+        }
+        HANDLER.onLoadSoundSettings(manager);
     }
 
     @Override
@@ -27,6 +32,7 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
         addClips(pool, "aerial", CLIPS);
         addClips(pool, "skelebird", SKELEBIRD);
         addClips(pool, "jetpack", JETPACK);
+        addClips(pool, "distillation", DISTILLATION);
         installed = pool;
     }
 

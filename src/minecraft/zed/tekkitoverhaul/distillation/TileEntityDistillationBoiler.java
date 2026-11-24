@@ -15,6 +15,18 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
     private int missingParts = 6;
     private DistillationLayout.Match lastStructure;
     private long lastSavedTick;
+    private DistillationState state = DistillationState.INCOMPLETE;
+    private int completionTicks;
+    private boolean presentationInterrupted;
+    private static StepListener stepListener;
+
+    public interface StepListener {
+        void onStep(TileEntityDistillationBoiler boiler, boolean started, boolean completed);
+    }
+
+    public static void setStepListener(StepListener listener) {
+        stepListener = listener;
+    }
 
     public FractionationProcess getProcess() { return process; }
     public boolean isFormed() { return formed; }
@@ -38,7 +50,7 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
         return DistillationStructure.canFace(worldObj, xCoord, yCoord, zCoord, facing);
     }
     String getMissingPartNames() {
-        if (lastStructure == null) return "Structure check pending";
+        if (lastStructure == null || presentationInterrupted) return "Structure check pending";
         StringBuilder names = new StringBuilder();
         for (DistillationLayout.Placement placement : lastStructure.missing) {
             if (names.length() > 0) names.append(", ");
@@ -111,32 +123,28 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
         return taken;
     }
 
-    /**
-     * Explain a stalled processing cycle using the current controller state.
-     * This is diagnostic feedback, not a networking or process simulation.
-     */
     public String getProcessStatus() {
-        if (!formed) return "Structure incomplete";
-        DistillateType selected = process.selectedType();
-        if (selected == null) return "No fraction selected";
-        if (process.getCrudeMB() < FractionationProcess.BATCH_INPUT_MB)
-            return "Crude oil required";
-        if (process.getCoolantMB() < selected.coolantPerBatchMB)
-            return "Cooling water required";
-        if (process.getDistillateMB() > 0 &&
-                process.getOutputTypeId() != selected.id)
-            return "Receiver contains another fraction";
-        if (process.getDistillateMB() >
-                FractionationProcess.TANK_CAPACITY_MB - FractionationProcess.BATCH_OUTPUT_MB)
-            return "Receiver is full";
-        if (worldObj == null) return "World not available";
-        TileEntity below = worldObj.getBlockTileEntity(xCoord, yCoord - 1, zCoord);
-        if (!(below instanceof TileEntityDistillationHeater))
-            return "LV heater missing";
-        if (((TileEntityDistillationHeater)below).getStoredEnergy() <
-                FractionationProcess.EU_PER_TICK)
-            return "Waiting for LV power";
-        return "Processing";
+        return visualState().label;
+    }
+
+    public DistillationState visualState() {
+        return !formed || presentationInterrupted ? DistillationState.INCOMPLETE : state;
+    }
+
+    public int completionTicks() { return completionTicks; }
+
+    // The auxiliary stack may straddle a chunk boundary. This never loads a chunk.
+    public boolean presentationAvailable() {
+        if (!formed || presentationInterrupted || isInvalid()) return false;
+        DistillationLayout.Facing facing = lastStructure.facing;
+        return worldObj.blockExists(xCoord + facing.dx, yCoord + 2, zCoord + facing.dz);
+    }
+
+    void interruptPresentation(DistillationLayout.Facing facing) {
+        if (formed && lastStructure.facing == facing) {
+            presentationInterrupted = true;
+            completionTicks = 0;
+        }
     }
 
     public void refreshStructure() {
@@ -144,6 +152,13 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
         formed = lastStructure != null && lastStructure.isFormed();
         missingParts = lastStructure == null ? 6 : lastStructure.missingParts;
         checkCountdown = STRUCTURE_CHECK_INTERVAL;
+        presentationInterrupted = false;
+        if (!formed) {
+            state = DistillationState.INCOMPLETE;
+            completionTicks = 0;
+        } else if (state == DistillationState.INCOMPLETE) {
+            state = DistillationState.IDLE;
+        }
     }
 
     @Override
@@ -154,15 +169,30 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
         TileEntityDistillationHeater heater = heaterTile instanceof TileEntityDistillationHeater
                 ? (TileEntityDistillationHeater)heaterTile : null;
         int available = heater == null ? 0 : heater.getStoredEnergy();
+        boolean advancing = state == DistillationState.ACTIVE;
+        if (completionTicks > 0) --completionTicks;
         int eu = process.tick(formed && heater != null, available);
+        state = eu > 0 ? DistillationState.ACTIVE : process.readiness(formed, available);
         if (eu > 0) {
             // The process only asks for EU already present in this heater.
             if (!heater.extractEU(eu)) throw new IllegalStateException("Distillation EU accounting error");
-            if (worldObj.getWorldTime() - lastSavedTick >= 20L || process.getProgressTicks() == 0) {
+            boolean completed = process.getProgressTicks() == 0;
+            if (completed && !presentationInterrupted) completionTicks = 10;
+            if (worldObj.getWorldTime() - lastSavedTick >= 20L || completed) {
                 lastSavedTick = worldObj.getWorldTime();
                 onInventoryChanged();
             }
+            if (!presentationInterrupted && stepListener != null) stepListener.onStep(this, !advancing, completed);
         }
+    }
+
+    @Override
+    public void onChunkUnload() {
+        super.onChunkUnload();
+        presentationInterrupted = true;
+        completionTicks = 0;
+        state = DistillationState.INCOMPLETE;
+        checkCountdown = 0;
     }
 
     @Override
@@ -178,6 +208,9 @@ public final class TileEntityDistillationBoiler extends TileEntityDistillationCo
         missingParts = 6;
         lastStructure = null;
         checkCountdown = 0;
+        state = DistillationState.INCOMPLETE;
+        completionTicks = 0;
+        presentationInterrupted = false;
     }
 
     @Override

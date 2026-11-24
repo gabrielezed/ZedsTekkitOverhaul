@@ -22,6 +22,20 @@ public final class ZTOAgent {
     static final String BRIDGE = "zed/tekkitoverhaul/agent/ZTOAgent";
     private static final Map<ClassLoader, Map<String, Boolean>> STATUS = new WeakHashMap<>();
     private static boolean started;
+    private static volatile String titleBuild;
+
+    public static void registerTitleBuild(String label) { titleBuild = label; }
+
+    public static String[] titleBranding(String[] nativeLines) {
+        String label = titleBuild;
+        if (label == null || nativeLines.length == 0) return nativeLines;
+        // The title draws the reversed FML array upward, starting at the mod count.
+        String[] lines = new String[nativeLines.length + 1];
+        lines[0] = nativeLines[0];
+        lines[1] = label;
+        System.arraycopy(nativeLines, 1, lines, 2, nativeLines.length - 1);
+        return lines;
+    }
     private static volatile WeakReference<Predicate<Object>> mouse = new WeakReference<>(null);
     private static volatile WeakReference<BiPredicate<Object, int[]>> furnaceFuel = new WeakReference<>(null);
     private static volatile WeakReference<ToIntBiFunction<Object, Integer>> moon = new WeakReference<>(null);
@@ -36,6 +50,10 @@ public final class ZTOAgent {
     private static volatile WeakReference<Predicate<Object>> jetpackGuard = new WeakReference<>(null);
     private static volatile WeakReference<BiConsumer<Object[], int[]>> provenance = new WeakReference<>(null);
     private static volatile WeakReference<BiConsumer<Object[], int[]>> siteUse = new WeakReference<>(null);
+    private static volatile WeakReference<ToIntBiFunction<Object, Integer>> air = new WeakReference<>(null);
+    private static volatile WeakReference<Predicate<Object>> swim = new WeakReference<>(null);
+    private static volatile WeakReference<Predicate<Object>> fog = new WeakReference<>(null);
+    private static float swimThrust = 1F, fogDistance = 1F;
 
     private ZTOAgent() {}
 
@@ -63,8 +81,8 @@ public final class ZTOAgent {
         boolean inventory = InventoryHook.TARGET.equals(name);
         boolean lunar = LunarHook.matches(name);
         if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
-                && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
-                && ProvenanceHook.find(name) == null) return null;
+                && !TitleBrandingHook.TARGET.equals(name) && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
+                && ProvenanceHook.find(name) == null && !UnderwaterHook.matches(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -87,7 +105,10 @@ public final class ZTOAgent {
         if (inventory && InventoryHook.SHA256.equals(hash)) return InventoryHook.patch(bytes);
         if (FurnaceTransferHook.TARGET.equals(name) && FurnaceTransferHook.SHA256.equals(hash))
             return FurnaceTransferHook.patch(bytes);
+        if (TitleBrandingHook.TARGET.equals(name) && TitleBrandingHook.SHA256.equals(hash))
+            return TitleBrandingHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
+        if (UnderwaterHook.accepts(name, hash)) return UnderwaterHook.patch(name, bytes);
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
         throw new IllegalArgumentException("unsupported class fingerprint");
     }
@@ -99,6 +120,31 @@ public final class ZTOAgent {
     private static synchronized boolean installed(ClassLoader loader, String name) {
         Map<String, Boolean> hooks = STATUS.get(loader);
         return hooks != null && Boolean.TRUE.equals(hooks.get(name));
+    }
+
+    public static void registerUnderwater(ToIntBiFunction<Object, Integer> holdAir, Predicate<Object> flippers,
+                                          Predicate<Object> mask, float thrust, float visibility) {
+        swimThrust = thrust;
+        fogDistance = visibility;
+        air = new WeakReference<>(holdAir);
+        swim = new WeakReference<>(flippers);
+        fog = new WeakReference<>(mask);
+    }
+
+    public static int underwaterAir(Object entity, int before, int nativeAir) {
+        ToIntBiFunction<Object, Integer> hook = air.get();
+        int held = hook == null ? -1 : hook.applyAsInt(entity, before);
+        return held < 0 ? nativeAir : held;
+    }
+
+    public static float underwaterThrust(float thrust, Object entity) {
+        Predicate<Object> hook = swim.get();
+        return hook != null && hook.test(entity) ? thrust * swimThrust : thrust;
+    }
+
+    public static float underwaterFog(float density, Object camera) {
+        Predicate<Object> hook = fog.get();
+        return hook != null && hook.test(camera) ? density / fogDistance : density;
     }
 
     public static void registerProvenance(BiConsumer<Object[], int[]> callback) {

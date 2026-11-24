@@ -50,6 +50,19 @@ public final class ZtoConfigSelfTest {
         check(ZtoConfigLoader.load(fresh, true, LOG).hopper == 3030, "adding Hopper assets");
         check(ZtoConfigLoader.load(fresh, false, LOG).hopper == 3030, "retain Hopper ID without assets");
 
+        Path underwater = Files.createDirectory(root.resolve("underwater-ids"));
+        String previous = "# retain the installed IDs\r\nconfigVersion=1\r\nblock.hopper=3030\r\nitem.oxygenTank=23223\r\n";
+        write(underwater, ZtoConfigLoader.FILE_NAME, previous);
+        ZtoConfig diving = ZtoConfigLoader.load(underwater, true, LOG);
+        check(diving.airCompressor == 3031 && diving.underwaterMask == 22012 && diving.oxygenTank == 23223
+                && diving.flippers == 22014 && diving.hopper == 3030, "append diving IDs and preserve existing assignments");
+        String upgraded = read(underwater, ZtoConfigLoader.FILE_NAME);
+        check(upgraded.startsWith(previous) && upgraded.contains("block.airCompressor=3031")
+                && upgraded.contains("item.underwaterMask=22012") && upgraded.contains("item.flippers=22014"),
+                "underwater migration appends only missing entries");
+        ZtoConfigLoader.load(underwater, true, LOG);
+        check(upgraded.equals(read(underwater, ZtoConfigLoader.FILE_NAME)), "underwater migration is idempotent");
+
         Path breachTest = Files.createDirectory(root.resolve("structural-breach-opt-in"));
         write(breachTest, ZtoConfigLoader.FILE_NAME, "siteSiegeStructuralBreaching=true\nexperimentalSiteSieges=false\n");
         ZtoConfig optedIn = ZtoConfigLoader.load(breachTest, false, LOG);

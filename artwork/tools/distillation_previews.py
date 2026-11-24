@@ -7,6 +7,7 @@ from zipfile import ZipFile
 
 from PIL import Image, ImageDraw
 
+from machine_panels import TEXT, recess
 from textures import ART, RUNTIME, artwork_sheet, save_image
 
 SOURCE = ART / "source"
@@ -138,15 +139,17 @@ def panel_mockups():
         font = LegacyFont(Image.open(BytesIO(jar.read("font/default.png"))).convert("RGBA"), chars)
         controls = Image.open(BytesIO(jar.read("gui/gui.png"))).convert("RGBA")
 
-    def label(img, y, value, color="#30302e"):
+    def label(img, y, value, color=TEXT):
         font.show(img, (14, y), value, color)
+
+    def title(img, y, value):
+        font.show(img, ((img.width - font.width(value)) // 2, y), value, TEXT)
 
     def gauge(img, y, name, value, fill, color):
         label(img, y, name)
-        font.show(img, (232 - font.width(value), y), value, "#30302e")
+        font.show(img, (232 - font.width(value), y), value, TEXT)
         draw = ImageDraw.Draw(img)
-        draw.rectangle((14, y + 10, 231, y + 16), fill="#53524d")
-        draw.rectangle((15, y + 11, 230, y + 15), fill="#74716a")
+        recess(draw, 14, y + 10, 218, 7)
         if fill:
             draw.rectangle((15, y + 11, 14 + int(fill * 216), y + 15), fill=color)
 
@@ -159,8 +162,8 @@ def panel_mockups():
 
     boiler = Image.open(SOURCE / "interfaces/distillation.png").crop((0, 0, 246, 206))
     thermo = boiler.copy()
-    for image, title in ((boiler, "Distillation Boiler"), (thermo, "Distillation Thermometer")):
-        label(image, 11, title)
+    for image, name in ((boiler, "Distillation Boiler"), (thermo, "Distillation Thermometer")):
+        title(image, 10, name)
         label(image, 32, "Formed  /  Processing", "#284c38")
         button(image, 165, 177, 67, "Close")
     label(boiler, 48, "Kerosene  /  Target 205 C")
@@ -173,6 +176,16 @@ def panel_mockups():
         button(thermo, 14 + index % 2 * 111, 78 + index // 2 * 23, 107, option, index == 1)
     gauge(thermo, 130, "Batch progress", "92 / 200 ticks", 92 / 200, "#577d69")
     save_image(artwork_sheet([("Boiler", boiler), ("Thermometer", thermo)], 2, 2), OUT / "distillation-panels.png")
+
+    compressor_atlas = Image.open(SOURCE / "interfaces/air_compressor.png")
+    compressor = compressor_atlas.crop((0, 0, 176, 169))
+    title(compressor, 6, "Air Compressor")
+    font.show(compressor, (42, 21), "Oxygen 3200/6000 ticks", TEXT)
+    compressor.paste(compressor_atlas.crop((0, 176, 64, 182)), (42, 33))
+    font.show(compressor, (42, 44), "Buffer 768/4000 EU", TEXT)
+    font.show(compressor, (8, 59), "Charging", "#385326")
+    font.show(compressor, (8, 76), "Inventory", TEXT)
+    save_image(artwork_sheet([("Air Compressor", compressor)], 2, 1), OUT / "air-compressor-ic2-panel.png")
 
 
 def main():

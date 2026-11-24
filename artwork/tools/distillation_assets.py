@@ -1,4 +1,4 @@
-"""Author original refinery indicator cells, panel skin and mechanical WAVs."""
+"""Author original refinery indicator cells and mechanical WAVs."""
 import math
 import random
 import struct
@@ -7,26 +7,6 @@ import wave
 from PIL import Image, ImageDraw
 
 from textures import ART, RUNTIME, save_image
-
-
-def panel():
-    image = Image.new("RGBA", (256, 256))
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((0, 0, 245, 205), fill="#353532")
-    draw.rectangle((1, 1, 244, 204), fill="#706e67")
-    draw.rectangle((1, 1, 243, 203), fill="#dedbd0")
-    draw.rectangle((3, 3, 242, 202), fill="#bcb9ae")
-    draw.rectangle((9, 28, 236, 171), fill="#858278")
-    draw.rectangle((10, 29, 236, 171), fill="#e0ddd1")
-    draw.rectangle((11, 30, 235, 170), fill="#c9c6bb")
-    draw.rectangle((11, 30, 235, 43), fill="#b4b2a7")
-    draw.line((11, 43, 235, 43), fill="#9e9a8e")
-    draw.line((10, 22, 235, 22), fill="#878479")
-    draw.line((10, 23, 235, 23), fill="#d8d5c9")
-    for x, y in ((6, 6), (238, 6), (6, 198), (238, 198)):
-        draw.rectangle((x, y, x + 2, y + 2), fill="#777469")
-        draw.point((x + 2, y + 2), fill="#e0ddd1")
-    save_image(image, ART / "source/interfaces/distillation.png")
 
 
 def indicators():
@@ -106,6 +86,5 @@ def synthesize_sounds():
 
 
 if __name__ == "__main__":
-    panel()
     indicators()
     synthesize_sounds()

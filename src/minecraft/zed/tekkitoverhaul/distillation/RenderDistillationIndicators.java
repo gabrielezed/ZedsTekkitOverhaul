@@ -25,21 +25,27 @@ final class RenderDistillationIndicators extends TileEntitySpecialRenderer {
         int receiver = DistillationAnimation.receiverFrame(process.getDistillateMB(), state.blocksOutput(), completion);
         if (state == DistillationState.IDLE && receiver == 0) return;
 
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_TEXTURE_BIT | GL11.GL_CURRENT_BIT);
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_TEXTURE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_POLYGON_BIT);
         try {
             GL11.glDisable(GL11.GL_LIGHTING);
+            // Keep the overlays on their host faces and bias their depth like vanilla block damage.
+            GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+            GL11.glPolygonOffset(-3F, -3F);
             bindTextureByName(SHEET);
             Tessellator tess = Tessellator.instance;
             tess.startDrawingQuads();
             tess.setColorOpaque_I(0xFFFFFF);
             if (running) {
                 window(tess, tile, x, y, z, 0, -1, 0, 0, 5, 11, 5, 8, motion, 0);
-                window(tess, tile, x, y, z, 0, 1, 0, 3, 6, 10, 3, 13, motion, 1);
-                window(tess, tile, x, y, z, 0, 2, 0, 3, 6, 10, 3, 13, (motion + 2) & 3, 1);
-                window(tess, tile, x, y, z, facing.dx, 2, facing.dz, 2, 5, 11, 4, 7, motion, 2);
+                int columnInset = DistillationGeometry.COLUMN_BODY.minX;
+                window(tess, tile, x, y, z, 0, 1, 0, columnInset, 6, 10, 3, 13, motion, 1);
+                window(tess, tile, x, y, z, 0, 2, 0, columnInset, 6, 10, 3, 13, (motion + 2) & 3, 1);
+                window(tess, tile, x, y, z, facing.dx, 2, facing.dz,
+                        DistillationGeometry.CONDENSER_BODY.minX, 5, 11, 4, 7, motion, 2);
             }
             if (receiver > 0)
-                window(tess, tile, x, y, z, facing.dx, 1, facing.dz, 3, 6, 10, 4, 11, receiver, 3);
+                window(tess, tile, x, y, z, facing.dx, 1, facing.dz,
+                        DistillationGeometry.RECEIVER_BODY.minX, 6, 10, 4, 11, receiver, 3);
 
             if (state != DistillationState.IDLE) {
                 int progress = running ? 4 * process.getProgressTicks() / process.selectedType().durationTicks : 5;
@@ -64,7 +70,7 @@ final class RenderDistillationIndicators extends TileEntitySpecialRenderer {
         if (block == null || world.isBlockOpaqueCube(bx + nx, by, bz + nz)) return;
         tess.setBrightness(block.getMixedBrightnessForBlock(world, bx + nx, by, bz + nz));
 
-        double depth = (8 - inset) / 16D + 0.001D;
+        double depth = (8 - inset) / 16D;
         double cx = x + dx + 0.5D + nx * depth;
         double cz = z + dz + 0.5D + nz * depth;
         double a = (left - 8) / 16D, b = (right - 8) / 16D;

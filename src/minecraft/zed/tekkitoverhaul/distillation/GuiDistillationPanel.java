@@ -7,7 +7,7 @@ import zed.tekkitoverhaul.client.GuiMachinePanel;
 
 /** Local process overview and part-specific controls. */
 final class GuiDistillationPanel extends GuiMachinePanel {
-    private static final int TEXT = 0xFF30302E;
+    private static final int TEXT = 0xFF404040;
     private static final int WARNING = 0xFF6C3528;
     private static final int RUNNING = 0xFF284C38;
     private static final int OIL = 0xFF926844;
@@ -75,7 +75,7 @@ final class GuiDistillationPanel extends GuiMachinePanel {
         GL11.glColor4f(1F, 1F, 1F, 1F);
         mc.renderEngine.bindTexture(mc.renderEngine.getTexture("/zed/gui/distillation.png"));
         drawTexturedModalRect(left, top, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-        fontRenderer.drawString(title, left + 14, top + 11, TEXT);
+        fontRenderer.drawString(title, left + (PANEL_WIDTH - fontRenderer.getStringWidth(title)) / 2, top + 10, TEXT);
     }
 
     @Override
@@ -175,8 +175,9 @@ final class GuiDistillationPanel extends GuiMachinePanel {
         String value = amount + " / " + max + " " + unit;
         fontRenderer.drawString(label, start, textY, TEXT);
         fontRenderer.drawString(value, end - fontRenderer.getStringWidth(value), textY, TEXT);
-        drawRect(start, textY + 10, end, textY + 17, 0xFF53524D);
-        drawRect(start + 1, textY + 11, end - 1, textY + 16, 0xFF74716A);
+        drawRect(start, textY + 10, end, textY + 17, 0xFFFFFFFF);
+        drawRect(start, textY + 10, end - 1, textY + 16, 0xFF373737);
+        drawRect(start + 1, textY + 11, end - 1, textY + 16, 0xFF8B8B8B);
         int fill = Math.min(max, Math.max(0, amount)) * (end - start - 2) / max;
         if (fill > 0) drawRect(start + 1, textY + 11, start + 1 + fill, textY + 16, color);
     }

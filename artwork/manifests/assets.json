@@ -5,9 +5,9 @@
     "runtime": "zed/gui/distillation.png",
     "size": [256, 256],
     "alpha": "cutout",
-    "role": "Classic 246 by 206 pixel Distillation status panel",
-    "palette": "industrial",
-    "origin": "zto-original",
+    "role": "Vanilla and IC2 style 246 by 206 pixel Distillation status panel",
+    "palette": "classic-gui",
+    "origin": "zto-reference-inspired",
     "jar": true
   },
   {

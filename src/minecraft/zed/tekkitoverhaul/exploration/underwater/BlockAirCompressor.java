@@ -3,6 +3,8 @@ package zed.tekkitoverhaul.exploration.underwater;
 import net.minecraft.src.*;
 
 final class BlockAirCompressor extends BlockContainer {
+    private static final int[] FRONT_BY_YAW = {2, 5, 3, 4};
+    private static final int ITEM_FRONT = 3;
     private final int cap;
     private final int grille;
 
@@ -19,8 +21,28 @@ final class BlockAirCompressor extends BlockContainer {
 
     @Override
     public int getBlockTextureFromSide(int side) {
+        return getBlockTextureFromSideAndMetadata(side, 0);
+    }
+
+    @Override
+    public int getBlockTextureFromSideAndMetadata(int side, int metadata) {
         if (side < 2) return cap;
-        return side == 2 || side == 3 ? grille : blockIndexInTexture;
+        int front = metadata >= 2 && metadata <= 5 ? metadata : ITEM_FRONT;
+        return side == front ? grille : blockIndexInTexture;
+    }
+
+    @Override
+    public int getBlockTexture(IBlockAccess world, int x, int y, int z, int side) {
+        int metadata = world.getBlockMetadata(x, y, z);
+        // Existing compressors were saved without facing and showed the grille on both Z faces.
+        if (metadata == 0 && side == 2) return grille;
+        return getBlockTextureFromSideAndMetadata(side, metadata);
+    }
+
+    @Override
+    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLiving placer) {
+        int quadrant = MathHelper.floor_double(placer.rotationYaw * 4F / 360F + 0.5D) & 3;
+        world.setBlockMetadataWithNotify(x, y, z, FRONT_BY_YAW[quadrant]);
     }
 
     @Override

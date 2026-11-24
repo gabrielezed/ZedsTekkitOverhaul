@@ -273,7 +273,19 @@ public final class UnderwaterEquipmentProbe {
 
     private static void verifyMachine(File root, Fixture world, yw diver) throws Exception {
         int x = 289, y = 5, z = 295;
-        check(world.g(x, y, z, COMPRESSOR), "compressor placement");
+        int[] fronts = {2, 5, 3, 4};
+        for (int quadrant = 0; quadrant < fronts.length; quadrant++) {
+            int placedX = x + 2 + quadrant;
+            world.g(placedX, y - 1, z, 1);
+            check(world.a(placedX, y - 1, z) == 1, "support for compressor ItemBlock placement");
+            diver.c(288, y, 288, quadrant * 90F, 0);
+            aan stack = new aan(COMPRESSOR, 1, 0);
+            check(stack.a(diver, world, placedX, y - 1, z, 1) && stack.a == 0,
+                    "native ItemBlock places compressor for quadrant " + quadrant);
+            verifyCompressorFacing(world, placedX, y, z, fronts[quadrant]);
+        }
+        check(world.g(x, y, z, COMPRESSOR), "legacy compressor placement");
+        verifyCompressorFacing(world, x, y, z, 0);
         TileAirCompressor tile = (TileAirCompressor) world.b(x, y, z);
         tile.a(0, new aan(1, 1, 0));
         check(tile.k_(0) == null, "direct insertion rejects unrelated items");
@@ -332,6 +344,9 @@ public final class UnderwaterEquipmentProbe {
         tile.onChunkUnload();
         check(!tile.isAddedToEnergyNet(), "chunk unload disconnects the sink");
         Fixture reopened = new Fixture(root);
+        verifyCompressorFacing(reopened, x, y, z, 0);
+        for (int quadrant = 0; quadrant < fronts.length; quadrant++)
+            verifyCompressorFacing(reopened, x + 2 + quadrant, y, z, fronts[quadrant]);
         TileAirCompressor restored = (TileAirCompressor) reopened.b(x, y, z);
         ady state = new ady();
         if (restored != null) restored.b(state);
@@ -359,7 +374,21 @@ public final class UnderwaterEquipmentProbe {
                 "buffer approaches capacity");
         check(replacement.injectEnergy(Direction.XN, 32) == 27 && buffered(replacement) == 4000
                 && !replacement.demandsEnergy(), "buffer returns unused EU at capacity");
+        System.out.println("PASS all four native compressor placements, saved facing and the legacy dual-grille fallback");
         System.out.println("PASS native IC2 EU through copper, normal and Shift-click transfers, bounded charging, disk reload, break and replacement");
+    }
+
+    private static void verifyCompressorFacing(xd world, int x, int y, int z, int front) {
+        pb block = pb.m[COMPRESSOR];
+        int grille = block.a(3, 0), casing = block.a(5, 0), cap = block.a(1, 0);
+        check(grille != casing && cap != casing && cap != grille && block.a(2, 0) == casing,
+                "item view has one grille and distinct casing and caps");
+        check(world.a(x, y, z) == COMPRESSOR && world.e(x, y, z) == front, "stored compressor front " + front);
+        for (int side = 0; side < 6; side++) {
+            boolean isFront = front == 0 ? side == 2 || side == 3 : side == front;
+            int expected = side < 2 ? cap : isFront ? grille : casing;
+            check(block.d((ali)world, x, y, z, side) == expected, "compressor texture " + front + "/" + side);
+        }
     }
 
     private static aan tank(int ticks) {

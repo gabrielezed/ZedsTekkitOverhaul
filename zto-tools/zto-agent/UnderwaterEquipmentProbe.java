@@ -68,8 +68,8 @@ public final class UnderwaterEquipmentProbe {
         BuildCraftCore.initialize();
         if (distillation) {
             DistillationRegistry.register(ZtoConfigLoader.load(new File(root, "config").toPath(), false,
-                    Logger.getLogger("distillation-fixture")));
-            DistillationVisualProbe.run(root, world, NaturalSpawnProbe.join(world));
+                    Logger.getLogger("distillation-fixture")), new zed.tekkitoverhaul.mod_ZedsTekkitOverhaul());
+            DistillationVisualProbe.run(root, world, client);
             return;
         }
         // Use BuildCraft's own item registration without constructing its OpenGL pipe renderer.
@@ -382,6 +382,7 @@ public final class UnderwaterEquipmentProbe {
     }
 
     static final class Fixture extends xd {
+        final java.util.List<String> distillationSounds = new ArrayList<>();
         Fixture(File root) {
             this(root, "underwater");
         }
@@ -393,11 +394,14 @@ public final class UnderwaterEquipmentProbe {
         }
 
         @Override public void a(nn entity, String sound, float volume, float pitch) {}
-        @Override public void a(double x, double y, double z, String sound, float volume, float pitch) {}
+        @Override public void a(double x, double y, double z, String sound, float volume, float pitch) {
+            if (sound.startsWith("zto.distillation.")) distillationSounds.add(sound);
+        }
     }
 
     private static final class HeadlessClient extends Minecraft {
         HeadlessClient() { super(null, null, null, 1, 1, false); }
         @Override public void a(ja failure) { throw new AssertionError(failure); }
+        @Override public void a(vp screen) { s = screen; }
     }
 }

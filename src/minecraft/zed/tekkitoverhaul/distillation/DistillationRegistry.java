@@ -1,6 +1,7 @@
 package zed.tekkitoverhaul.distillation;
 
 import net.minecraft.src.Block;
+import net.minecraft.src.BaseMod;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
@@ -18,11 +19,13 @@ public final class DistillationRegistry {
     private static final int[] BUCKET_ICONS = new int[BUCKETS.length];
     private static boolean registered;
     private static int oilBucketIdOverride = -1;
+    private static int vesselModel;
 
     private DistillationRegistry() { }
 
     public static void preloadTextures() {
         MinecraftForgeClient.preloadTexture(DistillationTextures.SHEET);
+        MinecraftForgeClient.preloadTexture(RenderDistillationIndicators.SHEET);
     }
 
     public static int blockId(DistillationPartType type) {
@@ -69,7 +72,9 @@ public final class DistillationRegistry {
         }
     }
 
-    public static void register(ZtoConfig config) {
+    public static int vesselModel() { return vesselModel; }
+
+    public static void register(ZtoConfig config, BaseMod mod) {
         if (registered) return;
         int[] blockIds = new int[BLOCKS.length];
         int[] itemIds = new int[BUCKETS.length];
@@ -104,7 +109,9 @@ public final class DistillationRegistry {
                     throw new IllegalStateException("ZTO: Duplicate distillate item ID " + shifted);
         }
 
-        ModLoader.registerTileEntity(TileEntityDistillationBoiler.class, "ZTODistillationBoiler");
+        vesselModel = ModLoader.getUniqueBlockModelID(mod, true);
+        ModLoader.registerTileEntity(TileEntityDistillationBoiler.class, "ZTODistillationBoiler",
+                new RenderDistillationIndicators());
         ModLoader.registerTileEntity(TileEntityDistillationPart.class, "ZTODistillationPart");
         ModLoader.registerTileEntity(TileEntityDistillationHeater.class, "ZTODistillationLVHeater");
         ModLoader.registerTileEntity(TileEntityDistillationReceiver.class, "ZTODistillationReceiver");

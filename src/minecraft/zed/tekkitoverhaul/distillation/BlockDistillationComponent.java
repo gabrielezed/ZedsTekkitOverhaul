@@ -21,12 +21,23 @@ abstract class BlockDistillationComponent extends BlockContainer {
         return DistillationTextures.SHEET;
     }
 
-    // Retain existing light and neighbor solidity behavior with native type-zero rendering.
+    // Keep the original light and neighbor solidity independently of the model bounds.
     @Override
     public boolean isOpaqueCube() { return false; }
 
     @Override
     public boolean renderAsNormalBlock() { return false; }
+
+    @Override
+    public int getRenderType() {
+        return DistillationGeometry.shaped(part) ? DistillationRegistry.vesselModel() : 0;
+    }
+
+    @Override
+    public void onBlockRemoval(World world, int x, int y, int z) {
+        if (part != DistillationPartType.BOILER) DistillationStructure.partRemoved(world, x, y, z, part);
+        super.onBlockRemoval(world, x, y, z);
+    }
 
     @Override
     public int getBlockTextureFromSide(int side) {

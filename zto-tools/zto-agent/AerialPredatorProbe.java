@@ -200,7 +200,7 @@ public final class AerialPredatorProbe {
         AerialSoundRegistration sounds = new AerialSoundRegistration();
         sounds.onLoadSoundSettings(manager);
         sounds.onLoadSoundSettings(manager);
-        check(manager.getSoundsPool().a == 15, "sound registration is idempotent per pool");
+        check(manager.getSoundsPool().a == 18, "sound registration is idempotent per pool");
         for (String key : new String[] {AerialSounds.AMBIENT, AerialSounds.WARNING, AerialSounds.DIVE,
                 AerialSounds.HURT, AerialSounds.DEATH, "zto.jetpack.warning", "zto.jetpack.fault", "zto.jetpack.recovery",
                 "zto.skelebird.ambient", "zto.skelebird.warning", "zto.skelebird.slash",
@@ -217,7 +217,7 @@ public final class AerialPredatorProbe {
         }
         sd recreated = new sd();
         sounds.onLoadSoundSettings(recreated);
-        check(recreated.getSoundsPool().a == 15, "a recreated sound manager gets the same sound set");
+        check(recreated.getSoundsPool().a == 18, "a recreated sound manager gets the same sound set");
     }
 
     private static void verifySkelebirdPose() throws Exception {

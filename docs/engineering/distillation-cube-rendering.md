@@ -1,5 +1,7 @@
 # Distillation cube rendering in Survival 0.5.1-alpha.1
 
+This records the earlier cube pass. See [the current industrial presentation](distillation-industrial-presentation.md) for the shaped vessels, operating cues and owner walkthrough.
+
 The legacy render type is 0. Forge binds `zed/textures/distillation_blocks.png` for the world block. The corresponding native ItemBlock uses the same sheet for inventory, hotbar, held stacks and drops. Inventory metadata zero puts the front on the vanilla furnace's visible face. World faces use the stored placement metadata. The upper column front uses two vertical neighbor lookups. The adjoining coil rails and lateral flanges are painted into the sheet.
 
 Six block IDs, five TileEntity identifiers and the seven-place layout keep their existing meanings. Column and Thermometer share `ZTODistillationPart`. Native NBT loading and old condenser/receiver upgrade code still run. Wrench permissions and linked facing use the existing structure resolver. The render path reads the saved block front even when the physical structure resolves to another orientation. Existing non-opaque and non-normal solidity/light behavior is retained. The boiler process and IC2/BuildCraft adapters own the same data and controls. No data migration is needed.

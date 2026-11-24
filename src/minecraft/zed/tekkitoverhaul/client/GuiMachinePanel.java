@@ -7,7 +7,7 @@ import net.minecraft.src.TileEntity;
 /** Shared live status panel for local machine controls. */
 public abstract class GuiMachinePanel extends GuiScreen {
     protected static final int PANEL_WIDTH = 246;
-    private static final int PANEL_HEIGHT = 206;
+    protected static final int PANEL_HEIGHT = 206;
     private static final int CLOSE = 99;
     private final String title;
     protected final TileEntity tile;
@@ -44,12 +44,16 @@ public abstract class GuiMachinePanel extends GuiScreen {
     @Override
     public final void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground();
+        drawPanelBackground(title);
+        drawPanel();
+        super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    protected void drawPanelBackground(String title) {
         drawRect(left - 1, top - 1, left + PANEL_WIDTH + 1, top + PANEL_HEIGHT + 1, 0xFF556570);
         drawRect(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xFF202B32);
         drawRect(left, top, left + PANEL_WIDTH, top + 29, 0xFF344653);
         drawCenteredString(fontRenderer, title, width / 2, top + 10, 0xFFF4F7FA);
-        drawPanel();
-        super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
     protected abstract void drawPanel();

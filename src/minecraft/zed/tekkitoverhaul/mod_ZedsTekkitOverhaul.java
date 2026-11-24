@@ -22,7 +22,9 @@ import zed.tekkitoverhaul.devbridge.DevBridge;
 import zed.tekkitoverhaul.devbridge.MobEquipmentFixture;
 import zed.tekkitoverhaul.client.BuildWatermark;
 import zed.tekkitoverhaul.distillation.DistillationRegistry;
+import zed.tekkitoverhaul.distillation.RenderDistillationBlock;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
+import zed.tekkitoverhaul.distillation.client.DistillationSounds;
 import zed.tekkitoverhaul.emc.EmcIntegration;
 import zed.tekkitoverhaul.equipment.MobEquipmentHooks;
 import zed.tekkitoverhaul.equipment.RenderMobEquipment;
@@ -85,7 +87,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
-        DistillationRegistry.register(settings);
+        DistillationRegistry.register(settings, this);
+        DistillationSounds.register(ModLoader.getMinecraftInstance());
         ModLoader.setInGameHook(this, true, false); // EE2 EMC registration runs on the first eligible tick.
         ModLoader.setInGUIHook(this, true, false);
         System.out.println("[ZTO] v" + getVersion() + " loaded");
@@ -144,7 +147,15 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
                                     Block block, int modelId) {
         if (HopperRegistry.block != null && modelId == HopperRegistry.model)
             return RenderHopper.render(renderer, world, x, y, z, block);
+        if (modelId == DistillationRegistry.vesselModel())
+            return RenderDistillationBlock.renderWorld(renderer, world, x, y, z, block);
         return modelId == petroleumModel && RenderPetroleum.render(renderer, world, x, y, z, block);
+    }
+
+    @Override
+    public void renderInvBlock(RenderBlocks renderer, Block block, int metadata, int modelId) {
+        if (modelId == DistillationRegistry.vesselModel())
+            RenderDistillationBlock.renderItem(renderer, block, metadata);
     }
 
     @Override

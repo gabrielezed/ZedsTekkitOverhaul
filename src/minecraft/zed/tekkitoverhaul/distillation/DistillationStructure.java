@@ -49,4 +49,20 @@ public final class DistillationStructure {
         TileEntity te = world.getBlockTileEntity(match.boilerX, match.boilerY, match.boilerZ);
         return te instanceof TileEntityDistillationBoiler ? (TileEntityDistillationBoiler)te : null;
     }
+
+    /** Invalidate every affected controller, even when an auxiliary is shared. */
+    static void partRemoved(World world, int x, int y, int z, DistillationPartType type) {
+        WorldAccess access = new WorldAccess(world);
+        for (DistillationLayout.Facing facing : DistillationLayout.Facing.values()) {
+            for (int i = 0; i < 6; i++) {
+                DistillationLayout.Placement offset = DistillationLayout.placement(0, 0, 0, facing, i);
+                if (offset.part != type) continue;
+                int bx = x - offset.x, by = y - offset.y, bz = z - offset.z;
+                if (!access.hasPart(bx, by, bz, DistillationPartType.BOILER)) continue;
+                TileEntity tile = world.getBlockTileEntity(bx, by, bz);
+                if (tile instanceof TileEntityDistillationBoiler)
+                    ((TileEntityDistillationBoiler)tile).interruptPresentation(facing);
+            }
+        }
+    }
 }

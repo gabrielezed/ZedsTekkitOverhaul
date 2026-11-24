@@ -2,9 +2,9 @@
 
 The [singleplayer acceptance matrix](singleplayer-acceptance.md) records the passing gasoline batch through the actual liquid and energy endpoints in Tekkit Dev. The Dev Bridge reads boiler process values, heater EU and EnergyNet membership. Physical BuildCraft pipe transport, external EU delivery and partial-batch persistence remain open.
 
-**Implementation:** [native cube renderer](../engineering/distillation-cube-rendering.md), [original prototype](../engineering/fractional-distillation-v1.md) and [rotated binding history](../engineering/distillation-rendering-and-binding-v2.md).
+**Implementation:** [industrial presentation and owner walkthrough](../engineering/distillation-industrial-presentation.md), [original prototype](../engineering/fractional-distillation-v1.md) and [rotated binding history](../engineering/distillation-rendering-and-binding-v2.md).
 
-This refinery uses native block faces with the generic structure validator and existing TileEntity persistence.
+This refinery uses native block faces and multipart vessels with the generic structure validator and existing TileEntity persistence.
 
 ## Non-negotiable constraints
 

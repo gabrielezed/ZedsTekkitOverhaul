@@ -1,5 +1,35 @@
 [
   {
+    "id": "distillation-panel",
+    "source": "source/interfaces/distillation.png",
+    "runtime": "zed/gui/distillation.png",
+    "size": [256, 256],
+    "alpha": "cutout",
+    "role": "Classic 246 by 206 pixel Distillation status panel",
+    "palette": "industrial",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "distillation-indicators",
+    "source": "source/distillation/distillation_indicators.png",
+    "runtime": "zed/textures/distillation_indicators.png",
+    "size": [256, 256],
+    "alpha": "cutout",
+    "role": "16 pixel heat, vapor, coolant, receiver and progress indicator cells",
+    "palette": "industrial",
+    "origin": "zto-original",
+    "jar": true,
+    "opaqueCells": [
+      [0, 0], [1, 0], [2, 0], [3, 0],
+      [0, 1], [1, 1], [2, 1], [3, 1],
+      [0, 2], [1, 2], [2, 2], [3, 2],
+      [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3],
+      [6, 3], [7, 3], [8, 3], [9, 3], [10, 3],
+      [0, 4], [1, 4], [2, 4], [3, 4], [4, 4], [5, 4]
+    ]
+  },
+  {
     "id": "distillation-blocks",
     "source": "source/distillation/distillation_blocks.png",
     "runtime": "zed/textures/distillation_blocks.png",
@@ -8,7 +38,7 @@
       256
     ],
     "alpha": "cutout",
-    "role": "Type-zero block faces and native cube item render",
+    "role": "World and item block faces, rails and vessel collars",
     "palette": "industrial",
     "origin": "zto-reference-inspired",
     "jar": true,

@@ -51,6 +51,8 @@ The local comparison script builds the six native-style item projections, an ass
 
 ### Local original-sprite machine study
 
+The [refinery visual pass](../docs/engineering/distillation-industrial-presentation.md) uses the original face map for both shaped vessels and cube components. Run `python artwork/tools/distillation_previews.py` for layout studies, operating states and GUI mockups. See [the three layout proposals](../docs/design/distillation-layout-alternatives.md).
+
 Build the Air Compressor and Distillation texture variants from the pinned Tekkit Classic archives. This writes four editable PNGs to `source/`, marks their provenance as local, and writes comparison images to the ignored `previews/` directory. Export the PNGs for a local candidate. Keep the resulting PNGs, mixed comparisons and candidate JAR local until redistribution permission is documented.
 
 ```powershell

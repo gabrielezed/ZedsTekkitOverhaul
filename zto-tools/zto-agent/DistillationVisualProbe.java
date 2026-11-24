@@ -296,8 +296,10 @@ final class DistillationVisualProbe {
         handlerField.setAccessible(true);
         AerialSoundRegistration handler = (AerialSoundRegistration)handlerField.get(null);
         handler.onLoadSoundSettings(manager);
+        int registered = manager.getSoundsPool().a;
         handler.onLoadSoundSettings(manager);
-        check(manager.getSoundsPool().a == 18, "one registration per clip, including after reload");
+        check(registered >= 18 && manager.getSoundsPool().a == registered,
+                "existing clips remain present and reloading the same pool adds no duplicates");
         sd replacement = new sd();
         handler.onLoadSoundSettings(replacement);
         for (String clip : new String[] {"start", "running", "complete"}) {

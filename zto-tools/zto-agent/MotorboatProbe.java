@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 import net.minecraft.client.Minecraft;
 import zed.tekkitoverhaul.config.ZtoConfig;
 import zed.tekkitoverhaul.config.ZtoConfigLoader;
@@ -17,6 +19,7 @@ import zed.tekkitoverhaul.exploration.motorboat.EntityMotorboat;
 import zed.tekkitoverhaul.exploration.motorboat.MotorboatRegistry;
 import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
 import zed.tekkitoverhaul.mod_ZedsTekkitOverhaul;
+import zed.tekkitoverhaul.survival.aerial.client.AerialSoundRegistration;
 
 /** One headless lake in the pinned pack, using the production-obfuscated item, entity and container. */
 public final class MotorboatProbe {
@@ -214,6 +217,7 @@ public final class MotorboatProbe {
                 && !replaced.isPropelling(), "solid shoreline stops the motor without breaking or burning fuel at rest");
         System.out.println("PASS bucket conservation, capacity, disk reload, metered exhaustion and fueled recovery");
         verifyArtwork();
+        verifySound();
     }
 
     private static int bucket(DistillateType type) { return DistillationRegistry.bucketFor(type.id).bQ; }
@@ -277,5 +281,20 @@ public final class MotorboatProbe {
 
     private static void check(boolean value, String message) {
         if (!value) throw new AssertionError(message);
+    }
+
+    private static void verifySound() throws Exception {
+        Field handlerField = AerialSoundRegistration.class.getDeclaredField("HANDLER");
+        handlerField.setAccessible(true);
+        AerialSoundRegistration handler = (AerialSoundRegistration) handlerField.get(null);
+        sd manager = new sd();
+        handler.onLoadSoundSettings(manager);
+        ub cue = manager.getSoundsPool().a("zto.motorboat.running");
+        check(cue != null, "running cue is registered in the native sound pool");
+        try (AudioInputStream clip = AudioSystem.getAudioInputStream(cue.b)) {
+            check(clip.getFormat().getChannels() == 1 && clip.getFormat().getSampleRate() == 22050
+                    && clip.getFrameLength() < 8800, "short positional mono outboard cue");
+        }
+        System.out.println("PASS native engine sound registration and packaged mono cue");
     }
 }

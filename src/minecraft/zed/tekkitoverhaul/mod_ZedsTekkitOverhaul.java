@@ -36,6 +36,8 @@ import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
 import zed.tekkitoverhaul.exploration.motorboat.MotorboatRegistry;
+import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.exploration.abyssal.RenderMarineOrganism;
 import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
@@ -120,6 +122,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AerialPredators.registerMagpieEgg(settings.magpieEgg);
         UnderwaterRegistry.register(settings);
         MotorboatRegistry.register(settings);
+        AbyssalRegistry.register(settings, ModLoader.getUniqueBlockModelID(this, false));
         MotorboatClient.register(ModLoader.getMinecraftInstance());
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
@@ -155,6 +158,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
             return RenderHopper.render(renderer, world, x, y, z, block);
         if (modelId == DistillationRegistry.vesselModel())
             return RenderDistillationBlock.renderWorld(renderer, world, x, y, z, block);
+        if (AbyssalRegistry.isMarineOrganism(block))
+            return RenderMarineOrganism.render(renderer, world, block, x, y, z);
         return modelId == petroleumModel && RenderPetroleum.render(renderer, world, x, y, z, block);
     }
 

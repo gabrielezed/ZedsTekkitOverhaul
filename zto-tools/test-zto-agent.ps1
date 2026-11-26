@@ -9,7 +9,7 @@ param(
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
         'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain',
-        'site-siege-completion','underwater','distillation','motorboat')][string]$Focus
+        'site-siege-completion','underwater','distillation','motorboat','abyssal')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,10 +65,11 @@ try {
         $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -in 'site-siege-terrain','site-siege-completion')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
-        if ($Focus -in 'underwater','distillation','motorboat') {
+        if ($Focus -in 'underwater','distillation','motorboat','abyssal') {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/UnderwaterEquipmentProbe.java'
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/DistillationVisualProbe.java'
         }
+        if ($Focus -eq 'abyssal') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalDecorationProbe.java' }
         if ($Focus -eq 'motorboat') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/MotorboatProbe.java' }
         if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ModdedSettlementProbe.java'
@@ -97,13 +98,13 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
-            if ($Focus -in 'underwater','distillation','motorboat') {
+            if ($Focus -in 'underwater','distillation','motorboat','abyssal') {
                 $fixture = New-Item -ItemType Directory -Path (Join-Path $out.FullName "$Focus-fixture")
                 $config = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'config')
                 Copy-Item -LiteralPath (Join-Path $game 'config/IC2.cfg') -Destination $config.FullName
                 $buildcraftConfig = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'buildcraft/config')
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
-                $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } else { 'UnderwaterEquipmentProbe' }
+                $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
                 & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath $probe $fixture.FullName $Focus
                 if ($LASTEXITCODE) { throw "Native $Focus fixture failed." }
                 return

@@ -65,6 +65,8 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 | `integration.buildcraftOilBucketItemId` | -1 for autodetection, or the registered runtime item ID from 0–31999 |
 | `emc.profile` | Empty for compatibility values. Use escaped newlines between directives. See the [EMC profile guide](../engineering/emc-profile.md). |
 
+The alpha.2 decoration keys extend the block defaults with 3032–3043 and the item constructor defaults with 22017–22022. See the [complete key and ID table](../engineering/abyssal-decoration.md). Existing configurations receive the new keys while retaining their current assignments.
+
 Keep assigned IDs stable for existing worlds. Block IDs use 1–4095, flowing IDs use 1–4094, and item constructor IDs use 0–31743. Inventory item IDs are constructor IDs plus 256. Registry collisions still fail with a diagnostic. Restore the original assignment before opening saves after an ID error. Existing configurations receive missing Motorboat registry keys. The Motorboat saves its own fuel and bucket slots.
 
 ## Legacy ownership inventory

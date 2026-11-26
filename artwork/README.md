@@ -72,6 +72,10 @@ The [derivation manifest](manifests/machine-derivations.json) pins each original
 
 `previews/industrial-source-sprites.png` identifies the source block faces, pipe cells and refinery UVs. Compare `compressor-original-vs-zto.png`, `distillation-original-vs-zto.png`, `distillation-complete-apparatus.png` and `industrial-machines-comparison.png`. Use the sheets ending in `-native.png` for a one-pixel-per-texel inspection. The inventory, hotbar, held item and placed-block checks in Minecraft still use the owner walkthrough.
 
+## Abyssal environments
+
+Original block and item atlases are in `source/abyssal/` and exported to both profiles. Run `py artwork/tools/abyssal_previews.py` to regenerate the local review sheets and underwater scene. See the [underwater style guide](guidelines/underwater-environments.md) and [atlas layout](../docs/engineering/abyssal-decoration.md#atlas-and-model).
+
 ## Motorboat
 
 The authored 64×32 engine UV sheet and two 16×16 sprite layers are in [`source/motorboat/`](source/motorboat/). The [asset manifest](manifests/assets.json) maps these PNGs and the fueling panel to their packaged paths. The installed client composes the vanilla boat cell (8,8) under the motor overlay and uses the stock boat hull texture directly.

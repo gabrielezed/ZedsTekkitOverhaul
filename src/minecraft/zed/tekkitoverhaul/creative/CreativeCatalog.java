@@ -12,6 +12,7 @@ import net.minecraft.src.Container;
 import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
+import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
 
 final class CreativeCatalog {
     final CreativeCategories.Tab[] tabs = CreativeCategories.tabs();
@@ -32,7 +33,7 @@ final class CreativeCatalog {
         addEntries(legacyEntries, seen);
         // Forge's default Block.addCreativeItems is empty. Include our registered machine blocks.
         for (Block block : Block.blocksList) {
-            if (CreativeCategories.isZto(block) && !block.blockMaterial.isLiquid()) {
+            if (CreativeCategories.isZto(block) && (!block.blockMaterial.isLiquid() || AbyssalRegistry.isMarineOrganism(block))) {
                 addEntries(Collections.singletonList(new ItemStack(block)), seen);
             }
         }

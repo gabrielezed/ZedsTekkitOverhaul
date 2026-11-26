@@ -1,5 +1,7 @@
 # Current implementation
 
+The `0.5.1-alpha.3` candidate adds the Sunken Observatory, finite Abyssal Guardian patrols and rare wild Guardians in deep Trench water. The Observatory owns a persistent location and a queryable chamber for alpha.4. [Generation and test seeds](../engineering/sunken-observatory.md) · [Guardian behavior and persistence](../engineering/abyssal-guardian.md).
+
 The `0.5.1-alpha.2` candidate generates Abyssal Trench terrain in new eligible Default Overworld ocean chunks. Continuous world-space fields shape connected channels and basins. Geological coatings and marine colonies use native extended block storage. The shaping plan constrains cuts across a native terrain halo. The mask reduces native water fog density and lifts the underwater lightmap in the pinned renderer. The owner approved the Abyssal Trench terrain and mask refinement after in-game testing. [World generation and owner walkthrough](../engineering/abyssal-worldgen.md) · [Abyssal decoration](../engineering/abyssal-decoration.md).
 
 The `0.5.1-alpha.1` candidate adds underwater equipment and an IC2 Air Compressor for ordinary water. It adds [coupled Distillation vessels and operating cues](../engineering/distillation-industrial-presentation.md), a [build watermark](../engineering/build-watermark.md) and a shared [artwork workspace](../../artwork/README.md). The default build restores the approved private machine textures through the [local-dev artwork profile](../engineering/local-artwork-recovery.md). [Implementation and owner walkthrough](survival-051-alpha1.md).

@@ -61,4 +61,4 @@ Recreate seed `32021` in a new Default world and inspect the old defect area nea
 
 A separate population sample exercised the native client provider and registered IC2, RedPower and BuildCraft generators. Copper and RedPower ores remained present below the coated floor. A controlled BuildCraft medium-deposit ticket exercises oil intersecting the generated terrain. Native structures were enabled in the provider fixture, but intersections with individual structure types have not been exhaustively sampled.
 
-Graphical owner acceptance is pending. The submerged observatory, its creatures, the Custodian and Ender Pearl progression belong to later revisions.
+The owner approved the revised terrain and underwater mask after in-game testing on 2026-11-26. The approved playtest used the local-dev candidate built from `839661d0df8424edd035d6653f38b89f42c47204`. The submerged observatory, its creatures, the Custodian and Ender Pearl progression belong to later revisions.

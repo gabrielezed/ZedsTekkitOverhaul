@@ -6,7 +6,7 @@
 - Add decorative crafting, support-aware underwater planting, four-segment Kelp and oriented Fan Coral.
 - Blend abyssal excavation across native shallow terrain and coat exposed cliff faces. Apply a partial underwater lightmap lift while wearing the mask.
 - Replace the Trench footprint with continuous warped geography, varied relief and independent habitats. Increase the equipped Underwater Mask water-fog distance multiplier to 3.5.
-- Generate the Abyssal Trench in eligible new Default Overworld ocean chunks. Add deep valleys, fossil formations, marine colonies, sparse masonry and a development locator. Owner graphical acceptance is pending. [Engineering and walkthrough](docs/engineering/abyssal-worldgen.md)
+- Generate the Abyssal Trench in eligible new Default Overworld ocean chunks. Add deep valleys, fossil formations, marine colonies, sparse masonry and a development locator. The owner approved the Abyssal Trench and mask refinement after in-game testing. [Engineering and walkthrough](docs/engineering/abyssal-worldgen.md)
 
 ## 0.5.1-alpha.1 — Underwater equipment and Air Compressor
 

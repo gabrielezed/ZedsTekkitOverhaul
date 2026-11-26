@@ -4,7 +4,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows mor
 
 ## Survival 0.5.1-alpha.2 · The Abyss Below
 
-**Pending owner graphical acceptance.** New Default Overworld oceans can contain the Abyssal Trench, with deep terraces, fossil formations, clustered marine life and weathered masonry. The Motorboat and diving equipment support expeditions to the biome. [World generation and owner walkthrough](docs/engineering/abyssal-worldgen.md) · [Decorative palette](docs/engineering/abyssal-decoration.md)
+New Default Overworld oceans can contain the Abyssal Trench, with deep terraces, fossil formations, clustered marine life and weathered masonry. The Motorboat and diving equipment support expeditions to the biome. [World generation and owner walkthrough](docs/engineering/abyssal-worldgen.md) · [Decorative palette](docs/engineering/abyssal-decoration.md)
 
 ## Survival 0.5.1-alpha.1 · Water exploration
 

@@ -127,6 +127,8 @@ public final class MotorboatProbe {
         check(Math.abs(accelerated - 1D) < 0.0001 && Math.abs(legacy - 0.4D) < 0.0001,
                 "steady speed, motor " + accelerated + ", vanilla " + legacy);
         check(boat.fuel() == 1990 && world.motorSounds == 3, "one mB per two powered ticks and bounded sound");
+        check(boat.propellerTurns(0F) < boat.propellerTurns(0.5F)
+                && boat.propellerTurns(0.5F) < boat.propellerTurns(1F), "forward propeller interpolates between ticks");
         player.a.a = 1;
         float heading = boat.u;
         boat.J_();
@@ -134,11 +136,14 @@ public final class MotorboatProbe {
                 "steering changes heading within the turn and speed caps");
         player.a.a = player.a.b = 0;
         int fuelAtRelease = boat.fuel();
+        float propellerAtRelease = boat.propellerTurns(1F);
         double speed = Math.hypot(boat.r, boat.t);
         int sounds = world.motorSounds;
         boat.J_();
         check(!boat.isPropelling() && Math.hypot(boat.r, boat.t) < speed
                 && boat.fuel() == fuelAtRelease && world.motorSounds == sounds, "coasting is silent and unmetered");
+        check(boat.propellerTurns(0F) == propellerAtRelease && boat.propellerTurns(1F) == propellerAtRelease,
+                "propeller holds its last orientation while coasting");
         boat.i_();
         boat.c(player);
         check(player.j == null, "vanilla dismount releases the rider");
@@ -175,15 +180,21 @@ public final class MotorboatProbe {
         reserve.a(METER, 1);
         EntityMotorboat ending = (EntityMotorboat) aao.a(reserve, reopened);
         ending.c(X + 8.5, restored.p, Z + 0.5, -90, 0);
+        ending.a(0D, 0D, 0D);
         player.c(ending.o, ending.p + 1, ending.q, 0, 0);
         ending.c(player);
-        player.a.b = 1;
+        player.a.b = -1;
         for (int i = 0; i < 40 && ending.fuel() > 0; i++) ending.J_();
         check(ending.fuel() == 0 && ending.isPropelling(), "final powered tick exhausts the last mB");
+        check(ending.propellerTurns(0F) > ending.propellerTurns(0.5F)
+                && ending.propellerTurns(0.5F) > ending.propellerTurns(1F), "propeller spins the other way in reverse");
+        float finalTurn = ending.propellerTurns(1F);
         sounds = reopened.motorSounds;
         for (int i = 0; i < 100; i++) ending.J_();
         check(!ending.isPropelling() && Math.hypot(ending.r, ending.t) < 0.003 && ending.p >= Y + 0.2
                 && reopened.motorSounds == sounds, "empty boat coasts to a float with no powered sound");
+        check(ending.propellerTurns(0F) == finalTurn && ending.propellerTurns(1F) == finalTurn,
+                "fuel exhaustion stops the propeller");
         player.h(ending);
 
         restored.a(md.a(player), 6);
@@ -261,9 +272,14 @@ public final class MotorboatProbe {
         motor.setAccessible(true);
         qp[] parts = (qp[]) motor.get(model);
         lq clamp = (lq) parts[2].l.get(0);
-        lq propeller = (lq) parts[5].l.get(0);
+        Field rotorField = model.getClass().getDeclaredField("propeller");
+        rotorField.setAccessible(true);
+        qp rotor = (qp) rotorField.get(model);
+        lq blade = (lq) rotor.l.get(0);
+        lq cross = (lq) ((qp) rotor.m.get(0)).l.get(0);
         check(model.a.length == 5 && model.a[2].c == 11F && clamp.a == 10F && clamp.d == 15F
-                && propeller.a == 18F && propeller.e == 9F, "native hull and stern-mounted submerged model coordinates");
+                && rotor.c == 18F && rotor.d == 7F && rotor.e == 0F && blade.e == 2F && cross.f == 2F,
+                "native hull, stern mount and shared propeller pivot");
         Class<?> artwork = Class.forName("zed.tekkitoverhaul.exploration.motorboat.client.MotorboatArtwork");
         Method icon = artwork.getDeclaredMethod("motorboatIcon");
         icon.setAccessible(true);

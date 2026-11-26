@@ -19,6 +19,7 @@ public final class EntityMotorboat extends EntityBoat {
     static final int INPUT = 0;
     static final int RETURN = 1;
     private static final int TICKS_PER_MB = 2;
+    private static final int PROPELLER_TICKS_PER_TURN = 12;
     private static final double MAX_SPEED = 1D;
     private static final double REVERSE_SPEED = 0.28D;
     private static final double ACCELERATION = 0.075D;
@@ -39,7 +40,8 @@ public final class EntityMotorboat extends EntityBoat {
     };
     private int fuel;
     private int poweredTicks;
-    private boolean propelling;
+    private int propulsionDirection;
+    private int propellerTick;
     private int ticksUntilSound;
 
     public EntityMotorboat(World world) {
@@ -52,8 +54,13 @@ public final class EntityMotorboat extends EntityBoat {
 
     public static void setControls(Controls input) { controls = input; }
     public int fuel() { return fuel; }
-    public boolean isPropelling() { return propelling; }
+    public boolean isPropelling() { return propulsionDirection != 0; }
     public boolean hasRoomForBucket() { return CAPACITY - fuel >= BUCKET_VOLUME; }
+
+    public float propellerTurns(float partialTick) {
+        // Interpolate over the most recent signed step, even across a full turn.
+        return (propellerTick + (partialTick - 1F) * propulsionDirection) / PROPELLER_TICKS_PER_TURN;
+    }
 
     @Override
     public boolean interact(EntityPlayer player) {
@@ -113,9 +120,11 @@ public final class EntityMotorboat extends EntityBoat {
 
         double heading = Math.toRadians(rotationYaw);
         double advance = -(posX - prevPosX) * Math.cos(heading) - (posZ - prevPosZ) * Math.sin(heading);
-        propelling = throttle != 0F && advance * Math.signum(throttle) > 0.01D;
+        int thrustDirection = (int) Math.signum(throttle);
+        propulsionDirection = advance * thrustDirection > 0.01D ? thrustDirection : 0;
         if (ticksUntilSound > 0) --ticksUntilSound;
-        if (propelling) {
+        if (isPropelling()) {
+            propellerTick = (propellerTick + propulsionDirection) % PROPELLER_TICKS_PER_TURN;
             if (++poweredTicks >= TICKS_PER_MB) {
                 fuel--;
                 poweredTicks = 0;

@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.config;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -25,6 +26,18 @@ public final class ZtoConfig {
     public final int tankEgg, thiefEgg, aerialPredatorEgg, skelebirdEgg, magpieEgg;
     public final Integer hopper;
     public final int airCompressor, underwaterMask, oxygenTank, flippers;
+    private final Map<String, Integer> abyssalIds = new LinkedHashMap<String, Integer>();
+
+    Iterable<String> abyssalRegistryKeys() {
+        return abyssalIds.keySet();
+    }
+
+    public int abyssalId(String key) {
+        Integer id = abyssalIds.get(key);
+        if (id == null) throw new IllegalArgumentException("Unknown abyssal registry key " + key);
+        return id;
+    }
+
     public final int outboardMotor, motorboat, motorboatEntity;
     public final int buildcraftOilBucketItemId;
     public final String emcProfile;
@@ -92,6 +105,24 @@ public final class ZtoConfig {
         flippers = values.item("flippers", 22014);
         outboardMotor = values.item("outboardMotor", 22015);
         motorboat = values.item("motorboat", 22016);
+        abyssalIds.put("block.abyssalStone", values.block("abyssalStone", 3032));
+        abyssalIds.put("block.abyssalSilt", values.block("abyssalSilt", 3033));
+        abyssalIds.put("block.shellstone", values.block("shellstone", 3034));
+        abyssalIds.put("block.petrifiedCoral", values.block("petrifiedCoral", 3035));
+        abyssalIds.put("block.abyssalBricks", values.block("abyssalBricks", 3036));
+        abyssalIds.put("block.erodedAbyssalBricks", values.block("erodedAbyssalBricks", 3037));
+        abyssalIds.put("block.abyssalLamp", values.block("abyssalLamp", 3038));
+        abyssalIds.put("block.abyssalKelp", values.block("abyssalKelp", 3039));
+        abyssalIds.put("block.ribbonAlgae", values.block("ribbonAlgae", 3040));
+        abyssalIds.put("block.deepwaterFanCoral", values.block("deepwaterFanCoral", 3041));
+        abyssalIds.put("block.tubeSponge", values.block("tubeSponge", 3042));
+        abyssalIds.put("block.ghostAnemone", values.block("ghostAnemone", 3043));
+        abyssalIds.put("item.ribbonAlgaeCutting", values.item("ribbonAlgaeCutting", 22018));
+        abyssalIds.put("item.fanCoralFragment", values.item("fanCoralFragment", 22019));
+        abyssalIds.put("item.spongeCutting", values.item("spongeCutting", 22020));
+        abyssalIds.put("item.luminousPolyp", values.item("luminousPolyp", 22021));
+        abyssalIds.put("item.kelpFrond", values.item("kelpFrond", 22017));
+        abyssalIds.put("item.abyssalShell", values.item("abyssalShell", 22022));
         motorboatEntity = values.integer("entity.motorboat", 240, 1, 254, false);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);

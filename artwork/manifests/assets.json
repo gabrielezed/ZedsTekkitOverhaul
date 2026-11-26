@@ -352,5 +352,28 @@
     "palette": "industrial",
     "origin": "zto-original",
     "jar": true
+  },
+  {
+    "id": "abyssal-materials",
+    "source": "source/abyssal/materials.png",
+    "runtime": "zed/textures/abyssal/materials.png",
+    "size": [256, 256],
+    "alpha": "cutout",
+    "role": "Abyssal cube faces, marine cutouts and sponge model surfaces",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true,
+    "opaqueCells": [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [11, 0], [12, 0]]
+  },
+  {
+    "id": "abyssal-items",
+    "source": "source/abyssal/items.png",
+    "runtime": "zed/textures/abyssal/items.png",
+    "size": [256, 256],
+    "alpha": "cutout",
+    "role": "Six marine resource icons in row zero",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
   }
 ]

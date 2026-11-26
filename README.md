@@ -2,6 +2,10 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
+## Survival 0.5.1-alpha.2 · The Abyss Below
+
+**Work in progress.** Part I adds the Abyssal Trench's decorative palette to Creative and NEI. The seven solid materials, five marine organisms and six resources support manually built underwater scenes. Biome generation is planned for Part II. [Content and owner playtest](docs/engineering/abyssal-decoration.md)
+
 ## Survival 0.5.1-alpha.1 · Water exploration
 
 **Alpha preview.** Headless Tekkit Classic checks cover diving equipment, oxygen charging, distillation and Motorboat operation. In-game visual and audio checks are tracked in the [owner playtest checklist](docs/engineering/local-artwork-recovery.md#owner-playtest).

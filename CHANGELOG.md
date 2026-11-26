@@ -1,5 +1,11 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.5.1-alpha.2 — The Abyss Below (work in progress)
+
+- Add seven abyssal building materials, five submerged organisms and six resource items with original textures.
+- Add decorative crafting, support-aware underwater planting, four-segment Kelp and oriented Fan Coral.
+- Add the environmental palette for future Abyssal Trench generation. [Engineering and playtest notes](docs/engineering/abyssal-decoration.md)
+
 ## 0.5.1-alpha.1 — Underwater equipment and Air Compressor
 
 - Explore ordinary water with an Underwater Mask, a rechargeable Oxygen Tank and Flippers in vanilla armor slots.

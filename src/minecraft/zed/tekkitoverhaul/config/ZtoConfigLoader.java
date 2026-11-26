@@ -64,6 +64,9 @@ public final class ZtoConfigLoader {
                     "item.oxygenTank", "item.flippers", "item.outboardMotor", "item.motorboat", "entity.motorboat"}) {
                 if (entries.containsKey(key) && !primary.containsKey(key)) additions.put(key, entries.get(key));
             }
+            for (String key : config.abyssalRegistryKeys()) {
+                if (!primary.containsKey(key)) additions.put(key, entries.get(key));
+            }
             if (migrate || !additions.isEmpty()) {
                 try {
                     Files.createDirectories(directory);

@@ -1,5 +1,7 @@
 # Current implementation
 
+The `0.5.1-alpha.2` work in progress registers an abyssal decoration collection for manually built underwater scenes. [Placement, models and future terrain integration](../engineering/abyssal-decoration.md).
+
 The `0.5.1-alpha.1` candidate adds underwater equipment and an IC2 Air Compressor for ordinary water. It adds [coupled Distillation vessels and operating cues](../engineering/distillation-industrial-presentation.md), a [build watermark](../engineering/build-watermark.md) and a shared [artwork workspace](../../artwork/README.md). The default build restores the approved private machine textures through the [local-dev artwork profile](../engineering/local-artwork-recovery.md). [Implementation and owner walkthrough](survival-051-alpha1.md).
 
 **Survival 0.2.2 — Aerial Ecology & Atmospheric Hazards** added Skelebird bone drops and strengthened Electric Jetpack faults while retaining powered descent braking. The supported target is Tekkit Classic 3.1.2 singleplayer. [Jetpack verification](survival-022-aerial-predator.md#verification) · [Skelebird](survival-022-skelebird.md)

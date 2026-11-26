@@ -38,6 +38,8 @@ compileForge: 3.4.9.171   # currently documented MDK profile
 runtimeForge: 3.3.8.164   # observed Tekkit Dev runtime; read dynamically
 minecraftVersion: 1.2.5
 jarSha256: <SHA-256 of deployed/running JAR>
+artworkProfile: local-dev | public
+artworkFingerprint: <SHA-256 of the profile name and ordered manifest PNG fingerprints>
 ```
 
 A clean release build should come from a fixed commit. Dirty builds are for tests only and must be labeled clearly. Do not bake a final JAR hash into the JAR itself (self-reference); compute the hash **after packaging** and compare it against the running code-source hash through Dev Bridge.
@@ -46,7 +48,7 @@ A clean release build should come from a fixed commit. Dirty builds are for test
 
 `BuildVersion.VERSION` is canonical. ModLoader and the startup banner use it directly. The canonical `zto-tools/build-and-deploy.bat` checks `mcmod.info` against it before compiling. Update both together and add an entry to the changelog for a version change.
 
-The build embeds `zto-build.properties` with the product version, full Git SHA, dirty state, UTC timestamp and compiler profile. The adjacent `ZedsTekkitOverhaul.jar.build.json` includes those values plus the SHA-256 of the finished archive. Keep the stable deployed JAR name. The Tekkit Dev lifecycle verifies the archive hash against the running code source and compares the running ModLoader version with the build record. Its report records pack Forge/FML from the current launch log and the Java version from the owned process.
+The build embeds `zto-build.properties` with the product version, full Git SHA, dirty state, UTC timestamp, compiler profile, artwork profile and per-PNG hashes. The mod and agent sidecars include those values plus the SHA-256 of each finished archive. Keep the stable deployed JAR name. The Tekkit Dev lifecycle verifies the archive hash against the running code source and compares the running ModLoader version with the build record. Its report records pack Forge/FML from the current launch log and the Java version from the owned process.
 
 ## 5. Compatibility contract
 

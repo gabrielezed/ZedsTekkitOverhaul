@@ -1,0 +1,41 @@
+{
+  "origin": "local-derivative",
+  "derivation": "manifests/machine-derivations.json",
+  "generator": "tools/derive_machines.py",
+  "approvedCommit": "3ae9b2bf24db47370d62237b6c20c1584e2090c2",
+  "approvedJarSha256": "58c184005d5f605e7d262fe93daffa6d998e3c98bb2c107e6b5be475f66baf34",
+  "assets": [
+    {
+      "id": "distillation-blocks",
+      "runtime": "zed/textures/distillation_blocks.png",
+      "size": [256, 256],
+      "faceMap": "Six Distillation part columns, faces 0–4 and Column upper front at (2,5)",
+      "pixelSha256": "158a05aa8ba6d40158f2b3780adcd9f6a64c93cdb2d2324641a009e6b65496bf",
+      "pngSha256": "712dc20f9f447ddd8704747011a7e2566fd9d773042e7257443ed9d2c941a063"
+    },
+    {
+      "id": "compressor-cap",
+      "runtime": "zed/textures/underwater/compressor_cap.png",
+      "size": [16, 16],
+      "faceMap": "Air Compressor top and bottom",
+      "pixelSha256": "ac52d128770ae49af055f2819102a28227f3b883473a9a284398f16115d6ebeb",
+      "pngSha256": "333a89562f30154e5db9c83141da4c5f83296ed0d4c6fc14807474e0446594e0"
+    },
+    {
+      "id": "compressor-side",
+      "runtime": "zed/textures/underwater/compressor_side.png",
+      "size": [16, 16],
+      "faceMap": "Air Compressor lateral casing",
+      "pixelSha256": "50260b4a7bd3ddfd7fb1954a49ae81a8577330bc3820c4738227815e3bc3f353",
+      "pngSha256": "1921e5a36fbcde8e37bf7c0b78f27e4056aabd9674d35ac1fe7a77465a026d01"
+    },
+    {
+      "id": "compressor-grille",
+      "runtime": "zed/textures/underwater/compressor_grille.png",
+      "size": [16, 16],
+      "faceMap": "Air Compressor front and both legacy metadata-zero Z faces",
+      "pixelSha256": "67171572304cc857909af343fc7b8504d83c4de25801a84fe16a5cf28be32021",
+      "pngSha256": "db92d772a4ef9f4c7288fa0cf10664eb898ae3f10240fd2ac8c8ab3b6715ba17"
+    }
+  ]
+}

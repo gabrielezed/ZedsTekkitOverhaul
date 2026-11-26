@@ -1,10 +1,75 @@
+[CmdletBinding(DefaultParameterSetName = 'Instance')]
 param(
-    [Parameter(Mandatory)][string]$Instance,
-    [string]$ArtifactDirectory = (Join-Path (Split-Path $PSScriptRoot) 'dist-zto'),
-    [switch]$Staging
+    [Parameter(Mandatory, ParameterSetName = 'Instance')][string]$Instance,
+    [Parameter(Mandatory, ParameterSetName = 'ModsDirectory')][string]$ModsDirectory,
+    [string]$ArtifactDirectory,
+    [Parameter(ParameterSetName = 'Instance')][switch]$Staging
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'file-sha256.ps1')
+if (!$ArtifactDirectory) { $ArtifactDirectory = Join-Path (Split-Path $PSScriptRoot) 'dist-zto' }
+$agentSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZTOAgent.jar')).Path
+$modSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZedsTekkitOverhaul.jar')).Path
+$agentBuild = Get-Content -LiteralPath "$agentSource.build.json" -Raw | ConvertFrom-Json
+$modBuild = Get-Content -LiteralPath "$modSource.build.json" -Raw | ConvertFrom-Json
+$version = $modBuild.productVersion
+if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' -or
+    $agentBuild.productVersion -cne $version -or
+    $agentBuild.commit -ne $modBuild.commit -or $agentBuild.buildTimestampUtc -ne $modBuild.buildTimestampUtc -or
+    $agentBuild.artworkProfile -ne $modBuild.artworkProfile -or
+    $agentBuild.artworkFingerprint -ne $modBuild.artworkFingerprint) {
+    throw 'Expected the mod and agent from the same verified build.'
+}
+if ($modBuild.artworkProfile -eq 'public') {
+    throw 'The public artifact is for distribution. Build local-dev for an owner playtest.'
+}
+function Assert-Archive([string]$Path, [string]$Expected) {
+    if ($Expected -notmatch '^[0-9a-f]{64}$' -or (Get-ZtoFileSha256 $Path) -cne $Expected) {
+        throw "Archive SHA-256 does not match its build: $Path"
+    }
+}
+Assert-Archive $agentSource $agentBuild.jarSha256
+Assert-Archive $modSource $modBuild.jarSha256
+
+if ($ModsDirectory) {
+    $requestedMods = Get-Item -LiteralPath $ModsDirectory
+    if (!$requestedMods.PSIsContainer) { throw 'ZTO_PRISM_MODS must point to an existing directory.' }
+    foreach ($parent in @($requestedMods, $requestedMods.Parent, $requestedMods.Parent.Parent)) {
+        if ($parent -and ((Test-Path -LiteralPath (Join-Path $parent.FullName 'mmc-pack.json')) -or
+            (Test-Path -LiteralPath (Join-Path $parent.FullName 'instance.cfg')))) {
+            if ($requestedMods.Name -ne 'mods' -or $requestedMods.Parent.Name -notin 'minecraft', '.minecraft' -or
+                $parent.FullName -ne $requestedMods.Parent.Parent.FullName) {
+                throw 'ZTO_PRISM_MODS inside a Prism instance must point to its minecraft/mods or .minecraft/mods directory.'
+            }
+            $Instance = $parent.FullName
+            break
+        }
+    }
+    if (!$Instance) {
+        if (Get-ChildItem -LiteralPath $requestedMods.FullName -File -Filter 'ZedsTekkitOverhaul*.jar' |
+            Where-Object Name -ne 'ZedsTekkitOverhaul.jar') {
+            throw 'Remove competing ZTO mod archives from the staging directory.'
+        }
+        $staged = Join-Path $requestedMods.FullName 'ZedsTekkitOverhaul.jar'
+        $pending = "$staged.$([guid]::NewGuid().ToString('N')).tmp"
+        try {
+            Copy-Item -LiteralPath $modSource -Destination $pending
+            Assert-Archive $pending $modBuild.jarSha256
+            if (Test-Path -LiteralPath $staged) {
+                [IO.File]::Replace($pending, $staged, "$pending.bak")
+            } else {
+                [IO.File]::Move($pending, $staged)
+            }
+            Assert-Archive $staged $modBuild.jarSha256
+        } finally {
+            if (Test-Path -LiteralPath $pending) { Remove-Item -LiteralPath $pending }
+        }
+        Write-Output "Staged the verified mod in $($requestedMods.FullName). No Prism instance was installed. The matching mod, agent and sidecars are in $ArtifactDirectory."
+        return
+    }
+}
+
 $instanceDir = Get-Item -LiteralPath $Instance
 $instancePath = $instanceDir.FullName
 if ($Staging) {
@@ -23,6 +88,9 @@ $agentFile = Join-Path $instancePath 'libraries/ZTOAgent.jar'
 $gamePath = Join-Path $instancePath 'minecraft'
 if (!(Test-Path -LiteralPath $gamePath)) { $gamePath = Join-Path $instancePath '.minecraft' }
 $mods = (Resolve-Path -LiteralPath (Join-Path $gamePath 'mods')).Path
+if ($requestedMods -and $mods -ne $requestedMods.FullName) {
+    throw 'The requested mods directory differs from the Prism instance game directory.'
+}
 $modFile = Join-Path $mods 'ZedsTekkitOverhaul.jar'
 $pack = Get-Content -LiteralPath $profile -Raw | ConvertFrom-Json
 $minecraft = @($pack.components | Where-Object uid -eq 'net.minecraft')
@@ -52,16 +120,6 @@ $configText = [regex]::Replace($configText, '(?m)^JvmArgs=[^\r\n]*', {
     if ($clean -match $legacyName) { throw 'Remove the previous ZTO agent entry in this instance before installing.' }
     $clean
 })
-$agentSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZTOAgent.jar')).Path
-$modSource = (Resolve-Path -LiteralPath (Join-Path $ArtifactDirectory 'ZedsTekkitOverhaul.jar')).Path
-$agentBuild = Get-Content -LiteralPath "$agentSource.build.json" -Raw | ConvertFrom-Json
-$modBuild = Get-Content -LiteralPath "$modSource.build.json" -Raw | ConvertFrom-Json
-$version = $modBuild.productVersion
-if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$' -or
-    $agentBuild.productVersion -cne $version -or
-    $agentBuild.commit -ne $modBuild.commit -or $agentBuild.buildTimestampUtc -ne $modBuild.buildTimestampUtc) {
-    throw 'Expected the mod and agent from the same verified build.'
-}
 $pack.components = @($pack.components | Where-Object uid -ne $uid) + @([ordered]@{
     uid = $uid; version = $version; cachedName = 'ZTO Agent'
 })
@@ -73,17 +131,6 @@ $patchSpec = [ordered]@{
         'MMC-filename' = 'ZTOAgent.jar'
     })
 }
-function Assert-Archive([string]$Path, [string]$Expected) {
-    $hash = [Security.Cryptography.SHA256]::Create()
-    $stream = [IO.File]::OpenRead($Path)
-    try {
-        if ([BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '') -ne $Expected) {
-            throw "Archive SHA-256 does not match its build: $Path"
-        }
-    } finally { $stream.Dispose(); $hash.Dispose() }
-}
-Assert-Archive $agentSource $agentBuild.jarSha256
-Assert-Archive $modSource $modBuild.jarSha256
 $id = [guid]::NewGuid().ToString('N')
 $destinations = [ordered]@{
     $agentFile = $agentSource

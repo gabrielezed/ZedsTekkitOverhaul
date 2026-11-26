@@ -39,7 +39,7 @@ Close the game and, from the MDK root, run:
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script validates the product version, calls `recompile.bat`, removes only stale `reobf/minecraft/zed/` output, calls `reobfuscate.bat`, and packages the reobfuscated `zed/` classes, assets and build metadata. It writes the archive SHA-256 to the sidecar before deploying the stable JAR. It aborts if required tools or assets are absent or if competing old `ZedsTekkitOverhaul*.jar` names are detected. See the [versioning policy](VERSIONING_POLICY.md).
+The script validates the product version and the default `local-dev` artwork profile, calls `recompile.bat`, removes only stale `reobf/minecraft/zed/` output, calls `reobfuscate.bat`, and packages the reobfuscated classes and selected assets. It checks the packaged PNGs and writes the artwork and archive SHA-256 values to the sidecars before deploying the stable JAR. It aborts if required tools or assets are absent or if competing old `ZedsTekkitOverhaul*.jar` names are detected. See the [artwork profiles](../../artwork/README.md#build-profiles) and [versioning policy](VERSIONING_POLICY.md).
 
 The build publishes both `dist-zto/ZedsTekkitOverhaul.jar` and the Java 8 `dist-zto/ZTOAgent.jar`. The managed Prism component selects the agent at JVM startup. The ordinary mod can load without the agent and retains the ZTO-owned transfer gates. [Installation](../deploy-prism.md) · [Industrial layouts and evidence](saboteur-industrial.md)
 

@@ -2,20 +2,24 @@
 import argparse
 from dataclasses import dataclass
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile
 
 from PIL import Image
 
-from alpha1_previews import BC, IC2, PARTS, SOURCE, cube, image, sheet
-from textures import ART, CACHE, read_json, save_image, sprite, verified, write_json
+from alpha1_previews import BC, IC2, PARTS, cube, sheet
+from textures import ART, CACHE, read_json, relative_to, verified, write_json
 
 MANIFEST = ART / "manifests/machine-derivations.json"
 ASSETS = ART / "manifests/assets.json"
+PROFILE = ART / "manifests/local-dev.json"
 ATLAS = "distillation/distillation_blocks.png"
 REFINERY = BC.parents[2] / "factory/gui/refinery.png"
 STEEL = "#3d4b50"
 AIR = "#7494a2"
 PALE = "#c4dce0"
+REFERENCE_IMAGES = {}
 
 
 @dataclass(frozen=True)
@@ -24,7 +28,8 @@ class Donor:
     cell: tuple
 
     def pixels(self):
-        return sprite(self.atlas, *self.cell, 16)
+        x, y = (axis * 16 for axis in self.cell)
+        return REFERENCE_IMAGES[self.atlas].crop((x, y, x + 16, y + 16))
 
     def record(self):
         cache, atlas = self.atlas.relative_to(CACHE).as_posix().split("/", 1)
@@ -282,7 +287,7 @@ def reference_previews():
     entries.extend((f"Refinery UV {x},{y}", Donor(REFINERY, (x, y)).pixels())
                    for x, y in ((0, 1), (1, 1), (2, 1)))
     sheet("industrial-source-sprites.png", entries, 8, 5)
-    sheet("refinery-source-uv.png", [("BuildCraft Refinery model UV", image(REFINERY))], 8, 1)
+    sheet("refinery-source-uv.png", [("BuildCraft Refinery model UV", REFERENCE_IMAGES[REFINERY])], 8, 1)
 
 
 def distillation_previews(parts, compressor_faces):
@@ -309,29 +314,30 @@ def distillation_previews(parts, compressor_faces):
     sheet("industrial-machines-comparison.png", reference_cubes + machines, 8, 6)
 
 
-def references():
-    result = {}
-    for key, mod, version, paths in (
-        ("ic2", "IndustrialCraft 2", "1.97", (IC2,)),
-        ("buildcraft-core", "BuildCraft", "2.2.14", (BC, REFINERY)),
-    ):
-        index = read_json(CACHE / key / "index.json")
-        atlases = {}
-        for path in paths:
-            relative = path.relative_to(CACHE / key).as_posix()
-            checksum = index["resources"][relative]
-            verified(path.read_bytes(), checksum, sha256, relative)
-            atlases[relative] = checksum
-        result[key] = {"mod": mod, "version": version, "archive": index["archive"], "atlases": atlases}
-    return result
+def load_references(references, mods_dir):
+    for key, spec in references.items():
+        archive_path = mods_dir / spec["archive"] if mods_dir else None
+        if archive_path and archive_path.is_file():
+            with ZipFile(archive_path) as archive:
+                contents = {name: archive.read(name) for name in spec["atlases"]}
+        else:
+            contents = {}
+        for name, checksum in spec["atlases"].items():
+            path = relative_to(CACHE / key, name)
+            if name not in contents and not path.is_file():
+                raise ValueError(f"Missing {spec['archive']} or cached {name}. Supply --mods-dir with the Tekkit Classic 3.1.2 archives.")
+            data = contents[name] if name in contents else path.read_bytes()
+            verified(data, checksum, sha256, f"{spec['archive']}:{name}")
+            with Image.open(BytesIO(data)) as image:
+                REFERENCE_IMAGES[path] = image.convert("RGBA")
 
 
-def build_assets(files, assets):
+def build_assets(files, assets, references):
     atlas_cells = {tuple(cell) for cell in assets[f"source/{ATLAS}"]["opaqueCells"]}
     if atlas_cells != set(files[ATLAS]):
         raise ValueError("Distillation cells differ from the runtime asset manifest")
 
-    manifest = {"references": references(), "outputs": {}}
+    manifest = {"references": references, "outputs": {}}
     images = {}
     for path, faces in files.items():
         image_size = tuple(assets[f"source/{path}"]["size"])
@@ -355,38 +361,49 @@ def build_assets(files, assets):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("build", "check", "record", "references"))
+    parser.add_argument("--mods-dir", type=Path)
+    parser.add_argument("--preview", action="store_true")
     args = parser.parse_args()
+    recorded = read_json(MANIFEST)
+    load_references(recorded["references"], args.mods_dir)
     if args.command == "references":
-        references()
         reference_previews()
         return
 
     compressor_faces = compressor()
     parts = list(zip(PARTS, (boiler(), heater(), column(), condenser(), receiver(), thermometer())))
-    asset_list = read_json(ASSETS)
-    assets = {entry["source"]: entry for entry in asset_list}
-    manifest, images = build_assets(outputs(compressor_faces, parts), assets)
+    assets = {entry["source"]: entry for entry in read_json(ASSETS)}
+    manifest, images = build_assets(outputs(compressor_faces, parts), assets, recorded["references"])
     if args.command == "record":
         write_json(MANIFEST, manifest)
-    elif read_json(MANIFEST) != manifest:
+        return
+    if recorded != manifest:
         raise ValueError("Machine derivations differ from the recorded donor hashes and pixel edits")
 
+    profile_bytes = PROFILE.read_bytes()
+    overlay = ART / "local-dev" / sha256(profile_bytes).hexdigest()
+    overrides = {entry["id"]: entry for entry in read_json(PROFILE)["assets"]}
+    if set(overrides) != {assets[f"source/{path}"]["id"] for path in images}:
+        raise ValueError("The local-dev profile and machine derivation outputs differ")
+    pending = {}
     for path, expected in images.items():
         asset = assets[f"source/{path}"]
+        override = overrides[asset["id"]]
+        if asset["runtime"] != override["runtime"] or expected.size != tuple(override["size"]):
+            raise ValueError(f"Local profile dimensions or runtime mapping differ for {path}")
+        verified(expected.tobytes(), override["pixelSha256"], sha256, path)
+        destination = relative_to(overlay, asset["runtime"])
         if args.command == "check":
-            current = image(SOURCE / path)
-            if current.size != expected.size or current.tobytes() != expected.tobytes():
-                raise ValueError(f"Machine artwork differs from the recorded derivation: {path}")
-            if asset.get("derivation") != MANIFEST.relative_to(ART).as_posix() or asset["origin"] != "local-derivative":
-                raise ValueError(f"Missing local derivation status: {path}")
+            verified(destination.read_bytes(), override["pngSha256"], sha256, str(destination))
         else:
-            save_image(expected, SOURCE / path)
-            asset["origin"] = "local-derivative"
-            asset["derivation"] = MANIFEST.relative_to(ART).as_posix()
-    if args.command == "check":
-        print(f"Verified {sum(map(len, manifest['outputs'].values()))} derived machine faces")
-    else:
-        write_json(ASSETS, asset_list)
+            encoded = BytesIO()
+            expected.save(encoded, format="PNG", compress_level=9)
+            pending[destination] = verified(encoded.getvalue(), override["pngSha256"], sha256, path)
+    for destination, content in pending.items():
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+    print(f"Verified {len(images)} approved PNGs and {sum(map(len, manifest['outputs'].values()))} derived machine faces")
+    if args.preview:
         compressor_previews(compressor_faces)
         reference_previews()
         distillation_previews(parts, compressor_faces)

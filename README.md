@@ -87,7 +87,7 @@ Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, and **JDK 8**. The development environm
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script places both JARs in `dist-zto` and installs them to **Tekkit Dev** by default. Set `ZTO_PRISM_MODS` to an existing staging directory to build outside the Prism profile. Keep the original obfuscated Tekkit mod JARs in the separate pack runtime. [Environment guide](docs/agents/environment.md)
+With Prism and Minecraft closed, the default build verifies the approved `local-dev` artwork and installs the matching mod and agent in **Tekkit Dev**. Select `ZTO_ARTWORK_PROFILE=public` explicitly to build redistribution artifacts without installing them. Keep the original obfuscated Tekkit mod JARs in the separate pack runtime. [Build profiles and deployment](docs/deploy-prism.md)
 
 ## Project resources
 

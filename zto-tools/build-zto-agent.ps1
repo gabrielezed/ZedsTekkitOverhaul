@@ -1,4 +1,4 @@
-param([string]$DependencyDirectory)
+param([string]$DependencyDirectory, [string]$ArtifactDirectory)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
@@ -33,7 +33,8 @@ foreach ($name in $pins.Keys) {
 }
 $asm = Join-Path $dependency.FullName "asm-$version.jar"
 $commons = Join-Path $dependency.FullName "asm-commons-$version.jar"
-$dist = New-Item -ItemType Directory -Path (Join-Path $root 'dist-zto') -Force
+if (!$ArtifactDirectory) { $ArtifactDirectory = Join-Path $root 'dist-zto' }
+$dist = New-Item -ItemType Directory -Path $ArtifactDirectory -Force
 $buildParent = (Resolve-Path -LiteralPath (Join-Path $root 'temp')).Path
 $id = "zto-agent-build-$([guid]::NewGuid().ToString('N'))"
 $build = New-Item -ItemType Directory -Path (Join-Path $buildParent $id)

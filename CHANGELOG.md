@@ -6,6 +6,7 @@
 - Recharge tanks at an LV IC2 Air Compressor with a tank slot and visible oxygen and EU readings.
 - Preserve oxygen in each tank's item data and buffered EU in the compressor's world data.
 - Include original pixel-art sprites, worn textures and a machine interface.
+- Craft an Outboard Motor from IC2 and BuildCraft parts and fit it to a vanilla boat. The Motorboat uses ZTO Gasoline and retains fuel when recovered.
 
 ## 0.4.0-alpha.2 — Tactical site objectives and manual siege testing
 

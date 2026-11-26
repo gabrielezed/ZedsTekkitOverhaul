@@ -3,7 +3,8 @@ setlocal EnableExtensions DisableDelayedExpansion
 
 rem ZedsTekkitOverhaul - MCP 1.2.5 build + PrismLauncher deployment.
 rem Start from anywhere: the script resolves the MDK root from its own location.
-rem Optional override: set "ZTO_PRISM_MODS=C:\path\to\instance\minecraft\mods"
+rem ZTO_ARTWORK_PROFILE=public creates distribution artifacts without installing.
+rem ZTO_PRISM_MODS selects a Prism mods directory or a loose staging directory.
 
 pushd "%~dp0.." >nul 2>&1
 if errorlevel 1 (
@@ -11,12 +12,29 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "MODS_DIR=%APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods"
+set "ARTWORK_PROFILE=local-dev"
+if defined ZTO_ARTWORK_PROFILE set "ARTWORK_PROFILE=%ZTO_ARTWORK_PROFILE%"
+set "ARTIFACT_DIR=%CD%\dist-zto"
+if "%ARTWORK_PROFILE%"=="public" (
+    set "ARTIFACT_DIR=%CD%\dist-zto\public"
+    if defined ZTO_PRISM_MODS (
+        echo [ZTO] ERROR: Clear ZTO_PRISM_MODS when building the public profile.
+        goto :fail
+    )
+) else if not "%ARTWORK_PROFILE%"=="local-dev" (
+    echo [ZTO] ERROR: Set ZTO_ARTWORK_PROFILE to local-dev or public.
+    goto :fail
+)
+set "INSTANCE=%APPDATA%\PrismLauncher\instances\Tekkit Dev"
+set "MODS_DIR=%INSTANCE%\minecraft\mods"
 if defined ZTO_PRISM_MODS set "MODS_DIR=%ZTO_PRISM_MODS%"
+for %%F in ("%MODS_DIR%") do set "MODS_DIR=%%~fF"
 set "JAR_NAME=ZedsTekkitOverhaul.jar"
-set "BUILD_JAR=dist-zto\ZedsTekkitOverhaul.building.jar"
+set "WORK_DIR=%CD%\dist-zto\packaging\%ARTWORK_PROFILE%"
+set "BUILD_JAR=%WORK_DIR%\%JAR_NAME%"
 set "DEPLOY_JAR=%MODS_DIR%\%JAR_NAME%"
-set "BUILD_METADATA=dist-zto\zto-build.properties"
+set "BUILD_METADATA=%WORK_DIR%\zto-build.properties"
+set "FINGERPRINTS=%WORK_DIR%\artwork.properties"
 
 if not exist "recompile.bat" (
     echo [ZTO] ERROR: recompile.bat was not found in the MDK root.
@@ -26,7 +44,7 @@ if not exist "reobfuscate.bat" (
     echo [ZTO] ERROR: reobfuscate.bat was not found in the MDK root.
     goto :fail
 )
-if not exist "%MODS_DIR%\" (
+if "%ARTWORK_PROFILE%"=="local-dev" if not exist "%MODS_DIR%\" (
     echo [ZTO] ERROR: PrismLauncher mods directory was not found:
     echo "%MODS_DIR%"
     goto :fail
@@ -43,7 +61,9 @@ if not exist "src\minecraft\zed\textures\foundry_rotor.png" (
     echo [ZTO] ERROR: Missing Foundry texture asset.
     goto :fail
 )
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1"
+if not exist "%WORK_DIR%\" mkdir "%WORK_DIR%"
+if not exist "%WORK_DIR%\" goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1" -Profile "%ARTWORK_PROFILE%" -PrepareLocal -Fingerprints "%FINGERPRINTS%"
 if errorlevel 1 goto :fail
 if not exist "src\minecraft\mcmod.info" (
     echo [ZTO] ERROR: Missing mcmod.info metadata resource.
@@ -56,7 +76,7 @@ if errorlevel 1 (
 )
 
 rem Avoid loading two versions of the same ModLoader mod.
-for %%F in ("%MODS_DIR%\ZedsTekkitOverhaul*.jar") do (
+if "%ARTWORK_PROFILE%"=="local-dev" for %%F in ("%MODS_DIR%\ZedsTekkitOverhaul*.jar") do (
     if exist "%%~fF" (
         if /I not "%%~nxF"=="%JAR_NAME%" (
             echo [ZTO] ERROR: Another ZedsTekkitOverhaul JAR was found in mods: %%~nxF
@@ -75,7 +95,7 @@ call "zto-tools\prepare-ee2-dev-stubs.bat"
 if errorlevel 1 goto :fail
 echo [ZTO] 1/4 - Compiling with MCP...
 if not exist "dist-zto\" mkdir "dist-zto"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -ArtworkFingerprints "%FINGERPRINTS%"
 if errorlevel 1 goto :fail
 call "recompile.bat" > "dist-zto\mcp-compile.log" 2>&1
 set "MCP_EXIT=%ERRORLEVEL%"
@@ -109,7 +129,7 @@ if not exist "reobf\minecraft\zed\tekkitoverhaul\mod_ZedsTekkitOverhaul.class" (
     goto :fail
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-zto-agent.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-zto-agent.ps1" -ArtifactDirectory "%WORK_DIR%"
 if errorlevel 1 goto :fail
 
 if not exist "dist-zto\" mkdir "dist-zto"
@@ -174,14 +194,21 @@ for %%S in (start running complete) do (
         goto :fail
     )
 )
+jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/sounds/motorboat/running.wav" >nul
+if errorlevel 1 (
+    echo [ZTO] ERROR: Missing Motorboat engine sound in the archive.
+    goto :fail
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" mcmod.info
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.
     goto :fail
 )
-jar uf "%BUILD_JAR%" -C "dist-zto" zto-build.properties
+jar uf "%BUILD_JAR%" -C "%WORK_DIR%" zto-build.properties
 if errorlevel 1 goto :fail
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1" -Archive "%BUILD_JAR%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\preserve-local-assets.ps1" -Profile "%ARTWORK_PROFILE%" -Candidate "%BUILD_JAR%" -Installed "%DEPLOY_JAR%"
+if errorlevel 1 goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\check-artwork.ps1" -Profile "%ARTWORK_PROFILE%" -Archive "%BUILD_JAR%" -Fingerprints "%FINGERPRINTS%"
 if errorlevel 1 goto :fail
 for %%U in (UnderwaterRegistry ItemOxygenTank TileAirCompressor ContainerAirCompressor GuiAirCompressor UnderwaterHooks) do (
     jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/tekkitoverhaul/exploration/underwater/%%U.class" >nul
@@ -233,31 +260,29 @@ if errorlevel 1 (
     goto :fail
 )
 
-echo [ZTO] 4/4 - Deploying to PrismLauncher...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\preserve-local-assets.ps1" -Candidate "%BUILD_JAR%" -Installed "%DEPLOY_JAR%"
-if errorlevel 1 goto :fail
-move /Y "%BUILD_JAR%" "dist-zto\%JAR_NAME%" >nul
-if errorlevel 1 goto :fail
-set "BUILD_JAR=dist-zto\%JAR_NAME%"
+echo [ZTO] 4/4 - Publishing the verified %ARTWORK_PROFILE% artifact pair...
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%BUILD_JAR%"
 if errorlevel 1 goto :fail
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "dist-zto\ZTOAgent.jar"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\build-provenance.ps1" -Metadata "%BUILD_METADATA%" -Archive "%WORK_DIR%\ZTOAgent.jar"
+if errorlevel 1 goto :fail
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\publish-zto-build.ps1" -CandidateDirectory "%WORK_DIR%" -ArtifactDirectory "%ARTIFACT_DIR%"
 if errorlevel 1 goto :fail
 
-if defined ZTO_PRISM_MODS (
-    copy /Y "%BUILD_JAR%" "%DEPLOY_JAR%" >nul
-    if errorlevel 1 goto :fail
-) else (
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\install-zto-prism.ps1" -Instance "%APPDATA%\PrismLauncher\instances\Tekkit Dev"
-    if errorlevel 1 goto :fail
+if "%ARTWORK_PROFILE%"=="local-dev" (
+    if defined ZTO_PRISM_MODS (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\install-zto-prism.ps1" -ModsDirectory "%MODS_DIR%" -ArtifactDirectory "%ARTIFACT_DIR%"
+        if errorlevel 1 goto :fail
+    ) else (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "zto-tools\install-zto-prism.ps1" -Instance "%INSTANCE%" -ArtifactDirectory "%ARTIFACT_DIR%"
+        if errorlevel 1 goto :fail
+    )
 )
 
 echo.
-echo [ZTO] SUCCESS: Build and deployment completed.
-echo [ZTO] JAR: "%CD%\%BUILD_JAR%"
-echo [ZTO] Compatibility launcher artifact: "%CD%\dist-zto\ZTOAgent.jar"
-echo [ZTO] Prism: "%DEPLOY_JAR%"
-echo [ZTO] Close Minecraft before starting the updated build.
+echo [ZTO] SUCCESS: Verified %ARTWORK_PROFILE% build.
+echo [ZTO] JAR: "%ARTIFACT_DIR%\%JAR_NAME%"
+echo [ZTO] Compatibility launcher artifact: "%ARTIFACT_DIR%\ZTOAgent.jar"
+if "%ARTWORK_PROFILE%"=="public" echo [ZTO] Public build completed without installing to Prism.
 popd
 exit /b 0
 

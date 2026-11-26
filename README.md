@@ -2,13 +2,16 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
-## Survival 0.5.1-alpha.1 · Underwater exploration
+## Survival 0.5.1-alpha.1 · Water exploration
 
-**Work in progress.** Tekkit Classic headless checks cover equipment, charging and distillation. The owner has approved the worn equipment textures. The mask's underwater visibility, remaining interface checks and refinery visuals still await in-game verification.
+**Alpha preview.** Headless Tekkit Classic checks cover diving equipment, oxygen charging, distillation and Motorboat operation. In-game visual and audio checks are tracked in the [owner playtest checklist](docs/engineering/local-artwork-recovery.md#owner-playtest).
 
 - **Diving equipment.** The Underwater Mask improves visibility in water with the matching ZTOAgent. The Oxygen Tank provides a finite air supply, and Flippers improve swimming.
 - **Air Compressor.** The IC2 low-voltage machine recharges Oxygen Tanks. Its grille faces the player when placed, and its panel shows remaining charge and stored EU.
 - **Fractional Distillation.** The refinery has connected vessels, indicators and positional audio driven by actual processing, and updated controls in the classic Minecraft and IC2 palette. The existing seven-block arrangement still forms the refinery.
+- **Motorboat.** Fit an outboard to a vanilla boat for faster ocean travel. Sneak-right-click to fill its 4,000 mB ZTO Gasoline tank and collect the empty bucket. The propeller spins under thrust and reverses with the engine. Dismantle the boat to recover the hull and its remaining fuel. [Recipes and controls](docs/engineering/motorboat.md)
+
+The default `local-dev` build restores the approved refinery and Air Compressor artwork for Tekkit Dev. The explicit `public` profile packages the public artwork baseline. [Artwork profiles](artwork/README.md#build-profiles)
 
 [Underwater playtest walkthrough](docs/agents/survival-051-alpha1.md#validation-and-owner-walkthrough) · [Distillation walkthrough](docs/engineering/distillation-industrial-presentation.md#verification-and-owner-walkthrough)
 
@@ -86,7 +89,7 @@ Use **FoxyRetroMDK 1.3.6**, **MCP 6.2**, and **JDK 8**. The development environm
 .\zto-tools\build-and-deploy.bat
 ```
 
-The script places both JARs in `dist-zto` and installs them to **Tekkit Dev** by default. Set `ZTO_PRISM_MODS` to an existing staging directory to build outside the Prism profile. Keep the original obfuscated Tekkit mod JARs in the separate pack runtime. [Environment guide](docs/agents/environment.md)
+With Prism and Minecraft closed, the default build verifies the approved `local-dev` artwork and installs the matching mod and agent in **Tekkit Dev**. Select `ZTO_ARTWORK_PROFILE=public` explicitly to build redistribution artifacts without installing them. Keep the original obfuscated Tekkit mod JARs in the separate pack runtime. [Build profiles and deployment](docs/deploy-prism.md)
 
 ## Project resources
 

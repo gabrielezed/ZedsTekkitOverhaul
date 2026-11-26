@@ -13,13 +13,14 @@ Start with the [current implementation map](docs/agents/current-state.md), then 
 - Preserve established behavior and its activation when changing packaging or tests. Use the single ZTOAgent for justified, version-pinned compatibility hooks. Check the [feature-preservation matrix](docs/agents/compatibility-acceptance.md) and treat a missing mandatory feature or behavioral check as a merge blocker.
 - When checking how a Tekkit Classic mod works, consult `tekkit-mods-decompiles/` first. This directory lives beside `AGENTS.md` at the repository root and is kept local, outside GitHub.
 - Before creating or editing textures, consult the [artwork suite and style guides](artwork/README.md). Edit the owned source PNGs, then export and validate the runtime copies against the artwork manifest.
+- Owner-approved local artwork can differ from the tracked public sources. Use the default [`local-dev` profile](artwork/README.md#build-profiles) for owner playtests. Keep private derivatives in the ignored, hash-keyed overlay and select `public` explicitly for distribution. Preserve approved overrides across features, branch changes and exports. Limit generators to their owned outputs and verify the actual packaged PNGs and profile fingerprint.
 
 ## Workflow
 
-1. Check the branch, working tree and relevant source. Keep edits focused and separate migrations from behavior changes where practical.
+1. Check the branch, working tree and relevant source. When recovering a regression, preserve the installed and built artifacts, sidecars, recovery JARs and artwork evidence before building, switching branches or exporting anything. Keep edits focused and separate migrations from behavior changes where practical.
 2. Use the [test tiers](docs/agents/testing.md). Run MCP compilation and reobfuscation before packaging with `zto-tools/build-and-deploy.bat`. Use isolated Tekkit Dev and marked disposable saves for runtime evidence.
 3. **Keep the owner's desktop, keyboard and mouse available.** Automated graphical clients are blocked on the Windows host. See [background client launch](docs/agents/testing.md#background-client-launch) for VM testing and [silent launch](docs/agents/testing.md#silent-client-launch) for per-fixture audio. Reserve interactive host launches for owner-requested manual playtests.
-4. Review the diff and report what actually ran. Keep portable, build, runtime and owner observations distinct. Add a focused runtime test for new gameplay where the isolated client can exercise it.
+4. Review the diff and report what actually ran. Report the artwork profile and installed hash. Compilation checks the code, archive validation checks the selected artwork, and headless runtime tests check behavior without a graphical client. Record in-game visual acceptance separately. Add a focused runtime test for new gameplay where the isolated client can exercise it.
 5. Write all repository content and commit/PR text in English. Communicate with the owner in Italian unless requested otherwise. Use focused commits and keep local/generated work out of Git.
 
 Runtime runners own their disposable copies through shutdown and cleanup. Keep compact evidence and require explicit retention for complete fixtures. Use the [artifact retention procedure](docs/agents/workspace-hygiene.md) when adding tooling or cleaning old runs.

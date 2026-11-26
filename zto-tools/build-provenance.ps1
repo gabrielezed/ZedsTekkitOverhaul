@@ -1,8 +1,10 @@
 param(
     [Parameter(Mandatory)][string]$Metadata,
-    [string]$Archive
+    [string]$Archive,
+    [string]$ArtworkFingerprints
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'file-sha256.ps1')
 $root = Split-Path $PSScriptRoot
 if (!$Archive) {
     $source = Get-Content -Raw (Join-Path $root 'src/minecraft/zed/tekkitoverhaul/BuildVersion.java')
@@ -24,15 +26,11 @@ if (!$Archive) {
         'compileForge=3.4.9.171'
         'compileMcp=6.2'
         'minecraftVersion=1.2.5'
+        if ($ArtworkFingerprints) { Get-Content -LiteralPath $ArtworkFingerprints }
     ) | Set-Content -LiteralPath $Metadata -Encoding ASCII
     Write-Output "[ZTO] $version | Git $commit | dirty=$([bool]$changes.Count)"
 } else {
-    $hash = [Security.Cryptography.SHA256]::Create()
-    try {
-        $stream = [IO.File]::OpenRead((Resolve-Path -LiteralPath $Archive).Path)
-        try { $sha = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
-        finally { $stream.Dispose() }
-    } finally { $hash.Dispose() }
+    $sha = Get-ZtoFileSha256 (Resolve-Path -LiteralPath $Archive).Path
     $values = Get-Content -Raw -LiteralPath $Metadata | ConvertFrom-StringData
     $values['jarSha256'] = $sha
     $values | ConvertTo-Json | Set-Content -LiteralPath "$Archive.build.json" -Encoding ASCII

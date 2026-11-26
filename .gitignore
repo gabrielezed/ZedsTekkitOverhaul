@@ -34,4 +34,5 @@
 /artwork/references/
 /artwork/previews/
 /artwork/.venv/
+/artwork/local-dev/
 __pycache__/

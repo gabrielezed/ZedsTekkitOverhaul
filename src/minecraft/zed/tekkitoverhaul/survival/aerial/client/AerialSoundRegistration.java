@@ -13,6 +13,7 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     private static final String[] SKELEBIRD = {"ambient1", "ambient2", "warning", "slash", "hurt", "death"};
     private static final String[] JETPACK = {"warning", "fault", "recovery"};
     private static final String[] DISTILLATION = {"start", "running", "complete"};
+    private static final String[] MOTORBOAT = {"running"};
     private static final AerialSoundRegistration HANDLER = new AerialSoundRegistration();
     private static boolean registered;
     private SoundPool installed;
@@ -33,6 +34,7 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
         addClips(pool, "skelebird", SKELEBIRD);
         addClips(pool, "jetpack", JETPACK);
         addClips(pool, "distillation", DISTILLATION);
+        addClips(pool, "motorboat", MOTORBOAT);
         installed = pool;
     }
 

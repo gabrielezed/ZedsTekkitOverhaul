@@ -6,7 +6,7 @@ The [asset manifest](../manifests/assets.json) records the origin of each packag
 | --- | --- |
 | ZTO original or reference-inspired artwork | `source/` plus an explicit runtime path in the manifest |
 | Artwork derived under documented permission | `source/` plus the original source, permission and attribution in its manifest entry |
-| Local machine variants derived from installed Tekkit sprites | Editable PNGs in `source/` and matching runtime copies for a local build. Mark the entries `local-derivative` and link the derivation manifest. Keep the PNGs and packaged variant out of public distribution pending documented permission. |
+| Local machine variants derived from installed Tekkit sprites | Approved PNGs in the ignored `local-dev/` overlay. Record the derivative, runtime path, model face map and exact hashes in [local-dev.json](../manifests/local-dev.json). The deterministic authoring recipe and the donor hashes remain in Git. Keep the PNGs and packaged variant private pending documented redistribution permission. |
 | Third-party texture, extracted sprite, original atlas or mixed comparison | Ignored local reference and preview directories |
 | Experimental ZTO art awaiting replacement | Existing owned source or Git history, with its status documented |
 

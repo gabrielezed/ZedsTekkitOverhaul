@@ -54,6 +54,22 @@ def compressor_panel():
     save_image(image, ART / "source/interfaces/air_compressor.png")
 
 
+def motorboat_panel():
+    image = shell(176, 169)
+    draw = ImageDraw.Draw(image)
+    recess(draw, 18, 27, 18, 18)
+    recess(draw, 56, 27, 18, 18)
+    recess(draw, 85, 34, 82, 8)
+    for column in range(9):
+        for y in (86, 104, 122, 144):
+            recess(draw, 7 + 18 * column, y, 18, 18)
+    draw.rectangle((0, 176, 79, 181), fill="#aa9354")
+    draw.line((0, 176, 79, 176), fill="#d7c578")
+    draw.line((0, 181, 79, 181), fill="#695836")
+    save_image(image, ART / "source/interfaces/motorboat.png")
+
+
 if __name__ == "__main__":
     distillation_panel()
     compressor_panel()
+    motorboat_panel()

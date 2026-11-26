@@ -35,6 +35,8 @@ import zed.tekkitoverhaul.integration.inventory.DragDistributionIntegration;
 import zed.tekkitoverhaul.power.AlchemicalPowerRegistry;
 import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
+import zed.tekkitoverhaul.exploration.motorboat.MotorboatRegistry;
+import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
 import zed.tekkitoverhaul.hopper.RenderHopper;
 import zed.tekkitoverhaul.lunar.client.LocalLunarCalendar;
 import zed.tekkitoverhaul.assault.SiegeDirector;
@@ -71,7 +73,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
     public String getVersion() { return BuildVersion.VERSION; }
 
     @Override
-    public String getPriorities() { return "after:mod_IC2;after:mod_BuildCraftTransport"; }
+    public String getPriorities() { return "after:mod_IC2;after:mod_BuildCraftTransport;after:mod_BuildCraftEnergy"; }
 
     @Override
     public void load() {
@@ -117,6 +119,8 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AerialPredators.registerSkelebirdEgg(settings.skelebirdEgg);
         AerialPredators.registerMagpieEgg(settings.magpieEgg);
         UnderwaterRegistry.register(settings);
+        MotorboatRegistry.register(settings);
+        MotorboatClient.register(ModLoader.getMinecraftInstance());
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
     }
@@ -132,6 +136,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         RenderPetroleum.preloadTextures();
         DistillationRegistry.preloadTextures();
         DistillateBucketTextures.register();
+        MotorboatClient.registerTextures();
     }
 
     @Override
@@ -140,6 +145,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         TacticalHostileRenderers.register(renderers);
         RenderAerialPredator.register(renderers);
         RenderMagpie.register(renderers);
+        MotorboatClient.registerRenderer(renderers);
     }
 
     @Override

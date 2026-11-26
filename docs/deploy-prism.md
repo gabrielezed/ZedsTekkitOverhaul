@@ -7,7 +7,8 @@ This workflow uses the **existing FoxyRetroMDK / MCP 6.2 workspace**. It does no
 - JDK 8 with `jar.exe` available on `PATH` (the same environment used by MCP).
 - A working `MDK-1.2.5` directory containing `recompile.bat` and `reobfuscate.bat`.
 - Original mod source under `src/minecraft/zed/` and GUI texture at `src/minecraft/zed/gui/advanced_table.png`.
-- The isolated PrismLauncher instance named **Tekkit Dev**, with Minecraft closed before deployment.
+- The isolated PrismLauncher instance named **Tekkit Dev**, with Prism and Minecraft closed before deployment.
+- A verified local artwork overlay, or Python with the [artwork requirements](../artwork/requirements.txt) and access to the original IC2 1.97 and BuildCraft 2.2.14 Core archives.
 
 ## One command
 
@@ -21,12 +22,12 @@ The script:
 
 1. Runs MCP compilation.
 2. Removes **only** the old `reobf/minecraft/zed/` output, then runs reobfuscation.
-3. Builds a candidate JAR and restores complete local Hopper and creative texture sets from the configured asset directories, installed JAR, last published JAR, or backup, in that order.
-4. Publishes `dist-zto/ZedsTekkitOverhaul.jar` and `dist-zto/ZTOAgent.jar` with matching build sidecars. The default Tekkit Dev deploy installs the managed component and backs up the files it replaces.
+3. Packages `local-dev` by default. The build verifies or regenerates the four approved machine PNGs and adds complete local Hopper and Creative sets from the configured directories, installed JAR, published JAR or backups.
+4. Verifies the actual archive entries, publishes the matching mod, agent and sidecars in `dist-zto` and installs both in Tekkit Dev. The installer backs up replaced instance files and verifies both installed hashes. Replaced build pairs and their sidecars are retained under `dist-zto/artifact-backups`.
 
 ### Managed compatibility
 
-Build into an isolated staging directory with `ZTO_PRISM_MODS` set to its `mods` folder. Once the candidate meets the [compatibility gates](agents/compatibility-acceptance.md), close Prism and install both matching artifacts in the intended instance.
+To stage a candidate with no Prism changes, point `ZTO_PRISM_MODS` to a loose directory outside a Prism instance. The build stages the verified mod there and prints the location of the matching mod, agent and sidecars. Once the candidate meets the [compatibility gates](agents/compatibility-acceptance.md), close Prism and install both matching artifacts in the intended instance.
 
 ```powershell
 .\zto-tools\install-zto-prism.ps1 -Instance "$env:APPDATA\PrismLauncher\instances\Tekkit Dev"
@@ -42,12 +43,23 @@ The plain mod install keeps the native gameplay gates. Inventory gestures and Sh
 %APPDATA%\PrismLauncher\instances\Tekkit Dev\minecraft\mods
 ```
 
-To stage the mod without editing a Prism profile, point the build at an existing staging mods directory. The agent and both sidecars are written to `dist-zto`.
+Pointing `ZTO_PRISM_MODS` at another existing Prism instance's `minecraft/mods` or `.minecraft/mods` directory installs the mod and managed agent together in that instance. Clear the variable to return to the default Tekkit Dev destination.
 
 ```powershell
 $env:ZTO_PRISM_MODS = 'D:\PrismLauncher\instances\Tekkit Dev\minecraft\mods'
 .\zto-tools\build-and-deploy.bat
+Remove-Item Env:ZTO_PRISM_MODS
 ```
+
+### Public artifacts
+
+```powershell
+$env:ZTO_ARTWORK_PROFILE = 'public'
+.\zto-tools\build-and-deploy.bat
+Remove-Item Env:ZTO_ARTWORK_PROFILE
+```
+
+The public profile writes a separate pair to `dist-zto/public` and performs no installation. Local machine derivatives, Hopper and Creative texture groups are excluded. Use the default `local-dev` command for owner playtests. The profile name and PNG fingerprints appear in the sidecars. The installed mod carries the same fields in its `zto-build.properties` entry.
 
 ## Safeguards and limitations
 
@@ -56,6 +68,7 @@ $env:ZTO_PRISM_MODS = 'D:\PrismLauncher\instances\Tekkit Dev\minecraft\mods'
 - The script does **not** modify `minecraft.jar`, `modpack.jar`, IC2, EE2 or BuildCraft.
 - The compatibility JAR lives in the instance library directory. The standard mod JAR lives in `mods`.
 - Failed compilation, reobfuscation or packaging stops before the new JAR is copied.
+- A local-dev build with missing or mismatched approved artwork stops before publishing or installing. The diagnostic identifies the artwork or donor archive to restore.
 - A configured Hopper requires all five local textures. Deployment stops if the textures cannot be recovered. For first-time setup, use `ZTO_HOPPER_ASSETS` and `ZTO_CREATIVE_ASSETS` with the directories produced by the local asset preparation scripts.
 - The JDK `jar` tool adds the recovered textures. The candidate must pass a full Java `ZipInputStream` read before publication because NEI streams mod archives on the first world tick.
 - Check block ID mappings and the mod configuration before opening an existing world.

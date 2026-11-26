@@ -38,13 +38,12 @@ public final class UnderwaterEquipmentProbe {
         }
     }
 
-    private static void run(File root, boolean distillation) throws Exception {
+    static Fixture startFixture(File root, String name) throws Exception {
         Files.createDirectories(new File(root, "config").toPath());
         Field directory = Minecraft.class.getDeclaredField("aj");
         directory.setAccessible(true);
         directory.set(null, root);
         FMLClientHandler handler = FMLClientHandler.instance();
-        String name = distillation ? "distillation" : "underwater";
         Fixture world = new Fixture(root, name);
         FMLCommonHandler.instance().beginLoading(handler);
         FMLRegistry.registerRegistry(new ClientRegistry());
@@ -63,6 +62,12 @@ public final class UnderwaterEquipmentProbe {
         mods.setAccessible(true);
         mods.set(Loader.instance(), new ArrayList<>());
         new mod_IC2().load();
+        return world;
+    }
+
+    private static void run(File root, boolean distillation) throws Exception {
+        Fixture world = startFixture(root, distillation ? "distillation" : "underwater");
+        Minecraft client = ModLoader.getMinecraftInstance();
         ModLoader.registerTileEntity(TileEntityCable.class, "Cable");
         ModLoader.registerTileEntity(TileEntityGenerator.class, "Generator");
         BuildCraftCore.initialize();
@@ -105,7 +110,7 @@ public final class UnderwaterEquipmentProbe {
                 MASK, TANK, FLIPPERS, COMPRESSOR);
     }
 
-    private static void verifyMask(HeadlessClient client, Fixture world) throws Exception {
+    private static void verifyMask(Minecraft client, Fixture world) throws Exception {
         Class.forName("lr", false, UnderwaterEquipmentProbe.class.getClassLoader()).getDeclaredMethods();
         vq local = new vq(client, world, new fc("UnderwaterFixture", ""), 0);
         client.h = local;
@@ -412,6 +417,7 @@ public final class UnderwaterEquipmentProbe {
 
     static final class Fixture extends xd {
         final java.util.List<String> distillationSounds = new ArrayList<>();
+        int motorSounds;
         Fixture(File root) {
             this(root, "underwater");
         }
@@ -425,6 +431,7 @@ public final class UnderwaterEquipmentProbe {
         @Override public void a(nn entity, String sound, float volume, float pitch) {}
         @Override public void a(double x, double y, double z, String sound, float volume, float pitch) {
             if (sound.startsWith("zto.distillation.")) distillationSounds.add(sound);
+            if ("zto.motorboat.running".equals(sound)) motorSounds++;
         }
     }
 

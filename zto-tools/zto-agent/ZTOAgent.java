@@ -92,6 +92,21 @@ public final class ZTOAgent {
         if (callback != null && plan != null) callback.apply(new Object[] {chunk, plan}, null);
     }
 
+    private static volatile WeakReference<BiConsumer<Object, Object>> observatoryStamp = new WeakReference<>(null);
+
+    public static boolean observatorySaveActive(ClassLoader loader) {
+        return installed(loader, ObservatorySaveHook.TARGET);
+    }
+
+    public static void registerObservatoryStamp(BiConsumer<Object, Object> callback) {
+        observatoryStamp = new WeakReference<>(callback);
+    }
+
+    public static void beforeAnvilQueue(Object tag, Object chunk) {
+        BiConsumer<Object, Object> callback = observatoryStamp.get();
+        if (callback != null) callback.accept(tag, chunk);
+    }
+
     private ZTOAgent() {}
 
     public static synchronized void premain(String args, Instrumentation instrumentation) {
@@ -119,7 +134,8 @@ public final class ZTOAgent {
         boolean lunar = LunarHook.matches(name);
         if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
                 && !TitleBrandingHook.TARGET.equals(name) && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
-                && ProvenanceHook.find(name) == null && !UnderwaterHook.matches(name) && !TrenchHook.TARGET.equals(name)) return null;
+                && ProvenanceHook.find(name) == null && !UnderwaterHook.matches(name) && !TrenchHook.TARGET.equals(name)
+                && !ObservatorySaveHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -146,6 +162,8 @@ public final class ZTOAgent {
             return TitleBrandingHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
         if (TrenchHook.TARGET.equals(name) && TrenchHook.SHA256.equals(hash)) return TrenchHook.patch(bytes);
+        if (ObservatorySaveHook.TARGET.equals(name) && ObservatorySaveHook.SHA256.equals(hash))
+            return ObservatorySaveHook.patch(bytes);
         if (UnderwaterHook.accepts(name, hash)) return UnderwaterHook.patch(name, bytes);
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
         throw new IllegalArgumentException("unsupported class fingerprint");

@@ -199,6 +199,13 @@ if errorlevel 1 (
     echo [ZTO] ERROR: Missing Motorboat engine sound in the archive.
     goto :fail
 )
+for %%S in (ambient warning lunge hurt death) do (
+    jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/sounds/guardian/%%S.wav" >nul
+    if errorlevel 1 (
+        echo [ZTO] ERROR: Missing Abyssal Guardian sound %%S in the archive.
+        goto :fail
+    )
+)
 jar uf "%BUILD_JAR%" -C "src\minecraft" mcmod.info
 if errorlevel 1 (
     echo [ZTO] ERROR: Failed to add mcmod.info to the JAR.

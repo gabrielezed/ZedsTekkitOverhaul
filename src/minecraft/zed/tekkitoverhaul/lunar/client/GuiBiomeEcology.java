@@ -6,6 +6,7 @@ import net.minecraft.src.MathHelper;
 import net.minecraft.src.World;
 import org.lwjgl.input.Keyboard;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
 import zed.tekkitoverhaul.survival.aerial.EntityMagpie;
 import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
@@ -21,6 +22,8 @@ final class GuiBiomeEcology extends GuiScreen {
     private String magpie;
     private int refreshTicks;
     private String trench;
+    private String observatory;
+    private String observatoryDetails;
 
     GuiBiomeEcology(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -31,8 +34,10 @@ final class GuiBiomeEcology extends GuiScreen {
     @Override
     public void initGui() {
         if (Boolean.getBoolean("zto.dev")) {
-            controlList.add(new GuiButton(1, width / 2 - 110, height - 25, 105, 20, "Locate Trench"));
-            controlList.add(new GuiButton(0, width / 2 + 5, height - 25, 105, 20, "Debug Hub"));
+            int buttonWidth = Math.min(105, (width - 24) / 3);
+            controlList.add(new GuiButton(1, width / 2 - buttonWidth * 3 / 2 - 4, height - 25, buttonWidth, 20, "Locate Trench"));
+            controlList.add(new GuiButton(2, width / 2 - buttonWidth / 2, height - 25, buttonWidth, 20, "Observatory"));
+            controlList.add(new GuiButton(0, width / 2 + buttonWidth / 2 + 4, height - 25, buttonWidth, 20, "Debug Hub"));
         } else {
             controlList.add(new GuiButton(0, width / 2 - 50, height - 25, 100, 20, "Debug Hub"));
         }
@@ -69,6 +74,15 @@ final class GuiBiomeEcology extends GuiScreen {
             mc.displayGuiScreen(parent);
         } else if (mc.thePlayer != null && mc.theWorld == world && !world.isRemote) {
             int x = MathHelper.floor_double(mc.thePlayer.posX), z = MathHelper.floor_double(mc.thePlayer.posZ);
+            if (button.id == 2) {
+                ObservatorySites.Site site = ObservatorySites.nearby(world, x, z);
+                observatory = site == null ? ObservatorySites.locate(world, x, z) : site.description(x, z);
+                observatoryDetails = site == null ? null : site.status();
+                trench = null;
+                return;
+            }
+            observatory = null;
+            observatoryDetails = null;
             TrenchRegion region = AbyssalWorldgen.locate(world, x, z);
             trench = region == null ? "No planned Trench in search area"
                     : "Planned Trench: " + region.x + ", " + region.z + "  (" + Math.round(Math.hypot(
@@ -108,6 +122,8 @@ final class GuiBiomeEcology extends GuiScreen {
         line(wildlife.status(), 152);
         line(local.aerialSnapshot().preyStatus, 164);
         if (trench != null) line(trench, height - 42);
+        if (observatory != null) line(observatory, height - (observatoryDetails == null ? 42 : 54));
+        if (observatoryDetails != null) line(observatoryDetails, height - 42);
         if (magpie != null && height >= 236) line("Nearby magpie: " + magpie, 176);
         super.drawScreen(mouseX, mouseY, partialTick);
     }

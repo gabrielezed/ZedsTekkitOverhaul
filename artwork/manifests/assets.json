@@ -375,5 +375,16 @@
     "palette": "abyssal",
     "origin": "zto-original",
     "jar": true
+  },
+  {
+    "id": "abyssal-guardian",
+    "source": "source/abyssal/guardian.png",
+    "runtime": "zed/textures/abyssal/guardian.png",
+    "size": [64, 64],
+    "alpha": "cutout",
+    "role": "Abyssal Guardian body, mineral brow, jaw, fins and articulated tail UVs",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
   }
 ]

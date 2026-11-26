@@ -52,6 +52,7 @@ public final class UnderwaterEquipmentProbe {
         client.F = root;
         client.f = world;
         client.p = new aaw(null, null) {
+            @Override public int a(java.awt.image.BufferedImage image) { return 0; }
             @Override public int b(String path) { return 0; }
             @Override public int[] a(String path) { return new int[256 * 256]; }
         };
@@ -87,11 +88,119 @@ public final class UnderwaterEquipmentProbe {
                 Logger.getLogger("underwater-fixture")));
         verifyRecipes();
         verifyMask(client, world);
+        verifyNativeFog(client, world, root);
         yw diver = NaturalSpawnProbe.join(world);
         verifyBreathing(world, diver);
         verifyTankRecovery(world);
         verifySwimming(world, diver);
         verifyMachine(root, world, diver);
+    }
+
+    private static void verifyNativeFog(Minecraft client, Fixture world, File root) throws Exception {
+        Class<?> capture = Class.forName("org.lwjgl.opengl.GL11");
+        Field density = capture.getField("fogDensity");
+        Method fog = lr.class.getDeclaredMethod("a", int.class, float.class);
+        fog.setAccessible(true);
+        Field config = Config.class.getDeclaredField("gameSettings");
+        config.setAccessible(true);
+        Object oldSettings = config.get(null);
+        // The native settings constructor queries a graphical context.
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe allocator = (sun.misc.Unsafe) unsafeField.get(null);
+        config.set(null, client.A = (hu) allocator.allocateInstance(hu.class));
+        Class.forName("org.lwjgl.opengl.GLContext").getField("capabilities").set(null,
+                allocator.allocateInstance(org.lwjgl.opengl.ContextCapabilities.class));
+        try {
+            vq local = client.h;
+            client.i = local;
+            aaw previousEngine = client.p;
+            final ArrayList<int[]> uploads = new ArrayList<>();
+            client.p = new aaw(null, null) {
+                @Override public int a(java.awt.image.BufferedImage image) { return 7; }
+                @Override public int b(String path) { return 0; }
+                @Override public void a(int[] colors, int width, int height, int texture) {
+                    check(width == 16 && height == 16 && texture == 7, "native lightmap upload dimensions and ID");
+                    uploads.add(colors.clone());
+                    try { capture.getField("boundTexture").setInt(null, texture); }
+                    catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+                }
+            };
+            lr renderer = new lr(client);
+            Field colorsField = lr.class.getDeclaredField("Q");
+            colorsField.setAccessible(true);
+            int[] colors = (int[]) colorsField.get(renderer);
+            colors[0] = 0xff001020;
+            colors[1] = 0xffc0d0e0;
+            int x = 291, y = 22, z = 291;
+            local.c(x + 0.5, y + 0.25, z + 0.5, 0, 0);
+            world.b(x, y, z, 9, 0);
+            world.b(x, y + 1, z, 9, 0);
+            local.ap.b[3] = null;
+            checkDensity(fog, renderer, density, 0.1F);
+            check(uploads.isEmpty(), "no mask preserves cached native lightmap");
+            local.ap.b[3] = new aan(MASK, 1, 0);
+            checkDensity(fog, renderer, density, 0.1F / 3.5F);
+            check(uploads.size() == 1 && uploads.get(0)[0] == 0xff5c6670
+                    && uploads.get(0)[1] == 0xffd7e1eb && colors[0] == 0xff001020
+                    && capture.getField("boundTexture").getInt(null) == 91,
+                    "mask lifts native dark and lit entries, preserves source and restores GL binding");
+            client.A.ofClearWater = true;
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            local.ap.b[3] = null;
+            checkDensity(fog, renderer, density, 0.02F);
+            check(uploads.size() == 2 && uploads.get(1)[0] == colors[0], "helmet removal restores native upload");
+            local.ap.b[3] = new aan(MASK, 1, 0);
+            zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry.register(
+                    ZtoConfigLoader.load(new File(root, "config").toPath(), false, Logger.getLogger("fog-fixture")), 100);
+            world.b(x, y - 1, z, 3032, 0);
+            check(zed.tekkitoverhaul.exploration.abyssal.MarineType.KELP.place(world, x, y, z, 0),
+                    "place occupied native water before rendering");
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            check(uploads.size() == 3, "Kelp enables enhancement without redundant Clear Water upload");
+            Method nativeUpdate = lr.class.getDeclaredMethod("e");
+            nativeUpdate.setAccessible(true);
+            nativeUpdate.invoke(renderer);
+            int nativeDark = colors[0];
+            check(uploads.size() == 4 && uploads.get(3)[0] == nativeDark, "native renderer refreshed lightmap");
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            check(uploads.size() == 5 && uploads.get(4)[0] != nativeDark, "native refresh reapplies enhancement");
+            yw other = new yw(world) { @Override public void ab() {} };
+            other.c(x + 0.5, y + 0.25, z + 0.5, 0, 0);
+            other.ap.b[3] = new aan(MASK, 1, 0);
+            client.i = other;
+            checkDensity(fog, renderer, density, 0.02F);
+            check(uploads.size() == 6 && uploads.get(5)[0] == nativeDark, "other camera restores native lightmap");
+            client.i = local;
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            world.b(x, y, z, 11, 0);
+            world.b(x, y + 1, z, 11, 0);
+            checkDensity(fog, renderer, density, 2.0F);
+            check(uploads.size() == 8 && uploads.get(7)[0] == nativeDark, "lava restores native lightmap");
+            world.b(x, y + 1, z, 0, 0);
+            world.b(x, y, z, 0, 0);
+            world.b(x, y, z, 9, 0);
+            world.b(x, y + 1, z, 9, 0);
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            world.b(x, y, z, 0, 0);
+            world.b(x, y + 1, z, 0, 0);
+            density.setFloat(null, Float.NaN);
+            fog.invoke(renderer, 0, 1.0F);
+            check(Float.isNaN(density.getFloat(null)) && capture.getField("fogMode").getInt(null) == 9729,
+                    "air after immersion selects native linear fog");
+            check(uploads.size() == 10 && uploads.get(9)[0] == nativeDark, "air restores native lightmap");
+            client.p = previousEngine;
+            System.out.println("PASS actual OptiFine fog and lightmap uploads for water, Clear Water, Kelp, helmet removal, alternate camera, lava and air");
+        } finally {
+            config.set(null, oldSettings);
+        }
+    }
+
+    private static void checkDensity(Method fog, lr renderer, Field density, float expected) throws Exception {
+        density.setFloat(null, Float.NaN);
+        fog.invoke(renderer, 0, 1.0F);
+        float actual = density.getFloat(null);
+        check(Math.abs(actual - expected) < 1E-7, "renderer density " + actual + " expected " + expected);
     }
 
     private static void verifyRecipes() {
@@ -117,7 +226,7 @@ public final class UnderwaterEquipmentProbe {
         float original = 0.1F;
         check(ZTOAgent.underwaterFog(original, local) == original, "camera without mask keeps native fog");
         local.ap.b[3] = new aan(MASK, 1, 0);
-        check(Math.abs(ZTOAgent.underwaterFog(original, local) - original / 1.30F) < 1E-7,
+        check(Math.abs(ZTOAgent.underwaterFog(original, local) - original / 3.50F) < 1E-7,
                 "mask callback applies only the proposed water fog density");
         check(ZTOAgent.underwaterFog(original, new yw(world) { @Override public void ab() {} }) == original,
                 "other cameras retain native density");

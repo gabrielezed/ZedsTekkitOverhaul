@@ -5,6 +5,8 @@ import net.minecraft.src.GuiScreen;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.World;
 import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
 import zed.tekkitoverhaul.survival.aerial.EntityMagpie;
 import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
 import zed.tekkitoverhaul.survival.tactical.BiomeEcology;
@@ -18,6 +20,7 @@ final class GuiBiomeEcology extends GuiScreen {
     private NaturalSpawnPressure.Snapshot spawn;
     private String magpie;
     private int refreshTicks;
+    private String trench;
 
     GuiBiomeEcology(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -27,7 +30,12 @@ final class GuiBiomeEcology extends GuiScreen {
 
     @Override
     public void initGui() {
-        controlList.add(new GuiButton(0, width / 2 - 50, height - 25, 100, 20, "Debug Hub"));
+        if (Boolean.getBoolean("zto.dev")) {
+            controlList.add(new GuiButton(1, width / 2 - 110, height - 25, 105, 20, "Locate Trench"));
+            controlList.add(new GuiButton(0, width / 2 + 5, height - 25, 105, 20, "Debug Hub"));
+        } else {
+            controlList.add(new GuiButton(0, width / 2 - 50, height - 25, 100, 20, "Debug Hub"));
+        }
         refresh();
     }
 
@@ -56,7 +64,17 @@ final class GuiBiomeEcology extends GuiScreen {
     }
 
     @Override
-    protected void actionPerformed(GuiButton button) { mc.displayGuiScreen(parent); }
+    protected void actionPerformed(GuiButton button) {
+        if (button.id == 0) {
+            mc.displayGuiScreen(parent);
+        } else if (mc.thePlayer != null && mc.theWorld == world && !world.isRemote) {
+            int x = MathHelper.floor_double(mc.thePlayer.posX), z = MathHelper.floor_double(mc.thePlayer.posZ);
+            TrenchRegion region = AbyssalWorldgen.locate(world, x, z);
+            trench = region == null ? "No planned Trench in search area"
+                    : "Planned Trench: " + region.x + ", " + region.z + "  (" + Math.round(Math.hypot(
+                            (double) region.x - x, (double) region.z - z)) + " blocks)";
+        }
+    }
 
     @Override
     protected void keyTyped(char character, int key) {
@@ -89,7 +107,8 @@ final class GuiBiomeEcology extends GuiScreen {
         line("Magpies " + wildlife.loaded() + "/" + ForestWildlife.LOADED_CAP + " loaded at last check", 140);
         line(wildlife.status(), 152);
         line(local.aerialSnapshot().preyStatus, 164);
-        if (magpie != null && height >= 224) line("Nearby magpie: " + magpie, 176);
+        if (trench != null) line(trench, height - 42);
+        if (magpie != null && height >= 236) line("Nearby magpie: " + magpie, 176);
         super.drawScreen(mouseX, mouseY, partialTick);
     }
 

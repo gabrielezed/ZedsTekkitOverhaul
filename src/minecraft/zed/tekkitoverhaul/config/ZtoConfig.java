@@ -105,6 +105,7 @@ public final class ZtoConfig {
         flippers = values.item("flippers", 22014);
         outboardMotor = values.item("outboardMotor", 22015);
         motorboat = values.item("motorboat", 22016);
+        abyssalIds.put("biome.abyssalTrench", values.biome("abyssalTrench", 40));
         abyssalIds.put("block.abyssalStone", values.block("abyssalStone", 3032));
         abyssalIds.put("block.abyssalSilt", values.block("abyssalSilt", 3033));
         abyssalIds.put("block.shellstone", values.block("shellstone", 3034));
@@ -199,6 +200,23 @@ public final class ZtoConfig {
 
         int key(String key, int fallback) {
             return integer(key, fallback, 0, 255, false);
+        }
+
+        int biome(String name, int fallback) {
+            String key = "biome." + name;
+            String value = raw(key);
+            int id = fallback;
+            if (value != null) {
+                try {
+                    id = Integer.parseInt(value);
+                } catch (NumberFormatException invalid) {
+                    throw new IllegalArgumentException(key + " must be a biome ID between 0 and 254.", invalid);
+                }
+                if (id < 0 || id >= 255)
+                    throw new IllegalArgumentException(key + " must be a biome ID between 0 and 254.");
+            }
+            entries.put(key, Integer.toString(id));
+            return id;
         }
 
         int block(String name, int fallback) { return integer("block." + name, fallback, 1, 4095, false); }

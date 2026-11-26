@@ -41,7 +41,7 @@ $build = New-Item -ItemType Directory -Path (Join-Path $buildParent $id)
 try {
     $classes = New-Item -ItemType Directory -Path (Join-Path $build.FullName 'classes')
     $tool = New-Item -ItemType Directory -Path (Join-Path $build.FullName 'tool')
-    $source = @('ZTOAgent','InventoryHook','FurnaceTransferHook','LunarHook','IndustrialHooks','NaturalSpawnHook','JetpackHook','ProvenanceHook','UnderwaterHook','TitleBrandingHook') |
+    $source = @('ZTOAgent','InventoryHook','FurnaceTransferHook','LunarHook','IndustrialHooks','NaturalSpawnHook','JetpackHook','ProvenanceHook','UnderwaterHook','TitleBrandingHook','TrenchHook') |
         ForEach-Object { Join-Path $modules "$_.java" }
     & javac -source 8 -target 8 -cp $asm -d $classes.FullName $source
     if ($LASTEXITCODE) { throw 'Agent compilation failed.' }

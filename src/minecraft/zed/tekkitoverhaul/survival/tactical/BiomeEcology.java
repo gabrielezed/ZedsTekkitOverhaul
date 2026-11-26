@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.survival.tactical;
 import java.util.Random;
 import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
 
 /** Legacy Overworld habitat families. Weights apply only after an ordinary Enderkin slot is rolled. */
 public enum BiomeEcology {
@@ -40,6 +41,7 @@ public enum BiomeEcology {
     }
 
     public static BiomeEcology family(int id) {
+        if (AbyssalWorldgen.isTrench(id)) return OCEAN;
         return id >= 0 && id < LEGACY.length ? LEGACY[id] : UNCLASSIFIED;
     }
 

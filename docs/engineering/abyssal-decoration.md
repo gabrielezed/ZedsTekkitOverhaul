@@ -44,11 +44,9 @@ Original source PNGs live in `artwork/source/abyssal` and export to `zed/texture
 
 The renderer batches two crossed cutouts for Kelp, Algae and Anemone, an axis-aligned double-sided fan for Coral, and three shaded square-section tubes for Sponge. Marine ItemBlocks use cutout inventory sprites. Solid ItemBlocks use the normal cube path.
 
-## Part II integration
+## Natural generation
 
-Use `AbyssalRegistry.MaterialType.block()` for solids and `MarineType.place(world, x, y, z, orientation)` for plants. Supply loaded coordinates on the owning world thread. Build Kelp bottom-up. Fan orientation parity selects an X-spanning or Z-spanning plane. Vanilla `ChunkProviderGenerate.generateTerrain` and `replaceBlocksForBiome` use byte buffers. Place high IDs after terrain construction using the native integer-ID world setter on loaded chunks, which writes the Forge extended chunk storage. Population ordering, chunk boundaries and notification cost need separate verification in Part II. The current implementation registers no biome or generator.
-
-Rocky margins use Stone, Shellstone and low algae. Sediment plains use Silt with scattered Algae and Sponges. Kelp grows in future generation as groups with open corridors. Irregular Petrified Coral forms fossil towers. Coral and Sponge cluster at rocky surfaces. Leave deep luminous zones sparse, with occasional Anemones and Lamps. Ruins mix both brick variants with sparse light and scattered marine colonization.
+The Abyssal Trench reuses the registered geological materials and Part I's marine water occupancy rules. The pinned terrain stage places the palette in newly generated chunks. See the [generation contract and owner walkthrough](abyssal-worldgen.md).
 
 ## Owner playtest
 

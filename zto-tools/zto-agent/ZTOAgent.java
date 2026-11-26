@@ -55,6 +55,43 @@ public final class ZTOAgent {
     private static volatile WeakReference<Predicate<Object>> fog = new WeakReference<>(null);
     private static float swimThrust = 1F, fogDistance = 1F;
 
+    private static volatile WeakReference<BiConsumer<Object[], int[]>> maskLight = new WeakReference<>(null);
+    private static int nativeLightmapSerial;
+
+    public static void registerMaskLightmap(BiConsumer<Object[], int[]> callback) {
+        maskLight = new WeakReference<>(callback);
+    }
+
+    public static void underwaterNativeLightmapUploaded() {
+        nativeLightmapSerial++;
+    }
+
+    public static void underwaterLightmap(int block, Object camera, Object engine, int[] nativeColors, int texture) {
+        BiConsumer<Object[], int[]> callback = maskLight.get();
+        if (callback != null)
+            callback.accept(new Object[] {camera, engine, nativeColors}, new int[] {block, texture, nativeLightmapSerial});
+    }
+
+    private static volatile WeakReference<BiFunction<Object[], int[], Object>> trench = new WeakReference<>(null);
+
+    public static void registerTrench(BiFunction<Object[], int[], Object> callback) {
+        trench = new WeakReference<>(callback);
+    }
+
+    public static boolean trenchActive(ClassLoader loader) {
+        return installed(loader, TrenchHook.TARGET);
+    }
+
+    public static Object shapeTrench(Object world, byte[] terrain, Object biomes, int x, int z) {
+        BiFunction<Object[], int[], Object> callback = trench.get();
+        return callback == null ? null : callback.apply(new Object[] {world, terrain, biomes}, new int[] {x, z});
+    }
+
+    public static void finishTrench(Object chunk, Object plan) {
+        BiFunction<Object[], int[], Object> callback = trench.get();
+        if (callback != null && plan != null) callback.apply(new Object[] {chunk, plan}, null);
+    }
+
     private ZTOAgent() {}
 
     public static synchronized void premain(String args, Instrumentation instrumentation) {
@@ -82,7 +119,7 @@ public final class ZTOAgent {
         boolean lunar = LunarHook.matches(name);
         if (!inventory && !lunar && industrial == null && !NaturalSpawnHook.TARGET.equals(name)
                 && !TitleBrandingHook.TARGET.equals(name) && !JetpackHook.TARGET.equals(name) && !FurnaceTransferHook.TARGET.equals(name)
-                && ProvenanceHook.find(name) == null && !UnderwaterHook.matches(name)) return null;
+                && ProvenanceHook.find(name) == null && !UnderwaterHook.matches(name) && !TrenchHook.TARGET.equals(name)) return null;
         byte[] transformed = patchKnownClass(name, bytes, industrial, inventory, lunar);
         record(loader, name, true);
         return transformed;
@@ -108,6 +145,7 @@ public final class ZTOAgent {
         if (TitleBrandingHook.TARGET.equals(name) && TitleBrandingHook.SHA256.equals(hash))
             return TitleBrandingHook.patch(bytes);
         if (lunar && LunarHook.accepts(name, hash)) return LunarHook.patch(bytes, LunarHook.MCP_RENDERER.equals(name));
+        if (TrenchHook.TARGET.equals(name) && TrenchHook.SHA256.equals(hash)) return TrenchHook.patch(bytes);
         if (UnderwaterHook.accepts(name, hash)) return UnderwaterHook.patch(name, bytes);
         if (industrial != null && industrial.hash.equals(hash)) return IndustrialHooks.patch(industrial, bytes);
         throw new IllegalArgumentException("unsupported class fingerprint");

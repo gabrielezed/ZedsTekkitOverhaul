@@ -1,6 +1,8 @@
 param(
     [string[]]$Java = @('java'),
     [string]$PackJava,
+    [long]$TrenchSeed = 32021,
+    [string]$TrenchPreviewDirectory,
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
@@ -9,7 +11,7 @@ param(
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
         'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain',
-        'site-siege-completion','underwater','distillation','motorboat','abyssal')][string]$Focus
+        'site-siege-completion','underwater','distillation','motorboat','abyssal','trench')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,10 +67,11 @@ try {
         $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -in 'site-siege-terrain','site-siege-completion')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
-        if ($Focus -in 'underwater','distillation','motorboat','abyssal') {
+        if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench') {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/UnderwaterEquipmentProbe.java'
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/DistillationVisualProbe.java'
         }
+        if ($Focus -eq 'trench') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalWorldgenProbe.java' }
         if ($Focus -eq 'abyssal') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalDecorationProbe.java' }
         if ($Focus -eq 'motorboat') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/MotorboatProbe.java' }
         if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
@@ -91,6 +94,18 @@ try {
         }
         & javac -source 8 -target 8 -cp $compileClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
+        if ($Focus -eq 'underwater') {
+            $fogClasses = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'fog-classes')
+            $fogLwjgl = Join-Path $out.FullName 'lwjgl-fog-fixture.jar'
+            $lwjgl = Join-Path $root 'jars/bin/lwjgl.jar'
+            Copy-Item -LiteralPath $lwjgl -Destination $fogLwjgl
+            $fogSources = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'zto-agent/fog-probe') -Filter '*.java'
+            & javac -source 8 -target 8 -cp $lwjgl -d $fogClasses.FullName @($fogSources.FullName)
+            if ($LASTEXITCODE) { throw 'Fog capture compilation failed.' }
+            & jar uf $fogLwjgl -C $fogClasses.FullName org/lwjgl/opengl
+            if ($LASTEXITCODE) { throw 'Fog capture packaging failed.' }
+            $industrialClasspath = $industrialClasspath.Replace($lwjgl, $fogLwjgl)
+        }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
         $mods = @(Get-ChildItem -LiteralPath (Join-Path $game 'mods') -File |
@@ -98,13 +113,22 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
-            if ($Focus -in 'underwater','distillation','motorboat','abyssal') {
+            if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench') {
                 $fixture = New-Item -ItemType Directory -Path (Join-Path $out.FullName "$Focus-fixture")
                 $config = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'config')
                 Copy-Item -LiteralPath (Join-Path $game 'config/IC2.cfg') -Destination $config.FullName
                 $buildcraftConfig = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'buildcraft/config')
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
+                if ($Focus -eq 'trench') {
+                    Copy-Item -LiteralPath (Join-Path $game 'redpower') -Destination $fixture.FullName -Recurse
+                    if (!$TrenchPreviewDirectory) {
+                        $TrenchPreviewDirectory = Join-Path $root "dist-zto/trench-refinement/after/$TrenchSeed"
+                    }
+                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath AbyssalWorldgenProbe $fixture.FullName $TrenchPreviewDirectory $TrenchSeed
+                    if ($LASTEXITCODE) { throw 'Native trench fixture failed.' }
+                    return
+                }
                 & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath $probe $fixture.FullName $Focus
                 if ($LASTEXITCODE) { throw "Native $Focus fixture failed." }
                 return

@@ -1,14 +1,16 @@
 # Abyssal Trench world generation
 
-Survival 0.5.1-alpha.2 gives the Motorboat and diving equipment an expedition destination. The native ocean surface conceals deep shelves, fossil outcrops, sparse light and fragments of masonry. The model exposes stable regional identity, orientation, footprint and depth for future site selection.
+Survival 0.5.1-alpha.2 gives the Motorboat and diving equipment an expedition destination. The native ocean surface conceals deep shelves, fossil outcrops, sparse light and fragments of masonry. A site can use a stable local anchor and sample the continuous terrain for future placement.
 
 ## Biome and geography
 
 `biome.abyssalTrench` defaults to 40. The valid byte-backed registry range is 0–254 and startup rejects occupied slots. The config loader appends the key to existing files. Keep the same ID for an existing world. The biome uses Ocean climate, water color, decoration and spawn policy, including squid, no passive land spawn list and native hostile spawn rules. ZTO treats the registered ID as Ocean for ecology. The sea floor relies on normal native spawn restrictions. Only the pinned default Overworld surface provider generates Trench terrain.
 
-One seed-derived ticket per 768 × 768 block grid cell admits roughly one third of the cells. Negative coordinates use floor division. Centers sit at least 230 blocks inside their cell and the footprint stays inside its owning cell, so candidates cannot overlap. A 16-block lattice tests the full-resolution native Ocean mask across the curved footprint and a margin of 12% of its radius. All sampled points must be ordinary Ocean. Each affected column must independently pass the native Ocean mask and have a submerged geological floor. The locator and terrain reuse the same region model and ocean test. A weak world-keyed cache retains up to 128 suitability decisions per world.
+Two independent 184- and 157-block value fields displace the sample coordinates by up to 62 blocks per axis. The warped geography blends 576-, 229- and 112-block fields at weights 0.67, 0.23 and 0.10. Influence ramps smoothly between 0.64 and 0.78. This world-space field can fork and join across any chunk boundary. Seeded value noise uses smooth interpolation between hashed lattice samples and floor-based coordinates.
 
-The regional salt separates admission from the identity hash and feature fields. Seeded axes span 240–420 by 100–180 blocks before variation. A sine bend and 42-block width field vary the outline. The central floor targets Y12–20 with 29- and 8-block undulations. A smoothed ramp blends from the valley into the native floor, with irregular shelf variation across the Y25–40 band and a gradual margin whose width depends on the cross-section. Native seawater remains at Y62. Classification in saved chunks follows columns actually lowered by the terrain phase. Native GenLayer samples and cached manager-only queries continue to supply Ocean ancestry and climate. Queries through the native world and chunk biome lookup use the persisted Trench identity.
+Each affected column must pass the full-resolution native Ocean mask and have a submerged geological floor with open sky above the native water line. A 20 × 20 quarter-resolution native biome sample finds nearby non-Ocean columns and attenuates influence over the 8–28 block distance band. The native biome manager samples terrain-free GenLayers. Land, river, beach and mushroom-shore columns keep their original blocks and biome.
+
+The depth calculation blends the native floor toward a separate relief field. A folded 138-block field creates channels, a 91-block field adds ridges, and 364-, 43- and 13-block fields vary basin depth, shelves and rock detail. Relief can target Y12–46 and can only lower the native floor. The perimeter preserves most of the native relief. Several corridors, ridges and low points can occupy the same connected region. Native seawater remains at Y62. Saved Trench membership follows actually lowered columns, and the vanilla biome layers continue to supply Ocean climate and ancestry.
 
 ## Runtime order
 
@@ -24,24 +26,30 @@ Disk loading bypasses both callbacks, including for older unpopulated chunks. A 
 
 ## Habitat and density
 
-- Abyssal Stone coats two to four shallow layers. Locally coherent Shellstone increases around rocky material clusters. On gentler slopes, a 24-block sediment field groups Silt across shelves and depressions.
-- A 19-block forest field favors Kelp on Y23–41 shelves. Selected eligible columns have a 30% planting ticket and a 20/35/30/15% distribution for one through four segments. A separate 9-block colony field groups Ribbon Algae, Fan Coral and Tube Sponge. Fan orientation uses a seed bit.
-- One deterministic formation ticket per chunk gives eligible interiors a 17/128 chance of an irregular Petrified Coral mound or pillar and a 2/128 chance of low weathered masonry. Anchors use 5 × 3 or smaller owned footprints and grow only from locally coated surfaces. There is no loot or persistent structure state.
-- Deep water stays largely open. Eligible Y20-or-deeper anchors have a 2/8 ticket for one Ghost Anemone. A smaller subset of the remaining tickets can convert an exposed Stone cell to an Abyssal Lamp. Both use native light levels, 3 and 5 respectively.
+- Abyssal Stone coats two to four shallow layers. Shellstone favors 12- and 97-block fossil fields. Silt favors low or gently sloped terrain and combines 24- and 68-block sediment fields.
+- A 34- and 118-block woodland field favors Kelp on shelf floors at Y23–43. A separate 9-block colony field favors Fan Coral and Tube Sponge over rock and mostly Ribbon Algae over sediment. Fan orientation uses a seed bit.
+- Fossil outcrops use world-space anchors jittered on a 23-block grid. A 109-block habitat field varies their frequency. Individual anchors vary in orientation, footprint, relief and branch shape. Each chunk evaluates the portion within its own footprint and uses its own rooted seabed and water cells. Small masonry traces fit within one owned chunk.
+- The deepest areas favor open water with sparse Ghost Anemones and Abyssal Lamps. The lighting writes stay inside the owning chunk. The marine inset remains one block because the pending chunk cannot safely inspect a neighboring chunk's water or support.
 
 ## Developer locator and walkthrough
 
-Launch the isolated Tekkit Dev instance manually with the managed agent and `-Dzto.dev=true`. Use **Numpad 1 → Biome Ecology → Locate Trench**. Each click searches at most 81 grid cells near the player and reports a planned center, not a confirmation that old chunks regenerated. It does not load or generate chunks and does not move the player. The regular Biome Ecology panel shows the current saved biome.
+Launch the isolated Tekkit Dev instance manually with the managed agent and `-Dzto.dev=true`. Use **Numpad 1 → Biome Ecology → Locate Trench**. Each click searches a 97 × 97 lattice of potential local anchors at 64-block spacing, up to roughly 3 km per axis. A qualifying location has strong influence, low target relief and an eligible ocean mask. The displayed position is a planned dive site. Its seed-and-coordinate hash identifies the anchor without enumerating the connected biome. It does not load or generate chunks and does not move the player. The regular Biome Ecology panel shows the current saved biome.
 
-1. Create a disposable Default Overworld with seed `32021`. Sail toward **X -1948, Z 269**. The tested footprint is approximately 262 × 142 blocks. Approach from the east to follow the ordinary ocean into the margin.
+1. Create a disposable Default Overworld with seed `32021`. Sail toward **the planned dive site listed in the evidence table**. Approach through the ordinary Ocean visible on the membership map to observe the transition.
 2. Equip the Underwater Mask, charged Oxygen Tank and Flippers. Descend through the outer rock and look for a Kelp shelf, Fan Coral, Tube Sponge and fossil formations. Continue toward the dark central valley. Inspect how darkness separates individual luminous organisms.
 3. Check that seams, open air and bedrock are absent across the new ocean surface. Harvest and replant one organism, return to the Motorboat and save and reopen the world. Record underwater graphical acceptance separately.
 
 ## Evidence
 
-Run `zto-tools/test-zto-agent.ps1 -Focus trench` for the pinned headless provider and disk fixture. Inspect `dist-zto/trench-previews/depth.png` and `habitats.png`. These are top-down maps of native generated chunks with north at the top. Depth shades lighter for shallower floors. Habitat hues distinguish exposed material or marine occupants. Neither image simulates underwater fog or gameplay lighting.
+Run `zto-tools/test-zto-agent.ps1 -Focus trench -TrenchSeed 32021` for the pinned native provider and disk fixture. The comparison maps are under `dist-zto/trench-refinement/before/<seed>` and `after/<seed>`. Each sample spans 784 × 784 blocks around that model's planned site. It includes saved biome membership, seabed height, exposed habitats and two orthogonal native sections through the anchor. These maps show generated blocks, outside the visual client's fog and lighting.
 
-A three-seed sample examined 121 cells per seed. Seeds `32021`, `32022` and `-32021` admitted 41, 51 and 46 tickets and yielded 3, 20 and 16 eligible candidates respectively. Ocean coverage drives the variation. The seed 32021 preview includes 25,482 shaped columns, with 4,756 seabed columns at Y20 or lower. The sample generated both brick variants, all major geological formations and all five marine types. No Abyssal Lamp happened to occur in that footprint. The direct provider probe compared 729 chunks in forward and reverse order, matched representative land and ordinary ocean chunks against native output, and reloaded a neighboring old chunk with a marker block and a chest inventory. Approximate headless provider means were 1.8 ms per affected chunk and 1.5 ms for surrounding chunks in one run, including native work and warm-up. These values are comparative observations of one fixture.
+| Seed | Previous dive X, Z | Refined dive X, Z | Trench share of sampled ocean before / after | Mean affected chunk before / after |
+| --- | --- | --- | --- | --- |
+| `32021` | -1948, 269 | -952, 840 | 5.95% / 56.01% | 2.48 / 2.26 ms |
+| `32022` | 1285, -1113 | 520, 648 | 4.88% / 43.90% | 2.31 / 2.09 ms |
+| `-32021` | -2791, 1294 | -1016, 1736 | 9.62% / 31.88% | 2.26 / 2.30 ms |
+
+Coverage is local to locator-selected windows. It is not a global frequency estimate. The native sample includes 2,401 chunks per window and checks 729 in reverse order. Background chunk means ranged from 1.90 to 2.12 ms across both models. These timings share the same fixture and include native generation and warm-up. The refined samples contain 5,673–22,613 seabed columns at Y25 or lower. They generated all five marine organisms across the three seeds, both brick variants and Petrified Coral. Naturally generated lamps were not observed in these windows.
 
 A separate population sample exercised the native client provider and registered IC2, RedPower and BuildCraft generators. Copper and RedPower ores remained present below the coated floor. A controlled BuildCraft medium-deposit ticket exercises oil intersecting the generated terrain. Native structures were enabled in the provider fixture, but intersections with individual structure types have not been exhaustively sampled.
 

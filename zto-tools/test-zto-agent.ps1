@@ -1,6 +1,8 @@
 param(
     [string[]]$Java = @('java'),
     [string]$PackJava,
+    [long]$TrenchSeed = 32021,
+    [string]$TrenchPreviewDirectory,
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
@@ -92,6 +94,18 @@ try {
         }
         & javac -source 8 -target 8 -cp $compileClasspath -d $out.FullName @headlessSources
         if ($LASTEXITCODE) { throw 'Pack gameplay probe compilation failed.' }
+        if ($Focus -eq 'underwater') {
+            $fogClasses = New-Item -ItemType Directory -Path (Join-Path $out.FullName 'fog-classes')
+            $fogLwjgl = Join-Path $out.FullName 'lwjgl-fog-fixture.jar'
+            $lwjgl = Join-Path $root 'jars/bin/lwjgl.jar'
+            Copy-Item -LiteralPath $lwjgl -Destination $fogLwjgl
+            $fogSources = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'zto-agent/fog-probe') -Filter '*.java'
+            & javac -source 8 -target 8 -cp $lwjgl -d $fogClasses.FullName @($fogSources.FullName)
+            if ($LASTEXITCODE) { throw 'Fog capture compilation failed.' }
+            & jar uf $fogLwjgl -C $fogClasses.FullName org/lwjgl/opengl
+            if ($LASTEXITCODE) { throw 'Fog capture packaging failed.' }
+            $industrialClasspath = $industrialClasspath.Replace($lwjgl, $fogLwjgl)
+        }
         $launch = Get-Content -Raw (Join-Path $runtimeSource 'launch.json') | ConvertFrom-Json
         $classpath = @($out.FullName, $launch.classpath, $candidate)
         $mods = @(Get-ChildItem -LiteralPath (Join-Path $game 'mods') -File |
@@ -108,7 +122,10 @@ try {
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
                 if ($Focus -eq 'trench') {
                     Copy-Item -LiteralPath (Join-Path $game 'redpower') -Destination $fixture.FullName -Recurse
-                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath AbyssalWorldgenProbe $fixture.FullName (Join-Path $root 'dist-zto/trench-previews')
+                    if (!$TrenchPreviewDirectory) {
+                        $TrenchPreviewDirectory = Join-Path $root "dist-zto/trench-refinement/after/$TrenchSeed"
+                    }
+                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath AbyssalWorldgenProbe $fixture.FullName $TrenchPreviewDirectory $TrenchSeed
                     if ($LASTEXITCODE) { throw 'Native trench fixture failed.' }
                     return
                 }

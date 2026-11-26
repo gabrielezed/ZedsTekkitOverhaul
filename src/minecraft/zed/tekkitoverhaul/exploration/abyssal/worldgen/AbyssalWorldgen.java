@@ -1,8 +1,5 @@
 package zed.tekkitoverhaul.exploration.abyssal.worldgen;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.function.BiFunction;
 import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.BiomeGenOcean;
@@ -17,8 +14,11 @@ import net.minecraft.src.WorldType;
 /** The native biome layers are the unmodified ocean mask. New chunks own the generated identity. */
 public final class AbyssalWorldgen {
     private static final int SEA_SURFACE = 62;
-    private static final int LOCATOR_RADIUS = 4;
-    private static final Map<World, Map<Long, TrenchRegion>> REGIONS = new WeakHashMap<World, Map<Long, TrenchRegion>>();
+    private static final int LOCATOR_STEP = 64;
+    private static final int LOCATOR_RADIUS = 48;
+    private static final int COAST_QUARTS = 8;
+    private static final BiomeGenBase[] OPEN_OCEAN = new BiomeGenBase[0];
+    private static final int COAST_SIDE = 4 + 2 * COAST_QUARTS;
     private static final BiFunction<Object[], int[], Object> CALLBACK = new BiFunction<Object[], int[], Object>() {
         @Override public Object apply(Object[] objects, int[] coordinates) {
             return generate(objects, coordinates);
@@ -68,52 +68,49 @@ public final class AbyssalWorldgen {
     /** Bounded planned geography only. Call on the thread owning the world. */
     public static TrenchRegion locate(World world, int x, int z) {
         if (!supported(world)) return null;
-        int gx = Math.floorDiv(x, TrenchRegion.SPACING), gz = Math.floorDiv(z, TrenchRegion.SPACING);
+        int gx = Math.floorDiv(x, LOCATOR_STEP), gz = Math.floorDiv(z, LOCATOR_STEP);
+        long seed = world.getSeed();
+        WorldChunkManager manager = world.getWorldChunkManager();
         TrenchRegion best = null;
-        double distance = Double.POSITIVE_INFINITY;
+        long nearest = Long.MAX_VALUE;
+        BiomeGenBase[] sample = null;
         for (int dz = -LOCATOR_RADIUS; dz <= LOCATOR_RADIUS; dz++) {
             for (int dx = -LOCATOR_RADIUS; dx <= LOCATOR_RADIUS; dx++) {
-                TrenchRegion region = region(world, gx + dx, gz + dz);
-                if (region == null) continue;
-                double candidate = Math.hypot((double) x - region.x, (double) z - region.z);
-                if (candidate < distance) {
-                    best = region;
-                    distance = candidate;
-                }
+                int xx = (gx + dx) * LOCATOR_STEP + 8, zz = (gz + dz) * LOCATOR_STEP + 8;
+                long distance = (long) (xx - x) * (xx - x) + (long) (zz - z) * (zz - z);
+                if (distance >= nearest || TrenchRegion.influence(seed, xx, zz) < 0.82
+                        || TrenchRegion.relief(seed, xx, zz) > 25) continue;
+                sample = manager.getBiomeGenAt(sample, xx, zz, 1, 1, false);
+                if (sample[0] != BiomeGenBase.ocean) continue;
+                if (coastWeight(coast(manager, xx & ~15, zz & ~15), xx & 15, zz & 15) < 0.99) continue;
+                best = new TrenchRegion(seed, xx, zz);
+                nearest = distance;
             }
         }
         return best;
     }
 
-    static boolean eligible(WorldChunkManager manager, TrenchRegion region) {
-        BiomeGenBase[] sample = null;
-        for (int dz = -224; dz <= 224; dz += 16) {
-            for (int dx = -224; dx <= 224; dx += 16) {
-                int x = region.x + dx, z = region.z + dz;
-                if (region.radius(x, z) > 1.12) continue;
-                sample = manager.getBiomeGenAt(sample, x, z, 1, 1, false);
-                if (sample[0] != BiomeGenBase.ocean) return false;
-            }
-        }
-        return true;
+    private static BiomeGenBase[] coast(WorldChunkManager manager, int x, int z) {
+        BiomeGenBase[] samples = manager.getBiomesForGeneration(null, (x >> 2) - COAST_QUARTS,
+                (z >> 2) - COAST_QUARTS, COAST_SIDE, COAST_SIDE);
+        for (int i = 0; i < COAST_SIDE * COAST_SIDE; i++)
+            if (samples[i] != BiomeGenBase.ocean) return samples;
+        return OPEN_OCEAN;
     }
 
-    private static synchronized TrenchRegion region(World world, int gx, int gz) {
-        Map<Long, TrenchRegion> cache = REGIONS.get(world);
-        if (cache == null) {
-            cache = new LinkedHashMap<Long, TrenchRegion>(64, 0.75F, true) {
-                @Override protected boolean removeEldestEntry(Map.Entry<Long, TrenchRegion> entry) {
-                    return size() > 128;
-                }
-            };
-            REGIONS.put(world, cache);
+    private static double coastWeight(BiomeGenBase[] coast, int x, int z) {
+        if (coast == OPEN_OCEAN) return 1;
+        int nearest = 28 * 28;
+        for (int dz = 0; dz < COAST_SIDE; dz++) {
+            int zz = 4 * (dz - COAST_QUARTS) - z;
+            if (zz * zz >= nearest) continue;
+            for (int dx = 0; dx < COAST_SIDE; dx++) {
+                int xx = 4 * (dx - COAST_QUARTS) - x;
+                if (coast[dx + dz * COAST_SIDE] != BiomeGenBase.ocean)
+                    nearest = Math.min(nearest, xx * xx + zz * zz);
+            }
         }
-        long key = ((long) gx << 32) | (gz & 0xffffffffL);
-        if (cache.containsKey(key)) return cache.get(key);
-        TrenchRegion region = TrenchRegion.candidate(world.getSeed(), gx, gz);
-        if (region != null && !eligible(world.getWorldChunkManager(), region)) region = null;
-        cache.put(key, region);
-        return region;
+        return TrenchRegion.smooth((Math.sqrt(nearest) - 8) / 20);
     }
 
     private static Object generate(Object[] objects, int[] coordinates) {
@@ -127,28 +124,29 @@ public final class AbyssalWorldgen {
     private static Plan shape(World world, byte[] terrain, BiomeGenBase[] biomes, int chunkX, int chunkZ) {
         if (!supported(world)) return null;
         int startX = chunkX << 4, startZ = chunkZ << 4;
-        TrenchRegion region = region(world, Math.floorDiv(startX, TrenchRegion.SPACING),
-                Math.floorDiv(startZ, TrenchRegion.SPACING));
-        if (region == null || Math.abs(region.x - startX - 8) > 233 || Math.abs(region.z - startZ - 8) > 233)
-            return null;
-
+        long seed = world.getSeed();
+        BiomeGenBase[] coast = null;
         Plan plan = null;
         for (int z = 0; z < 16; z++) {
             for (int x = 0; x < 16; x++) {
                 int column = (z << 4) | x;
                 if (biomes[column] != BiomeGenBase.ocean) continue;
                 int blockX = startX + x, blockZ = startZ + z;
-                double radius = region.radius(blockX, blockZ);
-                if (radius >= 1) continue;
+                double influence = TrenchRegion.influence(seed, blockX, blockZ);
+                if (influence < 0.015) continue;
+                if (coast == null) coast = coast(world.getWorldChunkManager(), startX, startZ);
+                influence *= coastWeight(coast, x, z);
+                if (influence < 0.015) continue;
                 int offset = (x << 11) | (z << 7);
+                if (terrain[offset + SEA_SURFACE + 1] != 0) continue;
                 int floor = SEA_SURFACE;
                 while (floor > 8 && isWater(terrain[offset + floor] & 255)) floor--;
                 if (floor > SEA_SURFACE - 4 || !geology(terrain[offset + floor] & 255)) continue;
-                int target = region.seabed(blockX, blockZ, floor, radius);
+                int target = TrenchRegion.seabed(TrenchRegion.relief(seed, blockX, blockZ), floor, influence);
                 if (target == floor || !geology(terrain[offset + target] & 255)) continue;
-                if (plan == null) plan = new Plan(region);
+                if (plan == null) plan = new Plan(seed);
                 plan.floor[column] = target;
-                plan.radius[column] = radius;
+                plan.influence[column] = influence;
                 for (int y = target + 1; y <= floor; y++)
                     terrain[offset + y] = (byte) Block.waterStill.blockID;
             }
@@ -166,10 +164,10 @@ public final class AbyssalWorldgen {
     }
 
     static final class Plan {
-        final TrenchRegion region;
+        final long seed;
         final int[] floor = new int[256];
-        final double[] radius = new double[256];
+        final double[] influence = new double[256];
 
-        Plan(TrenchRegion region) { this.region = region; }
+        Plan(long seed) { this.seed = seed; }
     }
 }

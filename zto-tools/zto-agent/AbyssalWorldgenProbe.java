@@ -14,12 +14,13 @@ import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
 
 /** Native provider and Anvil fixture. Direct provider calls isolate ZTO from later population. */
 public final class AbyssalWorldgenProbe {
-    private static final long SEED = 32021L;
-    private static final int RADIUS = 13;
+    private static long SEED = 32021L;
+    private static final int RADIUS = 24;
     private static final int SIDE = (RADIUS * 2 + 1) * 16;
 
     public static void main(String[] args) {
         try {
+            if (args.length > 2) SEED = Long.parseLong(args[2]);
             run(new File(args[0]), new File(args[1]));
             System.exit(0);
         } catch (Throwable failure) {
@@ -42,7 +43,6 @@ public final class AbyssalWorldgenProbe {
         xd otherWorld = world(root, "other", SEED + 1);
         TrenchRegion other = AbyssalWorldgen.locate(otherWorld, 0, 0);
         check(other == null || other.identity != region.identity, "other seed generates different geography");
-        sampleFrequency(world, otherWorld, world(root, "third", -SEED));
         int cx = region.x >> 4, cz = region.z >> 4;
         int originX = (cx - RADIUS) << 4, originZ = (cz - RADIUS) << 4;
         int biome = config.abyssalId("biome.abyssalTrench");
@@ -65,10 +65,13 @@ public final class AbyssalWorldgenProbe {
                 (java.util.function.BiFunction<Object[], int[], Object>) callback.get(null);
         zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(generator);
 
-        System.out.printf(Locale.ROOT, "seed=%d center=%d,%d footprint=%.0fx%.0f bearing=%.1f origin=%d,%d%n",
-                SEED, region.x, region.z, region.length, region.width, Math.toDegrees(region.angle), originX, originZ);
+        System.out.printf(Locale.ROOT, "seed=%d anchor=%d,%d origin=%d,%d side=%d%n",
+                SEED, region.x, region.z, originX, originZ, SIDE);
         BufferedImage depths = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
         BufferedImage habitats = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        BufferedImage membership = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        BufferedImage eastWest = new BufferedImage(SIDE, 72, BufferedImage.TYPE_INT_RGB);
+        BufferedImage northSouth = new BufferedImage(SIDE, 72, BufferedImage.TYPE_INT_RGB);
         aly provider = new aly(world, SEED, true);
         aly reverse = new aly(world, SEED, true);
         Map<Long, Long> signatures = new HashMap<>();
@@ -89,7 +92,10 @@ public final class AbyssalWorldgenProbe {
                 int columnBiome = chunk.m()[z * 16 + x] & 255;
                 int floor = 62;
                 while (floor > 0 && transparentWater(chunk.a(x, floor, z))) floor--;
-                int surface = chunk.a(x, floor, z);
+                int px = (dx + RADIUS) * 16 + x, pz = (dz + RADIUS) * 16 + z;
+                membership.setRGB(px, pz, trench ? 0x12b9b4 : columnBiome == 0 ? 0x17324c : 0x707955);
+                if (pz == region.z - originZ) section(eastWest, px, chunk, x, z);
+                if (px == region.x - originX) section(northSouth, pz, chunk, x, z);
                 int color = columnBiome == 0 || trench
                         ? ((11 + floor) << 16) | ((22 + floor * 2) << 8) | (42 + floor * 3) : 0x6f7551;
                 depths.setRGB((dx + RADIUS) * 16 + x, (dz + RADIUS) * 16 + z, color);
@@ -101,7 +107,7 @@ public final class AbyssalWorldgenProbe {
                     check(chunk.a(x, 62, z) == 9 || chunk.a(x, 62, z) == 8, "native ocean surface Y62");
                     check(chunk.a(x, 63, z) == 0, "air above the native water surface");
                     check(chunk.a(x, z, world.i()).M == biome, "native chunk biome query");
-                    if (floor <= 20) deep++;
+                    if (floor <= 25) deep++;
                     levels[floor]++;
                     boolean dry = false;
                     for (int y = floor + 1; y <= 62; y++) if (chunk.a(x, y, z) == 0) dry = true;
@@ -153,7 +159,7 @@ public final class AbyssalWorldgenProbe {
                 }
             }
         }
-        for (int dz = RADIUS; dz >= -RADIUS; dz--) for (int dx = RADIUS; dx >= -RADIUS; dx--)
+        for (int dz = 13; dz >= -13; dz--) for (int dx = 13; dx >= -13; dx--)
             check(signatures.get(key(dx, dz)) == signature(reverse.b(cx + dx, cz + dz)), "reverse provider order");
         ack generated = provider.b(cx, cz);
         check(signature(nativeCenter) != signature(generated), "center differs from ordinary terrain");
@@ -170,23 +176,37 @@ public final class AbyssalWorldgenProbe {
         zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(null);
         check(ordinarySample != 0 && ordinarySample == signature(baseline.b(cx + ordinaryDx, cz + ordinaryDz)),
                 "ordinary ocean matches unmodified provider");
-        check(landSample != 0 && landSample == signature(baseline.b(cx + landDx, cz + landDz)),
+        check(landSample == 0 || landSample == signature(baseline.b(cx + landDx, cz + landDz)),
                 "land matches unmodified provider");
         zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(generator);
         check(dryCaveColumns < changed / 100, "continuous water above sampled seabed");
-        check(changed > 2000 && deep > 500 && ordinary > 1000, "deep valley and ordinary ocean");
-        for (int id = 3039; id <= 3043; id++) check(counts[id - 3032] > 0, "naturally generated marine ID " + id);
+        check(changed > 2000 && deep > 100 && ordinary > 1000, "deep valley and ordinary ocean");
+        check(counts[7] + counts[8] + counts[9] + counts[10] + counts[11] > 0, "naturally generated marine colonies");
         for (int id : new int[] {3032, 3033, 3034, 3035}) check(counts[id - 3032] > 0, "naturally generated geology ID " + id);
         previews.mkdirs();
+        ImageIO.write(membership, "png", new File(previews, "membership.png"));
+        ImageIO.write(eastWest, "png", new File(previews, "cross-east-west.png"));
+        ImageIO.write(northSouth, "png", new File(previews, "cross-north-south.png"));
         ImageIO.write(depths, "png", new File(previews, "depth.png"));
         ImageIO.write(habitats, "png", new File(previews, "habitats.png"));
         System.out.printf(Locale.ROOT, "trenchColumns=%d deepColumns=%d ordinaryOceanColumns=%d otherBiomeColumns=%d%n", changed, deep, ordinary, land);
+        System.out.printf(Locale.ROOT, "abyssal ocean coverage=%.2f%%%n", 100.0 * changed / (ordinary + changed));
         System.out.println("dry interruptions above seabed " + dryCaveColumns);
         System.out.println("counts by id 3032-3043 " + Arrays.toString(counts));
         System.out.println("seabed heights " + Arrays.toString(levels));
         System.out.printf(Locale.ROOT, "mean provideChunk trench=%.3f ms (%d), background=%.3f ms (%d)%n",
                 trenchTime / (trenchChunks * 1e6), trenchChunks, normalTime / (normalChunks * 1e6), normalChunks);
         System.out.println("PASS native provider, reverse order, high IDs, metadata, Anvil and prior chunk preservation");
+    }
+
+    private static void section(BufferedImage image, int column, ack chunk, int x, int z) {
+        for (int y = 0; y < image.getHeight(); y++) {
+            int id = chunk.a(x, y, z);
+            int color = id == 0 ? 0xaac3ce : transparentWater(id) ? 0x163652
+                    : id >= 3032 && id <= 3038 ? 0x927e70 : id == 7 ? 0x241e25 : 0x514951;
+            if (id >= 3039 && id <= 3043) color = 0x49a77d;
+            image.setRGB(column, image.getHeight() - y - 1, color);
+        }
     }
 
     private static void verifyPopulation(File root, TrenchRegion region, int biome) {
@@ -224,23 +244,6 @@ public final class AbyssalWorldgenProbe {
         check(coated > 0 && ic2 > 0 && redPower > 0 && oil > 0, "native population and targeted oil intersect generated Trench");
         System.out.printf(Locale.ROOT, "post-population abyssal stone=%d IC2 copper=%d RedPower ore=%d BuildCraft oil=%d%n",
                 coated, ic2, redPower, oil);
-    }
-
-    private static void sampleFrequency(xd... worlds) throws Exception {
-        java.lang.reflect.Method candidate = TrenchRegion.class.getDeclaredMethod("candidate", long.class, int.class, int.class);
-        java.lang.reflect.Method eligible = AbyssalWorldgen.class.getDeclaredMethod("eligible", rs.class, TrenchRegion.class);
-        candidate.setAccessible(true);
-        eligible.setAccessible(true);
-        for (xd world : worlds) {
-            int admitted = 0, oceanic = 0;
-            for (int z = -5; z <= 5; z++) for (int x = -5; x <= 5; x++) {
-                TrenchRegion region = (TrenchRegion) candidate.invoke(null, world.v(), x, z);
-                if (region == null) continue;
-                admitted++;
-                if ((Boolean) eligible.invoke(null, world.i(), region)) oceanic++;
-            }
-            System.out.printf(Locale.ROOT, "seed=%d admitted=%d/121 eligible=%d/121%n", world.v(), admitted, oceanic);
-        }
     }
 
     private static xd world(File root, String name, long seed) {

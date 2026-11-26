@@ -52,6 +52,7 @@ public final class UnderwaterEquipmentProbe {
         client.F = root;
         client.f = world;
         client.p = new aaw(null, null) {
+            @Override public int a(java.awt.image.BufferedImage image) { return 0; }
             @Override public int b(String path) { return 0; }
             @Override public int[] a(String path) { return new int[256 * 256]; }
         };
@@ -87,11 +88,78 @@ public final class UnderwaterEquipmentProbe {
                 Logger.getLogger("underwater-fixture")));
         verifyRecipes();
         verifyMask(client, world);
+        verifyNativeFog(client, world, root);
         yw diver = NaturalSpawnProbe.join(world);
         verifyBreathing(world, diver);
         verifyTankRecovery(world);
         verifySwimming(world, diver);
         verifyMachine(root, world, diver);
+    }
+
+    private static void verifyNativeFog(Minecraft client, Fixture world, File root) throws Exception {
+        Class<?> capture = Class.forName("org.lwjgl.opengl.GL11");
+        Field density = capture.getField("fogDensity");
+        Method fog = lr.class.getDeclaredMethod("a", int.class, float.class);
+        fog.setAccessible(true);
+        Field config = Config.class.getDeclaredField("gameSettings");
+        config.setAccessible(true);
+        Object oldSettings = config.get(null);
+        // The native settings constructor queries a graphical context.
+        Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        unsafeField.setAccessible(true);
+        sun.misc.Unsafe allocator = (sun.misc.Unsafe) unsafeField.get(null);
+        config.set(null, client.A = (hu) allocator.allocateInstance(hu.class));
+        Class.forName("org.lwjgl.opengl.GLContext").getField("capabilities").set(null,
+                allocator.allocateInstance(org.lwjgl.opengl.ContextCapabilities.class));
+        try {
+            vq local = client.h;
+            client.i = local;
+            lr renderer = new lr(client);
+            int x = 291, y = 22, z = 291;
+            local.c(x + 0.5, y + 0.25, z + 0.5, 0, 0);
+            world.b(x, y, z, 9, 0);
+            world.b(x, y + 1, z, 9, 0);
+            local.ap.b[3] = null;
+            checkDensity(fog, renderer, density, 0.1F);
+            local.ap.b[3] = new aan(MASK, 1, 0);
+            checkDensity(fog, renderer, density, 0.1F / 3.5F);
+            client.A.ofClearWater = true;
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            local.ap.b[3] = null;
+            checkDensity(fog, renderer, density, 0.02F);
+            local.ap.b[3] = new aan(MASK, 1, 0);
+            zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry.register(
+                    ZtoConfigLoader.load(new File(root, "config").toPath(), false, Logger.getLogger("fog-fixture")), 100);
+            world.b(x, y - 1, z, 3032, 0);
+            check(zed.tekkitoverhaul.exploration.abyssal.MarineType.KELP.place(world, x, y, z, 0),
+                    "place occupied native water before rendering");
+            checkDensity(fog, renderer, density, 0.02F / 3.5F);
+            yw other = new yw(world) { @Override public void ab() {} };
+            other.c(x + 0.5, y + 0.25, z + 0.5, 0, 0);
+            other.ap.b[3] = new aan(MASK, 1, 0);
+            client.i = other;
+            checkDensity(fog, renderer, density, 0.02F);
+            client.i = local;
+            world.b(x, y, z, 11, 0);
+            world.b(x, y + 1, z, 11, 0);
+            checkDensity(fog, renderer, density, 2.0F);
+            world.b(x, y, z, 0, 0);
+            world.b(x, y + 1, z, 0, 0);
+            density.setFloat(null, Float.NaN);
+            fog.invoke(renderer, 0, 1.0F);
+            check(Float.isNaN(density.getFloat(null)) && capture.getField("fogMode").getInt(null) == 9729,
+                    "air after immersion selects native linear fog");
+            System.out.println("PASS actual OptiFine fog calls for water, Clear Water, Kelp, helmet removal, other camera, lava and air");
+        } finally {
+            config.set(null, oldSettings);
+        }
+    }
+
+    private static void checkDensity(Method fog, lr renderer, Field density, float expected) throws Exception {
+        density.setFloat(null, Float.NaN);
+        fog.invoke(renderer, 0, 1.0F);
+        float actual = density.getFloat(null);
+        check(Math.abs(actual - expected) < 1E-7, "renderer density " + actual + " expected " + expected);
     }
 
     private static void verifyRecipes() {
@@ -117,7 +185,7 @@ public final class UnderwaterEquipmentProbe {
         float original = 0.1F;
         check(ZTOAgent.underwaterFog(original, local) == original, "camera without mask keeps native fog");
         local.ap.b[3] = new aan(MASK, 1, 0);
-        check(Math.abs(ZTOAgent.underwaterFog(original, local) - original / 1.30F) < 1E-7,
+        check(Math.abs(ZTOAgent.underwaterFog(original, local) - original / 3.50F) < 1E-7,
                 "mask callback applies only the proposed water fog density");
         check(ZTOAgent.underwaterFog(original, new yw(world) { @Override public void ab() {} }) == original,
                 "other cameras retain native density");

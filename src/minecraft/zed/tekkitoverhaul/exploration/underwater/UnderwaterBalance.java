@@ -8,7 +8,7 @@ final class UnderwaterBalance {
     static final int EU_CAPACITY = 4000;
     static final int MAX_PACKET_EU = 32;
     static final float SWIM_THRUST = 1.25F;
-    static final float FOG_DISTANCE = 1.30F;
+    static final float FOG_DISTANCE = 3.50F;
 
     private UnderwaterBalance() {}
 }

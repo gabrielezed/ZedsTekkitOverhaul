@@ -281,19 +281,19 @@ public final class ObservatoryProbe {
 
     private static void exterior(xd world, Method position, Object plan, int floor, int half, int length, File output)
             throws Exception {
-        BufferedImage image = new BufferedImage(550, 310, BufferedImage.TYPE_INT_RGB);
+        BufferedImage image = new BufferedImage(610, 320, BufferedImage.TYPE_INT_RGB);
         java.awt.Graphics2D draw = image.createGraphics();
         draw.setColor(new java.awt.Color(16, 35, 44));
         draw.fillRect(0, 0, image.getWidth(), image.getHeight());
-        for (int depth = half + 5; depth >= -half - length; depth--) {
+        for (int depth = half + length; depth >= -half - 5; depth--) {
             for (int v = length; v >= -5; v--) {
-                int u = depth + v;
+                int u = depth - v;
                 if (u < -half || u > half) continue;
                 int[] p = (int[]) position.invoke(plan, u, 0, v);
                 for (int h = -7; h <= 11; h++) {
                     int id = world.a(p[0], floor + h, p[2]);
                     if (id < 3032 || id > 3038) continue;
-                    int x = 170 + (u + v) * 5, y = 125 + (u - v) * 2 - h * 5;
+                    int x = 435 + (u - v) * 5, y = 222 - depth * 2 - h * 5;
                     int color = id == 3036 ? 0x687771 : id == 3037 ? 0x50594b : id == 3038 ? 0xb3d0ad
                             : id == 3033 ? 0x54584a : id == 3034 ? 0x64746b : 0x415957;
                     draw.setColor(new java.awt.Color(color).darker());

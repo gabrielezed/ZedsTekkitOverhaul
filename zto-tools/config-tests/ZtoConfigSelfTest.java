@@ -58,6 +58,7 @@ public final class ZtoConfigSelfTest {
                 && diving.flippers == 22014 && diving.hopper == 3030, "append diving IDs and preserve existing assignments");
         check(diving.outboardMotor == 22015 && diving.motorboat == 22016 && diving.motorboatEntity == 242,
                 "append new item defaults and preserve the Motorboat entity override");
+        check(diving.abyssalId("biome.abyssalTrench") == 40, "default Trench biome ID");
         check(diving.abyssalId("block.abyssalStone") == 3082 && diving.abyssalId("item.kelpFrond") == 22117
                 && diving.abyssalId("block.ghostAnemone") == 3043 && diving.abyssalId("item.abyssalShell") == 22022,
                 "preserve abyssal overrides and fill missing defaults");
@@ -65,7 +66,7 @@ public final class ZtoConfigSelfTest {
         check(upgraded.startsWith(previous) && upgraded.contains("block.airCompressor=3031")
                 && upgraded.contains("item.underwaterMask=22012") && upgraded.contains("item.flippers=22014")
                 && upgraded.contains("item.outboardMotor=22015") && upgraded.contains("item.motorboat=22016")
-                && upgraded.contains("block.ghostAnemone=3043") && upgraded.contains("item.abyssalShell=22022"),
+                && upgraded.contains("biome.abyssalTrench=40") && upgraded.contains("block.ghostAnemone=3043") && upgraded.contains("item.abyssalShell=22022"),
                 "append only missing exploration IDs");
         ZtoConfigLoader.load(underwater, true, LOG);
         check(upgraded.equals(read(underwater, ZtoConfigLoader.FILE_NAME)), "underwater migration is idempotent");

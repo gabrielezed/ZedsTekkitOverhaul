@@ -5,6 +5,7 @@ Start with the [root instructions](../../AGENTS.md) and [current implementation 
 | Task | Current references |
 | --- | --- |
 | Settings, build and deploy | [Configuration](configuration.md), [environment](environment.md), [build provenance](VERSIONING_POLICY.md) |
+| Abyssal Trench, biome IDs and legacy chunk generation | [World generation](../engineering/abyssal-worldgen.md), [Abyssal decoration](../engineering/abyssal-decoration.md) |
 | Diving equipment and the LV Air Compressor | [Survival 0.5.1-alpha.1](survival-051-alpha1.md) |
 | Art and build identity | [Artwork suite and style guides](../../artwork/README.md), [cube renderer](../engineering/distillation-cube-rendering.md), [build watermark](../engineering/build-watermark.md) |
 | Selecting checks and managing fixtures | [Test tiers and host launch restriction](testing.md), [Dev Bridge lifecycle](test-automation.md), [workspace hygiene](workspace-hygiene.md) |

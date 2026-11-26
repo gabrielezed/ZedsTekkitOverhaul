@@ -4,7 +4,7 @@
 
 - Add seven abyssal building materials, five submerged organisms and six resource items with original textures.
 - Add decorative crafting, support-aware underwater planting, four-segment Kelp and oriented Fan Coral.
-- Add the environmental palette for future Abyssal Trench generation. [Engineering and playtest notes](docs/engineering/abyssal-decoration.md)
+- Generate the Abyssal Trench in eligible new Default Overworld ocean chunks. Add deep valleys, fossil formations, marine colonies, sparse masonry and a development locator. Owner graphical acceptance is pending. [Engineering and walkthrough](docs/engineering/abyssal-worldgen.md)
 
 ## 0.5.1-alpha.1 — Underwater equipment and Air Compressor
 

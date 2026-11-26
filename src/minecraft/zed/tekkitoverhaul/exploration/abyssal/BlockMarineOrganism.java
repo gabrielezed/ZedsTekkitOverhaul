@@ -48,8 +48,12 @@ final class BlockMarineOrganism extends Block {
         if (!world.blockExists(x, y, z) || !waterAt(world, x, y, z)
                 || world.getBlockMetadata(x, y, z) != 0 || !submerged(world, x, y, z)
                 || !supported(world, x, y, z)) return false;
-        int metadata = OCCUPIED_WATER + (type == MarineType.FAN_CORAL ? orientation & 1 : 0);
+        int metadata = occupiedMetadata(orientation);
         return world.isRemote || world.setBlockAndMetadataWithNotify(x, y, z, blockID, metadata);
+    }
+
+    int occupiedMetadata(int orientation) {
+        return OCCUPIED_WATER + (type == MarineType.FAN_CORAL ? orientation & 1 : 0);
     }
 
     private boolean submerged(World world, int x, int y, int z) {

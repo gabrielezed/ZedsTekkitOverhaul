@@ -37,6 +37,7 @@ import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
 import zed.tekkitoverhaul.exploration.motorboat.MotorboatRegistry;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
 import zed.tekkitoverhaul.exploration.abyssal.RenderMarineOrganism;
 import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
 import zed.tekkitoverhaul.hopper.RenderHopper;
@@ -123,6 +124,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         UnderwaterRegistry.register(settings);
         MotorboatRegistry.register(settings);
         AbyssalRegistry.register(settings, ModLoader.getUniqueBlockModelID(this, false));
+        AbyssalWorldgen.register(settings.abyssalId("biome.abyssalTrench"));
         MotorboatClient.register(ModLoader.getMinecraftInstance());
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);

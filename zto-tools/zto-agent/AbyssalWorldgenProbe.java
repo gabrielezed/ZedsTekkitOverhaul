@@ -14,6 +14,7 @@ import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
 
 /** Native provider and Anvil fixture. Direct provider calls isolate ZTO from later population. */
 public final class AbyssalWorldgenProbe {
+    private static java.util.function.BiFunction<Object[], int[], Object> capture;
     private static long SEED = 32021L;
     private static final int RADIUS = 24;
     private static final int SIDE = (RADIUS * 2 + 1) * 16;
@@ -65,6 +66,24 @@ public final class AbyssalWorldgenProbe {
                 (java.util.function.BiFunction<Object[], int[], Object>) callback.get(null);
         zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(generator);
 
+        final byte[][] terrain = new byte[2][];
+        capture = (objects, coordinates) -> {
+            if (coordinates == null) return generator.apply(objects, null);
+            terrain[0] = ((byte[]) objects[1]).clone();
+            Object plan = generator.apply(objects, coordinates);
+            terrain[1] = ((byte[]) objects[1]).clone();
+            return plan;
+        };
+        zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(capture);
+        byte[] nativeFloors = new byte[SIDE * SIDE], shapedFloors = new byte[SIDE * SIDE];
+        byte[] finalFloors = new byte[SIDE * SIDE], rejection = new byte[SIDE * SIDE];
+        BufferedImage fieldPlan = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        java.lang.reflect.Method field = TrenchRegion.class.getDeclaredMethod("influence", long.class, int.class, int.class);
+        java.lang.reflect.Method relief = TrenchRegion.class.getDeclaredMethod("relief", long.class, int.class, int.class);
+        java.lang.reflect.Method coast = AbyssalWorldgen.class.getDeclaredMethod("coast", rs.class, int.class, int.class);
+        java.lang.reflect.Method coastalWeight = AbyssalWorldgen.class.getDeclaredMethod("coastWeight", abn[].class, int.class, int.class);
+        for (java.lang.reflect.Method method : new java.lang.reflect.Method[] {field, relief, coast, coastalWeight})
+            method.setAccessible(true);
         System.out.printf(Locale.ROOT, "seed=%d anchor=%d,%d origin=%d,%d side=%d%n",
                 SEED, region.x, region.z, originX, originZ, SIDE);
         BufferedImage depths = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
@@ -87,12 +106,28 @@ public final class AbyssalWorldgenProbe {
             long elapsed = System.nanoTime() - started;
             signatures.put(key(dx, dz), signature(chunk));
             boolean affected = false, hasOcean = false, hasLand = false;
+            Object shore = coast.invoke(null, world.i(), (cx + dx) << 4, (cz + dz) << 4);
             for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
                 boolean trench = (chunk.m()[z * 16 + x] & 255) == biome;
                 int columnBiome = chunk.m()[z * 16 + x] & 255;
                 int floor = 62;
                 while (floor > 0 && transparentWater(chunk.a(x, floor, z))) floor--;
                 int px = (dx + RADIUS) * 16 + x, pz = (dz + RADIUS) * 16 + z;
+                int index = pz * SIDE + px, offset = (x << 11) | (z << 7);
+                int before = rawFloor(terrain[0], offset), shaped = rawFloor(terrain[1], offset);
+                nativeFloors[index] = (byte) before;
+                shapedFloors[index] = (byte) shaped;
+                finalFloors[index] = (byte) floor;
+                rejection[index] = (byte) (trench ? 1 : columnBiome != 0 ? 2
+                        : terrain[0][offset + 63] != 0 ? 3 : before > 58 ? 4 : 5);
+                if (trench || columnBiome == 0) {
+                    double influence = (Double) field.invoke(null, SEED, originX + px, originZ + pz);
+                    double coastWeight = (Double) coastalWeight.invoke(null, shore, x, z);
+                    double targetRelief = (Double) relief.invoke(null, SEED, originX + px, originZ + pz);
+                    int intended = Math.min(before, (int) Math.round(before + (targetRelief - before) * influence * coastWeight));
+                    fieldPlan.setRGB(px, pz, ((int) (255 * influence) << 16)
+                            | ((int) (255 * coastWeight) << 8) | (intended * 4));
+                }
                 membership.setRGB(px, pz, trench ? 0x12b9b4 : columnBiome == 0 ? 0x17324c : 0x707955);
                 if (pz == region.z - originZ) section(eastWest, px, chunk, x, z);
                 if (px == region.x - originX) section(northSouth, pz, chunk, x, z);
@@ -159,6 +194,8 @@ public final class AbyssalWorldgenProbe {
                 }
             }
         }
+        zed.tekkitoverhaul.agent.ZTOAgent.registerTrench(generator);
+        continuity(previews, originX, originZ, nativeFloors, shapedFloors, finalFloors, rejection);
         for (int dz = 13; dz >= -13; dz--) for (int dx = 13; dx >= -13; dx--)
             check(signatures.get(key(dx, dz)) == signature(reverse.b(cx + dx, cz + dz)), "reverse provider order");
         ack generated = provider.b(cx, cz);
@@ -184,6 +221,7 @@ public final class AbyssalWorldgenProbe {
         check(counts[7] + counts[8] + counts[9] + counts[10] + counts[11] > 0, "naturally generated marine colonies");
         for (int id : new int[] {3032, 3033, 3034, 3035}) check(counts[id - 3032] > 0, "naturally generated geology ID " + id);
         previews.mkdirs();
+        ImageIO.write(fieldPlan, "png", new File(previews, "field-plan.png"));
         ImageIO.write(membership, "png", new File(previews, "membership.png"));
         ImageIO.write(eastWest, "png", new File(previews, "cross-east-west.png"));
         ImageIO.write(northSouth, "png", new File(previews, "cross-north-south.png"));
@@ -197,6 +235,60 @@ public final class AbyssalWorldgenProbe {
         System.out.printf(Locale.ROOT, "mean provideChunk trench=%.3f ms (%d), background=%.3f ms (%d)%n",
                 trenchTime / (trenchChunks * 1e6), trenchChunks, normalTime / (normalChunks * 1e6), normalChunks);
         System.out.println("PASS native provider, reverse order, high IDs, metadata, Anvil and prior chunk preservation");
+    }
+
+    private static int rawFloor(byte[] terrain, int offset) {
+        int floor = 62;
+        while (floor > 0 && (terrain[offset + floor] == 8 || terrain[offset + floor] == 9)) floor--;
+        return floor;
+    }
+
+    private static void continuity(File previews, int originX, int originZ, byte[] nativeFloor, byte[] shaped,
+                                   byte[] finished, byte[] reason) throws Exception {
+        BufferedImage details = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        BufferedImage heights = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        BufferedImage heightDelta = new BufferedImage(SIDE, SIDE, BufferedImage.TYPE_INT_RGB);
+        int jumps = 0, seamJumps = 0, pillars = 0, maxExtra = 0, changedAfter = 0;
+        int[] protectedEdges = new int[6];
+        for (int z = 1; z < SIDE - 1; z++) for (int x = 1; x < SIDE - 1; x++) {
+            int i = x + z * SIDE;
+            int relief = shaped[i] - Math.max(Math.max(shaped[i - 1], shaped[i + 1]),
+                    Math.max(shaped[i - SIDE], shaped[i + SIDE]));
+            if (relief >= 12 && nativeFloor[i] - shaped[i] < 2) pillars++;
+            if (finished[i] != shaped[i]) changedAfter++;
+            int[] offsets = {1, SIDE};
+            for (int offset : offsets) {
+                int other = i + offset;
+                int actual = Math.abs(shaped[i] - shaped[other]);
+                int extra = actual - Math.abs(nativeFloor[i] - nativeFloor[other]);
+                if ((reason[i] == 1 || reason[other] == 1) && extra > maxExtra) {
+                    maxExtra = extra;
+                    System.out.printf("jump sample x=%d z=%d native=%d/%d shaped=%d/%d final=%d/%d classes=%d/%d%n",
+                            originX + x, originZ + z, nativeFloor[i], nativeFloor[other],
+                            shaped[i], shaped[other], finished[i], finished[other], reason[i], reason[other]);
+                }
+                if (actual >= 12 && extra >= 8 && (reason[i] == 1 || reason[other] == 1)) {
+                    jumps++;
+                    if (offset == 1 ? (x & 15) == 15 : (z & 15) == 15) seamJumps++;
+                    protectedEdges[reason[shaped[i] > shaped[other] ? i : other]]++;
+                }
+            }
+            int[] colors = {0, 0x154e79, 0x777a4e, 0xef664c, 0xe8b848, 0x516672};
+            details.setRGB(x, z, relief >= 12 ? 0xff00ff : colors[reason[i]]);
+            int cut = Math.min(255, 6 * Math.max(0, nativeFloor[i] - shaped[i]));
+            int later = Math.min(255, 15 * Math.abs(finished[i] - shaped[i]));
+            heights.setRGB(x, z, (nativeFloor[i] * 4 << 16) | (shaped[i] * 4 << 8) | (finished[i] * 4));
+            heightDelta.setRGB(x, z, later << 16 | cut << 8 | cut);
+        }
+        previews.mkdirs();
+        ImageIO.write(heights, "png", new File(previews, "height-stages.png"));
+        ImageIO.write(details, "png", new File(previews, "eligibility.png"));
+        ImageIO.write(heightDelta, "png", new File(previews, "height-deltas.png"));
+        System.out.printf("continuity jumps=%d chunkEdges=%d pillars=%d maxAddedStep=%d finalDiff=%d classes=%s%n",
+                jumps, seamJumps, pillars, maxExtra, changedAfter, Arrays.toString(protectedEdges));
+        boolean hasEnvelope = Arrays.stream(AbyssalWorldgen.class.getDeclaredMethods())
+                .anyMatch(method -> "limitExcavation".equals(method.getName()));
+        if (hasEnvelope) check(jumps == 0 && pillars == 0, "no pathological excavation discontinuities");
     }
 
     private static void section(BufferedImage image, int column, ack chunk, int x, int z) {

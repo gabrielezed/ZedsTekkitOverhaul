@@ -29,7 +29,7 @@ final class UnderwaterHook implements Opcodes {
         boolean living = LIVING.equals(target);
         ClassReader reader = new ClassReader(bytes);
         ClassWriter writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
-        int[] calls = new int[3];
+        int[] calls = new int[5];
         reader.accept(new ClassVisitor(ASM9, writer) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
@@ -37,10 +37,11 @@ final class UnderwaterHook implements Opcodes {
                 if (living && name.equals("B") && desc.equals("()V")) return breath(out, calls);
                 if (living && name.equals("a_") && desc.equals("(FF)V")) return swim(out, calls);
                 if (!living && name.equals("a") && desc.equals("(IF)V")) return fog(out, calls);
+                if (!living && name.equals("e") && desc.equals("()V")) return lightmapUpload(out, calls);
                 return out;
             }
         }, 0);
-        if (living ? calls[0] != 1 || calls[1] != 3 : calls[2] != 1) {
+        if (living ? calls[0] != 1 || calls[1] != 3 : calls[2] != 1 || calls[3] != 1 || calls[4] != 2) {
             throw new IllegalStateException("Unexpected underwater call sites in " + target);
         }
         return writer.toByteArray();
@@ -72,6 +73,19 @@ final class UnderwaterHook implements Opcodes {
                     super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "underwaterThrust", "(FLjava/lang/Object;)F", false);
                 }
                 super.visitMethodInsn(opcode, owner, name, desc, itf);
+            }
+        };
+    }
+
+    private static MethodVisitor lightmapUpload(MethodVisitor out, int[] calls) {
+        return new MethodVisitor(ASM9, out) {
+            @Override
+            public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                super.visitMethodInsn(opcode, owner, name, desc, itf);
+                if (opcode == INVOKEVIRTUAL && owner.equals("aaw") && name.equals("a") && desc.equals("([IIII)V")) {
+                    super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "underwaterNativeLightmapUploaded", "()V", false);
+                    calls[4]++;
+                }
             }
         };
     }
@@ -128,6 +142,22 @@ final class UnderwaterHook implements Opcodes {
                         && name.equals("isClearWater") && desc.equals("()Z");
                 densityValue = false;
                 super.visitMethodInsn(opcode, owner, name, desc, itf);
+                if (opcode == INVOKESTATIC && owner.equals("aau") && name.equals("a")
+                        && desc.equals("(Lxd;Lacq;F)I")) {
+                    // Keep the native camera block ID on the stack for the renderer.
+                    super.visitInsn(DUP);
+                    super.visitVarInsn(ALOAD, 3);
+                    super.visitVarInsn(ALOAD, 0);
+                    super.visitFieldInsn(GETFIELD, RENDERER, "r", "Lnet/minecraft/client/Minecraft;");
+                    super.visitFieldInsn(GETFIELD, "net/minecraft/client/Minecraft", "p", "Laaw;");
+                    super.visitVarInsn(ALOAD, 0);
+                    super.visitFieldInsn(GETFIELD, RENDERER, "Q", "[I");
+                    super.visitVarInsn(ALOAD, 0);
+                    super.visitFieldInsn(GETFIELD, RENDERER, "d", "I");
+                    super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "underwaterLightmap",
+                            "(ILjava/lang/Object;Ljava/lang/Object;[II)V", false);
+                    calls[3]++;
+                }
             }
         };
     }

@@ -4,6 +4,10 @@ import java.nio.FloatBuffer;
 
 /** Headless fog sink, compiled only for the underwater probe. */
 public final class GL11 {
+    public static final int GL_TEXTURE_BINDING_2D = 32873, GL_TEXTURE_2D = 3553;
+    public static int boundTexture = 91;
+    public static int glGetInteger(int parameter) { return boundTexture; }
+    public static void glBindTexture(int target, int texture) { boundTexture = texture; }
     public static float fogDensity;
     public static int fogMode;
 

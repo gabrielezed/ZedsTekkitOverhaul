@@ -1,5 +1,6 @@
 package zed.tekkitoverhaul.exploration.underwater;
 
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.ToIntBiFunction;
 import net.minecraft.client.Minecraft;
@@ -37,12 +38,13 @@ final class UnderwaterHooks {
             Class<?> agent = Class.forName("zed.tekkitoverhaul.agent.ZTOAgent", false, ClassLoader.getSystemClassLoader());
             agent.getMethod("registerUnderwater", ToIntBiFunction.class, Predicate.class, Predicate.class, float.class, float.class)
                     .invoke(null, BREATH, SWIM, FOG, UnderwaterBalance.SWIM_THRUST, UnderwaterBalance.FOG_DISTANCE);
+            agent.getMethod("registerMaskLightmap", BiConsumer.class).invoke(null, MaskLightmap.CALLBACK);
         } catch (ReflectiveOperationException unavailable) {
             ModLoader.getLogger().warning("[ZTO] Underwater equipment effects require the matching ZTOAgent: " + unavailable);
         }
     }
 
-    private static boolean wears(EntityPlayer player, int slot, Item item) {
+    static boolean wears(EntityPlayer player, int slot, Item item) {
         ItemStack stack = player.inventory.armorItemInSlot(slot);
         return stack != null && stack.getItem() == item;
     }

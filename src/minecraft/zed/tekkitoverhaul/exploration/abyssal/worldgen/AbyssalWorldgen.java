@@ -1,5 +1,8 @@
 package zed.tekkitoverhaul.exploration.abyssal.worldgen;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.BiFunction;
 import net.minecraft.src.BiomeGenBase;
 import net.minecraft.src.BiomeGenOcean;
@@ -14,11 +17,31 @@ import net.minecraft.src.WorldType;
 /** The native biome layers are the unmodified ocean mask. New chunks own the generated identity. */
 public final class AbyssalWorldgen {
     private static final int SEA_SURFACE = 62;
+    // A floor is at most 50 blocks below the water line. A 16-block halo
+    // contains the complete reach of the 4-rise-per-block envelope.
+    private static final int HALO = 16;
+    private static final int SIDE = 16 + HALO * 2;
+    private static final int ORTHOGONAL_RISE = 4;
+    private static final int DIAGONAL_RISE = 6;
     private static final int LOCATOR_STEP = 64;
     private static final int LOCATOR_RADIUS = 48;
     private static final int COAST_QUARTS = 8;
     private static final BiomeGenBase[] OPEN_OCEAN = new BiomeGenBase[0];
     private static final int COAST_SIDE = 4 + 2 * COAST_QUARTS;
+    private static final Map<World, Map<Long, byte[]>> TERRAIN = new WeakHashMap<World, Map<Long, byte[]>>();
+
+    private static synchronized Map<Long, byte[]> terrainCache(World world) {
+        Map<Long, byte[]> result = TERRAIN.get(world);
+        if (result == null) {
+            result = new LinkedHashMap<Long, byte[]>(64, 0.75F, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<Long, byte[]> eldest) {
+                    return size() > 64;
+                }
+            };
+            TERRAIN.put(world, result);
+        }
+        return result;
+    }
     private static final BiFunction<Object[], int[], Object> CALLBACK = new BiFunction<Object[], int[], Object>() {
         @Override public Object apply(Object[] objects, int[] coordinates) {
             return generate(objects, coordinates);
@@ -125,33 +148,91 @@ public final class AbyssalWorldgen {
         if (!supported(world)) return null;
         int startX = chunkX << 4, startZ = chunkZ << 4;
         long seed = world.getSeed();
-        BiomeGenBase[] coast = null;
-        Plan plan = null;
-        for (int z = 0; z < 16; z++) {
-            for (int x = 0; x < 16; x++) {
-                int column = (z << 4) | x;
-                if (biomes[column] != BiomeGenBase.ocean) continue;
-                int blockX = startX + x, blockZ = startZ + z;
-                double influence = TrenchRegion.influence(seed, blockX, blockZ);
-                if (influence < 0.015) continue;
-                if (coast == null) coast = coast(world.getWorldChunkManager(), startX, startZ);
-                influence *= coastWeight(coast, x, z);
-                if (influence < 0.015) continue;
+        boolean candidate = false;
+        for (int z = 0; z < 16 && !candidate; z++) for (int x = 0; x < 16 && !candidate; x++)
+            candidate = biomes[x + z * 16] == BiomeGenBase.ocean
+                    && TrenchRegion.influence(seed, startX + x, startZ + z) >= 0.015;
+        if (!candidate) return null;
+
+        WorldChunkManager manager = world.getWorldChunkManager();
+        BiomeGenBase[] ocean = manager.getBiomeGenAt(null, startX - HALO, startZ - HALO, SIDE, SIDE, false);
+        int[] nativeFloor = new int[SIDE * SIDE];
+        int[] desired = new int[SIDE * SIDE];
+        double[] strength = new double[256];
+        Map<Long, byte[]> density = terrainCache(world);
+        ChunkProviderGenerate sampler = null;
+        for (int dz = -1; dz <= 1; dz++) for (int dx = -1; dx <= 1; dx++) {
+            int wx = startX + dx * 16, wz = startZ + dz * 16;
+            BiomeGenBase[] shore = coast(manager, wx, wz);
+            // Raw density sampling only. This never requests or populates a chunk.
+            long key = ((long) (chunkX + dx) << 32) | ((chunkZ + dz) & 0xffffffffL);
+            byte[] raw = density.get(key);
+            if (raw == null) {
+                if (sampler == null) sampler = new ChunkProviderGenerate(world, seed, false);
+                raw = new byte[32768];
+                sampler.generateTerrain(chunkX + dx, chunkZ + dz, raw);
+                density.put(key, raw);
+            }
+            boolean owned = dx == 0 && dz == 0;
+            for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+                int index = (z + (dz + 1) * 16) * SIDE + x + (dx + 1) * 16;
                 int offset = (x << 11) | (z << 7);
-                if (terrain[offset + SEA_SURFACE + 1] != 0) continue;
-                int floor = SEA_SURFACE;
-                while (floor > 8 && isWater(terrain[offset + floor] & 255)) floor--;
-                if (floor > SEA_SURFACE - 4 || !geology(terrain[offset + floor] & 255)) continue;
-                int target = TrenchRegion.seabed(TrenchRegion.relief(seed, blockX, blockZ), floor, influence);
-                if (target == floor || !geology(terrain[offset + target] & 255)) continue;
-                if (plan == null) plan = new Plan(seed);
-                plan.floor[column] = target;
-                plan.influence[column] = influence;
-                for (int y = target + 1; y <= floor; y++)
-                    terrain[offset + y] = (byte) Block.waterStill.blockID;
+                BiomeGenBase nativeBiome = owned ? biomes[x + z * 16] : ocean[index];
+                int floor = seabed(raw, offset);
+                nativeFloor[index] = floor;
+                double influence = nativeBiome == BiomeGenBase.ocean && raw[offset + SEA_SURFACE + 1] == 0
+                        && isWater(raw[offset + SEA_SURFACE] & 255)
+                        ? TrenchRegion.influence(seed, wx + x, wz + z) * coastWeight(shore, x, z) : 0;
+                if (owned) strength[x + z * 16] = influence;
+                int target = influence < 0.015 ? floor : Math.max(12, TrenchRegion.seabed(
+                        TrenchRegion.relief(seed, wx + x, wz + z), floor, influence));
+                // Keep every cut cell in continuous native geological substrate.
+                int safe = floor;
+                while (safe > target && geology(raw[offset + safe] & 255)
+                        && geology(raw[offset + safe - 1] & 255)
+                        && (!owned || (geology(terrain[offset + safe] & 255)
+                        && geology(terrain[offset + safe - 1] & 255)))) safe--;
+                desired[index] = safe;
             }
         }
+        limitExcavation(desired);
+        Plan plan = null;
+        for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+            int index = (z + HALO) * SIDE + x + HALO;
+            int floor = nativeFloor[index], target = desired[index];
+            if (target >= floor) continue;
+            int offset = (x << 11) | (z << 7);
+            if (plan == null) plan = new Plan(seed, desired, nativeFloor);
+            int column = x + z * 16;
+            plan.floor[column] = target;
+            plan.influence[column] = strength[column];
+            for (int y = target + 1; y <= floor; y++) terrain[offset + y] = (byte) Block.waterStill.blockID;
+        }
         return plan;
+    }
+
+    private static int seabed(byte[] terrain, int offset) {
+        int floor = SEA_SURFACE;
+        while (floor > 8 && isWater(terrain[offset + floor] & 255)) floor--;
+        return floor;
+    }
+
+    private static void limitExcavation(int[] heights) {
+        // Two opposite sweeps compute the maximum of surrounding floors minus chamfer distance.
+        for (int step = 1; step >= -1; step -= 2) {
+            int start = step == 1 ? 0 : SIDE - 1;
+            for (int z = start; z >= 0 && z < SIDE; z += step) {
+                for (int x = start; x >= 0 && x < SIDE; x += step) {
+                    int i = z * SIDE + x, xx = x - step, zz = z - step;
+                    if (xx >= 0 && xx < SIDE)
+                        heights[i] = Math.max(heights[i], heights[z * SIDE + xx] - ORTHOGONAL_RISE);
+                    if (zz < 0 || zz >= SIDE) continue;
+                    heights[i] = Math.max(heights[i], heights[zz * SIDE + x] - ORTHOGONAL_RISE);
+                    if (x > 0) heights[i] = Math.max(heights[i], heights[zz * SIDE + x - 1] - DIAGONAL_RISE);
+                    if (x < SIDE - 1) heights[i] = Math.max(heights[i], heights[zz * SIDE + x + 1] - DIAGONAL_RISE);
+                }
+            }
+        }
     }
 
     static boolean isWater(int id) {
@@ -168,6 +249,22 @@ public final class AbyssalWorldgen {
         final int[] floor = new int[256];
         final double[] influence = new double[256];
 
-        Plan(long seed) { this.seed = seed; }
+        private final int[] envelope, nativeFloor;
+
+        Plan(long seed, int[] envelope, int[] nativeFloor) {
+            this.seed = seed;
+            this.envelope = envelope;
+            this.nativeFloor = nativeFloor;
+        }
+
+        boolean loweredAt(int x, int z) {
+            int i = (z + HALO) * SIDE + x + HALO;
+            return envelope[i] < nativeFloor[i];
+        }
+
+        int seabedAt(int x, int z) {
+            int i = (z + HALO) * SIDE + x + HALO;
+            return Math.min(envelope[i], nativeFloor[i]);
+        }
     }
 }

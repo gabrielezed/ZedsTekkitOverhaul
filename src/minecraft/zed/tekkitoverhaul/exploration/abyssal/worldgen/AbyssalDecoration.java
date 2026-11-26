@@ -39,6 +39,7 @@ final class AbyssalDecoration {
                 }
             }
         }
+        coatCliffs(chunk, plan, startX, startZ);
         formation(chunk, plan, seed);
         for (int z = 1; z < 15; z++) {
             for (int x = 1; x < 15; x++) {
@@ -71,6 +72,26 @@ final class AbyssalDecoration {
             else if ((roll & 8191) == 12 && chunk.getBlockID(x, y, z) == MaterialType.STONE.block().blockID) {
                 put(chunk, x, y, z, MaterialType.LAMP);
                 light(chunk, x, y, z, 5);
+            }
+        }
+    }
+
+    private static void coatCliffs(Chunk chunk, AbyssalWorldgen.Plan plan, int startX, int startZ) {
+        for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+            int top = plan.seabedAt(x, z);
+            int bottom = top;
+            for (int side = 0; side < 4; side++) {
+                int xx = x + (side == 0 ? -1 : side == 1 ? 1 : 0);
+                int zz = z + (side == 2 ? -1 : side == 3 ? 1 : 0);
+                int next = plan.seabedAt(xx, zz);
+                if ((plan.loweredAt(x, z) || plan.loweredAt(xx, zz)) && next < top - 1 && (xx < 0 || xx > 15 || zz < 0 || zz > 15
+                        || water(chunk, xx, Math.min(top, 61), zz))) bottom = Math.min(bottom, next);
+            }
+            if (top - bottom < 2 || !water(chunk, x, top + 1, z)) continue;
+            double shell = TrenchRegion.field(plan.seed ^ 217, startX + x, startZ + z, 37);
+            for (int y = Math.min(top, 61); y > Math.max(bottom, 8); y--) {
+                if (AbyssalWorldgen.geology(chunk.getBlockID(x, y, z)))
+                    put(chunk, x, y, z, shell > 0.67 ? MaterialType.SHELLSTONE : MaterialType.STONE);
             }
         }
     }

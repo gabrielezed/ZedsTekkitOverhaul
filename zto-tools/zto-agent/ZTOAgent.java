@@ -55,6 +55,23 @@ public final class ZTOAgent {
     private static volatile WeakReference<Predicate<Object>> fog = new WeakReference<>(null);
     private static float swimThrust = 1F, fogDistance = 1F;
 
+    private static volatile WeakReference<BiConsumer<Object[], int[]>> maskLight = new WeakReference<>(null);
+    private static int nativeLightmapSerial;
+
+    public static void registerMaskLightmap(BiConsumer<Object[], int[]> callback) {
+        maskLight = new WeakReference<>(callback);
+    }
+
+    public static void underwaterNativeLightmapUploaded() {
+        nativeLightmapSerial++;
+    }
+
+    public static void underwaterLightmap(int block, Object camera, Object engine, int[] nativeColors, int texture) {
+        BiConsumer<Object[], int[]> callback = maskLight.get();
+        if (callback != null)
+            callback.accept(new Object[] {camera, engine, nativeColors}, new int[] {block, texture, nativeLightmapSerial});
+    }
+
     private static volatile WeakReference<BiFunction<Object[], int[], Object>> trench = new WeakReference<>(null);
 
     public static void registerTrench(BiFunction<Object[], int[], Object> callback) {

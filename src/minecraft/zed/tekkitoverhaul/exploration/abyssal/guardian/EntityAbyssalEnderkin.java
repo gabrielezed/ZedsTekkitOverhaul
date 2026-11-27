@@ -21,7 +21,8 @@ public final class EntityAbyssalEnderkin extends EntityMob {
     private final AquaticPursuit movement = new AquaticPursuit();
     private int x, y, z, slot = -1, cooldown, aim;
     private long identity;
-    private EntityPlayer target;
+    private EntityPlayer target, resonanceTarget;
+    private int resonanceTicks;
 
     public EntityAbyssalEnderkin(World world) {
         super(world);
@@ -62,6 +63,17 @@ public final class EntityAbyssalEnderkin extends EntityMob {
     public long siteIdentity() { return identity; }
     public int casting() { return dataWatcher.getWatchableObjectByte(WATCH_CAST); }
     boolean engages(EntityPlayer player) { return target == player && !isDead; }
+
+    boolean canResonate(long identity, EntityPlayer player) {
+        return this.identity == identity && player != null && !AquaticDevelopment.manual(this)
+                && isEntityAlive() && isInWater() && aim == 0 && resonanceTicks == 0
+                && player.getDistanceSq(x + 0.5, y + 0.08, z + 0.5) <= 27 * 27 && site() != null;
+    }
+
+    void resonate(EntityPlayer player) {
+        resonanceTarget = player;
+        resonanceTicks = CustodianBalance.RESONANCE_SIGNAL;
+    }
 
     private Site site() {
         Site site = slot < 0 ? null : ObservatorySites.nearby(worldObj, x, z);
@@ -105,6 +117,7 @@ public final class EntityAbyssalEnderkin extends EntityMob {
     @Override protected void updateEntityActionState() {
         if (worldObj.isRemote || worldObj.difficultySetting == 0) return;
         if (cooldown > 0) cooldown--;
+        if (resonanceTicks > 0 && --resonanceTicks == 0) resonanceTarget = null;
         if (casting() < 0) pose(casting() + 1);
         if (!isInWater()) {
             movement.lose();
@@ -117,6 +130,14 @@ public final class EntityAbyssalEnderkin extends EntityMob {
             prospective = null;
         }
         target = prospective;
+        if (target == null && resonanceTarget != null && resonanceTarget.isEntityAlive()
+                && resonanceTarget.isInWater() && !resonanceTarget.capabilities.disableDamage
+                && GuardianEncounters.casters(resonanceTarget, false) < 6
+                && resonanceTarget.getDistanceSq(x + 0.5, y + 0.08, z + 0.5) <= 27 * 27) {
+            cancel();
+            movement.approach(this, resonanceTarget, 0.17);
+            return;
+        }
         if (target == null) {
             cancel();
             movement.patrol(this, x + 0.5, y + 0.08, z + 0.5, 0.12);

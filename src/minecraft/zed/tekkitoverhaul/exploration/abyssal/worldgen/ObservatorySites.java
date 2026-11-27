@@ -370,6 +370,7 @@ public final class ObservatorySites {
         private long slices;
         private int consumed, dead, retired;
         private boolean failed;
+        private CustodianRecord custodian;
 
         private Site(ObservatoryPlan plan, File file) {
             this.plan = plan;
@@ -412,6 +413,11 @@ public final class ObservatorySites {
         public int[] home(int slot) { return plan.station(slot); }
         public int[] arenaCorner(boolean far) { return plan.arenaCorner(far); }
         public int[] arenaEntry(boolean side) { return plan.arenaEntry(side); }
+        public CustodianRecord custodian() {
+            if (custodian == null) custodian = new CustodianRecord(file, plan.id);
+            return custodian;
+        }
+
         public int[] arenaCenter() { return plan.arenaCenter(); }
 
         public boolean excludesWild(int x, int z) {

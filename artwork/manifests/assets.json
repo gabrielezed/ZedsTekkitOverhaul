@@ -408,5 +408,27 @@
     "palette": "abyssal",
     "origin": "zto-original",
     "jar": true
+  },
+  {
+    "id": "abyssal-custodian",
+    "source": "source/abyssal/custodian.png",
+    "runtime": "zed/textures/abyssal/custodian.png",
+    "size": [128, 64],
+    "alpha": "cutout",
+    "role": "Custodian enderic body, gills and articulated limb UVs",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "abyssal-custodian-eyes",
+    "source": "source/abyssal/custodian_eyes.png",
+    "runtime": "zed/textures/abyssal/custodian_eyes.png",
+    "size": [128, 64],
+    "alpha": "cutout",
+    "role": "Two emissive face markings on the Custodian UV layout",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
   }
 ]

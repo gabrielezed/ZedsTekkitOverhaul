@@ -12,7 +12,7 @@ New sites use revision 2. An atrium, offset hall, future arena and two branches 
 
 Foundations follow the sampled seabed. The generator cuts flooded volumes, writes integer block IDs into native sections, seeds low lamp light and leaves native height and skylight initialization to the provider. Geological coatings remain in the Trench. Fossil formations and marine planting skip construction columns. Native population and third-party generators retain their normal order and can intersect the ruins.
 
-The inaugural candidate includes salvage from the existing masonry, lamps and fossil materials. Optional chest caches are omitted. The finished chamber includes a focal platform, masonry recess and two entrances for later integration. The alpha.4 handoff can query the site identity, opposite arena corners, center and both entrances through `ObservatorySites.Site`.
+The inaugural candidate includes salvage from the existing masonry, lamps and fossil materials. Optional chest caches are omitted. The finished chamber includes a focal platform, masonry recess and two entrances for later integration. The [Custodian encounter](abyssal-custodian.md) uses the existing site identity, chamber bounds and separate persistent encounter record in both revisions.
 
 ## Ownership and persistence
 

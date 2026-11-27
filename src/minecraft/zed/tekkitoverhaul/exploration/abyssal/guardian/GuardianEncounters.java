@@ -21,6 +21,7 @@ public final class GuardianEncounters {
         register(EntityDiverZombie.class, EntityDiverZombie.NAME, "Diver Zombie");
         register(EntityDiverSkeleton.class, EntityDiverSkeleton.NAME, "Diver Skeleton");
         register(EntityAbyssalEnderkin.class, EntityAbyssalEnderkin.NAME, "Abyssal Enderkin");
+        register(EntityAbyssalCustodian.class, EntityAbyssalCustodian.NAME, "Abyssal Custodian");
         ModLoader.registerEntityID(DiverArrow.class, "ZTO.DiverArrow", ModLoader.getUniqueEntityId());
     }
 
@@ -36,7 +37,10 @@ public final class GuardianEncounters {
         int x = SwimRoute.floor(player.posX), z = SwimRoute.floor(player.posZ);
         Site site = ObservatorySites.nearby(world, x, z);
         if (site != null && site.excludesWild(x, z)) {
-            if (site.ready(world)) materialize(world, player, site);
+            if (site.ready(world)) {
+                EntityAbyssalCustodian.admit(world, player, site);
+                materialize(world, player, site);
+            }
         } else if (world.getWorldTime() % 320 == 0) wild(world, player, x, z);
     }
 

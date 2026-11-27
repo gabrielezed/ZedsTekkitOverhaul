@@ -18,6 +18,8 @@ Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct
 
 Use `zto-tools/test-zto-agent.ps1 -Focus observatory` for revision-aware native site generation and persistence, flooded routes, protected old chunks, scoped OptiFine ceiling culling, native lighting, Fangfish, divers and Enderkin combat. The runner preserves native plans, sections and exterior projections under `dist-zto/observatory-refinement-previews/`. [Observatory walkthrough and seeds](../engineering/sunken-observatory.md#native-walkthrough)
 
+Use `zto-tools/test-zto-agent.ps1 -Focus custodian` for the focused native Custodian and EE2 scarcity fixture. Add `-CustodianOwnerSave` to export only the marked owner world as a zip. The test deletes its runtime workspace after export. [Custodian walkthrough](../engineering/abyssal-custodian.md)
+
 For 0.2.3-alpha.2, the same headless pack runner checks the native Enderkin substitution sample and population limits, magpie habitat and player-item recovery, and Fugl chicken hunts. `-Focus mining` exercises the restored local Survival controller with a stone pickaxe and both IC2 drills. See the [biome ecology implementation and playtest](survival-023-implementation.md).
 
 Use `zto-tools/test-zto-agent.ps1 -AerialSample -PackJava java` for the repeated ordinary-only aerial sample. `-CandidateJar` selects an archived mod for that sample. The controlled pack suite separately checks failed formations, predator warnings and recovery, lunar allocation, and the magpie scavenging and egg lifecycle.

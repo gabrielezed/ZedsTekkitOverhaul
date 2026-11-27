@@ -8,13 +8,17 @@ param(
     [string]$CandidateJar,
     [string]$IndustrialProfileBaseline,
     [switch]$TerrainBaseline,
+    [switch]$CustodianOwnerSave,
     [ValidateSet('furnace','mining','breacher','provenance','settlement','cabin','mutations','biome','settlement-profile',
         'compound','protection','query','industrial','industrial-profile','modded','modded-profile',
         'partial','partial-baseline','site-siege','site-siege-escalation','site-siege-industry','site-siege-terrain',
-        'site-siege-completion','underwater','distillation','motorboat','abyssal','trench','observatory')][string]$Focus
+        'site-siege-completion','underwater','distillation','motorboat','abyssal','trench','observatory','custodian')][string]$Focus
 )
 
 $ErrorActionPreference = 'Stop'
+if ($CustodianOwnerSave -and $Focus -ne 'custodian') {
+    throw 'CustodianOwnerSave requires -Focus custodian.'
+}
 if ($IndustrialProfileBaseline -and $Focus -ne 'industrial-profile') {
     throw 'IndustrialProfileBaseline requires -Focus industrial-profile.'
 }
@@ -67,12 +71,15 @@ try {
         $mixedSiegeSuite = $siteSiegeSuite -and (!$CandidateJar -or $Focus -in 'site-siege-terrain','site-siege-completion')
         if ($siteSiegeSuite -or $partialSuite) { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/SiteSiegeProbe.java' }
         $compileClasspath = $furnaceClasspath
-        if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench','observatory') {
+        if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench','observatory','custodian') {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/UnderwaterEquipmentProbe.java'
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/DistillationVisualProbe.java'
         }
         if ($Focus -eq 'trench') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalWorldgenProbe.java' }
-        if ($Focus -eq 'observatory') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ObservatoryProbe.java' }
+        if ($Focus -in 'observatory','custodian') {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ObservatoryProbe.java'
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/CustodianProbe.java'
+        }
         if ($Focus -eq 'abyssal') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalDecorationProbe.java' }
         if ($Focus -eq 'motorboat') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/MotorboatProbe.java' }
         if ($moddedSuite -or $mixedSiegeSuite -or $partialSuite) {
@@ -114,17 +121,26 @@ try {
         if (!$PackJava) { $PackJava = Join-Path (Split-Path $launch.java) 'java.exe' }
         Push-Location $out.FullName
         try {
-            if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench','observatory') {
+            if ($Focus -in 'underwater','distillation','motorboat','abyssal','trench','observatory','custodian') {
                 $fixture = New-Item -ItemType Directory -Path (Join-Path $out.FullName "$Focus-fixture")
                 $config = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'config')
                 Copy-Item -LiteralPath (Join-Path $game 'config/IC2.cfg') -Destination $config.FullName
                 $buildcraftConfig = New-Item -ItemType Directory -Path (Join-Path $fixture.FullName 'buildcraft/config')
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
-                if ($Focus -eq 'observatory') {
+                if ($Focus -in 'observatory','custodian') {
                     $previews = Join-Path $root 'dist-zto/observatory-refinement-previews'
-                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath ObservatoryProbe $fixture.FullName $previews
+                    $ownerArgs = @()
+                    if ($CustodianOwnerSave) { $ownerArgs += 'owner-save' }
+                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $furnaceClasspath ObservatoryProbe $fixture.FullName $previews $Focus @ownerArgs
                     if ($LASTEXITCODE) { throw 'Native Observatory fixture failed.' }
+                    if ($CustodianOwnerSave) {
+                        Add-Type -AssemblyName System.IO.Compression.FileSystem
+                        $artifact = Join-Path $root "dist-zto/custodian-owner-$([guid]::NewGuid().ToString('N')).zip"
+                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Custodian playtest'),
+                            $artifact, [IO.Compression.CompressionLevel]::Optimal, $true)
+                        Write-Output "Owner save: $artifact"
+                    }
                     return
                 }
                 if ($Focus -eq 'trench') {

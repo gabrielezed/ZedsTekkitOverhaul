@@ -1,5 +1,12 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.5.1-alpha.4 — The Abyssal Custodian
+
+- Add an articulated, transforming aquatic Custodian with four combat moves and two phases.
+- Bind a persistent Custodian to stamped revision-one and revision-two Observatories. On legitimate defeat, the site issues one vanilla Ender Pearl.
+- Remove ordinary native Enderman pearls and protect Ender Pearls and Eyes of Ender from EE2 replication while preserving physical items and the native Eye of Ender recipe.
+- Add a marked owner save, native encounter and economy verification, and previews captured from the actual model. [Encounter](docs/engineering/abyssal-custodian.md) · [Scarcity](docs/engineering/ender-pearl-scarcity.md)
+
 ## 0.5.1-alpha.3 — The Sunken Observatory
 
 - Generate rare flooded observatories in newly explored Abyssal Trench terrain. Each ruin includes alternative routes and a reserved chamber for alpha.4.

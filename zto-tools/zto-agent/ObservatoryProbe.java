@@ -33,7 +33,7 @@ import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 public final class ObservatoryProbe {
     public static void main(String[] args) {
         try {
-            run(new File(args[0]), new File(args[1]));
+            run(new File(args[0]), new File(args[1]), args.length > 2 && "custodian".equals(args[2]), args.length > 3);
             System.exit(0);
         } catch (Throwable failure) {
             failure.printStackTrace();
@@ -41,7 +41,7 @@ public final class ObservatoryProbe {
         }
     }
 
-    private static void run(File root, File previews) throws Exception {
+    private static void run(File root, File previews, boolean custodianOnly, boolean ownerSave) throws Exception {
         UnderwaterEquipmentProbe.startFixture(root, "setup");
         ZtoConfig config = ZtoConfigLoader.load(new File(root, "config").toPath(), false, Logger.getLogger("observatory"));
         AbyssalRegistry.register(config, 100);
@@ -49,6 +49,7 @@ public final class ObservatoryProbe {
         ObservatorySites.register();
         AbyssalWaterFaces.register();
         GuardianEncounters.register();
+        zed.tekkitoverhaul.emc.EnderPearlScarcity.register();
         Class<?> planClass = Class.forName("zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatoryPlan");
         Method candidate = method(ObservatorySites.class, "candidate", long.class, int.class, int.class);
         Method survey = method(ObservatorySites.class, "survey", xd.class, planClass);
@@ -75,9 +76,11 @@ public final class ObservatoryProbe {
                 nominal, eligible, surveyed, surveyed * 1e6 / (nominal * 512.0 * 512.0),
                 (System.nanoTime() - started) / 1e6);
         check(discovered.size() >= 2, "representative survey found distinct sites");
-        verifySwimming(root);
-        verifyWaterFace(root);
-        verifyDivers(root);
+        if (!custodianOnly) {
+            verifySwimming(root);
+            verifyWaterFace(root);
+            verifyDivers(root);
+        }
         int completed = 0;
         for (long[] sample : discovered) {
             long seed = sample[0];
@@ -106,6 +109,7 @@ public final class ObservatoryProbe {
                 verifyLegacy(root, site, seed, x, y, z, minX, maxX, minZ, maxZ);
                 defendOld(root, seed, minX, minZ, maxX, maxZ, x, z);
                 verifyActors(world, site, x, y, z);
+                CustodianProbe.exercise(world, site);
                 int[] actorHome = site.home(0);
                 int actorChunkX = actorHome[0] >> 4, actorChunkZ = actorHome[2] >> 4;
                 String population = site.status();
@@ -130,17 +134,33 @@ public final class ObservatoryProbe {
                 check(reopened.b(EntityAbyssalEnderkin.class) > 0, "living population reopened from native entity NBT");
                 check(saved.status().equals(site.status()), "population ledger survived save and reopen");
                 verifyLighting(reopened, minX, maxX, minZ, maxZ, y);
+                CustodianProbe.reopened(reopened, saved);
                 verifyCaster(reopened, saved);
                 reopened.q = 0;
                 for (Object entry : new ArrayList<>(reopened.b)) {
                     if (entry instanceof EntityAbyssalEnderkin) ((EntityAbyssalEnderkin) entry).J_();
                 }
                 check(!saved.status().endsWith("| 0 retired"), "Peaceful retires native living site actors");
-                verifyWild(root, seed);
+                reopened.z().a(true, null);
+                ce.a.a();
+                agp.a();
+                xd terminal = world(root, name, seed);
+                load(terminal, minX, maxX, minZ, maxZ, true);
+                CustodianProbe.terminal(terminal, ObservatorySites.nearby(terminal, x, z));
+                if (!custodianOnly) verifyWild(root, seed);
             }
             if (++completed == 3) break;
         }
         check(completed == 3, "three complete native Observatory candidates");
+        if (ownerSave) {
+            Object plan = candidate.invoke(null, 32021L, -3, 1);
+            xd owner = world(root, "ZTO Custodian playtest", 32021);
+            load(owner, get(plan, "minX") >> 4, get(plan, "maxX") >> 4,
+                    get(plan, "minZ") >> 4, get(plan, "maxZ") >> 4, false);
+            Site site = ObservatorySites.nearby(owner, -1170, 765);
+            check(site != null && site.ready(owner), "owner fixture native site");
+            CustodianProbe.ownerSave(root, owner, site, config);
+        }
         System.out.println("PASS native Observatory placement, alternatives, stamps, old terrain and finite Enderkin persistence");
     }
 
@@ -175,6 +195,7 @@ public final class ObservatoryProbe {
         }
         check(legacy.b(EntityAbyssalGuardian.class) > 0 && legacy.b(EntityAbyssalEnderkin.class) == 0,
                 "revision-one sites keep original population species");
+        CustodianProbe.legacy(legacy, old, player);
         System.out.println("PASS revision-one architecture and terminal slot compatibility");
     }
 

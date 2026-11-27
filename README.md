@@ -2,6 +2,10 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
+## Survival 0.5.1-alpha.4 · The Abyssal Custodian
+
+A transforming aquatic Enderman relative guards the deep Sunken Observatory chamber. Its tentacles, extended strikes, repulsion and local Riftstep reward careful movement and cover. Each eligible site can issue one Ender Pearl on its first legitimate defeat. Ordinary Endermen no longer drop pearls, and EE2 excludes pearls and eyes from direct exchange. [Encounter and owner playtest](docs/engineering/abyssal-custodian.md) · [Pearl scarcity](docs/engineering/ender-pearl-scarcity.md)
+
 ## Survival 0.5.1-alpha.3 · The Sunken Observatory
 
 New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Enderkin patrol newly generated Observatories. Fangfish and diving undead create rare encounters in ocean water. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Aquatic ecology](docs/engineering/abyssal-ecology.md)

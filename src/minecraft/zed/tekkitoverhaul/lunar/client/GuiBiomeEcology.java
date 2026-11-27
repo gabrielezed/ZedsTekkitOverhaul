@@ -25,7 +25,7 @@ final class GuiBiomeEcology extends GuiScreen {
     private int refreshTicks;
     private String trench;
     private String observatory;
-    private String observatoryDetails, aquatic;
+    private String observatoryDetails, custodianDetails, aquatic;
     private Species species = Species.FANGFISH;
     private boolean fixtureTools;
 
@@ -90,7 +90,7 @@ final class GuiBiomeEcology extends GuiScreen {
             }
             if (button.id == 4) {
                 aquatic = AquaticDevelopment.spawn(world, mc.thePlayer, species);
-                observatory = observatoryDetails = null;
+                observatory = observatoryDetails = custodianDetails = null;
                 trench = null;
                 return;
             }
@@ -99,11 +99,12 @@ final class GuiBiomeEcology extends GuiScreen {
                 ObservatorySites.Site site = ObservatorySites.nearby(world, x, z);
                 observatory = site == null ? ObservatorySites.locate(world, x, z) : site.description(x, z);
                 observatoryDetails = site == null ? null : site.status();
+                custodianDetails = site == null ? null : "Custodian: " + site.custodian().status();
                 trench = null;
                 return;
             }
             observatory = null;
-            observatoryDetails = null;
+            observatoryDetails = custodianDetails = null;
             aquatic = null;
             TrenchRegion region = AbyssalWorldgen.locate(world, x, z);
             trench = region == null ? "No planned Trench in search area"
@@ -146,8 +147,9 @@ final class GuiBiomeEcology extends GuiScreen {
         if (trench != null) line(trench, height - 42);
         int footer = fixtureTools ? height - 75 : height - 32;
         if (aquatic != null) line(aquatic, footer - 10);
-        if (observatoryDetails != null) line(observatoryDetails, footer - 22);
-        if (observatory != null) line(observatory, footer - (observatoryDetails == null ? 22 : 34));
+        if (custodianDetails != null) line(custodianDetails, footer - 22);
+        if (observatoryDetails != null) line(observatoryDetails, footer - 34);
+        if (observatory != null) line(observatory, footer - (observatoryDetails == null ? 22 : 46));
         if (magpie != null && height >= 236) line("Nearby magpie: " + magpie, 176);
         super.drawScreen(mouseX, mouseY, partialTick);
     }

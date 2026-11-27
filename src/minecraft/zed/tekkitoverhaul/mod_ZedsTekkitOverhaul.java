@@ -26,6 +26,7 @@ import zed.tekkitoverhaul.distillation.RenderDistillationBlock;
 import zed.tekkitoverhaul.distillation.client.DistillateBucketTextures;
 import zed.tekkitoverhaul.distillation.client.DistillationSounds;
 import zed.tekkitoverhaul.emc.EmcIntegration;
+import zed.tekkitoverhaul.emc.EnderPearlScarcity;
 import zed.tekkitoverhaul.equipment.MobEquipmentHooks;
 import zed.tekkitoverhaul.equipment.RenderMobEquipment;
 import zed.tekkitoverhaul.fluids.PetroleumFluids;
@@ -44,6 +45,7 @@ import zed.tekkitoverhaul.exploration.abyssal.guardian.GuardianEncounters;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.client.GuardianWorldTick;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderAbyssalGuardian;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderAbyssalEnderkin;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderAbyssalCustodian;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderDiver;
 import zed.tekkitoverhaul.exploration.abyssal.RenderMarineOrganism;
 import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
@@ -96,6 +98,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         AerialSoundRegistration.register(ModLoader.getMinecraftInstance().sndManager);
         AdvancedCraftingRegistry.register(settings);
         MinecraftForge.registerEntityLivingHandler(new MobEquipmentHooks());
+        EnderPearlScarcity.register();
         if (settings.disableNightSkipping) MinecraftForge.registerSleepHandler(new BedRespawn());
         petroleumModel = ModLoader.getUniqueBlockModelID(this, false);
         PetroleumFluids.setRenderType(petroleumModel);
@@ -108,6 +111,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
 
     @Override
     public void modsLoaded() {
+        emc.protectBeforeFirstWorld();
         cpw.mods.fml.common.FMLCommonHandler.instance().registerTickHandler(
                 new BuildWatermark(ModLoader.getMinecraftInstance()));
         LUNAR.register(this, settings.lunarDebugKey, settings.lunarVerboseLogging,
@@ -165,6 +169,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         RenderAbyssalGuardian.register(renderers);
         RenderDiver.register(renderers);
         RenderAbyssalEnderkin.register(renderers);
+        RenderAbyssalCustodian.register(renderers);
     }
 
     @Override

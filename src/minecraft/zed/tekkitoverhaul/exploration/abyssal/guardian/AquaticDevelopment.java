@@ -12,7 +12,8 @@ public final class AquaticDevelopment {
     private static final Map<EntityLiving, Species> MANUAL = new WeakHashMap<EntityLiving, Species>();
 
     public enum Species {
-        FANGFISH("Fangfish"), ZOMBIE("Diver Zombie"), SKELETON("Diver Skeleton"), ENDERKIN("Abyssal Enderkin");
+        FANGFISH("Fangfish"), ZOMBIE("Diver Zombie"), SKELETON("Diver Skeleton"), ENDERKIN("Abyssal Enderkin"),
+        CUSTODIAN("Abyssal Custodian");
 
         public final String label;
 
@@ -42,6 +43,7 @@ public final class AquaticDevelopment {
             case ZOMBIE: actor = new EntityDiverZombie(world); break;
             case SKELETON: actor = new EntityDiverSkeleton(world); break;
             case ENDERKIN: actor = new EntityAbyssalEnderkin(world); break;
+            case CUSTODIAN: actor = new EntityAbyssalCustodian(world); break;
             default: throw new AssertionError(species);
         }
         double yaw = Math.toRadians(player.rotationYaw);
@@ -54,6 +56,7 @@ public final class AquaticDevelopment {
             if (!SwimRoute.canInsert(actor)) continue;
             if (actor instanceof EntityAbyssalEnderkin)
                 ((EntityAbyssalEnderkin) actor).manualHome(SwimRoute.floor(x), SwimRoute.floor(y), SwimRoute.floor(z));
+            if (actor instanceof EntityAbyssalCustodian) ((EntityAbyssalCustodian) actor).manualHome();
             MANUAL.put(actor, species);
             if (world.spawnEntityInWorld(actor)) return "Spawned manual " + species.label;
             MANUAL.remove(actor);
@@ -71,7 +74,8 @@ public final class AquaticDevelopment {
         for (Object object : world.getEntitiesWithinAABB(EntityLiving.class, player.boundingBox.expand(16, 16, 16))) {
             EntityLiving actor = (EntityLiving) object;
             if (!(actor instanceof EntityAbyssalEnderkin || actor instanceof EntityAbyssalGuardian
-                    || actor instanceof EntityDiverZombie || actor instanceof EntityDiverSkeleton)) continue;
+                    || actor instanceof EntityDiverZombie || actor instanceof EntityDiverSkeleton
+                    || actor instanceof EntityAbyssalCustodian)) continue;
             double range = actor.getDistanceSqToEntity(player);
             if (actor.isEntityAlive() && range < distance) {
                 distance = range;
@@ -86,6 +90,7 @@ public final class AquaticDevelopment {
     }
 
     private static String label(EntityLiving actor) {
+        if (actor instanceof EntityAbyssalCustodian) return Species.CUSTODIAN.label;
         if (actor instanceof EntityAbyssalEnderkin) return Species.ENDERKIN.label;
         if (actor instanceof EntityDiverSkeleton) return Species.SKELETON.label;
         if (actor instanceof EntityDiverZombie) return Species.ZOMBIE.label;
@@ -93,6 +98,15 @@ public final class AquaticDevelopment {
     }
 
     private static String provenance(EntityLiving actor) {
+        if (actor instanceof EntityAbyssalCustodian) {
+            EntityAbyssalCustodian boss = (EntityAbyssalCustodian) actor;
+            int pose = boss.pose();
+            String state = pose >= EntityAbyssalCustodian.ATTACK
+                    ? CustodianBalance.Attack.values()[pose - EntityAbyssalCustodian.ATTACK].name()
+                    : new String[] {"dormant", "swim", "awaken", "transition"}[pose];
+            return (manual(actor) ? "manual" : Long.toHexString(boss.siteIdentity())) + " | "
+                    + boss.getHealth() + " HP | phase " + (boss.secondPhase() ? 2 : 1) + " | " + state + " " + boss.poseTick();
+        }
         if (manual(actor)) return "manual";
         if (actor instanceof EntityAbyssalEnderkin) {
             EntityAbyssalEnderkin caster = (EntityAbyssalEnderkin) actor;

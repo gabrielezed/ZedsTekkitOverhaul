@@ -12,6 +12,8 @@ The body and eye atlases are 128 × 128. Their faces remap original Thief and Sa
 
 Run `python artwork/tools/custodian_assets.py` then export the textures. After MCP compilation, run `python artwork/tools/custodian_previews.py` for poses, scale and the enderic family sheet under `artwork/previews/custodian`. Set `ZTO_REFINEMENT_BASELINE` to the old local mod JAR to include the previous Enderkin atlas. The preview recorder uses the authored Java model and native UV quads.
 
+Fresh native damage animates a directional head and body recoil, followed by a delayed tentacle curl. The model keeps the committed striking arm aligned with the authoritative attack geometry. The same recoil applies at compressed scale. The headless model capture writes `hurt-reactions.png` beside the combat poses.
+
 ## Combat
 
 The creature starts at 80 HP. A vulnerable diver within 17 blocks who enters the chamber territory can trigger a 24-tick awakening. Phase two starts once at 40 HP or below after the active attack cycle. It has a 28-tick transformation, shorter Riftstep cooldown and more frequent repositioning. Damage values and recovery windows carry across both phases.

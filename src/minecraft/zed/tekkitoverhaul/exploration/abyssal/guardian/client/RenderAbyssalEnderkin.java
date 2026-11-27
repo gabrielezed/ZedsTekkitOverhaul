@@ -49,6 +49,11 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
 
     private static final class CasterModel extends ModelBase {
         private final ModelRenderer head, torso, right, left, elbow, rightLeg, leftLeg, gillLeft, gillRight;
+        private float partial;
+
+        @Override public void setLivingAnimations(EntityLiving actor, float stride, float swing, float partial) {
+            this.partial = partial;
+        }
 
         CasterModel() {
             textureWidth = textureHeight = 64;
@@ -79,18 +84,29 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
             EntityAbyssalEnderkin caster = (EntityAbyssalEnderkin) actor;
             int phase = caster.casting();
             float kick = MathHelper.sin(age * 0.39F);
-            head.rotateAngleX = pitch * 0.017453292F;
-            head.rotateAngleY = 0;
-            torso.rotateAngleX = phase == 0 ? -0.13F : 0;
-            gillLeft.rotateAngleY = -0.17F + 0.09F * kick;
-            gillRight.rotateAngleY = 0.17F - 0.09F * kick;
-            right.rotateAngleX = phase == 0 ? -0.2F + kick * 0.23F
+            float flinch = AquaticHurtPose.recoil(caster, partial, 0);
+            float legs = AquaticHurtPose.recoil(caster, partial, 2);
+            float lateral = AquaticHurtPose.lateral(caster);
+            float backward = AquaticHurtPose.backward(caster);
+            head.rotateAngleX = pitch * 0.017453292F - (0.16F + 0.37F * backward) * flinch;
+            head.rotateAngleY = lateral * flinch * 0.35F;
+            head.rotateAngleZ = -lateral * flinch * 0.26F;
+            torso.rotateAngleX = (phase == 0 ? -0.13F : 0) + backward * flinch * 0.21F;
+            torso.rotateAngleZ = lateral * flinch * 0.21F;
+            gillLeft.rotateAngleY = -0.17F + 0.09F * kick - 0.27F * flinch;
+            gillRight.rotateAngleY = 0.17F - 0.09F * kick + 0.27F * flinch;
+            // Keep the casting shoulder and hand aligned with the authoritative pulse origin.
+            right.rotateAngleX = phase == 0 ? -0.2F + kick * 0.23F + flinch * 0.65F
                     : EntityAbyssalEnderkin.armPitch(caster.rotationPitch, phase);
-            elbow.rotateAngleX = phase > 0 ? -0.19F * (1 - Math.min(phase, 12) / 12.0F) : 0;
-            left.rotateAngleX = -0.35F - kick * 0.24F;
-            left.rotateAngleZ = 0.23F;
-            rightLeg.rotateAngleX = 0.3F + 0.35F * kick;
-            leftLeg.rotateAngleX = 0.3F - 0.35F * kick;
+            right.rotateAngleZ = phase == 0 ? -0.28F * flinch : 0;
+            elbow.rotateAngleX = phase > 0 ? -0.19F * (1 - Math.min(phase, 12) / 12.0F)
+                    : phase == 0 ? -0.76F * flinch : 0;
+            left.rotateAngleX = -0.35F - kick * 0.24F - flinch * 0.66F;
+            left.rotateAngleZ = 0.23F + flinch * 0.39F;
+            rightLeg.rotateAngleX = 0.3F + 0.35F * kick + 0.46F * legs;
+            leftLeg.rotateAngleX = 0.3F - 0.35F * kick + 0.26F * legs;
+            rightLeg.rotateAngleZ = -0.22F * legs;
+            leftLeg.rotateAngleZ = 0.21F * legs;
             head.render(scale);
             torso.render(scale);
             right.render(scale);

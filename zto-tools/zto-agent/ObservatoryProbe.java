@@ -88,9 +88,9 @@ public final class ObservatoryProbe {
         check(discovered.size() >= 2, "representative survey found distinct sites");
         if (!custodianOnly) {
             verifySwimming(root);
-            verifyWaterFace(root);
             verifyDivers(root);
         }
+        verifyWaterFace(root);
         int completed = 0;
         verifyLegacy(root, 1);
         verifyLegacy(root, 2);
@@ -225,16 +225,45 @@ public final class ObservatoryProbe {
         xd water = world(root, "ceiling", 32021);
         load(water, 63, 65, 63, 65, false);
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 1; dy++)
-            water.g(1024 + dx, 82 + dy, 1024 + dz, 9);
-        water.g(1024, 83, 1024, 3036);
+            water.d(1024 + dx, 82 + dy, 1024 + dz, 9);
+        water.d(1024, 83, 1024, 3036);
         vl renderer = new vl(water);
         adz.a.b();
         check(!renderer.n(pb.B, 1024, 82, 1024), "OptiFine emits no fluid face beneath full Abyssal Bricks");
-        water.g(1024, 83, 1024, 1);
+        water.d(1024, 83, 1024, 1);
         check(renderer.n(pb.B, 1024, 82, 1024), "ordinary stone keeps native liquid rendering");
-        water.g(1024, 83, 1024, 0);
+        water.d(1024, 83, 1024, 0);
         check(renderer.n(pb.B, 1024, 82, 1024), "open water keeps its surface face");
-        System.out.println("PASS pinned OptiFine water top-face emission under masonry and open-water control");
+        water.d(1024, 83, 1024, 9);
+        int[][] neighbors = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
+        int[] architecture = {3044, 3045, 3046, 3050, 3051};
+        for (int block : architecture) for (int side = 0; side < neighbors.length; side++) {
+            int[] offset = neighbors[side];
+            int x = 1024 + offset[0], y = 82 + offset[1], z = 1024 + offset[2];
+            water.d(x, y, z, block);
+            check(!renderer.n(pb.B, 1024, 82, 1024), "no submerged quad beside architecture " + block + " side " + side);
+            check(water.a(1024, 82, 1024) == 9 && water.e(1024, 82, 1024) == 0, "source water is unchanged");
+            water.d(x, y, z, 9);
+        }
+        water.d(1025, 82, 1023, 3046);
+        water.d(1025, 82, 1024, 3046);
+        water.d(1025, 82, 1025, 3046);
+        check(!renderer.n(pb.B, 1024, 82, 1024), "water covering a submerged slab row has no side seam");
+        water.d(1025, 83, 1024, 0);
+        check(renderer.n(pb.B, 1024, 82, 1024), "water at the exposed end of a slab row keeps its side");
+        water.d(1025, 83, 1024, 9);
+        water.d(1025, 82, 1023, 9);
+        water.d(1025, 82, 1025, 9);
+        water.d(1024, 83, 1024, 0);
+        check(renderer.n(pb.B, 1024, 82, 1024), "true open surface next to a slab is retained");
+        water.d(1024, 83, 1024, 9);
+        water.d(1025, 82, 1024, 0);
+        check(renderer.n(pb.B, 1024, 82, 1024), "side of an open water column is retained");
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 1; dy++)
+            water.d(1030 + dx, 82 + dy, 1024 + dz, 11);
+        water.d(1031, 82, 1024, 3046);
+        check(renderer.n(pb.D, 1030, 82, 1024), "lava retains its native contact quad");
+        System.out.println("PASS pinned OptiFine water faces on six sides of five submerged shapes, masonry, open water and lava");
     }
 
     private static void verifyLighting(xd world, int minX, int maxX, int minZ, int maxZ, int floor) {

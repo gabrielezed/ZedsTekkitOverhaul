@@ -110,6 +110,13 @@ public final class Capture {
         for (int i = 20; i <= 28; i++) watcher.addObject(i, Integer.valueOf(0));
         watcher.updateObject(27, Integer.valueOf(Float.floatToIntBits(1)));
         frame(actor, "neutral", 1, 0, 0, 0, 0, 0);
+        actor.maxHurtTime = 10;
+        actor.hurtTime = 8;
+        actor.attackedAtYaw = 55;
+        frame(actor, "hurt impact", 1, 0, 0, 0, 0, 0);
+        actor.hurtTime = 5;
+        frame(actor, "hurt follow through", 1, 0, 0, 0, 0, 0);
+        actor.hurtTime = 0;
         frame(actor, "contracted", 4 + Attack.PRESSURE.ordinal(), Attack.PRESSURE.windup - 1, 0, 0, 0, 0);
         frame(actor, "extended", 3, 12, 0, 0, 0, 0);
         frame(actor, "direct attack", 4, Attack.STRIKE.windup - 2, -1, 0, -4, 0);
@@ -139,6 +146,15 @@ public final class Capture {
         ModelBase model = (ModelBase) aquaticModel.newInstance();
         System.out.println("@abyssal neutral");
         model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        caster.hurtTime = 8;
+        caster.maxHurtTime = 10;
+        caster.attackedAtYaw = 55;
+        System.out.println("@abyssal hurt");
+        model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        caster.hurtTime = 5;
+        System.out.println("@abyssal hurt settle");
+        model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        caster.hurtTime = 0;
         casting.updateObject(20, Byte.valueOf((byte) 12));
         System.out.println("@abyssal casting");
         model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
@@ -280,6 +296,28 @@ def main():
         ink.text((x, 400), label, anchor="mm", fill="#d3e2eb", font=font)
     scale.save(OUT / "scale.png")
     lineup(frames, skin)
+    hurt_sheet(frames, skin, eyes)
+
+
+def hurt_sheet(frames, custodian, eyes):
+    abyssal = Image.open(SOURCES / "enderkin.png").convert("RGBA")
+    sheet = Image.new("RGB", (840, 570), "#141f2b")
+    for row, (label, keys, skin, scale) in enumerate((
+        ("Abyssal Enderkin", ("abyssal neutral", "abyssal hurt", "abyssal hurt settle"), abyssal, 110),
+        ("Abyssal Custodian", ("neutral", "hurt impact", "hurt follow through"), custodian, 40),
+    )):
+        for col, (key, phase) in enumerate(zip(keys, ("Swim", "Impact", "Follow-through"))):
+            card = Image.new("RGB", (278, 268), "#263448")
+            depth = [float("inf")] * (card.width * card.height)
+            anchor = (139, 170 if row else 66)
+            draw(card, depth, frames[key], skin, 22, -10, scale, anchor)
+            if row:
+                draw(card, depth, frames[key + " eyes"], eyes, 22, -10, scale, anchor, True)
+            ImageDraw.Draw(card).text((12, 247), label + " / " + phase, fill="#dce7f0")
+            sheet.paste(card, (col * 280, row * 284))
+    assert frames["abyssal neutral"] != frames["abyssal hurt"] != frames["abyssal hurt settle"]
+    assert frames["neutral"] != frames["hurt impact"] != frames["hurt follow through"]
+    sheet.save(OUT / "hurt-reactions.png")
 
 
 def lineup(frames, custodian):

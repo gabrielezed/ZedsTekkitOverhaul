@@ -94,6 +94,11 @@ final class CustodianModel extends ModelBase {
             contraction = CustodianBalance.ease(boss.deathTime / 17F);
             tall = spread = lift = lunge = 0;
         }
+        float flinch = AquaticHurtPose.recoil(boss, partial, 0);
+        float trailFlinch = AquaticHurtPose.recoil(boss, partial, 2);
+        float lateral = AquaticHurtPose.lateral(boss);
+        float backward = AquaticHurtPose.backward(boss);
+        boolean committed = attack == Attack.STRIKE && tick >= Attack.STRIKE.windup - 6;
         // The pelvis anchors the lower limbs. Torso and shoulders shift independently.
         float high = boss.highPose() ? tall : tall * 0.19F;
         torsoTop += 12 * contraction - 17 * high;
@@ -106,11 +111,15 @@ final class CustodianModel extends ModelBase {
         GL11.glScalef(size, size, size);
         GL11.glTranslatef(0, -24 * scale, 0);
         GL11.glTranslatef(0, pelvis * scale, 0);
-        GL11.glRotatef((float) Math.toDegrees(lean), 1, 0, 0);
+        // Preserve the world-aligned strike rig from commitment through recoil.
+        GL11.glRotatef((float) Math.toDegrees(lean) + (committed ? 0 : 12 * backward * flinch), 1, 0, 0);
+        if (!committed) GL11.glRotatef(-12 * lateral * flinch, 0, 0, 1);
         GL11.glTranslatef(0, -pelvis * scale, 0);
         head.setRotationPoint(0, torsoTop - 5 - high, 0);
         head.rotateAngleY = attack == Attack.STRIKE ? 0 : boss.gaze() * 0.017453292F;
-        head.rotateAngleX = Math.max(-0.42F, Math.min(0.42F, pitch * 0.011F - lean));
+        head.rotateAngleX = Math.max(-0.42F, Math.min(0.42F, pitch * 0.011F - lean))
+                - (0.14F + 0.32F * backward) * flinch;
+        head.rotateAngleZ = -0.24F * lateral * flinch;
         if (attack != null && attack != Attack.STRIKE)
             head.rotateAngleY *= 0.6F;
         head.render(scale);
@@ -125,11 +134,12 @@ final class CustodianModel extends ModelBase {
                 float trail = lean * 0.55F;
                 tentacle[i].rotateAngleX = end * (-0.42F - 0.35F * spread) + 0.14F * drift + trail;
                 tentacle[i].rotateAngleZ = sign * ((i < 2 ? -0.48F : -0.81F) + contraction * 0.55F - spread * 0.58F);
-                joint[i].rotateAngleX = end * (0.20F - contraction * 0.72F) + drift * 0.24F;
+                joint[i].rotateAngleX = end * (0.20F - contraction * 0.72F) + drift * 0.24F
+                        + (0.32F * backward - 0.15F * end) * flinch;
                 joint[i].rotateAngleZ = sign * (-0.06F + contraction * 0.85F);
                 taper[i].rotateAngleX = end * (0.23F - contraction * 0.83F) + wave * 0.22F;
-                taper[i].rotateAngleZ = sign * (0.47F + contraction * 0.48F);
-                tip[i].rotateAngleX = end * 0.26F - 0.26F * drift;
+                taper[i].rotateAngleZ = sign * (0.47F + contraction * 0.48F + 0.48F * trailFlinch);
+                tip[i].rotateAngleX = end * 0.26F - 0.26F * drift + (end * 0.24F + 0.32F * backward) * trailFlinch;
                 tip[i].rotateAngleZ = sign * (0.21F - 0.19F * wave);
             }
             hips.render(scale);
@@ -154,6 +164,10 @@ final class CustodianModel extends ModelBase {
                     out *= recoil;
                     bend *= recoil;
                     units = Math.max(0.05F, reach * 16 + 30 * recoil);
+                }
+                if (!chosen || !committed) {
+                    angle -= (0.28F + side * 0.25F * lateral) * flinch;
+                    bend -= 0.73F * flinch;
                 }
                 arm(index, scale, armX, armY, angle, out, bend, units);
             }

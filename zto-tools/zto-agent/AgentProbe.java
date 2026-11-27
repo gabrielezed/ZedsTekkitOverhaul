@@ -53,6 +53,10 @@ public final class AgentProbe {
                 byte[] spawner = bytes(game.getInputStream(game.getEntry("vf.class")));
                 check(ZTOAgent.patchKnownClass("vf", spawner, null, false, false) != null, "pinned natural spawner");
                 rejectFingerprint("vf", spawner, null, false);
+                byte[] liquidRenderer = bytes(game.getInputStream(game.getEntry(AbyssalCeilingHook.TARGET + ".class")));
+                check(ZTOAgent.patchKnownClass(AbyssalCeilingHook.TARGET, liquidRenderer, null, false, false) != null,
+                        "pinned OptiFine liquid visibility transform");
+                rejectFingerprint(AbyssalCeilingHook.TARGET, liquidRenderer, null, false);
                 for (String target : new String[] {UnderwaterHook.LIVING, UnderwaterHook.RENDERER}) {
                     byte[] underwater = bytes(game.getInputStream(game.getEntry(target + ".class")));
                     check(ZTOAgent.patchKnownClass(target, underwater, null, false, false) != null,

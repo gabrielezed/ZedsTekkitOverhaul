@@ -6,8 +6,9 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-/** Filters only the top-face visibility decision in the pinned OptiFine liquid renderer. */
+/** Intercepts the six ordered visibility decisions in the pinned OptiFine liquid renderer. */
 final class AbyssalCeilingHook implements Opcodes {
+    private static final int[] SIDES = {1, 0, 2, 3, 4, 5};
     static final String TARGET = "vl";
     static final String SHA256 = "e26df3cd6daac4cb6946ef20a6754458a7d62fd3f34be5e770644b58fbe38a9a";
 
@@ -24,15 +25,18 @@ final class AbyssalCeilingHook implements Opcodes {
                     @Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
                         super.visitMethodInsn(opcode, owner, name, desc, itf);
                         if (opcode != INVOKEVIRTUAL || !"pb".equals(owner) || !"a".equals(name)
-                                || !"(Lali;IIII)Z".equals(desc) || calls[0]++ != 0) return;
+                                || !"(Lali;IIII)Z".equals(desc)) return;
+                        if (calls[0] >= SIDES.length) throw new IllegalArgumentException("unexpected liquid visibility call");
+                        int side = SIDES[calls[0]++];
                         super.visitVarInsn(ALOAD, 1);
                         super.visitVarInsn(ALOAD, 0);
                         super.visitFieldInsn(GETFIELD, TARGET, "a", "Lali;");
                         super.visitVarInsn(ILOAD, 2);
                         super.visitVarInsn(ILOAD, 3);
                         super.visitVarInsn(ILOAD, 4);
-                        super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "waterTopFace",
-                                "(ZLjava/lang/Object;Ljava/lang/Object;III)Z", false);
+                        super.visitInsn(ICONST_0 + side);
+                        super.visitMethodInsn(INVOKESTATIC, ZTOAgent.BRIDGE, "waterVisibleFace",
+                                "(ZLjava/lang/Object;Ljava/lang/Object;IIII)Z", false);
                     }
                 };
             }

@@ -4,6 +4,8 @@ Small Enderkin patrol the galleries and attack from several elevations. The one-
 
 The owner refinement copies and remaps the existing Saboteur head and eyes and the Thief torso, arms and legs into the aquatic UV layout. The gill ribs are local accents. The one-arm attack retains the original shoulder, elbow and projectile origin. The eye layer uses its own pass and restores native render state.
 
+Native damage animates a compact head and torso flinch, widened gills, a defensive arm draw and a delayed swimming kick. The active casting arm stays aligned with the native pulse origin.
+
 The Enderkin has 12 HP and looks for a vulnerable diver within 16 blocks. It tries to shoot from approximately 5–12 blocks, uses lateral and vertical movement when crowded, and gives up when it leaves its movement territory or loses a physical route. Up to three may engage a diver and two may wind up. Active Custodian combat limits engagement to two, and strike and pressure windows limit wind-up to one. An 18-tick right-arm wind-up is interrupted by cover or a dry retreat. It fires one 2 HP energy wave and needs 58 ticks before another shot. The left arm stays in a balancing pose.
 
 The arm's pitch defines the charge effect and projectile origin. The source is offset at the right shoulder and projected to the hand using body yaw and the arm angle. The existing pulse collision orders solid and entity intersections, retains the living shooter as damage owner, and expires without saving or loading chunks. For an aquatic caster, the ray ignores volume-less marine organisms. A fellow Enderkin can intercept and dissipate a wave without taking damage. The Skirmisher retains its original render, gameplay and collision path.

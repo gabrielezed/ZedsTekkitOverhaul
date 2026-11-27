@@ -2,6 +2,14 @@
 
 Survival 0.5.1-alpha.4 places an aquatic Enderman relative in the Sunken Observatory's deep chamber. Players can clear the galleries before entering, use masonry as cover, fight with ordinary or advanced equipment, and retreat for oxygen or supplies. Learning the creature's silhouette and cues creates an exploration advantage. The encounter uses the existing Observatory identity, terrain and finite population, leaving future regional progression independent of this local reward.
 
+## Owner acceptance and future art direction
+
+The owner accepted 0.5.1-alpha.4 for integration into main with reservations about the art direction. Further work on mob animation and textures remains an explicit priority, especially for the Abyssal Enderkin and Custodian. The current damage reactions are a step toward that work.
+
+The Abyssal Trench and the Sunken Observatory should feel uncanny through their beauty. The landscape and the ruin should draw the player closer even as their visual character feels unfamiliar. Both currently fall short. Sparse spaces and visibly artificial layouts can make the setting feel empty. The next visual pass should give the biome and the ruin a stronger sense of place through terrain composition, material character, and the way the architecture meets the seabed.
+
+The Observatory entrance is the owner's highest-priority visual redesign. The current approach and threshold are unsatisfactory. Rework the first view and the passage from natural trench to built ruin so the arrival carries the same sense of uncanny beauty intended for the interior. This direction records the owner's intent for a future pass. The entrance design itself remains open.
+
 ## Entity, model and resources
 
 `ZTO.AbyssalCustodian` is a registered legacy living entity with the native hostile marker, no natural spawn table or egg, and a stable 1.55 × 4.45 block body box. It breathes in water and retains native health, armor and damage attribution. It uses the existing loaded-water swim sweeps and bounded route search. Idle movement thrust is 0.09 blocks/tick, cruising 0.13, and phase-two repositioning 0.17 before drag. The controller bounds swimming by the chamber, permits pursuit at the entrances, and returns toward the center on retreat. The original construction remains mutable.

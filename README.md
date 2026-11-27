@@ -6,6 +6,10 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows mor
 
 A transforming aquatic Enderman relative guards the deep Sunken Observatory chamber. Its tentacles, extended strikes, repulsion and local Riftstep reward careful movement and cover. Each eligible site can issue one Ender Pearl on its first legitimate defeat. Ordinary Endermen no longer drop pearls, and EE2 excludes pearls and eyes from direct exchange. [Encounter and owner playtest](docs/engineering/abyssal-custodian.md) · [Pearl scarcity](docs/engineering/ender-pearl-scarcity.md)
 
+The Abyssal Enderkin and Custodian now recoil when hit. The alpha also refines Enderkin combat movement, corrects stray water faces in existing Observatories, and groups spawn eggs in a dedicated Creative tab.
+
+The owner accepted this alpha with reservations. Future visual work will improve mob animations and textures, and develop the beauty and atmosphere of the Abyssal Trench and Sunken Observatory, starting with the entrance. [Owner acceptance and art direction](docs/engineering/abyssal-custodian.md#owner-acceptance-and-future-art-direction)
+
 ## Survival 0.5.1-alpha.3 · The Sunken Observatory
 
 New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Enderkin patrol newly generated Observatories. Fangfish and diving undead create rare encounters in ocean water. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Aquatic ecology](docs/engineering/abyssal-ecology.md)

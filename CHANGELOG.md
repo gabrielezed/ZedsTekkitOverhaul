@@ -3,8 +3,8 @@
 ## 0.5.1-alpha.3 — The Sunken Observatory
 
 - Generate rare flooded observatories in newly explored Abyssal Trench terrain. Each ruin includes alternative routes and a reserved chamber for alpha.4.
-- Add Abyssal Guardians with three-dimensional swimming, a telegraphed lunge, original artwork and positional audio.
-- Persist finite site populations and allow rare solitary encounters elsewhere in the Trench.
+- Add Fangfish, Diver Zombies and Diver Skeletons to natural ocean encounters. New Observatory sites use finite Abyssal Enderkin patrols with a one-handed cast. Revision-one sites retain their original populations.
+- Compose new Observatory layouts from flooded room and passage modules at varied elevations. Cull water top faces under solid abyssal masonry and initialize lamp light across slice boundaries.
 - Add a developer Observatory locator and native generation and persistence checks.
 
 ## 0.5.1-alpha.2 — The Abyss Below

@@ -1,5 +1,7 @@
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.DataOutputStream;
+import java.nio.file.Files;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayDeque;
@@ -12,12 +14,20 @@ import javax.imageio.ImageIO;
 import zed.tekkitoverhaul.config.ZtoConfig;
 import zed.tekkitoverhaul.config.ZtoConfigLoader;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.exploration.abyssal.AbyssalWaterFaces;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityDiverZombie;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityDiverSkeleton;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.DiverArrow;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.AquaticDevelopment;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.AquaticDevelopment.Species;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalGuardian;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.GuardianEncounters;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites.Site;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
+import zed.tekkitoverhaul.survival.tactical.EntityEnderPulse;
 
 /** Uses the reobfuscated candidate, pinned provider, installed native entity classes and Anvil. */
 public final class ObservatoryProbe {
@@ -37,6 +47,7 @@ public final class ObservatoryProbe {
         AbyssalRegistry.register(config, 100);
         AbyssalWorldgen.register(config.abyssalId("biome.abyssalTrench"));
         ObservatorySites.register();
+        AbyssalWaterFaces.register();
         GuardianEncounters.register();
         Class<?> planClass = Class.forName("zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatoryPlan");
         Method candidate = method(ObservatorySites.class, "candidate", long.class, int.class, int.class);
@@ -65,6 +76,8 @@ public final class ObservatoryProbe {
                 (System.nanoTime() - started) / 1e6);
         check(discovered.size() >= 2, "representative survey found distinct sites");
         verifySwimming(root);
+        verifyWaterFace(root);
+        verifyDivers(root);
         int completed = 0;
         for (long[] sample : discovered) {
             long seed = sample[0];
@@ -84,10 +97,13 @@ public final class ObservatoryProbe {
                 System.out.println("Unready native candidate at " + x + ", " + z + ": " + (site == null ? "unadmitted" : site.status()));
                 continue;
             }
+            check(site.revision() == 2, "new site uses revised architecture");
             System.out.printf("Native site seed=%d entrance=%d,%d,%d id=%x allocated=%d generation=%.0f ms%n",
                     seed, x, y, z, site.identity(), site.count(), (System.nanoTime() - generation) / 1e6);
             verifyArchitecture(world, site, plan, y, previews, completed);
+            verifyLighting(world, minX, maxX, minZ, maxZ, y);
             if (completed == 0) {
+                verifyLegacy(root, site, seed, x, y, z, minX, maxX, minZ, maxZ);
                 defendOld(root, seed, minX, minZ, maxX, maxZ, x, z);
                 verifyActors(world, site, x, y, z);
                 int[] actorHome = site.home(0);
@@ -111,11 +127,13 @@ public final class ObservatoryProbe {
                 Site saved = ObservatorySites.nearby(reopened, x, z);
                 check(saved != null && saved.identity() == site.identity() && saved.ready(reopened), "native slice stamps and record reopened");
                 check(reopened.a(modifiedX, y + 2, modifiedZ) == 5, "player edit survived without repair");
-                check(reopened.b(EntityAbyssalGuardian.class) > 0, "living population reopened from native entity NBT");
+                check(reopened.b(EntityAbyssalEnderkin.class) > 0, "living population reopened from native entity NBT");
                 check(saved.status().equals(site.status()), "population ledger survived save and reopen");
+                verifyLighting(reopened, minX, maxX, minZ, maxZ, y);
+                verifyCaster(reopened, saved);
                 reopened.q = 0;
                 for (Object entry : new ArrayList<>(reopened.b)) {
-                    if (entry instanceof EntityAbyssalGuardian) ((EntityAbyssalGuardian) entry).J_();
+                    if (entry instanceof EntityAbyssalEnderkin) ((EntityAbyssalEnderkin) entry).J_();
                 }
                 check(!saved.status().endsWith("| 0 retired"), "Peaceful retires native living site actors");
                 verifyWild(root, seed);
@@ -123,7 +141,180 @@ public final class ObservatoryProbe {
             if (++completed == 3) break;
         }
         check(completed == 3, "three complete native Observatory candidates");
-        System.out.println("PASS native Observatory placement, alternatives, stamps, old terrain and finite Guardian persistence");
+        System.out.println("PASS native Observatory placement, alternatives, stamps, old terrain and finite Enderkin persistence");
+    }
+
+    private static void verifyLegacy(File root, Site fresh, long seed, int x, int y, int z,
+            int minX, int maxX, int minZ, int maxZ) throws Exception {
+        xd legacy = world(root, "legacy-revision", seed);
+        File directory = new File(root, "legacy-revision/data/zto-observatories");
+        Files.createDirectories(directory.toPath());
+        File record = new File(directory, Math.floorDiv(x, 512) + "." + Math.floorDiv(z, 512) + ".dat");
+        try (DataOutputStream stream = new DataOutputStream(Files.newOutputStream(record.toPath()))) {
+            stream.writeInt(0x5a544f53);
+            stream.writeInt(1);
+            stream.writeLong(fresh.identity());
+            stream.writeInt(x);
+            stream.writeInt(z);
+            stream.writeInt(y);
+            stream.writeLong(0L);
+            stream.writeInt(1);
+            stream.writeInt(1);
+            stream.writeInt(0);
+            stream.writeBoolean(false);
+        }
+        load(legacy, minX, maxX, minZ, maxZ, false);
+        Site old = ObservatorySites.nearby(legacy, x, z);
+        check(old != null && old.revision() == 1 && old.ready(legacy) && old.consumed(0) && old.terminal(0),
+                "revision-one reservation reopened without resetting the ledger");
+        yw player = NaturalSpawnProbe.join(legacy);
+        player.c(x + 0.5, y + 3, z + 0.5, 0, 0);
+        for (int tick = 0; tick < 1200; tick += 20) {
+            legacy.a((long) tick);
+            GuardianEncounters.tick(legacy, player);
+        }
+        check(legacy.b(EntityAbyssalGuardian.class) > 0 && legacy.b(EntityAbyssalEnderkin.class) == 0,
+                "revision-one sites keep original population species");
+        System.out.println("PASS revision-one architecture and terminal slot compatibility");
+    }
+
+    private static void verifyWaterFace(File root) throws Exception {
+        xd water = world(root, "ceiling", 32021);
+        load(water, 63, 65, 63, 65, false);
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 1; dy++)
+            water.g(1024 + dx, 82 + dy, 1024 + dz, 9);
+        water.g(1024, 83, 1024, 3036);
+        vl renderer = new vl(water);
+        adz.a.b();
+        check(!renderer.n(pb.B, 1024, 82, 1024), "OptiFine emits no fluid face beneath full Abyssal Bricks");
+        water.g(1024, 83, 1024, 1);
+        check(renderer.n(pb.B, 1024, 82, 1024), "ordinary stone keeps native liquid rendering");
+        water.g(1024, 83, 1024, 0);
+        check(renderer.n(pb.B, 1024, 82, 1024), "open water keeps its surface face");
+        System.out.println("PASS pinned OptiFine water top-face emission under masonry and open-water control");
+    }
+
+    private static void verifyLighting(xd world, int minX, int maxX, int minZ, int maxZ, int floor) {
+        int lamps = 0, litWater = 0, seams = 0;
+        int[][] sides = {{1,0,0}, {-1,0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
+        for (int x = minX * 16; x < (maxX + 1) * 16; x++) for (int z = minZ * 16; z < (maxZ + 1) * 16; z++) {
+            for (int y = floor - 2; y <= floor + 11; y++) {
+                if (world.a(x, y, z) != 3038) continue;
+                lamps++;
+                check(world.b(wl.b, x, y, z) == 5, "generated lamp retains native block emission");
+                for (int[] d : sides) {
+                    int wx = x + d[0], wy = y + d[1], wz = z + d[2];
+                    if (world.a(wx, wy, wz) != 9) continue;
+                    check(world.e(wx, wy, wz) == 0, "lit Observatory water is a native source");
+                    check(world.b(wl.b, wx, wy, wz) >= 2, "native lamp reaches adjacent water");
+                    litWater++;
+                    if (wx >> 4 != x >> 4 || wz >> 4 != z >> 4) seams++;
+                }
+            }
+        }
+        check(lamps >= 4 && litWater >= 8, "architectural lighting exists");
+        System.out.printf("PASS %d lamps and %d source-water light samples, %d across chunk seams%n", lamps, litWater, seams);
+    }
+
+    private static void verifyDivers(File root) throws Exception {
+        xd tank = world(root, "divers", 32021);
+        load(tank, 61, 67, 61, 67, false);
+        fill(tank, 1024, 82, 1024, 8);
+        tank.g(1026, 82, 1028, 3038);
+        check(tank.b(wl.b, 1026, 82, 1028) == 5 && tank.b(wl.b, 1027, 82, 1028) == 2,
+                "manually placed native lamp matches generated emission and attenuation");
+        yw swimmer = new yw(tank) { @Override public void ab() {} };
+        swimmer.c(1024.5, 84, 1027.5, 0, 0);
+        check(tank.a((nn) swimmer), "registered native diver target");
+        EntityDiverZombie zombie = new EntityDiverZombie(tank);
+        zombie.c(1019.5, 82, 1027.5, 0, 0);
+        check(tank.a(zombie), "Diver Zombie inserted");
+        int health = swimmer.bb();
+        for (int tick = 0; tick < 130 && swimmer.bb() == health; tick++) zombie.J_();
+        check(swimmer.bb() == health - 3 && zombie.o > 1022 && zombie.p > 82.1, "Diver Zombie swims in three axes and uses native melee");
+        zombie.A();
+        tank.n();
+        yw archerTarget = new yw(tank) { @Override public void ab() {} };
+        archerTarget.c(1029.5, 83, 1024.5, 0, 0);
+        swimmer.c(1017.5, 82, 1017.5, 0, 0);
+        check(tank.a((nn) archerTarget), "registered native arrow target");
+        EntityDiverSkeleton skeleton = new EntityDiverSkeleton(tank);
+        skeleton.c(1024.5, 82, 1024.5, 0, 0);
+        check(tank.a(skeleton), "Diver Skeleton inserted");
+        boolean sawArrow = false, aimed = false;
+        for (int tick = 0; tick < 110 && archerTarget.bb() == 20; tick++) {
+            skeleton.J_();
+            aimed |= skeleton.aiming();
+            for (Object entry : new ArrayList<>(tank.b)) if (entry instanceof DiverArrow) {
+                DiverArrow arrow = (DiverArrow) entry;
+                check(arrow.c == skeleton, "native shooter attribution");
+                arrow.J_();
+                sawArrow = true;
+            }
+        }
+        check(aimed && sawArrow && archerTarget.bb() < 20, "Diver Skeleton hits through native water drag");
+        System.setProperty("zto.dev", "true");
+        check(!AquaticDevelopment.disposable(tank), "developer insertion rejected in an ordinary save");
+        Files.createFile(new File(root, "divers/.zto-disposable-test").toPath());
+        archerTarget.c(1024.5, 83, 1024.5, 0, 0);
+        check(AquaticDevelopment.spawn(tank, archerTarget, Species.ENDERKIN).startsWith("Spawned manual"),
+                "developer can observe a transitory Enderkin in a disposable save");
+        for (Object object : tank.b) if (object instanceof EntityAbyssalEnderkin) {
+            EntityAbyssalEnderkin manual = (EntityAbyssalEnderkin) object;
+            check(!manual.c(new ady()) && manual.siteIdentity() == 0, "manual actor has neither persistent entity nor site slot");
+        }
+        System.clearProperty("zto.dev");
+        System.out.println("PASS native scuba melee, ranged wind-up, underwater arrow and manual lamp comparison");
+    }
+
+    private static void verifyCaster(xd world, Site site) {
+        EntityAbyssalEnderkin actor = null;
+        for (Object object : world.b) if (object instanceof EntityAbyssalEnderkin) {
+            EntityAbyssalEnderkin candidate = (EntityAbyssalEnderkin) object;
+            if (candidate.M()) { actor = candidate; break; }
+        }
+        check(actor != null, "living minion for casting");
+        int x = (int) Math.floor(actor.o), y = (int) Math.floor(actor.p), z = (int) Math.floor(actor.q);
+        fill(world, x, y + 1, z, 8);
+        for (Object object : new ArrayList<>(world.b))
+            if (object instanceof EntityAbyssalEnderkin && object != actor) ((nn) object).A();
+        actor.c(x + 0.5, y + 1, z + 0.5, 0, 0);
+        yw player = new yw(world) { @Override public void ab() {} };
+        player.c(x + 0.5, y + 1.8, z + 7.5, 0, 0);
+        check(world.a((nn) player), "native pulse target");
+        boolean aimed = false, shot = false;
+        for (int tick = 0; tick < 100 && player.bb() == 20; tick++) {
+            actor.J_();
+            aimed |= actor.casting() > 0;
+            for (Object object : new ArrayList<>(world.b)) if (object instanceof EntityEnderPulse) {
+                EntityEnderPulse pulse = (EntityEnderPulse) object;
+                if (pulse.G) continue;
+                check(pulse.getShooter() == actor, "pulse keeps caster attribution");
+                if (!shot) check(pulse.o < actor.o - 0.15 && pulse.q > actor.q + 0.25, "first pulse originates at the extended right hand");
+                pulse.J_();
+                shot = true;
+            }
+        }
+        check(aimed && shot && player.bb() == 18, "native submerged casting deals one two-HP hit");
+        double px = player.o, py = player.p, pz = player.q;
+        for (int yy = y - 1; yy <= y + 4; yy++) world.g(x, yy, z + 4, 3036);
+        EntityEnderPulse blocked = new EntityEnderPulse(actor, x + 0.5, y + 1.2, z + 1.5, px, py, pz);
+        for (int i = 0; i < 12 && !blocked.G; i++) blocked.J_();
+        check(blocked.G && blocked.q < z + 5 && player.bb() == 18, "masonry intercepts the same pulse");
+        System.out.println("PASS right-hand charge and release, attributed 2 HP damage and masonry collision");
+    }
+
+    private static void fill(xd world, int centerX, int centerY, int centerZ, int radius) {
+        for (int z = centerZ - radius; z <= centerZ + radius; z++) {
+            for (int x = centerX - radius; x <= centerX + radius; x++) {
+                for (int y = centerY - 2; y <= centerY + 6; y++) {
+                    boolean shell = x == centerX - radius || x == centerX + radius
+                            || z == centerZ - radius || z == centerZ + radius
+                            || y == centerY - 2 || y == centerY + 6;
+                    world.g(x, y, z, shell ? 1 : 9);
+                }
+            }
+        }
     }
 
     private static void verifyWild(File root, long seed) throws Exception {
@@ -148,8 +339,10 @@ public final class ObservatoryProbe {
                     world.a((int) Math.floor(actor.o), (int) Math.floor(actor.q)).M), "wild actor is in deep Trench");
             wild++;
         }
-        check(wild > 0 && wild <= 2, "wild encounters use the local rarity cap: " + wild);
-        System.out.println("PASS wild encounters in deep saved Trench, capped at " + wild);
+        int divers = world.b(EntityDiverZombie.class) + world.b(EntityDiverSkeleton.class);
+        check(wild > 0 && wild <= 2 && wild + divers <= 4, "shared aquatic cap");
+        check(divers > 0 && world.b(EntityAbyssalEnderkin.class) == 0, "only environmental species occur away from ruins");
+        System.out.println("PASS wild Trench ecology: " + wild + " Fangfish and " + divers + " divers");
     }
 
     private static void verifySwimming(File root) throws Exception {
@@ -181,10 +374,10 @@ public final class ObservatoryProbe {
                 break;
             }
         }
-        check(prepared && recovered && hit && swimmer.bb() == startHealth - 3,
+        check(prepared && recovered && hit && swimmer.bb() == startHealth - 4,
                 "normal survival damage follows wind-up and lunge: " + actor.state() + " / " + swimmer.bb());
         check(actor.p > 81.6 && actor.o > 1023, "native swim progressed horizontally and vertically");
-        System.out.printf(Locale.ROOT, "PASS native 3D movement and 3 HP normal-difficulty lunge, %.1f ms%n",
+        System.out.printf(Locale.ROOT, "PASS native 3D movement and 4 HP normal-difficulty lunge, %.1f ms%n",
                 (System.nanoTime() - started) / 1e6);
         actor.A();
         for (int z = 1021; z <= 1031; z++) for (int y = 80; y <= 90; y++) tank.g(1028, y, z, 1);
@@ -239,9 +432,8 @@ public final class ObservatoryProbe {
     private static void verifyArchitecture(xd world, Site site, Object plan, int floor, File previews, int index) throws Exception {
         Method position = method(plan.getClass(), "position", int.class, int.class, int.class);
         int[] entrance = (int[]) position.invoke(plan, 0, 2, -2);
-        int[] center = (int[]) position.invoke(plan, 0, 3, get(plan, "length") - 9);
+        int[] center = site.arenaCenter();
         entrance[1] += floor;
-        center[1] += floor;
         int[] gate = site.arenaEntry(false);
         check(previews.isDirectory() || previews.mkdirs(), "preview directory");
         int half = get(plan, "width");
@@ -343,17 +535,18 @@ public final class ObservatoryProbe {
             world.a(attempt * 20L);
             GuardianEncounters.tick(world, player);
         }
-        int admitted = world.b(EntityAbyssalGuardian.class);
+        int admitted = world.b(EntityAbyssalEnderkin.class);
+        check(world.b(EntityAbyssalGuardian.class) == 0, "revised site admits only Enderkin");
         check(admitted >= 4 && admitted <= site.count(), "bounded local admission: " + admitted);
-        EntityAbyssalGuardian killed = null;
-        for (Object entry : world.a(EntityAbyssalGuardian.class, wu.b(x - 30, y - 10, z - 30, x + 30, y + 14, z + 30))) {
-            EntityAbyssalGuardian actor = (EntityAbyssalGuardian) entry;
-            if (actor.siteOwned()) {
+        EntityAbyssalEnderkin killed = null;
+        for (Object entry : world.a(EntityAbyssalEnderkin.class, wu.b(x - 30, y - 10, z - 30, x + 30, y + 14, z + 30))) {
+            EntityAbyssalEnderkin actor = (EntityAbyssalEnderkin) entry;
+            if (actor.siteIdentity() == site.identity()) {
                 killed = actor;
                 break;
             }
         }
-        check(killed != null && killed.siteIdentity() == site.identity() && killed.bb() == 16, "registered site actor health and identity");
+        check(killed != null && killed.siteIdentity() == site.identity() && killed.bb() == 12, "registered site actor health and identity");
         String before = site.status();
         killed.a(md.a(player), 100);
         check(!site.status().equals(before) && site.status().contains("1 dead"), "native death recorded immediately");
@@ -361,7 +554,7 @@ public final class ObservatoryProbe {
             world.a(attempt * 20L);
             GuardianEncounters.tick(world, player);
         }
-        check(world.b(EntityAbyssalGuardian.class) <= admitted, "death consumed slot after revisits");
+        check(world.b(EntityAbyssalEnderkin.class) <= admitted, "death consumed slot after revisits");
         player.c(x + 500, y + 10, z + 500, 0, 0);
         System.out.println("Local finite population: " + site.status());
     }
@@ -395,15 +588,28 @@ public final class ObservatoryProbe {
     }
 
     private static int get(Object object, String name) throws Exception {
-        Field field = object.getClass().getDeclaredField(name);
+        Field field = typeWithField(object.getClass(), name).getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(object);
     }
 
+    private static Class<?> typeWithField(Class<?> type, String name) throws Exception {
+        try { type.getDeclaredField(name); return type; }
+        catch (NoSuchFieldException missing) {
+            if (type.getSuperclass() == null) throw missing;
+            return typeWithField(type.getSuperclass(), name);
+        }
+    }
+
     private static Method method(Class<?> owner, String name, Class<?>... types) throws Exception {
-        Method method = owner.getDeclaredMethod(name, types);
-        method.setAccessible(true);
-        return method;
+        try {
+            Method method = owner.getDeclaredMethod(name, types);
+            method.setAccessible(true);
+            return method;
+        } catch (NoSuchMethodException missing) {
+            if (owner.getSuperclass() == null) throw missing;
+            return method(owner.getSuperclass(), name, types);
+        }
     }
 
     private static void check(boolean condition, String message) {

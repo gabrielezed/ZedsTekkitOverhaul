@@ -78,6 +78,8 @@ Original block and item atlases are in `source/abyssal/` and exported to both pr
 
 Run `py artwork/tools/guardian_assets.py` to author the Abyssal Guardian's 64×64 texture, enlarged UV preview and five original PCM clips. Export with `textures.py export`. Run `py artwork/tools/guardian_previews.py` for seven static projections of the textured runtime cuboids. [Guardian model and audio](../docs/engineering/abyssal-guardian.md#runtime-and-presentation)
 
+Run `py artwork/tools/abyssal_ecology_assets.py` to author the shared diver equipment, Abyssal Enderkin UVs and its five PCM cues. The `abyssal_ecology_previews.py` script accepts the local pinned client JAR and projects the native undead skins with the authored equipment, plus the original Enderkin model. Outputs are static pose studies under `artwork/previews/`. [Aquatic ecology](../docs/engineering/abyssal-ecology.md)
+
 ## Motorboat
 
 The authored 64×32 engine UV sheet and two 16×16 sprite layers are in [`source/motorboat/`](source/motorboat/). The [asset manifest](manifests/assets.json) maps these PNGs and the fueling panel to their packaged paths. The installed client composes the vanilla boat cell (8,8) under the motor overlay and uses the stock boat hull texture directly.

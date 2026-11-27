@@ -122,7 +122,7 @@ try {
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
                 if ($Focus -eq 'observatory') {
-                    $previews = Join-Path $root 'dist-zto/observatory-previews'
+                    $previews = Join-Path $root 'dist-zto/observatory-refinement-previews'
                     & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath ObservatoryProbe $fixture.FullName $previews
                     if ($LASTEXITCODE) { throw 'Native Observatory fixture failed.' }
                     return

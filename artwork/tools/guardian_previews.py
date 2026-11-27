@@ -74,7 +74,7 @@ def faces(size, uv):
     )
 
 
-def projection(boxes, parents, atlas, camera, pose):
+def projection(boxes, parents, atlas, camera, pose, allow_cutout=False):
     forward = unit(camera)
     right = unit(cross((0, -1, 0), forward))
     down = cross(right, forward)
@@ -101,6 +101,8 @@ def projection(boxes, parents, atlas, camera, pose):
                 for column in range(width):
                     rgb = atlas.getpixel((u + column, v + row))
                     if rgb[3] != 255:
+                        if allow_cutout and rgb[3] == 0:
+                            continue
                         raise ValueError(f"Transparent texel in {name} face at {u + column},{v + row}")
                     points = []
                     depth = 0

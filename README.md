@@ -4,7 +4,7 @@ A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows mor
 
 ## Survival 0.5.1-alpha.3 · The Sunken Observatory
 
-New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Guardians patrol the ruin and occasionally appear in deep water elsewhere. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Guardians and owner walkthrough](docs/engineering/abyssal-guardian.md)
+New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Enderkin patrol newly generated Observatories. Fangfish and diving undead create rare encounters in ocean water. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Aquatic ecology](docs/engineering/abyssal-ecology.md)
 
 ## Survival 0.5.1-alpha.2 · The Abyss Below
 

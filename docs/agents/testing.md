@@ -16,7 +16,7 @@ The Saboteur runtime suite covers `exercise`, `restart` and `stress` modes. Both
 
 Use `zto-tools/test-zto-agent.ps1 -Pack` to verify the pinned overlay and direct industrial hooks without a graphical process. It also compares ordinary hostile populations in matched quiet and occupied Tekkit worlds. The [compatibility manifest](compatibility-acceptance.md) tracks live gesture, rendering and throughput checks separately.
 
-Use `zto-tools/test-zto-agent.ps1 -Focus observatory` for native site surveys, flooded routes, old-save conservation, Guardian movement and finite population save/reopen. The runner preserves plan and section images under `dist-zto/observatory-previews/`. [Observatory walkthrough and seeds](../engineering/sunken-observatory.md#native-walkthrough)
+Use `zto-tools/test-zto-agent.ps1 -Focus observatory` for revision-aware native site generation and persistence, flooded routes, protected old chunks, scoped OptiFine ceiling culling, native lighting, Fangfish, divers and Enderkin combat. The runner preserves native plans, sections and exterior projections under `dist-zto/observatory-refinement-previews/`. [Observatory walkthrough and seeds](../engineering/sunken-observatory.md#native-walkthrough)
 
 For 0.2.3-alpha.2, the same headless pack runner checks the native Enderkin substitution sample and population limits, magpie habitat and player-item recovery, and Fugl chicken hunts. `-Focus mining` exercises the restored local Survival controller with a stone pickaxe and both IC2 drills. See the [biome ecology implementation and playtest](survival-023-implementation.md).
 

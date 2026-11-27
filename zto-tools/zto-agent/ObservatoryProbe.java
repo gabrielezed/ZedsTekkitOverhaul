@@ -94,6 +94,7 @@ public final class ObservatoryProbe {
         int completed = 0;
         verifyLegacy(root, 1);
         verifyLegacy(root, 2);
+        verifyLegacy(root, 3);
         long[] ownerLocation = null;
         for (long[] sample : discovered) {
             long seed = sample[0];
@@ -113,7 +114,7 @@ public final class ObservatoryProbe {
                 System.out.println("Unready native candidate at " + x + ", " + z + ": " + (site == null ? "unadmitted" : site.status()));
                 continue;
             }
-            check(site.revision() == 3 && site.count() >= 8 && site.count() <= 12, "buried plan and reduced allocation");
+            check(site.revision() == 4 && site.count() >= 8 && site.count() <= 12, "buried plan and reduced allocation");
             System.out.printf("Native site seed=%d entrance=%d,%d,%d id=%x allocated=%d generation=%.0f ms%n",
                     seed, x, y, z, site.identity(), site.count(), (System.nanoTime() - generation) / 1e6);
             verifyBurial(world, site, plan, y, previews, completed);
@@ -162,13 +163,14 @@ public final class ObservatoryProbe {
                 CustodianProbe.terminal(terminal, ObservatorySites.nearby(terminal, x, z));
                 if (!custodianOnly) verifyWild(root, seed);
             }
-            if (++completed == 3) break;
+            completed++;
         }
-        check(completed == 3, "three complete native Observatory candidates");
+        check(completed >= 3, "at least three complete native Observatory candidates");
+        System.out.printf("Native admission: %d of %d surveyed sites exercised to completion%n", completed, surveyed);
         if (ownerSave) {
             long[] sample = ownerLocation;
             Object plan = candidate.invoke(null, sample[0], (int) sample[1], (int) sample[2]);
-            xd owner = world(root, "ZTO Alpha4 Refinement", sample[0], 1);
+            xd owner = world(root, "ZTO Beauty of the Abyss", sample[0], 1);
             load(owner, get(plan, "minX") >> 4, get(plan, "maxX") >> 4,
                     get(plan, "minZ") >> 4, get(plan, "maxZ") >> 4, false);
             int x = get(plan, "x"), z = get(plan, "z");
@@ -208,7 +210,7 @@ public final class ObservatoryProbe {
         load(legacy, get(plan, "minX") >> 4, get(plan, "maxX") >> 4, get(plan, "minZ") >> 4, get(plan, "maxZ") >> 4, false);
         Site old = ObservatorySites.nearby(legacy, x, z);
         check(old != null && old.revision() == revision && old.ready(legacy) && old.consumed(0) && old.terminal(0)
-                && old.count() >= 16, "historical layout and finite slot allocation remain readable");
+                && (revision == 3 ? old.count() >= 8 && old.count() <= 12 : old.count() >= 16), "historical layout and finite slot allocation remain readable");
         yw player = NaturalSpawnProbe.join(legacy);
         player.c(x + 0.5, y + 3, z + 0.5, 180, 0);
         for (int tick = 0; tick < 1800; tick += 20) {
@@ -540,8 +542,20 @@ public final class ObservatoryProbe {
         }
         check(qualifying > 500 && covered >= qualifying * 0.8, "native natural roof cover " + covered + "/" + qualifying);
         check(lamps >= 6 && details >= 24, "native contextual lamps and architectural blocks " + lamps + "/" + details);
-        int[] mouth = (int[]) position.invoke(plan, 0, 0, 2);
-        mouth[1] = floor + 8;
+        Field frozen = Site.class.getDeclaredField("plan");
+        frozen.setAccessible(true);
+        Object portal = frozen.get(site);
+        int sill = get(portal, "sill");
+        int[] mouth = (int[]) position.invoke(plan, 0, 0, -2);
+        mouth[1] = floor + sill + 1;
+        System.out.printf("Portal %s approach=%d,%d,%d%n",
+                flag(portal, "recessed") ? "recessed" : "terraced", mouth[0], mouth[1], mouth[2]);
+        int jamb = get(portal, "jamb");
+        for (int u = 1 - jamb; u < jamb; u++) {
+            int[] opening = (int[]) position.invoke(portal, u, 1, 0);
+            for (int rise = 0; rise < 4; rise++)
+                check(wet(world.a(opening[0], opening[1] + sill + rise, opening[2])), "clear portal aperture");
+        }
         int[] center = site.arenaCenter();
         check(wet(world.a(mouth[0],mouth[1],mouth[2])), "flooded entrance shaft");
         check(swimmable(world, mouth, center, null), "native entrance to chamber");
@@ -550,12 +564,27 @@ public final class ObservatoryProbe {
         writeMap(top, previews, "buried-" + index + "-seabed");
         writeMap(interior, previews, "buried-" + index + "-interior");
         writeMap(section, previews, "buried-" + index + "-section");
-        int[] approach = (int[]) position.invoke(plan, 0, 0, -3);
-        int seabed = 54;
-        while (seabed > floor && (wet(world.a(approach[0], seabed, approach[2]))
-                || world.a(approach[0], seabed, approach[2]) == 0)) seabed--;
-        System.out.printf("PASS native burial %d/%d covered, %d lamps, %d details; entrance approach=%d,%d,%d%n",
-                covered, qualifying, lamps, details, approach[0], seabed + 1, approach[2]);
+        BufferedImage front = new BufferedImage(17, 17, BufferedImage.TYPE_INT_RGB);
+        BufferedImage threshold = new BufferedImage(17, 17, BufferedImage.TYPE_INT_RGB);
+        for (int u = -8; u <= 8; u++) for (int rise = -5; rise <= 11; rise++) {
+            int[] face = (int[]) position.invoke(plan, u, 0, 0);
+            int[] inside = (int[]) position.invoke(plan, u, 0, 3);
+            int height = floor + sill + rise;
+            front.setRGB(u + 8, 11 - rise, color(world.a(face[0], height, face[2])));
+            threshold.setRGB(u + 8, 11 - rise, color(world.a(inside[0], height, inside[2])));
+        }
+        writeMap(front, previews, "buried-" + index + "-portal-front");
+        writeMap(threshold, previews, "buried-" + index + "-vestibule-section");
+        exterior(world, position, plan, floor + sill, 8, 10,
+                new File(previews, "buried-" + index + "-portal-isometric.png"));
+        BufferedImage arena = new BufferedImage(21, 13, BufferedImage.TYPE_INT_RGB);
+        for (int u = -10; u <= 10; u++) for (int h = -1; h <= 11; h++) {
+            int[] at = (int[]) position.invoke(plan, u, 0, length - 9);
+            arena.setRGB(u + 10, 11 - h, color(world.a(at[0], floor + h, at[2])));
+        }
+        writeMap(arena, previews, "buried-" + index + "-arena-section");
+        System.out.printf("PASS native burial %d/%d covered, %d lamps, %d details%n",
+                covered, qualifying, lamps, details);
     }
 
     private static void writeMap(BufferedImage map, File target, String name) throws Exception {
@@ -576,7 +605,7 @@ public final class ObservatoryProbe {
             if (Arrays.equals(p, goal)) return true;
             for (int[] d : moves) {
                 int x=p[0]+d[0], y=p[1]+d[1], z=p[2]+d[2];
-                if (Math.abs(x-start[0]) > 66 || Math.abs(z-start[2]) > 66 || y < start[1]-9 || y > start[1]+1) continue;
+                if (Math.abs(x-start[0]) > 66 || Math.abs(z-start[2]) > 66 || y < goal[1]-2 || y > start[1]+1) continue;
                 if (blocked != null && Math.abs(x-blocked[0]) <= 2 && Math.abs(z-blocked[2]) <= 2) continue;
                 if (!world.z().a(x >> 4,z >> 4) || !wet(world.a(x,y,z)) || !wet(world.a(x,y+1,z))) continue;
                 if (seen.add(x + "/" + y + "/" + z)) frontier.add(new int[] {x,y,z});
@@ -646,10 +675,10 @@ public final class ObservatoryProbe {
                 int[] p = (int[]) position.invoke(plan, u, 0, v);
                 for (int h = -7; h <= 11; h++) {
                     int id = world.a(p[0], floor + h, p[2]);
-                    if (id < 3032 || id > 3038) continue;
+                    if (id == 0 || wet(id)) continue;
                     int x = 435 + (u - v) * 5, y = 222 - depth * 2 - h * 5;
-                    int color = id == 3036 ? 0x687771 : id == 3037 ? 0x50594b : id == 3038 ? 0xb3d0ad
-                            : id == 3033 ? 0x54584a : id == 3034 ? 0x64746b : 0x415957;
+                    int color = id == 3049 ? 0x929681 : id == 3047 ? 0x687c79 : id == 3048 ? 0x87908c
+                            : id == 3037 || id == 3045 ? 0x555d52 : color(id);
                     draw.setColor(new java.awt.Color(color).darker());
                     draw.fillPolygon(new int[] {x - 5, x, x, x - 5}, new int[] {y, y + 2, y + 7, y + 5}, 4);
                     draw.setColor(new java.awt.Color(color));
@@ -767,6 +796,12 @@ public final class ObservatoryProbe {
         Field field = typeWithField(object.getClass(), name).getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(object);
+    }
+
+    private static boolean flag(Object object, String name) throws Exception {
+        Field field = typeWithField(object.getClass(), name).getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(object);
     }
 
     private static Class<?> typeWithField(Class<?> type, String name) throws Exception {

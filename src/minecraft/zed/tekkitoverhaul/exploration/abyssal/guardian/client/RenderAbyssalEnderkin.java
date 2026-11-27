@@ -83,7 +83,11 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
         @Override public void render(Entity actor, float stride, float swing, float age, float yaw, float pitch, float scale) {
             EntityAbyssalEnderkin caster = (EntityAbyssalEnderkin) actor;
             int phase = caster.casting();
-            float kick = MathHelper.sin(age * 0.39F);
+            float travel = (float) Math.sqrt(caster.motionX * caster.motionX + caster.motionZ * caster.motionZ);
+            float stroke = Math.min(1, 0.25F + travel * 5);
+            float kick = MathHelper.sin(age * 0.30F) * stroke;
+            float glide = MathHelper.sin(age * 0.15F);
+            float rise = phase > 0 ? Math.min(1, phase / 8.0F) : 0;
             float flinch = AquaticHurtPose.recoil(caster, partial, 0);
             float legs = AquaticHurtPose.recoil(caster, partial, 2);
             float lateral = AquaticHurtPose.lateral(caster);
@@ -91,7 +95,7 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
             head.rotateAngleX = pitch * 0.017453292F - (0.16F + 0.37F * backward) * flinch;
             head.rotateAngleY = lateral * flinch * 0.35F;
             head.rotateAngleZ = -lateral * flinch * 0.26F;
-            torso.rotateAngleX = (phase == 0 ? -0.13F : 0) + backward * flinch * 0.21F;
+            torso.rotateAngleX = (-0.10F - 0.16F * stroke) * (1 - rise) + backward * flinch * 0.21F;
             torso.rotateAngleZ = lateral * flinch * 0.21F;
             gillLeft.rotateAngleY = -0.17F + 0.09F * kick - 0.27F * flinch;
             gillRight.rotateAngleY = 0.17F - 0.09F * kick + 0.27F * flinch;
@@ -101,8 +105,8 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
             right.rotateAngleZ = phase == 0 ? -0.28F * flinch : 0;
             elbow.rotateAngleX = phase > 0 ? -0.19F * (1 - Math.min(phase, 12) / 12.0F)
                     : phase == 0 ? -0.76F * flinch : 0;
-            left.rotateAngleX = -0.35F - kick * 0.24F - flinch * 0.66F;
-            left.rotateAngleZ = 0.23F + flinch * 0.39F;
+            left.rotateAngleX = -0.30F - kick * 0.28F - rise * 0.28F - flinch * 0.66F;
+            left.rotateAngleZ = 0.19F + rise * 0.22F + glide * 0.05F + flinch * 0.39F;
             rightLeg.rotateAngleX = 0.3F + 0.35F * kick + 0.46F * legs;
             leftLeg.rotateAngleX = 0.3F - 0.35F * kick + 0.26F * legs;
             rightLeg.rotateAngleZ = -0.22F * legs;

@@ -22,6 +22,8 @@ Run `python artwork/tools/custodian_assets.py` then export the textures. After M
 
 Fresh native damage animates a directional head and body recoil, followed by a delayed tentacle curl. The model keeps the committed striking arm aligned with the authoritative attack geometry. The same recoil applies at compressed scale. The headless model capture writes `hurt-reactions.png` beside the combat poses.
 
+Beta.1 adds small mineral-grey accents along the tentacles. Successive joints trail the swimming motion with different phase offsets. Repulsion crosses from contraction to expansion over a short visual envelope, and Riftstep opens into a post-arrival lift. Physical strike alignment, Compression size, damage and attack timing remain gameplay-owned.
+
 ## Combat
 
 The creature starts at 80 HP. A vulnerable diver within 17 blocks who enters the chamber territory can trigger a 24-tick awakening. Phase two starts once at 40 HP or below after the active attack cycle. It has a 28-tick transformation, shorter Riftstep cooldown and more frequent repositioning. Damage values and recovery windows carry across both phases.

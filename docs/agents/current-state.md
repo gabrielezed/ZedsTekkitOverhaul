@@ -1,5 +1,7 @@
 # Current implementation
 
+Survival `0.5.1-beta.1` adds terrain-surveyed revision-four portals and interior detailing, coherent kelp stands and luminous marine colonies, and revised Enderkin and Custodian presentation. [Candidate and owner walkthrough](survival-051-beta1.md).
+
 The alpha.4 owner refinement introduces buried revision-three Observatories, reduced Enderkin patrols, architecture blocks, the Spawn Eggs tab and the redesigned Custodian with native Compression. [Architecture](../engineering/abyssal-architecture.md) · [Owner playtest](../engineering/abyssal-custodian.md)
 
 The `0.5.1-alpha.4` candidate adds the Abyssal Custodian to existing stamped Observatory revisions. The persistent encounter issues one Ender Pearl on legitimate defeat. Ordinary Endermen lose their pearl loot, and EE2 excludes pearls and eyes from exchange. [Custodian and owner fixture](../engineering/abyssal-custodian.md) · [Reward and EMC policy](../engineering/ender-pearl-scarcity.md)

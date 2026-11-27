@@ -2,6 +2,12 @@
 
 The Observatory gives the Abyssal Trench a destination for a diving expedition. Follow the weathered columns to the entrance, descend through the flooded halls, and return by a side gallery or through the main approach. Oxygen, lights, temporary refuges, mining and advanced Tekkit equipment remain ordinary sandbox tools.
 
+## Revision four
+
+New sites use the same candidate grid, footprint, native terrain survey and buried room envelope. The survey measures the approach floor and rock shoulders. A stored sill and profile bind the portal to those measurements across chunk writes and save/reload. The shelf and recessed compositions share a three- or five-block opening, stepped stone crown, pillar jambs and an asymmetrically damaged outer support. The threshold opens into a descending flooded vestibule on the existing gallery axis.
+
+The revision-four record adds two validated bytes after the base floor. The layout, slot ownership, stamps and encounter state in revisions one through three retain their original interpretation. Stored chunks and player alterations remain protected by the existing slice admission rules. [Native evidence and coordinates](../agents/survival-051-beta1.md).
+
 ## Revision-three owner refinement
 
 New structures now occupy rock beneath their natural seabed. The survey measures cover over the actual chamber roofs before carving. Most of the upper shell is never visible in the seabed projection. The shaft mouth opens between eroded columns and leads through a staggered stair gallery to the observation hall. The return corridor can reach the tall Custodian chamber if the main inner passage is blocked. [Architecture, atlas and recipes](abyssal-architecture.md)

@@ -48,6 +48,8 @@ The renderer batches two crossed cutouts for Kelp, Algae and Anemone, an axis-al
 
 The Abyssal Trench reuses the registered geological materials and Part I's marine water occupancy rules. The pinned terrain stage places the palette in newly generated chunks. See the [generation contract and owner walkthrough](abyssal-worldgen.md).
 
+Beta.1 separates shelf kelp, deep anemone-and-sponge colonies and sparse algae or fan coral. Rooted fossil spurs, shellstone bands and taller stone stacks share deterministic terrain anchors. Architectural lamps are reserved for placed structures. The generation-only marine placement continues to validate the local support, water above the organism and lateral source-water cells.
+
 ## Owner playtest
 
 1. Assemble a source-water basin in a marked disposable world. Search for the 18 names in NEI and check both Creative catalog modes. Craft the five recipes and harvest the solid blocks with the appropriate tools.

@@ -78,11 +78,13 @@ final class CustodianModel extends ModelBase {
                 lunge = windup * recovery;
                 if (tick < attack.windup) torsoTop += 1.4F * windup;
             } else if (attack == Attack.PRESSURE) {
-                contraction = tick < attack.windup ? windup : 0;
-                spread = tick >= attack.windup ? recovery : 0;
+                float discharge = CustodianBalance.ease((tick - attack.windup + 1) / 4);
+                contraction = windup * (1 - discharge);
+                spread = discharge * recovery;
             } else if (attack == Attack.BLINK) {
-                contraction = windup * recovery;
-                tall = tick >= attack.windup ? (1 - recovery) * CustodianBalance.ease((attack.end() - tick) / 7) : 0;
+                float arrival = CustodianBalance.ease((tick - attack.windup) / 7);
+                contraction = windup * (1 - arrival);
+                tall = arrival * CustodianBalance.ease((attack.end() - tick) / 9);
             } else if (attack == Attack.COMPRESSION) {
                 contraction = 0.45F * (1 - boss.bodyScale()) / (1 - CustodianBalance.COMPRESSED_SCALE);
             } else {
@@ -130,16 +132,19 @@ final class CustodianModel extends ModelBase {
             for (int i = 0; i < 4; i++) {
                 float sign = i % 2 == 0 ? -1 : 1;
                 float end = i < 2 ? -1 : 1;
-                float drift = (float) Math.sin(age * 0.105F + i * 0.8F);
+                float phase = age * 0.105F + i * 0.8F;
+                float drift = (float) Math.sin(phase);
+                float middle = (float) Math.sin(phase - 0.65F);
+                float distal = (float) Math.sin(phase - 1.3F);
                 float trail = lean * 0.55F;
                 tentacle[i].rotateAngleX = end * (-0.42F - 0.35F * spread) + 0.14F * drift + trail;
                 tentacle[i].rotateAngleZ = sign * ((i < 2 ? -0.48F : -0.81F) + contraction * 0.55F - spread * 0.58F);
-                joint[i].rotateAngleX = end * (0.20F - contraction * 0.72F) + drift * 0.24F
+                joint[i].rotateAngleX = end * (0.20F - contraction * 0.72F) + middle * 0.24F
                         + (0.32F * backward - 0.15F * end) * flinch;
                 joint[i].rotateAngleZ = sign * (-0.06F + contraction * 0.85F);
-                taper[i].rotateAngleX = end * (0.23F - contraction * 0.83F) + wave * 0.22F;
+                taper[i].rotateAngleX = end * (0.23F - contraction * 0.83F) + distal * 0.22F;
                 taper[i].rotateAngleZ = sign * (0.47F + contraction * 0.48F + 0.48F * trailFlinch);
-                tip[i].rotateAngleX = end * 0.26F - 0.26F * drift + (end * 0.24F + 0.32F * backward) * trailFlinch;
+                tip[i].rotateAngleX = end * 0.26F + 0.26F * (float) Math.sin(phase - 1.95F) + (end * 0.24F + 0.32F * backward) * trailFlinch;
                 tip[i].rotateAngleZ = sign * (0.21F - 0.19F * wave);
             }
             hips.render(scale);

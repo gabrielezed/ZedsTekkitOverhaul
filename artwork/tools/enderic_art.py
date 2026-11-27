@@ -57,6 +57,11 @@ def enderkin():
         gills = (u, 0, 1, 3, 4)
         remap(body, thief, THIEF_HEAD, gills)
         embellish_gills(body, gills)
+    draw = ImageDraw.Draw(body)
+    for u in (24, 38):
+        x, y, w, h = faces(u, 28, 3, 1, 3)[4]
+        for rib in range(w):
+            draw.line((x + rib, y, x + rib, y + h - 2), fill="#353443" if rib == 1 else "#4a4a58")
     return body, eyes
 
 

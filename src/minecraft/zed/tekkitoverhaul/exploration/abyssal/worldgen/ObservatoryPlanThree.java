@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** A flooded shaft gives access to chambers cut below the existing seabed. */
-final class ObservatoryPlanThree extends ObservatoryPlan {
+class ObservatoryPlanThree extends ObservatoryPlan {
     // The chamber floor is one block below this datum. Native caves can fill through Y10 with lava.
     static final int MIN_BASE = 12, MAX_HEIGHT = 30;
     private final List<Room> rooms = new ArrayList<Room>();
@@ -97,6 +97,11 @@ final class ObservatoryPlanThree extends ObservatoryPlan {
             if (side == 2 && h <= 9 && v % 2 == 0) return SLAB;
             return WATER;
         }
+        return interior(u, h, v);
+    }
+
+    final int interior(int u, int h, int v) {
+        int side = Math.abs(u);
         boolean hollow = false, shell = false;
         for (Room room : rooms) if (room.covers(u, v) && h >= room.floor && h <= room.roof) {
             if (room.inside(u, v) && h > room.floor && h < room.roof) hollow = true;

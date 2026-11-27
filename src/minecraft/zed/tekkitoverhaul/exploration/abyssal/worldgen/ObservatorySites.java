@@ -104,7 +104,7 @@ public final class ObservatorySites {
         int x = gx * GRID + 136 + (int) ((id >>> 8) % 241);
         int z = gz * GRID + 136 + (int) ((id >>> 24) % 241);
         if (TrenchRegion.influence(seed, x, z) < 0.77 || TrenchRegion.relief(seed, x, z) > 35) return null;
-        return new ObservatoryPlanThree(id, x, z, 0);
+        return new ObservatoryPlanFour(id, x, z, 0, 12, false);
     }
 
     static Site prepare(World world, int cx, int cz) {
@@ -121,12 +121,14 @@ public final class ObservatorySites {
                 cache(world).put(key(gx, gz), UNAVAILABLE);
                 return null;
             }
-            int y = survey(world, candidate);
+            int[] entrance = new int[2];
+            int y = survey(world, candidate, entrance);
             if (y == 0) {
                 cache(world).put(key(gx, gz), UNAVAILABLE);
                 return null;
             }
-            Site result = new Site(new ObservatoryPlanThree(candidate.id, candidate.x, candidate.z, y), file);
+            Site result = new Site(new ObservatoryPlanFour(candidate.id, candidate.x, candidate.z, y,
+                    entrance[0], entrance[1] != 0), file);
             result.save();
             cache(world).put(key(gx, gz), result);
             return result;
@@ -155,14 +157,15 @@ public final class ObservatorySites {
             stream = new DataInputStream(Files.newInputStream(file.toPath()));
             if (stream.readInt() != MAGIC) throw new IOException("Unrecognized site header");
             int revision = stream.readInt();
-            if ((revision < 1 || revision > 3) || stream.readLong() != candidate.id
+            if ((revision < 1 || revision > 4) || stream.readLong() != candidate.id
                     || stream.readInt() != candidate.x || stream.readInt() != candidate.z)
                 throw new IOException("Unrecognized site revision or identity");
             int floor = stream.readInt();
-            if (floor < (revision == 3 ? ObservatoryPlanThree.MIN_BASE : MIN_FLOOR) || floor > MAX_FLOOR) throw new IOException("Invalid floor");
+            if (floor < (revision >= 3 ? ObservatoryPlanThree.MIN_BASE : MIN_FLOOR) || floor > MAX_FLOOR) throw new IOException("Invalid floor");
             ObservatoryPlan frozen = revision == 1 ? new ObservatoryPlan(candidate.id, candidate.x, candidate.z, floor)
                     : revision == 2 ? new ObservatoryPlanTwo(candidate.id, candidate.x, candidate.z, floor)
-                    : new ObservatoryPlanThree(candidate.id, candidate.x, candidate.z, floor);
+                    : revision == 3 ? new ObservatoryPlanThree(candidate.id, candidate.x, candidate.z, floor)
+                    : readEntrance(stream, candidate, floor);
             found = new Site(frozen, file);
             found.slices = stream.readLong();
             found.consumed = stream.readInt();
@@ -225,10 +228,23 @@ public final class ObservatorySites {
         }
     }
 
+    private static ObservatoryPlan readEntrance(DataInputStream stream, ObservatoryPlan candidate, int floor)
+            throws IOException {
+        int sill = stream.readUnsignedByte();
+        int profile = stream.readUnsignedByte();
+        if (sill < 9 || sill > 23 || profile > 1) throw new IOException("Invalid portal profile");
+        return new ObservatoryPlanFour(candidate.id, candidate.x, candidate.z, floor, sill, profile == 1);
+    }
+
     private static int survey(World world, ObservatoryPlan plan) {
+        return survey(world, plan, null);
+    }
+
+    private static int survey(World world, ObservatoryPlan plan, int[] entrance) {
         if (!plan.connected(false) || !plan.connected(true)) return 0;
         ChunkProviderGenerate sampler = new ChunkProviderGenerate(world, world.getSeed(), false);
         int low = 127, high = 0, sum = 0, samples = 0, maxBase = MAX_FLOOR, entranceTop = 0;
+        int approach = 0, shoulder = 0;
         ObservatoryPlanThree buried = plan instanceof ObservatoryPlanThree ? (ObservatoryPlanThree) plan : null;
         for (int cz = plan.minZ >> 4; cz <= plan.maxZ >> 4; cz++) {
             for (int cx = plan.minX >> 4; cx <= plan.maxX >> 4; cx++) {
@@ -243,6 +259,8 @@ public final class ObservatorySites {
                         int u = plan.across(wx, wz), v = plan.along(wx, wz), roof = buried.coverRoof(u, v);
                         if (roof >= 0) maxBase = Math.min(maxBase, floor - roof - 3);
                         if (Math.abs(u) <= 4 && v >= -2 && v <= 5) entranceTop = Math.max(entranceTop, floor);
+                        if (u == 0 && v == -3) approach = floor;
+                        if (Math.abs(u) == 4 && v == 1) shoulder = Math.max(shoulder, floor);
                         if (plan.coversColumn(wx, wz) && terrain.influence[column] < 0.50) return 0;
                     } else if (floor < 12 || floor > 40 || terrain.influence[column] < 0.55) return 0;
                     low = Math.min(low, floor);
@@ -252,8 +270,15 @@ public final class ObservatorySites {
                 }
             }
         }
-        if (buried != null) return maxBase >= ObservatoryPlanThree.MIN_BASE && entranceTop - maxBase <= 25
-                && entranceTop - maxBase >= 9 ? maxBase : 0;
+        if (buried != null) {
+            if (maxBase < ObservatoryPlanThree.MIN_BASE || entranceTop - maxBase > 25
+                    || entranceTop - maxBase < 9) return 0;
+            if (entrance != null) {
+                entrance[0] = Math.max(9, Math.min(23, approach - maxBase));
+                entrance[1] = shoulder >= approach + 1 ? 1 : 0;
+            }
+            return maxBase;
+        }
         int floor = (sum + samples / 2) / samples;
         return floor >= MIN_FLOOR && floor <= MAX_FLOOR && floor - low <= FOUNDATION
                 && high - floor <= 8 ? floor : 0;
@@ -263,7 +288,7 @@ public final class ObservatorySites {
         ObservatoryPlan plan = site.plan;
         long bit = 1L << plan.slice(chunk.xPosition, chunk.zPosition);
         if ((site.slices & bit) != 0 || site.failed) return;
-        boolean buried = plan.revision() == 3;
+        boolean buried = plan.revision() >= 3;
         int high = buried ? ObservatoryPlanThree.MAX_HEIGHT : 11;
         int[] writes = new int[16 * 16 * (high + FOUNDATION + 1)];
         for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
@@ -480,6 +505,11 @@ public final class ObservatorySites {
                 stream.writeInt(plan.x);
                 stream.writeInt(plan.z);
                 stream.writeInt(plan.y);
+                if (plan instanceof ObservatoryPlanFour) {
+                    ObservatoryPlanFour portal = (ObservatoryPlanFour) plan;
+                    stream.writeByte(portal.sill);
+                    stream.writeByte(portal.recessed ? 1 : 0);
+                }
                 stream.writeLong(slices);
                 stream.writeInt(consumed);
                 stream.writeInt(dead);

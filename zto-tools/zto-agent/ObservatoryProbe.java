@@ -58,7 +58,7 @@ public final class ObservatoryProbe {
         zed.tekkitoverhaul.assault.SiegeDirector.registerSiteInfantry();
         zed.tekkitoverhaul.survival.CreatureEggs.register(config.abyssalId("item.creatureEgg"));
         zed.tekkitoverhaul.survival.CreatureEggs.audit();
-        CustodianProbe.verifyCreativeCatalog();
+        CustodianProbe.verifyCreativeCatalog(config);
         zed.tekkitoverhaul.emc.EnderPearlScarcity.register();
         Class<?> planClass = Class.forName("zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatoryPlan");
         Method candidate = method(ObservatorySites.class, "candidate", long.class, int.class, int.class);
@@ -259,6 +259,13 @@ public final class ObservatoryProbe {
         water.d(1024, 83, 1024, 9);
         water.d(1025, 82, 1024, 0);
         check(renderer.n(pb.B, 1024, 82, 1024), "side of an open water column is retained");
+        water.d(1025, 82, 1024, 9);
+        water.d(1024, 81, 1024, 3046);
+        for (int side = 2; side < neighbors.length; side++) {
+            int[] offset = neighbors[side];
+            water.d(1024 + offset[0], 81, 1024 + offset[2], 3036);
+        }
+        check(!renderer.n(pb.B, 1024, 82, 1024), "no bottom quad over a flooded landing with dry slab-level neighbors");
         for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int dy = -1; dy <= 1; dy++)
             water.d(1030 + dx, 82 + dy, 1024 + dz, 11);
         water.d(1031, 82, 1024, 3046);
@@ -368,6 +375,9 @@ public final class ObservatoryProbe {
             }
         }
         check(aimed && shot && player.bb() == 18, "native submerged casting deals one two-HP hit");
+        double startX = actor.o, startY = actor.p, startZ = actor.q;
+        for (int tick = 0; tick < 35; tick++) actor.J_();
+        check(actor.f(startX, startY, startZ) < 0.25, "caster holds range during recharge instead of circling away");
         double px = player.o, py = player.p, pz = player.q;
         for (int yy = y - 1; yy <= y + 4; yy++) world.g(x, yy, z + 4, 3036);
         EntityEnderPulse blocked = new EntityEnderPulse(actor, x + 0.5, y + 1.2, z + 1.5, px, py, pz);

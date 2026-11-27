@@ -9,6 +9,7 @@ import net.minecraft.src.Item;
 import net.minecraft.src.ItemBlock;
 import net.minecraft.src.ItemStack;
 import zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry;
+import zed.tekkitoverhaul.survival.CreatureEggs;
 
 /** Category registration for client mods during load or modsLoaded. */
 public final class CreativeCategories {
@@ -38,11 +39,13 @@ public final class CreativeCategories {
             public boolean includes(ItemStack stack) { return stack.getItem() instanceof ItemBlock; }
         });
         tabs[1] = new Tab("Items", new ItemStack(Item.swordGold), new Filter() {
-            public boolean includes(ItemStack stack) { return !(stack.getItem() instanceof ItemBlock); }
+            public boolean includes(ItemStack stack) {
+                return !(stack.getItem() instanceof ItemBlock) && !CreatureEggs.isEgg(stack);
+            }
         });
         tabs[2] = new Tab("ZedsTekkitOverhaul", new ItemStack(AdvancedCraftingRegistry.advancedTable), new Filter() {
             public boolean includes(ItemStack stack) {
-                return isZto(stack.getItem() instanceof ItemBlock && stack.itemID < Block.blocksList.length
+                return !CreatureEggs.isEgg(stack) && isZto(stack.getItem() instanceof ItemBlock && stack.itemID < Block.blocksList.length
                         ? Block.blocksList[stack.itemID] : stack.getItem());
             }
         });

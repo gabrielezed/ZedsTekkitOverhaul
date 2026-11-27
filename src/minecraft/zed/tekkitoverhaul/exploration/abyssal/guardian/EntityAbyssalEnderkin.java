@@ -23,6 +23,7 @@ public final class EntityAbyssalEnderkin extends EntityMob {
     private long identity;
     private EntityPlayer target, resonanceTarget;
     private int resonanceTicks;
+    private boolean closing, retreating;
 
     public EntityAbyssalEnderkin(World world) {
         super(world);
@@ -130,6 +131,7 @@ public final class EntityAbyssalEnderkin extends EntityMob {
             movement.lose();
             prospective = null;
         }
+        if (target != prospective) closing = retreating = false;
         target = prospective;
         if (target == null && resonanceTarget != null && resonanceTarget.isEntityAlive()
                 && resonanceTarget.isInWater() && !resonanceTarget.capabilities.disableDamage
@@ -146,21 +148,22 @@ public final class EntityAbyssalEnderkin extends EntityMob {
         }
 
         double distance = getDistanceSqToEntity(target);
-        if (!AquaticPursuit.visible(this, target) || distance > 144) {
-            cancel();
-            movement.approach(this, target, 0.17);
-            return;
-        }
-        if (distance < 23) {
+        // Keep moving past the entry thresholds so momentum does not alternate approach and retreat.
+        retreating = distance < (retreating ? 36 : 23);
+        if (retreating) {
+            closing = false;
             cancel();
             movement.reposition(this, target, 0.17);
             return;
         }
-        SwimRoute.face(this, target.posX - posX, target.posY + target.getEyeHeight() * 0.75 - posY - 0.9, target.posZ - posZ);
-        if (cooldown > 0) {
-            if (cooldown < COOL - 10) movement.reposition(this, target, 0.11);
+        closing = !AquaticPursuit.visible(this, target) || distance > (closing ? 100 : 144);
+        if (closing) {
+            cancel();
+            movement.approach(this, target, 0.17);
             return;
         }
+        SwimRoute.face(this, target.posX - posX, target.posY + target.getEyeHeight() * 0.75 - posY - 0.9, target.posZ - posZ);
+        if (cooldown > 0) return;
         if (aim == 0) {
             if (GuardianEncounters.casters(target, true) >= GuardianEncounters.castLimit(target) || !clearShot(hand())) {
                 movement.reposition(this, target, 0.11);

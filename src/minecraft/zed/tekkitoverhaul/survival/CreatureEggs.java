@@ -17,6 +17,7 @@ import zed.tekkitoverhaul.creative.CreativeCategories;
 
 /** Explicit metadata is part of the saved ItemStack contract. */
 public final class CreatureEggs extends ItemSurvivalSpawnEgg {
+    private static final String SIEGE_ZOMBIE = "ZTO.SiegeZombie", SIEGE_SKELETON = "ZTO.SiegeSkeleton";
     private static final Variant[] VARIANTS = {
         new Variant("ZTO.AbyssalGuardian", "Abyssal Fangfish", 0x263B3D, 0x46534E, true),
         new Variant("ZTO.DiverZombie", "Diver Zombie", 0x497533, 0x273332, true),
@@ -27,8 +28,9 @@ public final class CreatureEggs extends ItemSurvivalSpawnEgg {
         new Variant("SnowMan", "Snow Golem", 0xECF3F4, 0xE58B36, false),
         new Variant("VillagerGolem", "Iron Golem", 0xCDCAC2, 0x676E45, false),
         new Variant("EnderDragon", "Ender Dragon", 0x202027, 0xBF7EE2, false),
-        new Variant("ZTO.SiegeZombie", "Siege Zombie", 0x425838, 0x846850, false),
-        new Variant("ZTO.SiegeSkeleton", "Siege Skeleton", 0xAAA396, 0x5F4439, false)
+        // Historical metadata stays allocated so saved stacks still resolve to their original item.
+        new Variant(SIEGE_ZOMBIE, "Siege Zombie", 0x425838, 0x846850, false),
+        new Variant(SIEGE_SKELETON, "Siege Skeleton", 0xAAA396, 0x5F4439, false)
     };
     private static CreatureEggs item;
 
@@ -53,6 +55,15 @@ public final class CreatureEggs extends ItemSurvivalSpawnEgg {
                 : kind instanceof ItemSurvivalSpawnEgg && ((ItemSurvivalSpawnEgg) kind).validVariant(meta);
     }
 
+    public static boolean isRetired(ItemStack stack) {
+        Variant variant = stack.getItem() == item ? variant(stack.getItemDamage()) : null;
+        return variant != null && siegeOnly(variant.name);
+    }
+
+    private static boolean siegeOnly(String name) {
+        return SIEGE_ZOMBIE.equals(name) || SIEGE_SKELETON.equals(name);
+    }
+
     public static List<ItemStack> entries() {
         List<ItemStack> eggs = new ArrayList<ItemStack>();
         for (Object id : EntityList.entityEggs.keySet()) eggs.add(new ItemStack(Item.monsterPlacer, 1, (Integer) id));
@@ -74,7 +85,7 @@ public final class CreatureEggs extends ItemSurvivalSpawnEgg {
         for (Map.Entry<String, Class<? extends Entity>> entry : EntityList.getEntityToClassMapping().entrySet()) {
             Class<?> type = entry.getValue();
             if (type != EntityLiving.class && EntityLiving.class.isAssignableFrom(type)
-                    && !Modifier.isAbstract(type.getModifiers()) && !supported.contains(entry.getKey()))
+                    && !Modifier.isAbstract(type.getModifiers()) && !siegeOnly(entry.getKey()) && !supported.contains(entry.getKey()))
                 unsupported.add(entry.getKey() + "=" + type.getName());
         }
         ModLoader.getLogger().info("[ZTO] Spawn eggs cover " + supported + "; unaudited constructors: " + unsupported);
@@ -87,7 +98,8 @@ public final class CreatureEggs extends ItemSurvivalSpawnEgg {
 
     @Override protected String entityName(int damage) {
         Variant variant = variant(damage);
-        return variant != null && EntityList.getEntityToClassMapping().containsKey(variant.name) ? variant.name : null;
+        return variant != null && !siegeOnly(variant.name) && EntityList.getEntityToClassMapping().containsKey(variant.name)
+                ? variant.name : null;
     }
 
     @Override protected boolean aquatic(int damage) {

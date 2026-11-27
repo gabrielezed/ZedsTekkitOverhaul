@@ -45,7 +45,11 @@ public final class AbyssalWaterFaces {
         }
         // The volume above a low block is visually continuous only if the nearby cells are flooded.
         if (wet(access, nx, ny + (side == 1 ? 1 : -1), nz)) return false;
-        if (side == 0 && !wet(access, x, y + 1, z)) return true;
+        if (side == 0) {
+            // Water can cover the width of a slab landing while the slab layer itself is dry.
+            if (!wet(access, x, y + 1, z)) return true;
+            if (wetAlongside(access, x, y, z, -1)) return false;
+        }
         return !wetAlongside(access, nx, ny, nz, -1);
     }
 

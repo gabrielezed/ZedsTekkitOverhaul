@@ -65,6 +65,7 @@ final class CreativeCatalog {
             if (!(candidate instanceof ItemStack)) continue;
             ItemStack stack = (ItemStack) candidate;
             if (stack.itemID <= 0 || stack.itemID >= Item.itemsList.length || stack.getItem() == null) continue;
+            if (CreatureEggs.isRetired(stack)) continue;
             List<Entry> variants = seen.get(stack.itemID);
             if (variants == null) {
                 variants = new ArrayList<Entry>();

@@ -60,14 +60,16 @@ final class CustodianProbe {
         System.out.println("PASS marked owner save on the surface above the buried entrance");
     }
 
-    static void verifyCreativeCatalog() throws Exception {
+    static void verifyCreativeCatalog(ZtoConfig config) throws Exception {
         // The tab only needs its normal block icon. Do not initialize the graphical Foundry renderer.
         zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry.advancedTable = pb.M;
         Class<?> type = Class.forName("zed.tekkitoverhaul.creative.CreativeCatalog");
         java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(java.util.List.class);
         constructor.setAccessible(true);
         aan pig = new aan(383, 1, 90), chickenEgg = new aan(344, 1, 0);
-        Object catalog = constructor.newInstance(java.util.Arrays.asList(pig, pig.m(), chickenEgg));
+        int creatureEgg = config.abyssalId("item.creatureEgg") + 256;
+        aan siegeZombie = new aan(creatureEgg, 1, 9), siegeSkeleton = new aan(creatureEgg, 1, 10);
+        Object catalog = constructor.newInstance(java.util.Arrays.asList(pig, pig.m(), chickenEgg, siegeZombie, siegeSkeleton));
         Object[] tabs = (Object[]) field(catalog, "tabs");
         int eggTab = -1;
         for (int i = 0; i < tabs.length; i++) if (tabs[i] != null && "Spawn Eggs".equals(field(tabs[i], "title"))) eggTab = i;
@@ -81,17 +83,30 @@ final class CustodianProbe {
         java.util.List<?> search = (java.util.List<?>) method(catalog, "entries", int.class, String.class)
                 .invoke(catalog, 5, "custodian");
         check(search.size() == 1, "ordinary Creative search finds the Custodian egg");
+        for (int tab : new int[] {1, 2}) {
+            java.util.List<?> generalEntries = (java.util.List<?>) method(catalog, "entries", int.class, String.class)
+                    .invoke(catalog, tab, "");
+            for (Object entry : generalEntries)
+                check(!zed.tekkitoverhaul.survival.CreatureEggs.isEgg((aan) field(entry, "stack")),
+                        "general categories omit spawn eggs");
+        }
+        check(((java.util.List<?>) method(catalog, "entries", int.class, String.class)
+                .invoke(catalog, 5, "siege")).isEmpty(), "legacy siege metadata stays out of Creative search");
         System.out.println("PASS Creative Spawn Eggs category, filtering, search and deduplication");
     }
 
     static void verifyEggs(xd world, Site site, ZtoConfig config) {
-        check(zed.tekkitoverhaul.survival.CreatureEggs.entries().size() >= 40, "native variants and ZTO egg entries");
         int id = config.abyssalId("item.creatureEgg") + 256;
         yr egg = yr.e[id];
         int[] p = site.arenaCenter();
         yw player = fixturePlayer(world);
         place(player, p[0] + 0.5, p[1] + 1.5, p[2] + 0.5);
         player.aT.d = true;
+        for (int metadata : new int[] {9, 10}) {
+            aan retired = new aan(id, 1, metadata);
+            check(!egg.a(retired, player, world, p[0], p[1], p[2], 1) && retired.a == 1,
+                    "saved siege egg cannot spawn or consume its stack");
+        }
         // Use the actual item entry point, with the viewer aimed into open chamber water.
         int consumed = 0;
         for (int slot = 0; slot < site.count(); slot++) if (site.consumed(slot)) consumed++;

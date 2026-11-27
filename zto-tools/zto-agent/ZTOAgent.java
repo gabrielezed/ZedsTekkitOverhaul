@@ -110,16 +110,16 @@ public final class ZTOAgent {
     private static volatile Object stillWater, movingWater;
     private static volatile WeakReference<BiPredicate<Object, int[]>> waterFace = new WeakReference<>(null);
 
-    public static void registerWaterTopFace(Object still, Object moving, BiPredicate<Object, int[]> callback) {
+    public static void registerWaterFaces(Object still, Object moving, BiPredicate<Object, int[]> callback) {
         stillWater = still;
         movingWater = moving;
         waterFace = new WeakReference<>(callback);
     }
 
-    public static boolean waterTopFace(boolean nativeFace, Object fluid, Object access, int x, int y, int z) {
+    public static boolean waterVisibleFace(boolean nativeFace, Object fluid, Object access, int x, int y, int z, int side) {
         if (!nativeFace || fluid != stillWater && fluid != movingWater) return nativeFace;
         BiPredicate<Object, int[]> callback = waterFace.get();
-        return callback == null || callback.test(access, new int[] {x, y, z});
+        return callback == null || callback.test(access, new int[] {x, y, z, side});
     }
 
     private ZTOAgent() {}

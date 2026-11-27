@@ -13,8 +13,10 @@ import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.survival.CreatureEggs;
 
 final class CreativeCatalog {
+    private static boolean auditedEggs;
     final CreativeCategories.Tab[] tabs = CreativeCategories.tabs();
 
     static List<?> readLegacyEntries(Container container) throws ReflectiveOperationException {
@@ -37,6 +39,11 @@ final class CreativeCatalog {
                 addEntries(Collections.singletonList(new ItemStack(block)), seen);
             }
         }
+        addEntries(CreatureEggs.entries(), seen);
+        if (!auditedEggs) {
+            CreatureEggs.audit();
+            auditedEggs = true;
+        }
         addEntries(readNeiEntries(), seen);
     }
 
@@ -58,6 +65,7 @@ final class CreativeCatalog {
             if (!(candidate instanceof ItemStack)) continue;
             ItemStack stack = (ItemStack) candidate;
             if (stack.itemID <= 0 || stack.itemID >= Item.itemsList.length || stack.getItem() == null) continue;
+            if (CreatureEggs.isRetired(stack)) continue;
             List<Entry> variants = seen.get(stack.itemID);
             if (variants == null) {
                 variants = new ArrayList<Entry>();

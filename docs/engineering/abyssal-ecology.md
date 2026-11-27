@@ -1,6 +1,8 @@
 # Abyssal ecology
 
-The open ocean supports rare encounters with familiar undead. The deep Trench favors predators. An Observatory discovered under layout revision two has a finite enderic population. Diving gear, Tekkit armor and player-made refuges give different ways to explore these habitats.
+Revision-three Observatory patrols use 8–12 finite slots and a minimum 160-tick successful admission interval. The station separation and view check distribute arrivals around the layout. The old sites keep their original slot counts and bit masks. See [Abyssal Enderkin](abyssal-enderkin.md) and [buried architecture](abyssal-architecture.md).
+
+The open ocean supports rare encounters with familiar undead. The deep Trench favors predators. An Observatory discovered under layout revision two or three has a finite enderic population. Diving gear, Tekkit armor and player-made refuges give different ways to explore these habitats.
 
 | Display name | Native registration | Habitat and role |
 | --- | --- | --- |

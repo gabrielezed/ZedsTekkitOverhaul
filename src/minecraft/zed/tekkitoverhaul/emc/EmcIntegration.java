@@ -15,12 +15,32 @@ public final class EmcIntegration {
     private Ee2EmcAdapter ee2;
     private boolean done;
 
+    public void protectBeforeFirstWorld() {
+        try {
+            ee2 = new Ee2EmcAdapter();
+            protect();
+        } catch (ClassNotFoundException absent) {
+            done = true;
+        } catch (Exception failure) {
+            ModLoader.getLogger().log(Level.WARNING, "[ZTO] Early EE2 scarcity protection failed", failure);
+        } catch (LinkageError failure) {
+            ModLoader.getLogger().log(Level.WARNING, "[ZTO] Early EE2 scarcity protection failed", failure);
+        }
+    }
+
+    private void protect() throws IllegalAccessException {
+        Map<Integer, Map<Integer, Integer>> values = ee2.snapshot();
+        EnderPearlScarcity.protect(values);
+        ee2.publish(values);
+    }
+
     public void onGameTick(File gameDirectory, String profileText) {
         if (done) return;
         try {
             if (ee2 == null) ee2 = new Ee2EmcAdapter();
             if (!ee2.isReady()) return;
             done = true;
+            protect();
             initialize(new File(gameDirectory, "config"), profileText);
         } catch (ClassNotFoundException absent) {
             done = true;
@@ -63,6 +83,8 @@ public final class EmcIntegration {
         for (EmcProfile.Rule rule : profile.rules) {
             try {
                 int id = EmcIdentity.resolve(rule);
+                if (EnderPearlScarcity.protectedItem(id) && rule.action == EmcProfile.Action.SET)
+                    throw new IllegalArgumentException("Ender Pearl and Eye of Ender EMC are reserved for exploration");
                 rules.stage(rule, id, ee2.isCollectorFuel(id));
                 resolved.put(rule, id);
             } catch (IllegalArgumentException failure) {
@@ -76,6 +98,7 @@ public final class EmcIntegration {
                 throw invalid(entry.getKey(), failure);
             }
         }
+        EnderPearlScarcity.protect(candidate);
         ee2.publish(candidate);
         ModLoader.getLogger().info("[ZTO] EMC applied " + resolved.size() + " profile rules");
     }

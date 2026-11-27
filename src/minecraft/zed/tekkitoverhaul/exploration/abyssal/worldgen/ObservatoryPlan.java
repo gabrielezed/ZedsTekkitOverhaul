@@ -10,9 +10,13 @@ import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry.MaterialType;
 class ObservatoryPlan {
     static final int REVISION = 1;
     static final int UNTOUCHED = 0, WATER = 1, BRICK = 2, ERODED = 3, STONE = 4, SILT = 5, LAMP = 6, SHELL = 7, CORAL = 8;
+    static final int STAIRS = 9, ERODED_STAIRS = 10, SLAB = 11, PILLAR = 12, CARVED = 13,
+            FRIEZE = 14, GRATE = 15, PEDESTAL = 16;
     private static final MaterialType[] MATERIALS = {null, null, MaterialType.BRICKS,
         MaterialType.ERODED_BRICKS, MaterialType.STONE, MaterialType.SILT, MaterialType.LAMP,
-        MaterialType.SHELLSTONE, MaterialType.PETRIFIED_CORAL};
+        MaterialType.SHELLSTONE, MaterialType.PETRIFIED_CORAL, MaterialType.STAIRS,
+        MaterialType.ERODED_STAIRS, MaterialType.SLAB, MaterialType.PILLAR, MaterialType.CARVED,
+        MaterialType.FRIEZE, MaterialType.GRATE, MaterialType.PEDESTAL};
 
     final long id;
     final int x, z, y, rotation, length, width;
@@ -63,6 +67,8 @@ class ObservatoryPlan {
     }
 
     int revision() { return REVISION; }
+    int population() { return 16 + (int) (id & 3); }
+    int metadata(int cell, int u, int v) { return 0; }
 
     int[] station(int slot) {
         int[] station = stations[slot];

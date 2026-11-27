@@ -2,6 +2,8 @@
 
 The EMC module uses the legacy client game tick after EE2 reports external initialization. It has no hard EE2 dependency. If the EE2 classes are absent, the module skips initialization. The adapter is scoped to the inspected EE2 1.4.6.5 client and single-player use. Dedicated server behavior needs separate lifecycle verification.
 
+Survival 0.5.1-alpha.4 applies the mandatory Ender Pearl and Eye of Ender exclusion before the first world and after external mod initialization. AUDIT records the protected effective baseline. An explicit SET for either identity is rejected even in a custom profile. [Progression sources and pinned verification](ender-pearl-scarcity.md)
+
 Set `emc.profile` in the [unified configuration](../agents/configuration.md) and restart. The empty value selects the compatibility defaults. The following setting enables baseline audit. Existing UTF-8 `ZedsTekkitOverhaul-emc.txt` files are imported once on upgrade.
 
 ```text

@@ -124,6 +124,15 @@ public final class ZtoConfig {
         abyssalIds.put("item.luminousPolyp", values.item("luminousPolyp", 22021));
         abyssalIds.put("item.kelpFrond", values.item("kelpFrond", 22017));
         abyssalIds.put("item.abyssalShell", values.item("abyssalShell", 22022));
+        abyssalIds.put("block.abyssalStairs", values.block("abyssalStairs", 3044));
+        abyssalIds.put("block.erodedAbyssalStairs", values.block("erodedAbyssalStairs", 3045));
+        abyssalIds.put("block.abyssalSlab", values.block("abyssalSlab", 3046));
+        abyssalIds.put("block.abyssalPillar", values.block("abyssalPillar", 3047));
+        abyssalIds.put("block.abyssalCarved", values.block("abyssalCarved", 3048));
+        abyssalIds.put("block.abyssalFrieze", values.block("abyssalFrieze", 3049));
+        abyssalIds.put("block.abyssalGrate", values.block("abyssalGrate", 3050));
+        abyssalIds.put("block.abyssalPedestal", values.block("abyssalPedestal", 3051));
+        abyssalIds.put("item.creatureEgg", values.item("creatureEgg", 22023));
         motorboatEntity = values.integer("entity.motorboat", 240, 1, 254, false);
         for (DistillationPartType type : DistillationPartType.values()) {
             parts[type.index] = values.block(type.modelName, 3010 + type.index);

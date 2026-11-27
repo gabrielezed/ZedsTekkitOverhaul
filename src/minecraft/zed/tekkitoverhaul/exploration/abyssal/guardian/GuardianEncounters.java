@@ -6,6 +6,7 @@ import net.minecraft.src.EntityLiving;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ModLoader;
 import net.minecraft.src.World;
+import net.minecraft.src.Vec3D;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites.Site;
@@ -21,6 +22,7 @@ public final class GuardianEncounters {
         register(EntityDiverZombie.class, EntityDiverZombie.NAME, "Diver Zombie");
         register(EntityDiverSkeleton.class, EntityDiverSkeleton.NAME, "Diver Skeleton");
         register(EntityAbyssalEnderkin.class, EntityAbyssalEnderkin.NAME, "Abyssal Enderkin");
+        register(EntityAbyssalCustodian.class, EntityAbyssalCustodian.NAME, "Abyssal Custodian");
         ModLoader.registerEntityID(DiverArrow.class, "ZTO.DiverArrow", ModLoader.getUniqueEntityId());
     }
 
@@ -36,13 +38,18 @@ public final class GuardianEncounters {
         int x = SwimRoute.floor(player.posX), z = SwimRoute.floor(player.posZ);
         Site site = ObservatorySites.nearby(world, x, z);
         if (site != null && site.excludesWild(x, z)) {
-            if (site.ready(world)) materialize(world, player, site);
+            if (site.ready(world)) {
+                EntityAbyssalCustodian.admit(world, player, site);
+                materialize(world, player, site);
+            }
         } else if (world.getWorldTime() % 320 == 0) wild(world, player, x, z);
     }
 
     private static void materialize(World world, EntityPlayer player, Site site) {
+        long tick = world.getWorldTime();
+        if (!site.canMaterialize(tick)) return;
         for (int slot = 0; slot < site.count(); slot++) {
-            if (site.consumed(slot)) continue;
+            if (site.consumed(slot) || site.roomCleared(slot)) continue;
             int[] position = site.home(slot);
             double distance = player.getDistanceSq(position[0] + 0.5, position[1], position[2] + 0.5);
             if (distance < 8 * 8 || distance > 29 * 29) continue;
@@ -59,11 +66,21 @@ public final class GuardianEncounters {
             for (int[] offset : ALTERNATIVES) {
                 actor.setPosition(position[0] + 0.5 + offset[0], position[1] + 0.08 + offset[1],
                         position[2] + 0.5 + offset[2]);
-                if (!SwimRoute.canInsert(actor)) continue;
-                if (site.reserve(slot) && !world.spawnEntityInWorld(actor)) site.finish(slot, false);
+                if (!SwimRoute.canInsert(actor) || inView(actor, player)) continue;
+                if (site.reserve(slot)) {
+                    site.materialized(tick);
+                    if (!world.spawnEntityInWorld(actor)) site.finish(slot, false);
+                }
                 return;
             }
         }
+    }
+
+    private static boolean inView(EntityLiving actor, EntityPlayer player) {
+        Vec3D look = player.getLook(1);
+        double dx = actor.posX - player.posX, dy = actor.posY - player.posY, dz = actor.posZ - player.posZ;
+        return dx * look.xCoord + dy * look.yCoord + dz * look.zCoord
+                > 0.65 * Math.sqrt(dx * dx + dy * dy + dz * dz) && AquaticPursuit.visible(actor, player);
     }
 
     private static void wild(World world, EntityPlayer player, int x, int z) {
@@ -117,6 +134,28 @@ public final class GuardianEncounters {
             if (actor.engages(player) && (!casting || actor.casting() > 0)) count++;
         }
         return count;
+    }
+
+    static boolean mayEngage(EntityAbyssalEnderkin actor, EntityPlayer player) {
+        int limit = custodianPressure(player) > 0 ? 2 : 3;
+        for (Object entry : player.worldObj.getEntitiesWithinAABB(EntityAbyssalEnderkin.class,
+                player.boundingBox.expand(32, 32, 32))) {
+            EntityAbyssalEnderkin ally = (EntityAbyssalEnderkin) entry;
+            if (ally != actor && ally.engages(player) && (!actor.engages(player) || ally.entityId < actor.entityId)
+                    && --limit == 0) return false;
+        }
+        return true;
+    }
+
+    static int castLimit(EntityPlayer player) { return custodianPressure(player) == 2 ? 1 : 2; }
+
+    private static int custodianPressure(EntityPlayer player) {
+        int pressure = 0;
+        for (Object entry : player.worldObj.getEntitiesWithinAABB(EntityAbyssalCustodian.class,
+                player.boundingBox.expand(19, 19, 19))) {
+            pressure = Math.max(pressure, ((EntityAbyssalCustodian) entry).combatPressure(player));
+        }
+        return pressure;
     }
 
     static int engagements(EntityPlayer player) {

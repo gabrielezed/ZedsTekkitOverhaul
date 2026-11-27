@@ -104,7 +104,7 @@ public final class ObservatorySites {
         int x = gx * GRID + 136 + (int) ((id >>> 8) % 241);
         int z = gz * GRID + 136 + (int) ((id >>> 24) % 241);
         if (TrenchRegion.influence(seed, x, z) < 0.77 || TrenchRegion.relief(seed, x, z) > 31) return null;
-        return new ObservatoryPlan(id, x, z, 0);
+        return new ObservatoryPlanTwo(id, x, z, 0);
     }
 
     static Site prepare(World world, int cx, int cz) {
@@ -126,7 +126,7 @@ public final class ObservatorySites {
                 cache(world).put(key(gx, gz), UNAVAILABLE);
                 return null;
             }
-            Site result = new Site(new ObservatoryPlan(candidate.id, candidate.x, candidate.z, y), file);
+            Site result = new Site(new ObservatoryPlanTwo(candidate.id, candidate.x, candidate.z, y), file);
             result.save();
             cache(world).put(key(gx, gz), result);
             return result;
@@ -153,12 +153,16 @@ public final class ObservatorySites {
         DataInputStream stream = null;
         try {
             stream = new DataInputStream(Files.newInputStream(file.toPath()));
-            if (stream.readInt() != MAGIC || stream.readInt() != ObservatoryPlan.REVISION
-                    || stream.readLong() != candidate.id || stream.readInt() != candidate.x
-                    || stream.readInt() != candidate.z) throw new IOException("Unrecognized site header");
+            if (stream.readInt() != MAGIC) throw new IOException("Unrecognized site header");
+            int revision = stream.readInt();
+            if ((revision != 1 && revision != 2) || stream.readLong() != candidate.id
+                    || stream.readInt() != candidate.x || stream.readInt() != candidate.z)
+                throw new IOException("Unrecognized site revision or identity");
             int floor = stream.readInt();
             if (floor < MIN_FLOOR || floor > MAX_FLOOR) throw new IOException("Invalid floor");
-            found = new Site(new ObservatoryPlan(candidate.id, candidate.x, candidate.z, floor), file);
+            ObservatoryPlan frozen = revision == 1 ? new ObservatoryPlan(candidate.id, candidate.x, candidate.z, floor)
+                    : new ObservatoryPlanTwo(candidate.id, candidate.x, candidate.z, floor);
+            found = new Site(frozen, file);
             found.slices = stream.readLong();
             found.consumed = stream.readInt();
             found.dead = stream.readInt();
@@ -283,11 +287,33 @@ public final class ObservatorySites {
             section.setExtBlockMetadata(x, y & 15, z, 0);
             section.setExtBlocklightValue(x, y & 15, z, 0);
         }
+        int lamp = ObservatoryPlan.material(ObservatoryPlan.LAMP);
+        int emission = Block.lightValue[lamp];
         for (int i = 0; i < writes.length; i++) {
             if (writes[i] == ObservatoryPlan.LAMP)
-                AbyssalDecoration.light(chunk, i & 15, plan.y + (i >> 8) - FOUNDATION, (i >> 4) & 15, 5);
+                AbyssalDecoration.light(chunk, i & 15, plan.y + (i >> 8) - FOUNDATION, (i >> 4) & 15, emission);
         }
+        if (plan.revision() == 2) lightAcrossSeams(chunk, plan, emission);
         STAMPS.put(chunk, plan.id);
+    }
+
+    /** Native source water absorbs three light levels, so one submerged neighbor can receive lamp light. */
+    private static void lightAcrossSeams(Chunk chunk, ObservatoryPlan plan, int emission) {
+        int startX = chunk.xPosition << 4, startZ = chunk.zPosition << 4;
+        for (int side = 0; side < 4; side++) for (int i = 0; i < 16; i++) {
+            int x = side < 2 ? (side == 0 ? 0 : 15) : i;
+            int z = side < 2 ? i : (side == 2 ? 0 : 15);
+            int otherX = startX + x + (side == 0 ? -1 : side == 1 ? 1 : 0);
+            int otherZ = startZ + z + (side == 2 ? -1 : side == 3 ? 1 : 0);
+            int u = plan.across(otherX, otherZ), v = plan.along(otherX, otherZ);
+            for (int h = 0; h <= 11; h++) {
+                int y = plan.y + h;
+                if (chunk.getBlockID(x, y, z) != Block.waterStill.blockID
+                        || plan.cell(u, h, v, h) != ObservatoryPlan.LAMP) continue;
+                int light = emission - Math.max(1, chunk.getBlockLightOpacity(x, y, z));
+                if (light > 0) AbyssalDecoration.light(chunk, x, y, z, light);
+            }
+        }
     }
 
     private static boolean replaceable(int id) {
@@ -351,7 +377,8 @@ public final class ObservatorySites {
         }
 
         public long identity() { return plan.id; }
-        public String description(int x, int z) { return describe(plan, x, z, "Site r" + ObservatoryPlan.REVISION); }
+        public int revision() { return plan.revision(); }
+        public String description(int x, int z) { return describe(plan, x, z, "Site r" + revision()); }
         boolean coversColumn(int x, int z) { return !failed && plan.coversColumn(x, z); }
         public int count() { return 16 + (int) (plan.id & 3); }
         public boolean complete() { return !failed && slices == plan.allSlices(); }
@@ -382,26 +409,10 @@ public final class ObservatorySites {
             saveChange();
         }
 
-        public int[] home(int slot) {
-            int[] station = plan.stations[slot];
-            return plan.position(station[0], station[1], station[2]);
-        }
-
-        public int[] arenaCorner(boolean far) {
-            ObservatoryPlan.Room room = plan.arena;
-            return far ? plan.position(room.right - 1, room.roof - 1, room.last - 1)
-                    : plan.position(room.left + 1, room.floor + 1, room.first + 1);
-        }
-
-        public int[] arenaEntry(boolean side) {
-            ObservatoryPlan.Room room = plan.arena;
-            return side ? plan.position(room.left, 2, room.first + 4) : plan.position(0, 2, room.first);
-        }
-
-        public int[] arenaCenter() {
-            ObservatoryPlan.Room room = plan.arena;
-            return plan.position(0, (room.floor + room.roof) / 2, (room.first + room.last) / 2);
-        }
+        public int[] home(int slot) { return plan.station(slot); }
+        public int[] arenaCorner(boolean far) { return plan.arenaCorner(far); }
+        public int[] arenaEntry(boolean side) { return plan.arenaEntry(side); }
+        public int[] arenaCenter() { return plan.arenaCenter(); }
 
         public boolean excludesWild(int x, int z) {
             return x >= plan.minX - 12 && x <= plan.maxX + 12 && z >= plan.minZ - 12 && z <= plan.maxZ + 12;
@@ -432,7 +443,7 @@ public final class ObservatorySites {
             DataOutputStream stream = new DataOutputStream(output);
             try {
                 stream.writeInt(MAGIC);
-                stream.writeInt(ObservatoryPlan.REVISION);
+                stream.writeInt(plan.revision());
                 stream.writeLong(plan.id);
                 stream.writeInt(plan.x);
                 stream.writeInt(plan.z);

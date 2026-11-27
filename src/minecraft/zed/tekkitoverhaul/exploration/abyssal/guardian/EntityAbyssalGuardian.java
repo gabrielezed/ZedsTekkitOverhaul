@@ -16,9 +16,9 @@ public final class EntityAbyssalGuardian extends EntityMob {
     public static final String TEXTURE = "/zed/textures/abyssal/guardian.png";
     private static final String SOUND = "zto.guardian.";
     private static final int WATCH_STATE = 20;
-    private static final int DETECT = 16, LEASH = 28;
+    private static final int DETECT = 18, LEASH = 28;
     private static final int WINDUP_TICKS = 10, LUNGE_TICKS = 8, RECOVERY_TICKS = 32;
-    private static final double CRUISE = 0.14, CHASE = 0.22, BURST = 0.38;
+    private static final double CRUISE = 0.14, CHASE = 0.23, BURST = 0.38;
     private static final double HIT_RANGE = 1.45;
 
     public enum State { PATROL, ALERT, PURSUE, WIND_UP, LUNGE, RECOVER, RETURN }
@@ -35,7 +35,7 @@ public final class EntityAbyssalGuardian extends EntityMob {
         super(world);
         setSize(0.68F, 0.70F);
         texture = TEXTURE;
-        attackStrength = 3;
+        attackStrength = 4;
     }
 
     @Override protected void entityInit() {
@@ -43,7 +43,7 @@ public final class EntityAbyssalGuardian extends EntityMob {
         dataWatcher.addObject(WATCH_STATE, Byte.valueOf((byte) 0));
     }
 
-    @Override public int getMaxHealth() { return 16; }
+    @Override public int getMaxHealth() { return 20; }
     @Override public boolean canBreatheUnderwater() { return true; }
     @Override public boolean handleWaterMovement() {
         return worldObj.handleMaterialAcceleration(boundingBox.contract(0.01, 0.08, 0.01), Material.water, this);
@@ -87,7 +87,7 @@ public final class EntityAbyssalGuardian extends EntityMob {
 
     private Site site() {
         Site result = ObservatorySites.nearby(worldObj, homeX, homeZ);
-        return result != null && result.identity() == siteId && slot < result.count() ? result : null;
+        return result != null && result.identity() == siteId && result.revision() == 1 && slot < result.count() ? result : null;
     }
 
     @Override public void onUpdate() {
@@ -219,7 +219,7 @@ public final class EntityAbyssalGuardian extends EntityMob {
             goalX = homeX + 0.5 + rand.nextInt(radius * 2 + 1) - radius;
             goalY = homeY + 0.08 + rand.nextInt(9) - 4;
             goalZ = homeZ + 0.5 + rand.nextInt(radius * 2 + 1) - radius;
-            if (!SwimRoute.clear(worldObj, goalX, goalY, goalZ)) {
+            if (!SwimRoute.clear(this, goalX, goalY, goalZ)) {
                 goalX = homeX + 0.5;
                 goalY = homeY + 0.08;
                 goalZ = homeZ + 0.5;
@@ -234,7 +234,7 @@ public final class EntityAbyssalGuardian extends EntityMob {
         double dx = target.posX - posX, dy = y - posY, dz = target.posZ - posZ;
         double range = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (range > 0.02 && range < 3.1 && visible(target)
-                && SwimRoute.swept(worldObj, posX, posY, posZ, dx * 0.85, dy * 0.85, dz * 0.85)) {
+                && SwimRoute.swept(this, posX, posY, posZ, dx * 0.85, dy * 0.85, dz * 0.85)) {
             attackX = dx / range;
             attackY = dy / range;
             attackZ = dz / range;
@@ -252,11 +252,11 @@ public final class EntityAbyssalGuardian extends EntityMob {
         double dx = target.posX - posX, dy = target.boundingBox.minY + 0.42 - posY, dz = target.posZ - posZ;
         if (!hit && dx * dx + dy * dy + dz * dz <= HIT_RANGE * HIT_RANGE
                 && dx * attackX + dy * attackY + dz * attackZ > -0.2 && visible(target)
-                && SwimRoute.swept(worldObj, posX, posY, posZ, dx * 0.8, dy * 0.8, dz * 0.8)) {
+                && SwimRoute.swept(this, posX, posY, posZ, dx * 0.8, dy * 0.8, dz * 0.8)) {
             hit = true;
             attackEntityAsMob(target);
             state(State.RECOVER, RECOVERY_TICKS);
-        } else if (--phaseTicks <= 0 || !SwimRoute.swept(worldObj, posX, posY, posZ,
+        } else if (--phaseTicks <= 0 || !SwimRoute.swept(this, posX, posY, posZ,
                 attackX * BURST, attackY * BURST, attackZ * BURST)) {
             state(State.RECOVER, RECOVERY_TICKS);
         } else thrust(attackX, attackY, attackZ, BURST);
@@ -267,23 +267,12 @@ public final class EntityAbyssalGuardian extends EntityMob {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    void thrust(double x, double y, double z, double speed) {
-        double length = Math.sqrt(x * x + y * y + z * z);
-        if (length < 0.001) return;
-        double force = Math.min(speed, length) / length;
-        motionX += (x * force - motionX) * 0.72;
-        motionY += (y * force - motionY) * 0.72;
-        motionZ += (z * force - motionZ) * 0.72;
-        face(x, y, z);
+    private void thrust(double x, double y, double z, double speed) {
+        SwimRoute.thrust(this, x, y, z, speed);
     }
 
     private void face(double x, double y, double z) {
-        float desired = (float) (Math.atan2(-x, z) * 180 / Math.PI);
-        float turn = desired - rotationYaw;
-        turn -= 360 * Math.floor((turn + 180) / 360);
-        rotationYaw += Math.max(-30, Math.min(30, turn));
-        float pitch = (float) (-Math.atan2(y, Math.hypot(x, z)) * 180 / Math.PI);
-        rotationPitch += (Math.max(-60, Math.min(60, pitch)) - rotationPitch) * 0.35F;
+        SwimRoute.face(this, x, y, z);
     }
 
     @Override public void moveEntityWithHeading(float strafe, float forward) {
@@ -291,22 +280,11 @@ public final class EntityAbyssalGuardian extends EntityMob {
             super.moveEntityWithHeading(0, 0);
             return;
         }
-        // Entity collision and native damage impulses still go through moveEntity.
-        if (SwimRoute.swept(worldObj, posX, posY, posZ, motionX, motionY, motionZ)) {
-            moveEntity(motionX, motionY, motionZ);
-        } else if (SwimRoute.swept(worldObj, posX, posY, posZ, 0, motionY, 0)) {
-            moveEntity(0, motionY, 0);
-            motionX *= 0.2;
-            motionZ *= 0.2;
-        } else {
-            motionX *= 0.2;
-            motionY *= 0.2;
-            motionZ *= 0.2;
-        }
-        double drag = state() == State.WIND_UP || state() == State.RECOVER ? 0.65 : 0.85;
-        motionX *= drag;
-        motionY *= drag;
-        motionZ *= drag;
+        SwimRoute.move(this, state() == State.WIND_UP || state() == State.RECOVER ? 0.65 : 0.85);
+    }
+
+    @Override public boolean addEntityID(NBTTagCompound tag) {
+        return !AquaticDevelopment.manual(this) && super.addEntityID(tag);
     }
 
     @Override public void writeEntityToNBT(NBTTagCompound tag) {

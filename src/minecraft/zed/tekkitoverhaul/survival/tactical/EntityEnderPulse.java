@@ -9,6 +9,7 @@ import net.minecraft.src.MovingObjectPosition;
 import net.minecraft.src.NBTTagCompound;
 import net.minecraft.src.Vec3D;
 import net.minecraft.src.World;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin;
 
 /** Short-lived local-world projectile with a fixed heading and one impact. */
 public final class EntityEnderPulse extends Entity {
@@ -16,7 +17,7 @@ public final class EntityEnderPulse extends Entity {
     public static final int DAMAGE = 2;
     public static final int LIFETIME = 19;
     private static final double HIT_MARGIN = 0.10D;
-    private EntitySkirmisher owner;
+    private EntityLiving owner;
 
     public EntityEnderPulse(World world) {
         super(world);
@@ -24,6 +25,11 @@ public final class EntityEnderPulse extends Entity {
     }
 
     public EntityEnderPulse(EntitySkirmisher shooter, double x, double y, double z,
+            double aimX, double aimY, double aimZ) {
+        this((EntityLiving) shooter, x, y, z, aimX, aimY, aimZ);
+    }
+
+    public EntityEnderPulse(EntityLiving shooter, double x, double y, double z,
             double aimX, double aimY, double aimZ) {
         this(shooter.worldObj);
         owner = shooter;
@@ -37,7 +43,9 @@ public final class EntityEnderPulse extends Entity {
         }
     }
 
-    public EntitySkirmisher getOwner() { return owner; }
+    public EntitySkirmisher getOwner() { return owner instanceof EntitySkirmisher ? (EntitySkirmisher) owner : null; }
+
+    public EntityLiving getShooter() { return owner; }
 
     @Override
     public void onUpdate() {
@@ -63,7 +71,8 @@ public final class EntityEnderPulse extends Entity {
         Vec3D start = Vec3D.createVector(posX, posY, posZ);
         Vec3D end = Vec3D.createVector(x, y, z);
         // The legacy world ray mutates its start vector.
-        MovingObjectPosition wall = worldObj.rayTraceBlocks(Vec3D.createVector(posX, posY, posZ), end);
+        boolean aquatic = owner instanceof EntityAbyssalEnderkin;
+        MovingObjectPosition wall = worldObj.rayTraceBlocks_do_do(Vec3D.createVector(posX, posY, posZ), end, false, aquatic);
         Vec3D hit = wall == null ? null : wall.hitVec;
         double nearest = hit == null ? Double.POSITIVE_INFINITY : start.squareDistanceTo(hit);
         EntityLiving victim = null;
@@ -81,7 +90,7 @@ public final class EntityEnderPulse extends Entity {
             }
         }
         if (hit != null) {
-            if (victim != null) victim.attackEntityFrom(DamageSource.causeThrownDamage(this, owner), DAMAGE);
+            if (victim != null && !(aquatic && victim instanceof EntityAbyssalEnderkin)) victim.attackEntityFrom(DamageSource.causeThrownDamage(this, owner), DAMAGE);
             dissipate(hit);
         } else {
             setPosition(x, y, z);

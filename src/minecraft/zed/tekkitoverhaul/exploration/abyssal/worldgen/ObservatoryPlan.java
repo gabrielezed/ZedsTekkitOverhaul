@@ -7,7 +7,7 @@ import java.util.Random;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry.MaterialType;
 
 /** Revision-one architecture. Coordinates are relative to the entrance, facing inward. */
-final class ObservatoryPlan {
+class ObservatoryPlan {
     static final int REVISION = 1;
     static final int UNTOUCHED = 0, WATER = 1, BRICK = 2, ERODED = 3, STONE = 4, SILT = 5, LAMP = 6, SHELL = 7, CORAL = 8;
     private static final MaterialType[] MATERIALS = {null, null, MaterialType.BRICKS,
@@ -60,6 +60,26 @@ final class ObservatoryPlan {
         maxX = Math.max(a[0], b[0]);
         minZ = Math.min(a[2], b[2]);
         maxZ = Math.max(a[2], b[2]);
+    }
+
+    int revision() { return REVISION; }
+
+    int[] station(int slot) {
+        int[] station = stations[slot];
+        return position(station[0], station[1], station[2]);
+    }
+
+    int[] arenaCorner(boolean far) {
+        return far ? position(arena.right - 1, arena.roof - 1, arena.last - 1)
+                : position(arena.left + 1, arena.floor + 1, arena.first + 1);
+    }
+
+    int[] arenaEntry(boolean side) {
+        return side ? position(arena.left, 2, arena.first + 4) : position(0, 2, arena.first);
+    }
+
+    int[] arenaCenter() {
+        return position(0, (arena.floor + arena.roof) / 2, (arena.first + arena.last) / 2);
     }
 
     int[] position(int u, int height, int v) {

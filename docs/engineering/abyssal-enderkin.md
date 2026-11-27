@@ -12,4 +12,6 @@ The arm's pitch defines the charge effect and projectile origin. The source is o
 
 Revisions two and three use these minions. Egg-created actors use a temporary local home independent of site slots. An admitted site reserves one of its layout-specific slots before insertion. Native entity data holds the site identity, slot, home and health, while the site records reservations and terminal outcomes. Death and Peaceful retirement consume the slot. Eviction keeps living actors eligible for native reload. Older revisions continue to use their original Fangfish slots and records. [Layout and compatibility](sunken-observatory.md)
 
+Beta.1 adds cooler ribs on the fins and uses travel speed to weight the swim kick. The torso and balancing arm rise during casting while the firing-side pose keeps the original projectile alignment. Revision four uses the same finite patrol policy as revision three.
+
 The native probe verifies right-hand launch, live damage, masonry interception, bounded ecology and population persistence. Visual gill readability, bow and arm silhouettes, positional sound and balance remain playtest items.

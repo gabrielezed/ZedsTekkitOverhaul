@@ -129,15 +129,15 @@ try {
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
                 if ($Focus -in 'observatory','custodian') {
-                    $previews = Join-Path $root 'dist-zto/observatory-refinement-previews'
+                    $previews = Join-Path $root 'dist-zto/observatory-beta1-previews'
                     $ownerArgs = @()
                     if ($CustodianOwnerSave) { $ownerArgs += 'owner-save' }
                     & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $furnaceClasspath ObservatoryProbe $fixture.FullName $previews $Focus @ownerArgs
                     if ($LASTEXITCODE) { throw 'Native Observatory fixture failed.' }
                     if ($CustodianOwnerSave) {
                         Add-Type -AssemblyName System.IO.Compression.FileSystem
-                        $artifact = Join-Path $root "dist-zto/custodian-owner-$([guid]::NewGuid().ToString('N')).zip"
-                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Alpha4 Refinement'),
+                        $artifact = Join-Path $root "dist-zto/abyss-beta1-owner-$([guid]::NewGuid().ToString('N')).zip"
+                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Beauty of the Abyss'),
                             $artifact, [IO.Compression.CompressionLevel]::Optimal, $true)
                         Write-Output "Owner save: $artifact"
                     }

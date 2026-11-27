@@ -146,6 +146,10 @@ public final class Capture {
         ModelBase model = (ModelBase) aquaticModel.newInstance();
         System.out.println("@abyssal neutral");
         model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        caster.motionX = 0.16;
+        System.out.println("@abyssal pursuit");
+        model.render(caster, 0, 0, 19, 0, -12, 0.0625F);
+        caster.motionX = 0;
         caster.hurtTime = 8;
         caster.maxHurtTime = 10;
         caster.attackedAtYaw = 55;
@@ -158,6 +162,9 @@ public final class Capture {
         casting.updateObject(20, Byte.valueOf((byte) 12));
         System.out.println("@abyssal casting");
         model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        casting.updateObject(20, Byte.valueOf((byte) 18));
+        System.out.println("@abyssal release");
+        model.render(caster, 0, 0, 28, 0, 0, 0.0625F);
         System.out.println("@enderman");
         new ModelEnderman().render(null, 0, 0, 0, 0, 0, 0.0625F);
         System.out.println("@player");
@@ -346,6 +353,17 @@ def lineup(frames, custodian):
         sheet.paste(card,(12+i*192,350))
         draw_ink.text((12+i*192,510),key, fill="#d9dfec")
     sheet.save(OUT / "enderic-family.png")
+
+    poses = Image.new("RGB", (720, 376), "#232938")
+    for i, (label, key, yaw) in enumerate((
+            ("Front", "neutral", 0), ("Side", "neutral", 90), ("Rear", "neutral", 180),
+            ("Pursuit", "pursuit", 35), ("Cast preparation", "casting", 35),
+            ("Pulse release", "release", 35), ("Damage", "hurt", 35), ("Recovery", "hurt settle", 35))):
+        card = Image.new("RGB", (178, 186), "#2d3a48")
+        draw(card, [float("inf")] * (178 * 186), frames["abyssal " + key], abyss, yaw, -8, 96, (89, 48))
+        ImageDraw.Draw(card).text((10, 166), label, fill="#d9dfec")
+        poses.paste(card, (180 * (i % 4), 188 * (i // 4)))
+    poses.save(OUT / "enderkin-poses.png")
 
 
 if __name__ == "__main__":

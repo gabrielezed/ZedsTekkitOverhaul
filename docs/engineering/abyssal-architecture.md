@@ -4,6 +4,8 @@ Revision three places the Observatory beneath the existing Trench seabed. The su
 
 The old layout hashes, physical revision-one and revision-two plans, finite slot masks and Custodian records keep their original interpretation. A newly reserved site never writes into a previously loaded or stored footprint. A native slice containing foreign blocks is vetoed rather than carving through them. See [Sunken Observatory](sunken-observatory.md) for the site contract.
 
+Revision four groups the portal, inner screen and vestibule using the surveyed approach datum. Gallery supports reuse bases, shafts and capitals. Slab soffits mark the main hall, and the Custodian chamber uses perimeter supports and a carved panel at its far end. Erosion follows continuous masonry patches with stronger exposure at low elevations. The two swim routes and the original arena volume remain available.
+
 ## Building palette
 
 All IDs are the configurable default block IDs in the local pack.

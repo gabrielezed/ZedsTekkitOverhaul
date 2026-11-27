@@ -55,8 +55,8 @@ final class CustodianProbe {
         world.n();
         ce.a.a();
         agp.a();
-        Files.createFile(new File(root, "ZTO Alpha4 Refinement/.zto-disposable-test").toPath());
-        check(new File(root, "ZTO Alpha4 Refinement/level.dat").isFile(), "owner fixture saved level.dat");
+        Files.createFile(new File(root, "ZTO Beauty of the Abyss/.zto-disposable-test").toPath());
+        check(new File(root, "ZTO Beauty of the Abyss/level.dat").isFile(), "owner fixture saved level.dat");
         System.out.println("PASS marked owner save on the surface above the buried entrance");
     }
 

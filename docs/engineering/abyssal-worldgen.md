@@ -31,9 +31,9 @@ Disk loading bypasses both callbacks, including for older unpopulated chunks. A 
 ## Habitat and density
 
 - Abyssal Stone coats two to four shallow layers. Shellstone favors 12- and 97-block fossil fields. Silt favors low or gently sloped terrain and combines 24- and 68-block sediment fields.
-- A 34- and 118-block woodland field favors Kelp on shelf floors at Y23–43. A separate 9-block colony field favors Fan Coral and Tube Sponge over rock and mostly Ribbon Algae over sediment. Fan orientation uses a seed bit.
-- Fossil outcrops use world-space anchors jittered on a 23-block grid. A 109-block habitat field varies their frequency. Individual anchors vary in orientation, footprint, relief and branch shape. Each chunk evaluates the portion within its own footprint and uses its own rooted seabed and water cells. Small masonry traces fit within one owned chunk.
-- The deepest areas favor open water with sparse Ghost Anemones and Abyssal Lamps. The lighting writes stay inside the owning chunk. The marine inset remains one block because the pending chunk cannot safely inspect a neighboring chunk's water or support.
+- World-space woodland fields at 42 and 119 blocks favor kelp on shelf floors at Y23–43. A smaller field creates variable tree-height stands and corridors with ribbon algae. Slope comes from the existing terrain halo.
+- Fossil formations share the jittered 23-block grid and a 109-block frequency field. Tapered ridges and spurs carry Shellstone strata, with occasional taller stone stacks rooted in the seabed. Each chunk evaluates and writes its portion using native extended block storage.
+- Deep rocky patches support groups of Ghost Anemones and Tube Sponges. The anemones provide localized native light. The one-block marine inset preserves actual lateral water checks in the pending chunk. Both planting and formation writes skip the Observatory construction columns.
 
 ## Developer locator and walkthrough
 

@@ -1,9 +1,16 @@
 # ZedsTekkitOverhaul changelog
 
+## 0.5.1-beta.1 — The Beauty of the Abyss
+
+- Compose new revision-four Sunken Observatories with surveyed portals, flooded vestibules, contextual masonry and more distinct interior landmarks.
+- Establish coherent kelp stands, deep luminous marine colonies, branching fossil deposits and rooted stone stacks. Natural seabed decoration no longer generates freestanding Abyssal Lamps.
+- Refine the Enderkin fin and Custodian tentacle textures and animate swimming, casting preparation and attack transitions.
+- Preserve prior layout geometry, finite populations, encounter records and nonrepeatable pearl rewards. This version is a trial pending graphical acceptance.
+
 ## 0.5.1-alpha.4 — The Abyssal Custodian
 
-- Add an articulated, transforming aquatic Custodian with four combat moves and two phases.
-- Bind a persistent Custodian to stamped revision-one and revision-two Observatories. On legitimate defeat, the site issues one vanilla Ender Pearl.
+- Add an articulated, transforming aquatic Custodian with two phases and five moves: Elongated Strike, Abyssal Repulsion, Riftstep, Compression and Enderic Resonance.
+- Bind a persistent Custodian to stamped Observatories, including the new buried revision-three plan. On legitimate defeat, the site issues one vanilla Ender Pearl.
 - Remove ordinary native Enderman pearls and protect Ender Pearls and Eyes of Ender from EE2 replication while preserving physical items and the native Eye of Ender recipe.
 - Add a marked owner save, native encounter and economy verification, and previews captured from the actual model. [Encounter](docs/engineering/abyssal-custodian.md) · [Scarcity](docs/engineering/ender-pearl-scarcity.md)
 

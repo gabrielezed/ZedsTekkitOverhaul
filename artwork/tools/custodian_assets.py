@@ -82,6 +82,12 @@ def atlas():
         r = 4 + i*3
         for side in (-1, 1):
             draw.line((x+8+side*2, y+r, x+8+side*(4+i//2), y+r-2), fill="#25232e")
+    for part in ("tentacle root", "tentacle joint", "tentacle taper", "tentacle tip"):
+        x, y, w, h = faces(*PARTS[part])[1]
+        for row in range(1, h - 1, 3):
+            draw.point((x + w // 2, y + row), fill="#494653")
+            if w >= 4:
+                draw.point((x + w // 2 - 1, y + row + 1), fill="#25232e")
     image.save(SOURCES / "custodian.png")
     eyes.save(SOURCES / "custodian_eyes.png")
 

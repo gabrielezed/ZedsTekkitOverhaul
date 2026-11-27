@@ -2,6 +2,10 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
+## Survival 0.5.1-alpha.3 · The Sunken Observatory
+
+New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Enderkin patrol newly generated Observatories. Fangfish and diving undead create rare encounters in ocean water. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Aquatic ecology](docs/engineering/abyssal-ecology.md)
+
 ## Survival 0.5.1-alpha.2 · The Abyss Below
 
 New Default Overworld oceans can contain the Abyssal Trench, with deep terraces, fossil formations, clustered marine life and weathered masonry. The Motorboat and diving equipment support expeditions to the biome. [World generation and owner walkthrough](docs/engineering/abyssal-worldgen.md) · [Decorative palette](docs/engineering/abyssal-decoration.md)

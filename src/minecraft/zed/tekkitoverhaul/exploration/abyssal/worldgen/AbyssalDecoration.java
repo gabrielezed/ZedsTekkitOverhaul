@@ -46,6 +46,7 @@ final class AbyssalDecoration {
                 int y = plan.floor[(z << 4) | x];
                 if (y == 0) continue;
                 int wx = startX + x, wz = startZ + z;
+                if (plan.observatory != null && plan.observatory.coversColumn(wx, wz)) continue;
                 long roll = TrenchRegion.hash(seed ^ 7781, wx, wz);
                 double ticket = TrenchRegion.unit(roll);
                 double forest = 0.64 * TrenchRegion.field(seed ^ 764, wx, wz, 34)
@@ -66,6 +67,7 @@ final class AbyssalDecoration {
         for (int z = 3; z <= 12; z++) for (int x = 3; x <= 12; x++) {
             int y = plan.floor[(z << 4) | x];
             if (y == 0 || y > 24) continue;
+            if (plan.observatory != null && plan.observatory.coversColumn(startX + x, startZ + z)) continue;
             long roll = TrenchRegion.hash(seed ^ 5719, startX + x, startZ + z);
             if ((roll & 2047) == 3 && MarineType.ANEMONE.placeInNewChunk(chunk, x, y + 1, z, 1, 0))
                 light(chunk, x, y + 1, z, 3);
@@ -126,6 +128,7 @@ final class AbyssalDecoration {
                 int peak = 2 + (int) ((roll >>> 35) & 7);
                 for (int z = Math.max(0, anchorZ - 6); z <= Math.min(15, anchorZ + 6); z++) {
                     for (int x = Math.max(0, anchorX - 6); x <= Math.min(15, anchorX + 6); x++) {
+                        if (plan.observatory != null && plan.observatory.coversColumn(startX + x, startZ + z)) continue;
                         int y = plan.floor[(z << 4) | x];
                         if (y < 15 || y > 44 || !coated(chunk.getBlockID(x, y, z))) continue;
                         int dx = x - anchorX, dz = z - anchorZ;
@@ -168,7 +171,7 @@ final class AbyssalDecoration {
         section.setExtBlockMetadata(x, y & 15, z, 0);
     }
 
-    private static void light(Chunk chunk, int x, int y, int z, int level) {
+    static void light(Chunk chunk, int x, int y, int z, int level) {
         ExtendedBlockStorage section = chunk.getBlockStorageArray()[y >> 4];
         if (section == null || section.getExtBlocklightValue(x, y & 15, z) >= level) return;
         section.setExtBlocklightValue(x, y & 15, z, level);

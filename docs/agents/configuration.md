@@ -67,6 +67,8 @@ Booleans accept either capitalization. Key codes use LWJGL values 0–255. Zero 
 
 New Default Overworld ocean generation uses `biome.abyssalTrench=40`. The loader appends the key for older configurations. IDs 0–254 are representable and an occupied slot stops biome registration with a diagnostic. Preserve the assigned biome ID for a save. [Abyssal world generation](../engineering/abyssal-worldgen.md).
 
+Observatories and Abyssal Guardians use the existing Trench biome setting and the matching ZTOAgent. Guardians persist under `ZTO.AbyssalGuardian` and receive an available runtime entity ID from FML. The Observatory adds no configuration keys. [Observatory records](../engineering/sunken-observatory.md#ownership-and-persistence)
+
 The alpha.2 decoration keys extend the block defaults with 3032–3043 and the item constructor defaults with 22017–22022. See the [complete key and ID table](../engineering/abyssal-decoration.md). Existing configurations receive the new keys while retaining their current assignments.
 
 Keep assigned IDs stable for existing worlds. Block IDs use 1–4095, flowing IDs use 1–4094, and item constructor IDs use 0–31743. Inventory item IDs are constructor IDs plus 256. Registry collisions still fail with a diagnostic. Restore the original assignment before opening saves after an ID error. Existing configurations receive missing Motorboat registry keys. The Motorboat saves its own fuel and bucket slots.

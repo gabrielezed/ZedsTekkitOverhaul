@@ -44,6 +44,12 @@ public final class AgentProbe {
                 byte[] trench = bytes(game.getInputStream(game.getEntry("aly.class")));
                 check(ZTOAgent.patchKnownClass("aly", trench, null, false, false) != null, "pinned terrain provider");
                 rejectFingerprint("aly", trench, null, false);
+                byte[] liquid = bytes(game.getInputStream(game.getEntry("vl.class")));
+                check(ZTOAgent.patchKnownClass("vl", liquid, null, false, false) != null, "pinned liquid renderer");
+                rejectFingerprint("vl", liquid, null, false);
+                byte[] anvil = bytes(game.getInputStream(game.getEntry("aiv.class")));
+                check(ZTOAgent.patchKnownClass("aiv", anvil, null, false, false) != null, "pinned Anvil queue");
+                rejectFingerprint("aiv", anvil, null, false);
                 byte[] spawner = bytes(game.getInputStream(game.getEntry("vf.class")));
                 check(ZTOAgent.patchKnownClass("vf", spawner, null, false, false) != null, "pinned natural spawner");
                 rejectFingerprint("vf", spawner, null, false);

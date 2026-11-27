@@ -5,7 +5,10 @@ import net.minecraft.src.GuiScreen;
 import net.minecraft.src.MathHelper;
 import net.minecraft.src.World;
 import org.lwjgl.input.Keyboard;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.AquaticDevelopment;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.AquaticDevelopment.Species;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.TrenchRegion;
 import zed.tekkitoverhaul.survival.aerial.EntityMagpie;
 import zed.tekkitoverhaul.survival.aerial.ForestWildlife;
@@ -21,6 +24,10 @@ final class GuiBiomeEcology extends GuiScreen {
     private String magpie;
     private int refreshTicks;
     private String trench;
+    private String observatory;
+    private String observatoryDetails, aquatic;
+    private Species species = Species.FANGFISH;
+    private boolean fixtureTools;
 
     GuiBiomeEcology(LocalLunarCalendar local, World world, GuiScreen parent) {
         this.local = local;
@@ -31,10 +38,17 @@ final class GuiBiomeEcology extends GuiScreen {
     @Override
     public void initGui() {
         if (Boolean.getBoolean("zto.dev")) {
-            controlList.add(new GuiButton(1, width / 2 - 110, height - 25, 105, 20, "Locate Trench"));
-            controlList.add(new GuiButton(0, width / 2 + 5, height - 25, 105, 20, "Debug Hub"));
+            int buttonWidth = Math.min(105, (width - 24) / 3);
+            controlList.add(new GuiButton(1, width / 2 - buttonWidth * 3 / 2 - 4, height - 25, buttonWidth, 20, "Locate Trench"));
+            controlList.add(new GuiButton(2, width / 2 - buttonWidth / 2, height - 25, buttonWidth, 20, "Observatory"));
+            controlList.add(new GuiButton(0, width / 2 + buttonWidth / 2 + 4, height - 25, buttonWidth, 20, "Debug Hub"));
         } else {
             controlList.add(new GuiButton(0, width / 2 - 50, height - 25, 100, 20, "Debug Hub"));
+        }
+        fixtureTools = AquaticDevelopment.disposable(world);
+        if (fixtureTools) {
+            controlList.add(new GuiButton(3, width / 2 - 111, height - 68, 118, 20, species.label));
+            controlList.add(new GuiButton(4, width / 2 + 10, height - 68, 101, 20, "Spawn in fixture"));
         }
         refresh();
     }
@@ -69,6 +83,28 @@ final class GuiBiomeEcology extends GuiScreen {
             mc.displayGuiScreen(parent);
         } else if (mc.thePlayer != null && mc.theWorld == world && !world.isRemote) {
             int x = MathHelper.floor_double(mc.thePlayer.posX), z = MathHelper.floor_double(mc.thePlayer.posZ);
+            if (button.id == 3) {
+                species = species.next();
+                button.displayString = species.label;
+                return;
+            }
+            if (button.id == 4) {
+                aquatic = AquaticDevelopment.spawn(world, mc.thePlayer, species);
+                observatory = observatoryDetails = null;
+                trench = null;
+                return;
+            }
+            if (button.id == 2) {
+                aquatic = AquaticDevelopment.inspect(world, mc.thePlayer);
+                ObservatorySites.Site site = ObservatorySites.nearby(world, x, z);
+                observatory = site == null ? ObservatorySites.locate(world, x, z) : site.description(x, z);
+                observatoryDetails = site == null ? null : site.status();
+                trench = null;
+                return;
+            }
+            observatory = null;
+            observatoryDetails = null;
+            aquatic = null;
             TrenchRegion region = AbyssalWorldgen.locate(world, x, z);
             trench = region == null ? "No planned Trench in search area"
                     : "Planned Trench: " + region.x + ", " + region.z + "  (" + Math.round(Math.hypot(
@@ -108,6 +144,10 @@ final class GuiBiomeEcology extends GuiScreen {
         line(wildlife.status(), 152);
         line(local.aerialSnapshot().preyStatus, 164);
         if (trench != null) line(trench, height - 42);
+        int footer = fixtureTools ? height - 75 : height - 32;
+        if (aquatic != null) line(aquatic, footer - 10);
+        if (observatoryDetails != null) line(observatoryDetails, footer - 22);
+        if (observatory != null) line(observatory, footer - (observatoryDetails == null ? 22 : 34));
         if (magpie != null && height >= 236) line("Nearby magpie: " + magpie, 176);
         super.drawScreen(mouseX, mouseY, partialTick);
     }

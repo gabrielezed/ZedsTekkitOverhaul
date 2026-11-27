@@ -83,7 +83,7 @@ public final class AbyssalWorldgen {
 
     public static boolean isTrench(int id) { return biome != null && biome.biomeID == id; }
 
-    private static boolean supported(World world) {
+    static boolean supported(World world) {
         return active && world.worldProvider.getClass() == WorldProviderSurface.class
                 && world.worldProvider.worldType == 0 && world.getWorldInfo().getTerrainType() == WorldType.DEFAULT;
     }
@@ -137,11 +137,25 @@ public final class AbyssalWorldgen {
     }
 
     private static Object generate(Object[] objects, int[] coordinates) {
-        if (coordinates != null)
-            return shape((World) objects[0], (byte[]) objects[1], (BiomeGenBase[]) objects[2],
-                    coordinates[0], coordinates[1]);
-        AbyssalDecoration.decorate((Chunk) objects[0], (Plan) objects[1], biome.biomeID);
+        if (coordinates != null) {
+            World world = (World) objects[0];
+            Plan plan = shape(world, (byte[]) objects[1], (BiomeGenBase[]) objects[2], coordinates[0], coordinates[1]);
+            if (plan != null) plan.observatory = ObservatorySites.prepare(world, coordinates[0], coordinates[1]);
+            return plan;
+        }
+        Chunk chunk = (Chunk) objects[0];
+        Plan plan = (Plan) objects[1];
+        AbyssalDecoration.decorate(chunk, plan, biome.biomeID);
+        if (plan != null && plan.observatory != null) ObservatorySites.build(chunk, plan, plan.observatory);
         return null;
+    }
+
+    /** Samples exactly the same trench envelope without requesting a chunk from the world. */
+    static Plan sample(World world, ChunkProviderGenerate provider, int cx, int cz) {
+        byte[] raw = new byte[32768];
+        provider.generateTerrain(cx, cz, raw);
+        BiomeGenBase[] biomes = world.getWorldChunkManager().getBiomeGenAt(null, cx << 4, cz << 4, 16, 16, false);
+        return shape(world, raw, biomes, cx, cz);
     }
 
     private static Plan shape(World world, byte[] terrain, BiomeGenBase[] biomes, int chunkX, int chunkZ) {
@@ -248,6 +262,7 @@ public final class AbyssalWorldgen {
         final long seed;
         final int[] floor = new int[256];
         final double[] influence = new double[256];
+        ObservatorySites.Site observatory;
 
         private final int[] envelope, nativeFloor;
 

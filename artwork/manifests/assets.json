@@ -375,5 +375,38 @@
     "palette": "abyssal",
     "origin": "zto-original",
     "jar": true
+  },
+  {
+    "id": "abyssal-guardian",
+    "source": "source/abyssal/guardian.png",
+    "runtime": "zed/textures/abyssal/guardian.png",
+    "size": [64, 64],
+    "alpha": "cutout",
+    "role": "Abyssal Guardian body, mineral brow, jaw, fins and articulated tail UVs",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "abyssal-diver-equipment",
+    "source": "source/abyssal/diver_equipment.png",
+    "runtime": "zed/textures/abyssal/diver_equipment.png",
+    "size": [64, 64],
+    "alpha": "cutout",
+    "role": "Diver mask, hose, cylinder, straps and fins",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
+    "id": "abyssal-enderkin",
+    "source": "source/abyssal/enderkin.png",
+    "runtime": "zed/textures/abyssal/enderkin.png",
+    "size": [64, 64],
+    "alpha": "cutout",
+    "role": "Abyssal Enderkin body, gills and casting arm UVs",
+    "palette": "abyssal",
+    "origin": "zto-original",
+    "jar": true
   }
 ]

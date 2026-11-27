@@ -1,6 +1,13 @@
 # ZedsTekkitOverhaul changelog
 
-## 0.5.1-alpha.2 — The Abyss Below (work in progress)
+## 0.5.1-alpha.3 — The Sunken Observatory
+
+- Generate rare flooded observatories in newly explored Abyssal Trench terrain. Each ruin includes alternative routes and a reserved chamber for alpha.4.
+- Add Fangfish, Diver Zombies and Diver Skeletons to natural ocean encounters. New Observatory sites use finite Abyssal Enderkin patrols with a one-handed cast. Revision-one sites retain their original populations.
+- Compose new Observatory layouts from flooded room and passage modules at varied elevations. Cull water top faces under solid abyssal masonry and initialize lamp light across slice boundaries.
+- Add a developer Observatory locator and native generation and persistence checks.
+
+## 0.5.1-alpha.2 — The Abyss Below
 
 - Add seven abyssal building materials, five submerged organisms and six resource items with original textures.
 - Add decorative crafting, support-aware underwater planting, four-segment Kelp and oriented Fan Coral.

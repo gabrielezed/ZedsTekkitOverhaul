@@ -14,6 +14,10 @@ The depth calculation blends the native floor toward a separate relief field. A 
 
 ## Runtime order
 
+The alpha.3 Observatory refinement audited the owner's archived revision-one playtest. Its saved position was near `-1170, 24.62, 788.53`. The flooded column contains stationary water with metadata zero through Y29, eroded masonry at Y30 and water again above the roof. The sampled area also includes 234 stationary-water cells directly beneath bricks or eroded bricks. OptiFine's pinned liquid renderer ordinarily emits a top quad under an opaque block. ZTO filters that one visibility result for water directly beneath opaque owned abyssal rock cubes. The fix keeps native water, open surfaces and unrelated solids, and is independent of the mask.
+
+Revision 2 redistributes existing level-five lamps as paired landmarks and doorway lights. The owned-slice light pass seeds the native block-light level and propagates into adjacent water with the native attenuation. A small plan-derived border pass initializes a receiving water cell across a chunk edge without loading its neighbor. Native lighting continues after generation.
+
 The pinned 1.2.5 client provides `aly.b(II)Lack;`. Tekkit's overlay supplies the extended Chunk implementation. The ZTOAgent checks the SHA-256 of the effective provider and both instruction sites before installing the patch. Missing or unsupported hooks keep native generation active and emit a diagnostic. No base game archives are modified.
 
 1. Native provider computes low-resolution biome-weighted noise and fills a legacy byte buffer. Native high-resolution biomes drive surface replacement and native bedrock placement.

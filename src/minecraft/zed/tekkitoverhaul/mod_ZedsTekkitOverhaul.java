@@ -37,7 +37,14 @@ import zed.tekkitoverhaul.hopper.HopperRegistry;
 import zed.tekkitoverhaul.exploration.underwater.UnderwaterRegistry;
 import zed.tekkitoverhaul.exploration.motorboat.MotorboatRegistry;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.exploration.abyssal.AbyssalWaterFaces;
 import zed.tekkitoverhaul.exploration.abyssal.worldgen.AbyssalWorldgen;
+import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.GuardianEncounters;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.client.GuardianWorldTick;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderAbyssalGuardian;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderAbyssalEnderkin;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.client.RenderDiver;
 import zed.tekkitoverhaul.exploration.abyssal.RenderMarineOrganism;
 import zed.tekkitoverhaul.exploration.motorboat.client.MotorboatClient;
 import zed.tekkitoverhaul.hopper.RenderHopper;
@@ -125,6 +132,10 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         MotorboatRegistry.register(settings);
         AbyssalRegistry.register(settings, ModLoader.getUniqueBlockModelID(this, false));
         AbyssalWorldgen.register(settings.abyssalId("biome.abyssalTrench"));
+        ObservatorySites.register();
+        AbyssalWaterFaces.register();
+        GuardianEncounters.register();
+        GuardianWorldTick.register(ModLoader.getMinecraftInstance());
         MotorboatClient.register(ModLoader.getMinecraftInstance());
         if (settings.creativeInventoryBackport) creativeInventory.register(this);
         DevBridge.startIfEnabled(getVersion(), LUNAR);
@@ -151,6 +162,9 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         RenderAerialPredator.register(renderers);
         RenderMagpie.register(renderers);
         MotorboatClient.registerRenderer(renderers);
+        RenderAbyssalGuardian.register(renderers);
+        RenderDiver.register(renderers);
+        RenderAbyssalEnderkin.register(renderers);
     }
 
     @Override

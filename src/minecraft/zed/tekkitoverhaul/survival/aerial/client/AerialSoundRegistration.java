@@ -18,7 +18,7 @@ public final class AerialSoundRegistration extends SoundHandlerAdaptor {
     private static final String[] ABYSSAL_ENDERKIN = {"ambient", "charge", "release", "hurt", "death"};
     private static final String[] CUSTODIAN = {"ambient", "hurt", "death", "awaken", "phase", "arrival",
             "strike_charge", "strike_release", "pressure_charge", "pressure_release", "blink_charge", "blink_release",
-            "resonance_charge", "resonance_release"};
+            "resonance_charge", "resonance_release", "compression_charge", "compression_release"};
     private static final AerialSoundRegistration HANDLER = new AerialSoundRegistration();
     private static boolean registered;
     private SoundPool installed;

@@ -25,23 +25,34 @@ final class CustodianArena {
     }
 
     boolean contains(double x, double y, double z, double height) {
-        double half = CustodianBalance.WIDTH * 0.5;
+        return contains(x, y, z, CustodianBalance.WIDTH, height);
+    }
+
+    boolean contains(double x, double y, double z, double width, double height) {
+        double half = width * 0.5;
         return x - half >= bounds.minX && x + half <= bounds.maxX && y >= bounds.minY
                 && y + height <= bounds.maxY && z - half >= bounds.minZ && z + half <= bounds.maxZ;
     }
 
-    double xWithin(double point) { return clamp(point, bounds.minX + 0.7, bounds.maxX - 0.7); }
-    double yWithin(double point) { return clamp(point, bounds.minY + 0.08, bounds.maxY - CustodianBalance.HEIGHT - 0.08); }
-    double zWithin(double point) { return clamp(point, bounds.minZ + 0.7, bounds.maxZ - 0.7); }
+    double xWithin(double point, double width) { return clamp(point, bounds.minX + width * 0.5 + 0.1, bounds.maxX - width * 0.5 - 0.1); }
+    double yWithin(double point, double height) { return clamp(point, bounds.minY + 0.08, bounds.maxY - height - 0.08); }
+    double zWithin(double point, double width) { return clamp(point, bounds.minZ + width * 0.5 + 0.1, bounds.maxZ - width * 0.5 - 0.1); }
 
     boolean landing(EntityAbyssalCustodian boss, double x, double y, double z) {
-        if (!contains(x, y, z, 3.1) || !SwimRoute.clear(boss, x, y, z)) return false;
-        if (!SwimRoute.clear(boss, x, y + 3.1 - CustodianBalance.HEIGHT, z)) return false;
+        return free(boss, x, y, z, CustodianBalance.WIDTH, CustodianBalance.HEIGHT + 0.3);
+    }
+
+    boolean free(EntityAbyssalCustodian boss, double x, double y, double z, double width, double height) {
+        if (!contains(x, y, z, width, height) || !SwimRoute.clear(boss, x, y, z, width, height)) return false;
         World world = boss.worldObj;
-        double half = CustodianBalance.WIDTH * 0.5;
-        AxisAlignedBB volume = AxisAlignedBB.getBoundingBoxFromPool(x - half, y, z - half, x + half, y + 3.1, z + half);
-        return world.getEntitiesWithinAABBExcludingEntity(boss, volume).isEmpty()
-                && world.getCollidingBoundingBoxes(boss, volume).isEmpty();
+        double half = width * 0.5;
+        AxisAlignedBB volume = AxisAlignedBB.getBoundingBoxFromPool(x - half, y, z - half, x + half, y + height, z + half);
+        if (!world.getCollidingBoundingBoxes(boss, volume).isEmpty()) return false;
+        for (Object object : world.getEntitiesWithinAABBExcludingEntity(boss, volume)) {
+            net.minecraft.src.Entity entity = (net.minecraft.src.Entity) object;
+            if (!entity.isDead && (entity.preventEntitySpawning || entity instanceof net.minecraft.src.EntityPlayer)) return false;
+        }
+        return true;
     }
 
     private static AxisAlignedBB bounds(double a, double b, double c, double x, double y, double z) {

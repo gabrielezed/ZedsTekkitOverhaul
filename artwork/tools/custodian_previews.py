@@ -11,6 +11,7 @@ from zipfile import ZipFile
 from PIL import Image, ImageDraw, ImageFont
 
 from custodian_assets import ART, SOURCES
+from enderic_art import NEAREST, THIEF_HEAD, SABOTEUR_HEAD, crop, donor, faces, swatches
 
 ROOT = ART.parent
 OUT = ART / "previews" / "custodian"
@@ -106,18 +107,41 @@ public final class Capture {
         field.setAccessible(true);
         DataWatcher watcher = new DataWatcher();
         field.set(actor, watcher);
-        for (int i = 20; i <= 26; i++) watcher.addObject(i, Integer.valueOf(0));
+        for (int i = 20; i <= 28; i++) watcher.addObject(i, Integer.valueOf(0));
+        watcher.updateObject(27, Integer.valueOf(Float.floatToIntBits(1)));
         frame(actor, "neutral", 1, 0, 0, 0, 0, 0);
         frame(actor, "contracted", 4 + Attack.PRESSURE.ordinal(), Attack.PRESSURE.windup - 1, 0, 0, 0, 0);
         frame(actor, "extended", 3, 12, 0, 0, 0, 0);
         frame(actor, "direct attack", 4, Attack.STRIKE.windup - 2, -1, 0, -4, 0);
         frame(actor, "fully extended arm", 4, Attack.STRIKE.windup + Attack.STRIKE.active - 1, -1, 4.85F, -4, 0);
         frame(actor, "radial pressure charge", 5, 21, 0, 0, 0, 0);
+        frame(actor, "pressure release", 5, Attack.PRESSURE.windup + 3, 0, 0, 0, 0);
         frame(actor, "teleport preparation", 6, Attack.BLINK.windup - 2, 0, 0, 0, 0);
         frame(actor, "teleport arrival", 6, Attack.BLINK.windup + 13, 0, 0, 0, 0);
         frame(actor, "resonance", 7, Attack.RESONANCE.windup - 1, 0, 0, 0, 0);
         frame(actor, "recovery", 4, Attack.STRIKE.windup + Attack.STRIKE.active + 6, 1, 2.42F, 2, 0);
         frame(actor, "defeated", 0, 0, 0, 0, 0, 15);
+        float[] sizes = {1, 0.70F, 0.38F, 0.80F};
+        String[] names = {"compression normal", "compression intermediate", "fully compressed", "re-expansion"};
+        for (int i = 0; i < sizes.length; i++) {
+            watcher.updateObject(27, Integer.valueOf(Float.floatToIntBits(sizes[i])));
+            frame(actor, names[i], 4 + Attack.COMPRESSION.ordinal(), 23 + i*15, 0, 0, 0, 0);
+        }
+        zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin caster =
+                (zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin)
+                allocator.allocateInstance(zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin.class);
+        DataWatcher casting = new DataWatcher();
+        casting.addObject(20, Byte.valueOf((byte) 0));
+        field.set(caster, casting);
+        java.lang.reflect.Constructor<?> aquaticModel =
+                Class.forName(RenderAbyssalEnderkin.class.getName() + "$CasterModel").getDeclaredConstructor();
+        aquaticModel.setAccessible(true);
+        ModelBase model = (ModelBase) aquaticModel.newInstance();
+        System.out.println("@abyssal neutral");
+        model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
+        casting.updateObject(20, Byte.valueOf((byte) 12));
+        System.out.println("@abyssal casting");
+        model.render(caster, 0, 0, 24, 0, 0, 0.0625F);
         System.out.println("@enderman");
         new ModelEnderman().render(null, 0, 0, 0, 0, 0, 0.0625F);
         System.out.println("@player");
@@ -222,36 +246,68 @@ def main():
     skin = Image.open(SOURCES / "custodian.png").convert("RGBA")
     eyes = Image.open(SOURCES / "custodian_eyes.png").convert("RGBA")
     views = [("Neutral front", "neutral", 0), ("Neutral rear", "neutral", 180),
-             ("Neutral side", "neutral", 90), ("Three-quarter", "neutral", 35)]
+             ("Neutral side", "neutral", 90), ("Three-quarter", "neutral", 35),
+             ("From above", "neutral", 26), ("From below", "neutral", 24)]
     views.extend((name.capitalize(), name, yaw) for name, yaw in (
         ("contracted", 28), ("extended", 25), ("direct attack", 35), ("fully extended arm", 70),
-        ("radial pressure charge", 30), ("teleport preparation", 37), ("teleport arrival", 30),
-        ("resonance", 23), ("recovery", 52), ("defeated", 16)))
-    sheet = Image.new("RGB", (1120, 4*252), "#111e28")
+        ("radial pressure charge", 30), ("pressure release", 34), ("teleport preparation", 37), ("teleport arrival", 30),
+        ("resonance", 23), ("recovery", 52), ("defeated", 16),
+        ("compression normal", 27), ("compression intermediate", 27), ("fully compressed", 27), ("re-expansion", 27)))
+    sheet = Image.new("RGB", (1120, ((len(views) + 3) // 4) * 252), "#111e28")
     font = ImageFont.load_default()
     for index, (label, name, yaw) in enumerate(views):
         card = Image.new("RGB", (278, 248), "#172a37")
         depth = [float("inf")] * (card.width * card.height)
-        anchor = (239 if name == "fully extended arm" else 139, 142)
-        draw(card, depth, frames[name], skin, yaw, -10, 49, anchor)
-        draw(card, depth, frames[name+" eyes"], eyes, yaw, -10, 49, anchor, True)
+        anchor = (221 if name == "fully extended arm" else 139, 157)
+        pitch = -45 if label == "From below" else 38 if label == "From above" else -10
+        draw(card, depth, frames[name], skin, yaw, pitch, 34, anchor)
+        draw(card, depth, frames[name+" eyes"], eyes, yaw, pitch, 34, anchor, True)
         ImageDraw.Draw(card).text((12, 223), label, font=font, fill="#d3e2eb")
         sheet.paste(card, (280*(index % 4), 252*(index // 4)))
     sheet.save(OUT / "poses.png")
 
-    scale = Image.new("RGB", (720, 345), "#172a37")
+    scale = Image.new("RGB", (720, 435), "#172a37")
     depth = [float("inf")] * (scale.width * scale.height)
     with ZipFile(ROOT / "jars/bin/minecraft.jar") as archive:
         for name, texture, x in (("player", "mob/char.png", 124), ("enderman", "mob/enderman.png", 357)):
             tex = Image.open(BytesIO(archive.read(texture))).convert("RGBA")
-            draw(scale, depth, frames[name], tex, 22, 0, 75, (x, 179))
-    draw(scale, depth, frames["neutral"], skin, 22, 0, 75, (594, 179))
-    draw(scale, depth, frames["neutral eyes"], eyes, 22, 0, 75, (594, 179), True)
+            draw(scale, depth, frames[name], tex, 22, 0, 75, (x, 260))
+    draw(scale, depth, frames["neutral"], skin, 22, 0, 75, (594, 260))
+    draw(scale, depth, frames["neutral eyes"], eyes, 22, 0, 75, (594, 260), True)
     ink = ImageDraw.Draw(scale)
-    ink.line((25, 292, 695, 292), fill="#455762")
+    ink.line((25, 373, 695, 373), fill="#455762")
     for x, label in ((124, "Native player"), (357, "Native Enderman"), (594, "Abyssal Custodian")):
-        ink.text((x, 316), label, anchor="mm", fill="#d3e2eb", font=font)
+        ink.text((x, 400), label, anchor="mm", fill="#d3e2eb", font=font)
     scale.save(OUT / "scale.png")
+    lineup(frames, skin)
+
+
+def lineup(frames, custodian):
+    sheet = Image.new("RGB", (930, 530), "#232938")
+    draw_ink = ImageDraw.Draw(sheet)
+    abyss = Image.open(SOURCES / "enderkin.png").convert("RGBA")
+    items = [("Thief", donor("thief"), THIEF_HEAD), ("Saboteur", donor("saboteur"), SABOTEUR_HEAD),
+             ("Revised Enderkin", abyss, (0,0,7,6,6)), ("Revised Custodian", custodian, (0,0,16,13,14))]
+    previous = os.environ.get("ZTO_REFINEMENT_BASELINE")
+    if previous:
+        with ZipFile(previous) as archive:
+            old = Image.open(BytesIO(archive.read("zed/textures/abyssal/enderkin.png"))).convert("RGBA")
+        items.insert(2, ("Previous Enderkin", old, (0,0,7,5,6)))
+    for i, (label, texture, head) in enumerate(items):
+        x = 12+184*i
+        tile = texture.resize((158,158), NEAREST)
+        sheet.paste(tile,(x,28),tile)
+        face = crop(texture, faces(*head)[1]).resize((140,92), NEAREST)
+        sheet.paste(face, (x,206), face)
+        draw_ink.text((x, 7), label, fill="#d9dfec")
+        for index,color in enumerate(swatches(texture)):
+            draw_ink.rectangle((x+index*23,308,x+index*23+21,329), fill=color[:3])
+    for i,(key,yaw) in enumerate((("abyssal neutral", 0), ("abyssal neutral", 90), ("abyssal casting", 35))):
+        card = Image.new("RGB",(180,160),"#2d3a48")
+        draw(card,[float("inf")]*(180*160),frames[key],abyss,yaw,-10,90,(90,40))
+        sheet.paste(card,(12+i*192,350))
+        draw_ink.text((12+i*192,510),key, fill="#d9dfec")
+    sheet.save(OUT / "enderic-family.png")
 
 
 if __name__ == "__main__":

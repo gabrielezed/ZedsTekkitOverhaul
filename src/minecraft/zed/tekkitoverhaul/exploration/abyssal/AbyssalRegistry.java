@@ -18,7 +18,15 @@ public final class AbyssalRegistry {
         PETRIFIED_CORAL("petrifiedCoral", "Petrified Coral", 3, 1.3F),
         BRICKS("abyssalBricks", "Abyssal Bricks", 4, 2.0F),
         ERODED_BRICKS("erodedAbyssalBricks", "Eroded Abyssal Bricks", 5, 1.8F),
-        LAMP("abyssalLamp", "Abyssal Lamp", 6, 1.0F);
+        LAMP("abyssalLamp", "Abyssal Lamp", 6, 1.0F),
+        STAIRS("abyssalStairs", "Abyssal Brick Stairs", 4, 2.0F),
+        ERODED_STAIRS("erodedAbyssalStairs", "Eroded Abyssal Brick Stairs", 5, 1.8F),
+        SLAB("abyssalSlab", "Abyssal Brick Slab", 4, 2.0F),
+        PILLAR("abyssalPillar", "Abyssal Pillar", 16, 2.0F),
+        CARVED("abyssalCarved", "Carved Abyssal Bricks", 18, 2.0F),
+        FRIEZE("abyssalFrieze", "Abyssal Frieze", 19, 2.0F),
+        GRATE("abyssalGrate", "Abyssal Grate", 20, 2.0F),
+        PEDESTAL("abyssalPedestal", "Abyssal Pedestal", 21, 2.0F);
 
         final String key, displayName;
         final int texture;
@@ -59,8 +67,15 @@ public final class AbyssalRegistry {
         MinecraftForgeClient.preloadTexture(BlockAbyssalMaterial.TEXTURE);
         for (MaterialType type : MaterialType.values()) {
             boolean sediment = type == MaterialType.SILT;
-            type.block = new BlockAbyssalMaterial(config.abyssalId("block." + type.key),
-                    type.texture, type.key, type.hardness, sediment, type == MaterialType.LAMP ? 5 : 0);
+            int id = config.abyssalId("block." + type.key);
+            switch (type) {
+                case STAIRS: type.block = new AbyssalArchitecture.Stairs(id, MaterialType.BRICKS.block, type.key); break;
+                case ERODED_STAIRS: type.block = new AbyssalArchitecture.Stairs(id, MaterialType.ERODED_BRICKS.block, type.key); break;
+                case SLAB: case GRATE: case PEDESTAL: type.block = new AbyssalArchitecture.Partial(id, type); break;
+                default:
+                    type.block = new BlockAbyssalMaterial(id, type.texture, type.key, type.hardness, sediment,
+                            type == MaterialType.LAMP ? 5 : 0);
+            }
             ModLoader.registerBlock(type.block);
             ModLoader.addName(type.block, type.displayName);
             MinecraftForge.setBlockHarvestLevel(type.block, sediment ? "shovel" : "pickaxe", 0);
@@ -88,6 +103,7 @@ public final class AbyssalRegistry {
                 MaterialType.BRICKS.block, Block.sand);
         ModLoader.addShapelessRecipe(new ItemStack(MaterialType.LAMP.block),
                 MaterialType.STONE.block, MarineType.ANEMONE.propagule);
+        AbyssalArchitecture.recipes();
         ModLoader.addShapelessRecipe(new ItemStack(shell), MaterialType.SHELLSTONE.block);
         ModLoader.addShapelessRecipe(new ItemStack(MaterialType.SHELLSTONE.block), shell,
                 MaterialType.STONE.block);

@@ -410,10 +410,21 @@
     "jar": true
   },
   {
+    "id": "abyssal-enderkin-eyes",
+    "source": "source/abyssal/enderkin_eyes.png",
+    "runtime": "zed/textures/abyssal/enderkin_eyes.png",
+    "size": [64, 64],
+    "alpha": "cutout",
+    "role": "Remapped Saboteur eye emission for the aquatic Enderkin",
+    "palette": "enderic",
+    "origin": "zto-original",
+    "jar": true
+  },
+  {
     "id": "abyssal-custodian",
     "source": "source/abyssal/custodian.png",
     "runtime": "zed/textures/abyssal/custodian.png",
-    "size": [128, 64],
+    "size": [128, 128],
     "alpha": "cutout",
     "role": "Custodian enderic body, gills and articulated limb UVs",
     "palette": "abyssal",
@@ -424,7 +435,7 @@
     "id": "abyssal-custodian-eyes",
     "source": "source/abyssal/custodian_eyes.png",
     "runtime": "zed/textures/abyssal/custodian_eyes.png",
-    "size": [128, 64],
+    "size": [128, 128],
     "alpha": "cutout",
     "role": "Two emissive face markings on the Custodian UV layout",
     "palette": "abyssal",

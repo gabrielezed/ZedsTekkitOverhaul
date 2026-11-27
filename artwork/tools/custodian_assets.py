@@ -7,6 +7,10 @@ import struct
 import wave
 
 from PIL import Image, ImageDraw
+from enderic_art import (
+    ARM, HAND, LEG, SABOTEUR_HEAD, SABOTEUR_TORSO, THIEF_HEAD, THIEF_TORSO,
+    donor, embellish_gills, faces, remap,
+)
 
 ART = Path(__file__).resolve().parents[1]
 SOURCES = ART / "source" / "abyssal"
@@ -14,20 +18,20 @@ SOUNDS = ART.parent / "src/minecraft/zed/sounds/custodian"
 
 # UV origin, width, height, depth, material. These match CustodianModel.
 PARTS = {
-    "head": (0, 0, 14, 10, 12, "skin"),
-    "left gill": (56, 0, 2, 5, 5, "gill"),
-    "right gill": (70, 0, 2, 5, 5, "gill"),
-    "neck": (84, 0, 6, 4, 6, "underside"),
-    "torso": (0, 24, 12, 13, 8, "skin"),
-    "hips": (42, 25, 10, 5, 8, "underside"),
-    "upper arm": (80, 18, 4, 8, 4, "skin"),
-    "forearm": (96, 18, 3, 8, 3, "skin"),
-    "hand": (110, 18, 3, 3, 3, "underside"),
-    "tentacle root": (0, 47, 4, 6, 4, "skin"),
-    "tentacle joint": (18, 47, 3, 6, 3, "underside"),
-    "tentacle tip": (32, 47, 2, 6, 2, "underside"),
+    "head": (0, 0, 16, 13, 14),
+    "left gill": (62, 0, 2, 7, 6),
+    "right gill": (79, 0, 2, 7, 6),
+    "neck": (96, 0, 6, 8, 6),
+    "torso": (0, 29, 18, 22, 10),
+    "waist": (58, 29, 12, 7, 10),
+    "upper arm": (0, 65, 5, 13, 5),
+    "forearm": (22, 65, 4, 12, 4),
+    "hand": (40, 65, 3, 5, 3),
+    "tentacle root": (0, 90, 6, 12, 5),
+    "tentacle joint": (23, 90, 4, 11, 4),
+    "tentacle taper": (41, 90, 3, 10, 3),
+    "tentacle tip": (55, 90, 2, 9, 2),
 }
-MATERIALS = {"skin": (43, 55, 65), "gill": (71, 99, 101), "underside": (46, 62, 68)}
 
 # Duration, fundamental, final frequency ratio, dissonant harmonic, current/noise, attack envelope.
 CUES = {
@@ -45,45 +49,39 @@ CUES = {
     "blink_release": (0.36, 167, 2.09, 2.42, 0.31, 0.04),
     "resonance_charge": (1.06, 82, 1.07, 1.506, 0.06, 0.29),
     "resonance_release": (0.94, 123, 0.90, 1.992, 0.07, 0.06),
+    "compression_charge": (1.22, 112, 0.30, 1.338, 0.23, 0.38),
+    "compression_release": (1.04, 48, 2.00, 1.438, 0.16, 0.19),
 }
 
 
-def faces(u, v, w, h, d):
-    return [
-        (u, v+d, d, h), (u+d, v+d, w, h), (u+d+w, v+d, d, h),
-        (u+2*d+w, v+d, w, h), (u+d, v, w, d), (u+d+w, v, w, d),
-    ]
-
-
 def atlas():
-    image = Image.new("RGBA", (128, 64))
+    image = Image.new("RGBA", (128, 128))
     eyes = Image.new("RGBA", image.size)
-    random = Random(5091)
-    for name, (u, v, w, h, d, material) in PARTS.items():
-        for face, (x, y, width, height) in enumerate(faces(u, v, w, h, d)):
-            base = MATERIALS[material]
-            for i in range(width):
-                vein = random.choice((-5, -3, 0, 1, 4, 6))
-                for j in range(height):
-                    bevel = 4 * (j == 0 or i == 0) - 5 * (j == height - 1 or i == width - 1)
-                    grain = random.choice((-3, -1, 0, 0, 1, 2))
-                    crease = -15 if material == "gill" and i % 2 == 0 and j > 0 else 0
-                    tone = (0, -4, -1, -6, 7, -6)[face] + vein + bevel + grain + crease
-                    if name == "head" and face == 1:
-                        tone -= 10 if 1 < j < 8 else 3
-                    image.putpixel((x+i, y+j), tuple(max(0, c + tone) for c in base) + (255,))
+    thief, saboteur = donor("thief"), donor("saboteur")
+    for part, uv in PARTS.items():
+        if part == "head":
+            source, region = thief, THIEF_HEAD
+        elif part in ("neck", "waist"):
+            source, region = saboteur, SABOTEUR_TORSO
+        elif part == "torso":
+            source, region = thief, THIEF_TORSO
+        elif part == "hand":
+            source, region = thief, HAND
+        elif part.startswith("tentacle"):
+            source, region = thief, LEG
+        else:
+            source, region = thief, ARM
+        remap(image, source, region, uv)
+        if "gill" in part:
+            embellish_gills(image, uv)
+    remap(eyes, donor("thief_eyes"), THIEF_HEAD, PARTS["head"])
+    # Pale ribs follow the donor's violet-gray shading without replacing the skin.
     draw = ImageDraw.Draw(image)
-    draw.line((16, 19, 21, 19), fill="#1b202a")
-    draw.line((22, 19, 23, 18), fill="#252b37")
-    for i in (13, 21):
-        draw.rectangle((i, 15, i+3, 17), fill="#252230")
-    glow = ImageDraw.Draw(eyes)
-    for i in (13, 21):
-        glow.line((i, 16, i+3, 16), fill="#9a77bd")
-        glow.line((i+1, 16, i+2, 16), fill="#d2b4ed")
-    for j in (33, 35, 36, 39):
-        draw.point((12+(j % 3), j), fill="#536473")
-        draw.point((16+(j % 2), j+1), fill="#3f5260")
+    x, y, _, _ = faces(*PARTS["torso"])[1]
+    for i in range(5):
+        r = 4 + i*3
+        for side in (-1, 1):
+            draw.line((x+8+side*2, y+r, x+8+side*(4+i//2), y+r-2), fill="#25232e")
     image.save(SOURCES / "custodian.png")
     eyes.save(SOURCES / "custodian_eyes.png")
 

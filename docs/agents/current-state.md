@@ -1,5 +1,7 @@
 # Current implementation
 
+The alpha.4 owner refinement introduces buried revision-three Observatories, reduced Enderkin patrols, architecture blocks, the Spawn Eggs tab and the redesigned Custodian with native Compression. [Architecture](../engineering/abyssal-architecture.md) · [Owner playtest](../engineering/abyssal-custodian.md)
+
 The `0.5.1-alpha.4` candidate adds the Abyssal Custodian to existing stamped Observatory revisions. The persistent encounter issues one Ender Pearl on legitimate defeat. Ordinary Endermen lose their pearl loot, and EE2 excludes pearls and eyes from exchange. [Custodian and owner fixture](../engineering/abyssal-custodian.md) · [Reward and EMC policy](../engineering/ender-pearl-scarcity.md)
 
 The `0.5.1-alpha.3` candidate adds the Sunken Observatory, three wild aquatic hostiles and finite Abyssal Enderkin patrols in revision-two ruins. Revision-one sites retain their Fangfish populations and original plan. The Observatory owns a persistent location and a queryable chamber for alpha.4. [Generation and test seeds](../engineering/sunken-observatory.md) · [Aquatic ecology](../engineering/abyssal-ecology.md) · [Enderkin casting](../engineering/abyssal-enderkin.md).

@@ -18,6 +18,8 @@ final class CustodianCombat {
     private float yaw, pitch;
     private boolean struck;
     private Vec3D destination;
+    private double swimX, swimY, swimZ;
+    private boolean expansionCue;
 
     CustodianCombat(EntityAbyssalCustodian boss) { this.boss = boss; }
 
@@ -31,6 +33,7 @@ final class CustodianCombat {
         }
         if (target == null) startIntroduction(EntityAbyssalCustodian.AWAKEN, AWAKEN, "awaken");
         target = nearby;
+        boss.lookAt(target);
         if (attack != null) {
             advance();
             return;
@@ -68,12 +71,20 @@ final class CustodianCombat {
         sound(cue);
     }
 
+    boolean compressing() { return attack == Attack.COMPRESSION; }
+
+    int pressureOn(EntityPlayer diver) {
+        if (target != diver) return 0;
+        return attack == Attack.STRIKE || attack == Attack.PRESSURE ? 2 : 1;
+    }
+
     void disengage() {
         if (attack != null) cooldown[attack.ordinal()] = Math.max(30, cooldown[attack.ordinal()]);
         attack = null;
         destination = null;
         introductionLength = 0;
         target = null;
+        boss.lookAt(null);
         boss.pose(EntityAbyssalCustodian.DORMANT, 0);
     }
 
@@ -113,6 +124,8 @@ final class CustodianCombat {
         if (visible && distance > 3 && cooldown[Attack.RESONANCE.ordinal()] == 0
                 && GuardianEncounters.casters(target, true) == 0 && !responders().isEmpty())
             weights[Attack.RESONANCE.ordinal()] = 3;
+        if (visible && cooldown[Attack.COMPRESSION.ordinal()] == 0 && distance > 1.3 && distance < 7)
+            weights[Attack.COMPRESSION.ordinal()] = boss.secondPhase() ? 6 : distance < 4 ? 4 : 2;
         int total = 0;
         for (Attack candidate : Attack.values()) {
             if (candidate == previous) weights[candidate.ordinal()] /= 3;
@@ -144,6 +157,14 @@ final class CustodianCombat {
         previous = selected;
         tick = 0;
         struck = false;
+        if (selected == Attack.COMPRESSION) {
+            double direction = Math.toRadians(boss.rotationYaw + (side < 0 ? 72 : -72));
+            swimX = boss.posX - Math.sin(direction) * 7;
+            swimZ = boss.posZ + Math.cos(direction) * 7;
+            swimY = boss.boundingBox.minY + (boss.worldObj.rand.nextBoolean() ? 2 : -2);
+            expansionCue = false;
+            side = -side;
+        }
         if (selected == Attack.STRIKE) {
             side = -side;
             aim(side);
@@ -153,6 +174,10 @@ final class CustodianCombat {
     }
 
     private void advance() {
+        if (attack == Attack.COMPRESSION) {
+            compression();
+            return;
+        }
         boss.halt();
         if (attack != Attack.STRIKE) face();
         boss.pose(EntityAbyssalCustodian.ATTACK + attack.ordinal(), tick);
@@ -171,14 +196,40 @@ final class CustodianCombat {
             if (attack == Attack.BLINK) teleport();
             if (attack == Attack.RESONANCE) resonance();
         }
-        if (++tick >= attack.end()) {
-            int delay = 12;
-            if (attack == Attack.BLINK) delay = boss.secondPhase() ? BLINK_COOLDOWN_TWO : BLINK_COOLDOWN;
-            if (attack == Attack.PRESSURE) delay = PRESSURE_COOLDOWN;
-            if (attack == Attack.RESONANCE) delay = RESONANCE_COOLDOWN;
-            cooldown[attack.ordinal()] = delay;
-            attack = null;
+        if (++tick >= attack.end()) finish();
+    }
+
+    private void finish() {
+        int delay = 12;
+        if (attack == Attack.BLINK) delay = boss.secondPhase() ? BLINK_COOLDOWN_TWO : BLINK_COOLDOWN;
+        if (attack == Attack.PRESSURE) delay = PRESSURE_COOLDOWN;
+        if (attack == Attack.RESONANCE) delay = RESONANCE_COOLDOWN;
+        if (attack == Attack.COMPRESSION) delay = boss.secondPhase() ? COMPRESSION_COOLDOWN_TWO : COMPRESSION_COOLDOWN;
+        cooldown[attack.ordinal()] = delay;
+        attack = null;
+    }
+
+    private void compression() {
+        Attack move = Attack.COMPRESSION;
+        boss.pose(EntityAbyssalCustodian.ATTACK + move.ordinal(), tick);
+        if (tick < move.windup) {
+            boss.halt();
+            boss.resize(1 - (1 - COMPRESSED_SCALE) * ease((tick + 1F) / move.windup));
+        } else if (tick < move.windup + move.active) {
+            boss.steer(swimX, swimY, swimZ, 0.23);
+        } else {
+            float next = Math.min(1, boss.bodyScale() + (1 - COMPRESSED_SCALE) / COMPRESSION_EXPAND);
+            if (boss.bodyScale() < 1 && !boss.resize(next)) {
+                moveHome();
+                return;
+            }
+            if (!expansionCue) {
+                sound("compression_release");
+                expansionCue = true;
+            }
+            boss.halt();
         }
+        if (++tick >= move.end() && boss.bodyScale() >= 1) finish();
     }
 
     private void aim(int arm) {
@@ -250,7 +301,7 @@ final class CustodianCombat {
             double angle = boss.worldObj.rand.nextDouble() * Math.PI * 2;
             double radius = BLINK_MIN + boss.worldObj.rand.nextDouble() * (BLINK_MAX - BLINK_MIN);
             double x = boss.posX + Math.cos(angle) * radius, z = boss.posZ + Math.sin(angle) * radius;
-            double y = arena.yWithin(boss.boundingBox.minY + boss.worldObj.rand.nextInt(7) - 3);
+            double y = arena.yWithin(boss.boundingBox.minY + boss.worldObj.rand.nextInt(7) - 3, HEIGHT + 0.3);
             double span = boss.getDistance(x, y, z);
             if (span < BLINK_MIN || span > BLINK_MAX || target.getDistanceSq(x, y, z) < 3 * 3
                     || !arena.landing(boss, x, y, z)) continue;
@@ -270,11 +321,11 @@ final class CustodianCombat {
 
     private List<EntityAbyssalEnderkin> responders() {
         List<EntityAbyssalEnderkin> result = new ArrayList<EntityAbyssalEnderkin>(RESONANCE_LIMIT);
-        if (!boss.siteOwned()) return result;
+        if (!boss.siteOwned() && !AquaticDevelopment.manual(boss)) return result;
         for (Object object : boss.worldObj.getEntitiesWithinAABB(EntityAbyssalEnderkin.class,
                 boss.boundingBox.expand(22, 13, 22))) {
             EntityAbyssalEnderkin minion = (EntityAbyssalEnderkin) object;
-            if (!minion.canResonate(boss.siteIdentity(), target)) continue;
+            if (!minion.canResonate(boss.siteIdentity(), target, !boss.siteOwned())) continue;
             result.add(minion);
             if (result.size() >= RESONANCE_LIMIT) break;
         }
@@ -285,7 +336,9 @@ final class CustodianCombat {
         for (EntityAbyssalEnderkin minion : responders()) minion.resonate(target);
     }
 
-    private Vec3D center() { return Vec3D.createVector(boss.posX, boss.boundingBox.minY + 1.35, boss.posZ); }
+    private Vec3D center() {
+        return Vec3D.createVector(boss.posX, (boss.boundingBox.minY + boss.boundingBox.maxY) * 0.5, boss.posZ);
+    }
 
     private void sound(String cue) { boss.worldObj.playSoundAtEntity(boss, EntityAbyssalCustodian.SOUND + cue, 0.82F, 1); }
 
@@ -295,6 +348,7 @@ final class CustodianCombat {
             case PRESSURE: return "pressure";
             case BLINK: return "blink";
             case RESONANCE: return "resonance";
+            case COMPRESSION: return "compression";
             default: throw new AssertionError(value);
         }
     }

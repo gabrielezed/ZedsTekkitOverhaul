@@ -9,7 +9,7 @@ import net.minecraft.src.EnumSkyBlock;
 import net.minecraft.src.World;
 
 public final class AquaticDevelopment {
-    private static final Map<EntityLiving, Species> MANUAL = new WeakHashMap<EntityLiving, Species>();
+    private static final Map<EntityLiving, Boolean> MANUAL = new WeakHashMap<EntityLiving, Boolean>();
 
     public enum Species {
         FANGFISH("Fangfish"), ZOMBIE("Diver Zombie"), SKELETON("Diver Skeleton"), ENDERKIN("Abyssal Enderkin"),
@@ -53,15 +53,23 @@ public final class AquaticDevelopment {
             double z = player.posZ + Math.cos(yaw) * range;
             double y = player.boundingBox.minY - i / 4;
             actor.setPosition(x, y, z);
-            if (!SwimRoute.canInsert(actor)) continue;
-            if (actor instanceof EntityAbyssalEnderkin)
-                ((EntityAbyssalEnderkin) actor).manualHome(SwimRoute.floor(x), SwimRoute.floor(y), SwimRoute.floor(z));
-            if (actor instanceof EntityAbyssalCustodian) ((EntityAbyssalCustodian) actor).manualHome();
-            MANUAL.put(actor, species);
-            if (world.spawnEntityInWorld(actor)) return "Spawned manual " + species.label;
-            MANUAL.remove(actor);
+            if (insertManual(actor)) return "Spawned manual " + species.label;
         }
         return "No clear submerged position in front of player";
+    }
+
+    /** Ordinary Creative eggs and the debug fixture share temporary, independently owned actors. */
+    public static boolean insertManual(EntityLiving actor) {
+        if (actor.worldObj.isRemote || !SwimRoute.canInsert(actor)) return false;
+        int x = SwimRoute.floor(actor.posX), y = SwimRoute.floor(actor.boundingBox.minY), z = SwimRoute.floor(actor.posZ);
+        if (actor instanceof EntityAbyssalGuardian)
+            ((EntityAbyssalGuardian) actor).home(new int[] {x, y, z}, null, -1);
+        if (actor instanceof EntityAbyssalEnderkin) ((EntityAbyssalEnderkin) actor).manualHome(x, y, z);
+        if (actor instanceof EntityAbyssalCustodian) ((EntityAbyssalCustodian) actor).manualHome();
+        MANUAL.put(actor, Boolean.TRUE);
+        if (actor.worldObj.spawnEntityInWorld(actor)) return true;
+        MANUAL.remove(actor);
+        return false;
     }
 
     static boolean manual(EntityLiving actor) { return MANUAL.containsKey(actor); }

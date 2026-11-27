@@ -13,8 +13,10 @@ import net.minecraft.src.Item;
 import net.minecraft.src.ItemStack;
 import net.minecraft.src.ModLoader;
 import zed.tekkitoverhaul.exploration.abyssal.AbyssalRegistry;
+import zed.tekkitoverhaul.survival.CreatureEggs;
 
 final class CreativeCatalog {
+    private static boolean auditedEggs;
     final CreativeCategories.Tab[] tabs = CreativeCategories.tabs();
 
     static List<?> readLegacyEntries(Container container) throws ReflectiveOperationException {
@@ -36,6 +38,11 @@ final class CreativeCatalog {
             if (CreativeCategories.isZto(block) && (!block.blockMaterial.isLiquid() || AbyssalRegistry.isMarineOrganism(block))) {
                 addEntries(Collections.singletonList(new ItemStack(block)), seen);
             }
+        }
+        addEntries(CreatureEggs.entries(), seen);
+        if (!auditedEggs) {
+            CreatureEggs.audit();
+            auditedEggs = true;
         }
         addEntries(readNeiEntries(), seen);
     }

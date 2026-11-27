@@ -2,13 +2,27 @@
 
 The Observatory gives the Abyssal Trench a destination for a diving expedition. Follow the weathered columns to the entrance, descend through the flooded halls, and return by a side gallery or through the main approach. Oxygen, lights, temporary refuges, mining and advanced Tekkit equipment remain ordinary sandbox tools.
 
+## Revision-three owner refinement
+
+New structures now occupy rock beneath their natural seabed. The survey measures cover over the actual chamber roofs before carving. Most of the upper shell is never visible in the seabed projection. The shaft mouth opens between eroded columns and leads through a staggered stair gallery to the observation hall. The return corridor can reach the tall Custodian chamber if the main inner passage is blocked. [Architecture, atlas and recipes](abyssal-architecture.md)
+
+The native survey sampled 1,444 cells across four seeds. Six accepted the geometry and terrain gates, about 0.016 candidates per million blocks in that sample. The probe loaded and checked the following three native ruins.
+
+| Seed | Entrance approach X, Y, Z | Natural cover over principal plan |
+| --- | --- | --- |
+| −32021 | 3371, 27, −4268 | 1,367 / 1,396 columns |
+| −32021 | −3371, 38, −2914 | 1,353 / 1,382 columns |
+| 32022 | 4846, 28, −3289 | 1,387 / 1,416 columns |
+
+Revision-three layouts deterministically allocate 8–12 patrol slots. A site can admit one actor per 160 world ticks, outside the diver's immediate range and view. A revision-three room with a terminal slot stops admitting further actors there. Historical populations retain their 16–19 slot masks, actors and terminal outcomes.
+
 ## Placement and architecture
 
 The Default Overworld is divided into 512-block candidate cells. A salted seed hash provides one possible anchor per cell, kept at least 136 blocks from its edges. Five of eight hash tickets can advance to the geography filter. The anchor requires strong Trench influence and deep target relief. The whole footprint then samples the same bounded trench envelope as the native provider without requesting chunks. Every surveyed column must be shaped ocean within the depth and influence limits. The foundation floor uses the mean seabed at Y17–32, with at most seven blocks of rise from the lowest seabed and eight blocks of burial beneath the highest.
 
 Revision 1 uses an 11–14-block atrium including walls, a seven-block-wide principal gallery including walls, a 15×16 hall, and a 19×19 chamber with eight clear blocks above its central floor. The exterior adds columns and a submerged entry cut. The overall width is 35–39 blocks and its length is 59–66 blocks including the approach. Four orientations, mirrored side galleries, varying gallery and atrium lengths, a conditional annex, coherent wall erosion and roof damage vary the silhouette. One bypass rejoins the central hall. The lower bypass links the hall to the future arena separately from its front arch.
 
-New sites use revision 2. An atrium, offset hall, future arena and two branches are joined by independently composed longitudinal and cross passages. Seeded choices shift and mirror rooms, add annexes, change elevations and open selected roofs. Recessed lamps and paired hall columns guide movement. Passage water and interior clearance take priority over neighboring shells and foundations. The finished plan is checked in three dimensions for two-block-high continuity to the hall and arena, including a route with the main arena gate closed.
+Revision-two sites use the following original layout. An atrium, offset hall, future arena and two branches are joined by independently composed longitudinal and cross passages. Seeded choices shift and mirror rooms, add annexes, change elevations and open selected roofs. Recessed lamps and paired hall columns guide movement. Passage water and interior clearance take priority over neighboring shells and foundations. The finished plan is checked in three dimensions for two-block-high continuity to the hall and arena, including a route with the main arena gate closed.
 
 Foundations follow the sampled seabed. The generator cuts flooded volumes, writes integer block IDs into native sections, seeds low lamp light and leaves native height and skylight initialization to the provider. Geological coatings remain in the Trench. Fossil formations and marine planting skip construction columns. Native population and third-party generators retain their normal order and can intersect the ruins.
 
@@ -22,7 +36,7 @@ Each admitted cell has a fixed-size record under the world's `data/zto-observato
 
 A flushed file write and atomic replacement reserve admission and each slice before block writes. A second pinned agent callback stores a site stamp in the native chunk root before Anvil queues it for asynchronous serialization. Forge loads the stamp with the chunk. Encounters begin after the complete footprint is loaded and populated with matching stamps. An interrupted build can therefore leave a partial Observatory or an unavailable encounter. Previously saved slices and player modifications are preserved. A record and the native chunk saves are independent files.
 
-## Native walkthrough
+## Historical revision-two walkthrough
 
 In a marked disposable Default world with the matching agent, `-Dzto.dev=true` enables **Numpad 1 → Biome Ecology → Observatory**. The locator checks at most 169 cells and refines at most 12 promising anchors. It reports predicted or admitted coordinates, distance, dimensions and identity. Near a site, the panel includes reserved slices and population counters. The lookup leaves chunks unloaded.
 

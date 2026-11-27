@@ -64,10 +64,11 @@ public final class EntityAbyssalEnderkin extends EntityMob {
     public int casting() { return dataWatcher.getWatchableObjectByte(WATCH_CAST); }
     boolean engages(EntityPlayer player) { return target == player && !isDead; }
 
-    boolean canResonate(long identity, EntityPlayer player) {
-        return this.identity == identity && player != null && !AquaticDevelopment.manual(this)
-                && isEntityAlive() && isInWater() && aim == 0 && resonanceTicks == 0
-                && player.getDistanceSq(x + 0.5, y + 0.08, z + 0.5) <= 27 * 27 && site() != null;
+    boolean canResonate(long identity, EntityPlayer player, boolean manualEncounter) {
+        boolean manual = AquaticDevelopment.manual(this);
+        return manualEncounter == manual && player != null && isEntityAlive() && isInWater()
+                && aim == 0 && resonanceTicks == 0 && player.getDistanceSq(x + 0.5, y + 0.08, z + 0.5) <= 27 * 27
+                && (manual || this.identity == identity && site() != null);
     }
 
     void resonate(EntityPlayer player) {
@@ -77,7 +78,7 @@ public final class EntityAbyssalEnderkin extends EntityMob {
 
     private Site site() {
         Site site = slot < 0 ? null : ObservatorySites.nearby(worldObj, x, z);
-        return site != null && site.revision() == 2 && site.identity() == identity && slot < site.count() ? site : null;
+        return site != null && site.revision() >= 2 && site.identity() == identity && slot < site.count() ? site : null;
     }
 
     @Override public void onUpdate() {
@@ -125,14 +126,14 @@ public final class EntityAbyssalEnderkin extends EntityMob {
             return;
         }
         EntityPlayer prospective = movement.target(this, 16, 27, x + 0.5, y + 0.08, z + 0.5);
-        if (prospective != null && prospective != target && GuardianEncounters.casters(prospective, false) >= 6) {
+        if (prospective != null && !GuardianEncounters.mayEngage(this, prospective)) {
             movement.lose();
             prospective = null;
         }
         target = prospective;
         if (target == null && resonanceTarget != null && resonanceTarget.isEntityAlive()
                 && resonanceTarget.isInWater() && !resonanceTarget.capabilities.disableDamage
-                && GuardianEncounters.casters(resonanceTarget, false) < 6
+                && GuardianEncounters.mayEngage(this, resonanceTarget)
                 && resonanceTarget.getDistanceSq(x + 0.5, y + 0.08, z + 0.5) <= 27 * 27) {
             cancel();
             movement.approach(this, resonanceTarget, 0.17);
@@ -161,11 +162,15 @@ public final class EntityAbyssalEnderkin extends EntityMob {
             return;
         }
         if (aim == 0) {
-            if (GuardianEncounters.casters(target, true) >= 2 || !clearShot(hand())) {
+            if (GuardianEncounters.casters(target, true) >= GuardianEncounters.castLimit(target) || !clearShot(hand())) {
                 movement.reposition(this, target, 0.11);
                 return;
             }
             worldObj.playSoundAtEntity(this, SOUND + "charge", 0.60F, 1);
+        }
+        if (aim > 0 && GuardianEncounters.casters(target, true) > GuardianEncounters.castLimit(target)) {
+            cancel();
+            return;
         }
         pose(++aim);
         Vec3D origin = hand();

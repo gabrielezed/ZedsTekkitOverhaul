@@ -25,7 +25,10 @@ public final class RenderAbyssalCustodian extends RenderLiving {
 
     @Override protected void rotateCorpse(EntityLiving actor, float age, float yaw, float partial) {
         EntityAbyssalCustodian boss = (EntityAbyssalCustodian) actor;
-        float direction = boss.pose() == EntityAbyssalCustodian.ATTACK ? boss.strikeYaw() : actor.rotationYaw;
+        float direction = actor.prevRotationYaw
+                + EntityAbyssalCustodian.wrap(actor.rotationYaw - actor.prevRotationYaw) * partial;
+        if (boss.pose() == EntityAbyssalCustodian.ATTACK && boss.poseTick() >= Attack.STRIKE.windup - 6)
+            direction = boss.strikeYaw();
         super.rotateCorpse(actor, age, direction, partial);
     }
 

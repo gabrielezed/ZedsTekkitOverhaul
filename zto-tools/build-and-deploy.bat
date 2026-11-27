@@ -213,7 +213,7 @@ for %%S in (ambient charge release hurt death) do (
         goto :fail
     )
 )
-for %%S in (ambient hurt death awaken phase arrival strike_charge strike_release pressure_charge pressure_release blink_charge blink_release resonance_charge resonance_release) do (
+for %%S in (ambient hurt death awaken phase arrival strike_charge strike_release pressure_charge pressure_release blink_charge blink_release resonance_charge resonance_release compression_charge compression_release) do (
     jar tf "%BUILD_JAR%" | findstr /L /X /C:"zed/sounds/custodian/%%S.wav" >nul
     if errorlevel 1 (
         echo [ZTO] ERROR: Missing Abyssal Custodian sound %%S in the archive.

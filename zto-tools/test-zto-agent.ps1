@@ -137,7 +137,7 @@ try {
                     if ($CustodianOwnerSave) {
                         Add-Type -AssemblyName System.IO.Compression.FileSystem
                         $artifact = Join-Path $root "dist-zto/custodian-owner-$([guid]::NewGuid().ToString('N')).zip"
-                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Custodian playtest'),
+                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Alpha4 Refinement'),
                             $artifact, [IO.Compression.CompressionLevel]::Optimal, $true)
                         Write-Output "Owner save: $artifact"
                     }

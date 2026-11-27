@@ -139,6 +139,7 @@ public class mod_ZedsTekkitOverhaul extends BaseMod {
         ObservatorySites.register();
         AbyssalWaterFaces.register();
         GuardianEncounters.register();
+        zed.tekkitoverhaul.survival.CreatureEggs.register(settings.abyssalId("item.creatureEgg"));
         GuardianWorldTick.register(ModLoader.getMinecraftInstance());
         MotorboatClient.register(ModLoader.getMinecraftInstance());
         if (settings.creativeInventoryBackport) creativeInventory.register(this);

@@ -22,13 +22,13 @@ import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites.Site;
 final class CustodianProbe {
     private static final int PEARL = 368, EYE = 381;
 
-    static void ownerSave(File root, xd world, Site site, ZtoConfig config) throws Exception {
+    static void ownerSave(File root, xd world, Site site, ZtoConfig config, int x, int z) throws Exception {
         yw diver = fixturePlayer(world);
         admit(world, site, diver);
         EntityAbyssalCustodian boss = actor(world);
         check(boss.bb() == 80, "owner fixture contains a legitimate full-health Custodian");
         world.b(diver);
-        int x = -1170, z = 765;
+
         for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++)
             world.g(x + dx, 64, z + dz, 5);
         world.g(x + 1, 65, z, 54);
@@ -45,14 +45,74 @@ final class CustodianProbe {
         chest.a(7, new aan(308, 1, 0));
         chest.a(8, new aan(20, 32, 0));
         chest.a(9, new aan(297, 8, 0));
+        for (int i = 0; i < 8; i++) chest.a(10 + i, new aan(3044 + i, 8, 0));
+        chest.a(18, new aan(config.abyssalId("block.abyssalLamp"), 8, 0));
+        world.g(x - 2, 65, z, 3047);
+        world.g(x - 2, 66, z, 3038);
+        world.g(x - 2, 67, z, 3049);
         world.a(new uh(x, 65, z));
         world.a(true, null);
         world.n();
         ce.a.a();
         agp.a();
-        Files.createFile(new File(root, "ZTO Custodian playtest/.zto-disposable-test").toPath());
-        check(new File(root, "ZTO Custodian playtest/level.dat").isFile(), "owner fixture saved level.dat");
-        System.out.println("PASS marked owner save on the surface above seed 32021 entrance");
+        Files.createFile(new File(root, "ZTO Alpha4 Refinement/.zto-disposable-test").toPath());
+        check(new File(root, "ZTO Alpha4 Refinement/level.dat").isFile(), "owner fixture saved level.dat");
+        System.out.println("PASS marked owner save on the surface above the buried entrance");
+    }
+
+    static void verifyCreativeCatalog() throws Exception {
+        // The tab only needs its normal block icon. Do not initialize the graphical Foundry renderer.
+        zed.tekkitoverhaul.crafting.AdvancedCraftingRegistry.advancedTable = pb.M;
+        Class<?> type = Class.forName("zed.tekkitoverhaul.creative.CreativeCatalog");
+        java.lang.reflect.Constructor<?> constructor = type.getDeclaredConstructor(java.util.List.class);
+        constructor.setAccessible(true);
+        aan pig = new aan(383, 1, 90), chickenEgg = new aan(344, 1, 0);
+        Object catalog = constructor.newInstance(java.util.Arrays.asList(pig, pig.m(), chickenEgg));
+        Object[] tabs = (Object[]) field(catalog, "tabs");
+        int eggTab = -1;
+        for (int i = 0; i < tabs.length; i++) if (tabs[i] != null && "Spawn Eggs".equals(field(tabs[i], "title"))) eggTab = i;
+        check(eggTab >= 0, "Spawn Eggs category is present");
+        java.util.List<?> entries = (java.util.List<?>) method(catalog, "entries", int.class, String.class).invoke(catalog, eggTab, "");
+        check(entries.size() == zed.tekkitoverhaul.survival.CreatureEggs.entries().size(), "native plus ZTO entries deduplicate");
+        for (Object entry : entries) {
+            aan stack = (aan) field(entry, "stack");
+            check(zed.tekkitoverhaul.survival.CreatureEggs.isEgg(stack) && stack.c != 344, "egg tab contains only usable eggs");
+        }
+        java.util.List<?> search = (java.util.List<?>) method(catalog, "entries", int.class, String.class)
+                .invoke(catalog, 5, "custodian");
+        check(search.size() == 1, "ordinary Creative search finds the Custodian egg");
+        System.out.println("PASS Creative Spawn Eggs category, filtering, search and deduplication");
+    }
+
+    static void verifyEggs(xd world, Site site, ZtoConfig config) {
+        check(zed.tekkitoverhaul.survival.CreatureEggs.entries().size() >= 40, "native variants and ZTO egg entries");
+        int id = config.abyssalId("item.creatureEgg") + 256;
+        yr egg = yr.e[id];
+        int[] p = site.arenaCenter();
+        yw player = fixturePlayer(world);
+        place(player, p[0] + 0.5, p[1] + 1.5, p[2] + 0.5);
+        player.aT.d = true;
+        // Use the actual item entry point, with the viewer aimed into open chamber water.
+        int consumed = 0;
+        for (int slot = 0; slot < site.count(); slot++) if (site.consumed(slot)) consumed++;
+        String status = site.custodian().status();
+        aan stack = new aan(id, 1, 4);
+        check(egg instanceof zed.tekkitoverhaul.survival.CreatureEggs
+                && zed.tekkitoverhaul.survival.CreatureEggs.isEgg(stack), "real Custodian egg stack");
+        egg.a(stack, world, player);
+        EntityAbyssalCustodian test = null;
+        for (Object entity : world.b)
+            if (entity instanceof EntityAbyssalCustodian && !((EntityAbyssalCustodian) entity).c(new ady()))
+                test = (EntityAbyssalCustodian) entity;
+        check(test != null && stack.a == 1, "open-water egg inserts a temporary Custodian without consuming Creative stack");
+        test.a(md.a(player),100);
+        check(pearls(world) == 0 && status.equals(site.custodian().status()), "manual boss has no progression ownership");
+        world.b(test);
+        int still = 0;
+        for (int slot = 0; slot < site.count(); slot++) if (site.consumed(slot)) still++;
+        check(consumed == still, "manual creature cannot touch the finite patrol ledger");
+        world.b(player);
+        System.out.println("PASS egg catalog entries and independent manual ownership");
     }
 
     static void legacy(xd world, Site site, yw player) {
@@ -129,6 +189,7 @@ final class CustodianProbe {
         place(boss, x, y, z);
         place(player, x, y + 1.25, z + 4);
         verifyResonance(world, boss, begin, advance, combat);
+        verifyCompression(world, boss, combat, begin, advance);
         boss.l(40);
         boss.B();
         method(combat, "tick").invoke(combat);
@@ -238,6 +299,31 @@ final class CustodianProbe {
         System.out.println("PASS pinned EE2 EMC, native condenser and tablet output gates for both identities");
     }
 
+    private static void verifyCompression(xd world, EntityAbyssalCustodian boss, Object combat,
+                                          Method begin, Method advance) throws Exception {
+        double feet = boss.y.b;
+        double full = boss.y.e - boss.y.b;
+        begin.invoke(combat, Attack.COMPRESSION);
+        advance(advance, combat, Attack.COMPRESSION.windup);
+        check(Math.abs(boss.bodyScale() - 0.38) < 0.01 && boss.y.e - boss.y.b < full * 0.4
+                && Math.abs(boss.y.b - feet) < 0.001, "native Compression AABB shrinks about its feet");
+        ady tag = new ady();
+        check(boss.c(tag), "save compressed legitimate actor");
+        EntityAbyssalCustodian copy = new EntityAbyssalCustodian(world);
+        copy.e(tag);
+        check(Math.abs(copy.y.e - copy.y.b - (boss.y.e - boss.y.b)) < 0.001 && copy.bb() == boss.bb(),
+                "compressed body dimensions and health round-trip through native NBT");
+        int x = (int) Math.floor(boss.o), y = (int) Math.floor(feet) + 2, z = (int) Math.floor(boss.q);
+        int previous = world.a(x,y,z);
+        world.g(x,y,z,1);
+        advance(advance, combat, Attack.COMPRESSION.active + Attack.COMPRESSION.recover);
+        check(boss.bodyScale() < 0.65, "solid masonry blocks re-expansion");
+        world.g(x,y,z,previous);
+        advance(advance, combat, 54);
+        check(boss.bodyScale() == 1 && Math.abs(boss.y.e - boss.y.b - full) < 0.001, "clear water permits re-expansion");
+        System.out.println("PASS native Compression size, feet anchoring, blocked expansion and NBT");
+    }
+
     private static void verifyResonance(xd world, EntityAbyssalCustodian boss, Method begin, Method advance, Object combat)
             throws Exception {
         yw player = (yw) field(combat, "target");
@@ -307,7 +393,7 @@ final class CustodianProbe {
     private static void clearHurt(yw player) { player.Y = 0; }
     private static double square(double value) { return value * value; }
     private static void advance(Method advance, Object combat, int ticks) throws Exception {
-        for (int i = 0; i < ticks; i++) {
+        for (int i = 0; i < ticks && field(combat,"attack") != null; i++) {
             bo.b();
             // Reuse the vector pool as the native client does between ticks.
             bo.b(999, 999, 999);

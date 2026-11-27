@@ -18,12 +18,16 @@ final class SwimRoute {
     private int refresh;
 
     static boolean clear(EntityLiving actor, double x, double y, double z) {
-        World world = actor.worldObj;
         AxisAlignedBB box = actor.boundingBox;
-        double half = Math.max(box.maxX - box.minX, box.maxZ - box.minZ) * 0.5 + 0.02;
+        return clear(actor, x, y, z, Math.max(box.maxX - box.minX, box.maxZ - box.minZ), box.maxY - box.minY);
+    }
+
+    static boolean clear(EntityLiving actor, double x, double y, double z, double width, double height) {
+        World world = actor.worldObj;
+        double half = width * 0.5 + 0.02;
         int minX = floor(x - half), maxX = floor(x + half);
         int minZ = floor(z - half), maxZ = floor(z + half);
-        int minY = floor(y), maxY = floor(y + box.maxY - box.minY + 0.03);
+        int minY = floor(y), maxY = floor(y + height + 0.03);
         if (minY < 1 || maxY > 125 || !world.checkChunksExist(minX, minY, minZ, maxX, maxY, maxZ)) return false;
         for (int bx = minX; bx <= maxX; bx++) for (int bz = minZ; bz <= maxZ; bz++)
             for (int by = minY; by <= maxY; by++)

@@ -8,10 +8,36 @@ import net.minecraft.src.ModelBase;
 import net.minecraft.src.ModelRenderer;
 import net.minecraft.src.Render;
 import net.minecraft.src.RenderLiving;
+import net.minecraft.src.OpenGlHelper;
+import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin;
 
 public final class RenderAbyssalEnderkin extends RenderLiving {
-    private RenderAbyssalEnderkin() { super(new CasterModel(), 0.27F); }
+    private RenderAbyssalEnderkin() {
+        super(new CasterModel(), 0.27F);
+        setRenderPassModel(new CasterModel());
+    }
+
+    @Override protected int shouldRenderPass(EntityLiving actor, int pass, float partial) {
+        if (pass != 0) return -1;
+        loadTexture("/zed/textures/abyssal/enderkin_eyes.png");
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glDepthMask(false);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
+        GL11.glColor4f(1, 1, 1, ((EntityAbyssalEnderkin) actor).casting() > 0 ? 0.86F : 0.62F);
+        return 1;
+    }
+
+    @Override protected int inheritRenderPass(EntityLiving actor, int pass, float partial) { return -1; }
+
+    @Override protected void renderEquippedItems(EntityLiving actor, float partial) {
+        GL11.glDepthMask(true);
+        GL11.glColor4f(1, 1, 1, 1);
+        int light = actor.getBrightnessForRender(partial);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light & 65535, light >>> 16);
+    }
 
     public static void register(Map<Class<? extends Entity>, Render> renderers) {
         renderers.put(EntityAbyssalEnderkin.class, new RenderAbyssalEnderkin());
@@ -26,7 +52,7 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
 
         CasterModel() {
             textureWidth = textureHeight = 64;
-            head = box(0, 0, 0, 9, 0, -3.5F, -5, -3, 7, 5, 6);
+            head = box(0, 0, 0, 9, 0, -3.5F, -6, -3, 7, 6, 6);
             gillLeft = box(28, 0, -3.5F, -1, 0, -1, -2, -2, 1, 3, 4);
             gillRight = box(40, 0, 3.5F, -1, 0, 0, -2, -2, 1, 3, 4);
             head.addChild(gillLeft);

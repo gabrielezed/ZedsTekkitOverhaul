@@ -583,8 +583,52 @@ public final class ObservatoryProbe {
             arena.setRGB(u + 10, 11 - h, color(world.a(at[0], floor + h, at[2])));
         }
         writeMap(arena, previews, "buried-" + index + "-arena-section");
+        diverView(world, position, plan, floor, sill + 2, -5, 1, length, previews, index, "approach");
+        diverView(world, position, plan, floor, sill + 2, 3, -1, length, previews, index, "threshold");
+        if (index == 0) {
+            diverView(world, position, plan, floor, 7, 7, 1, length, previews, index, "gallery");
+            diverView(world, position, plan, floor, 5, 20, 1, length, previews, index, "hall");
+            diverView(world, position, plan, floor, 4, length - 15, 1, length, previews, index, "chamber");
+        }
         System.out.printf("PASS native burial %d/%d covered, %d lamps, %d details%n",
                 covered, qualifying, lamps, details);
+    }
+
+    /** Bounded perspective diagnostic using generated block IDs, with a fixed water attenuation. */
+    private static void diverView(xd world, Method position, Object plan, int floor, int cameraY, int cameraV,
+                                  int direction, int length, File previews, int index, String name) throws Exception {
+        int minV = Math.max(-5, cameraV - (direction < 0 ? 16 : 0));
+        int maxV = Math.min(length, cameraV + (direction > 0 ? 24 : 0));
+        int[][][] blocks = new int[maxV - minV + 1][21][31];
+        for (int v = minV; v <= maxV; v++) for (int u = -10; u <= 10; u++) {
+            int[] at = (int[]) position.invoke(plan, u, 0, v);
+            for (int h = 0; h <= 30; h++)
+                blocks[v - minV][u + 10][h] = world.a(at[0], floor + h, at[2]);
+        }
+        BufferedImage image = new BufferedImage(240, 150, BufferedImage.TYPE_INT_RGB);
+        int waterColor = 0x173843;
+        for (int row = 0; row < image.getHeight(); row++) for (int col = 0; col < image.getWidth(); col++) {
+            double dx = direction * (col - 119.5) / 174;
+            double dy = (74.5 - row) / 174;
+            int pixel = waterColor;
+            for (double distance = 0.25; distance <= 24; distance += 0.25) {
+                int v = (int) Math.floor(cameraV + 0.5 + direction * distance);
+                int u = (int) Math.floor(0.5 + dx * distance);
+                int h = (int) Math.floor(cameraY + 0.5 + dy * distance);
+                if (v < minV || v > maxV || u < -10 || u > 10 || h < 0 || h > 30) break;
+                int id = blocks[v - minV][u + 10][h];
+                if (id == 0 || wet(id)) continue;
+                int surface = color(id);
+                double amount = 1 / (1 + distance * 0.09);
+                int r = (int) ((surface >> 16) * amount + (waterColor >> 16) * (1 - amount));
+                int g = (int) ((surface >> 8 & 255) * amount + (waterColor >> 8 & 255) * (1 - amount));
+                int b = (int) ((surface & 255) * amount + (waterColor & 255) * (1 - amount));
+                pixel = r << 16 | g << 8 | b;
+                break;
+            }
+            image.setRGB(col, row, pixel);
+        }
+        ImageIO.write(image, "png", new File(previews, "buried-" + index + "-" + name + "-perspective.png"));
     }
 
     private static void writeMap(BufferedImage map, File target, String name) throws Exception {

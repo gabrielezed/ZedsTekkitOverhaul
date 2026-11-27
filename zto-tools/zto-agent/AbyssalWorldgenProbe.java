@@ -100,12 +100,16 @@ public final class AbyssalWorldgenProbe {
         int ordinaryDx = 0, ordinaryDz = 0, landDx = 0, landDz = 0;
         long normalTime = 0, trenchTime = 0;
         int normalChunks = 0, trenchChunks = 0;
+        String[] sceneNames = {"kelp", "fossils", "anemones", "relief", "quiet"};
+        int[] bestScores = new int[sceneNames.length], bestX = new int[sceneNames.length];
+        int[] bestZ = new int[sceneNames.length];
         for (int dz = -RADIUS; dz <= RADIUS; dz++) for (int dx = -RADIUS; dx <= RADIUS; dx++) {
             long started = System.nanoTime();
             ack chunk = provider.b(cx + dx, cz + dz);
             long elapsed = System.nanoTime() - started;
             signatures.put(key(dx, dz), signature(chunk));
             boolean affected = false, hasOcean = false, hasLand = false;
+            int kelp = 0, fossils = 0, anemones = 0, organisms = 0, columns = 0, low = 62, high = 0;
             Object shore = coast.invoke(null, world.i(), (cx + dx) << 4, (cz + dz) << 4);
             for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
                 boolean trench = (chunk.m()[z * 16 + x] & 255) == biome;
@@ -137,6 +141,9 @@ public final class AbyssalWorldgenProbe {
                 int feature = 0;
                 if (trench) {
                     affected = true;
+                    columns++;
+                    low = Math.min(low, floor);
+                    high = Math.max(high, floor);
                     changed++;
                     check(chunk.a(x, 0, z) == 7, "bedrock at Y0");
                     check(chunk.a(x, 62, z) == 9 || chunk.a(x, 62, z) == 8, "native ocean surface Y62");
@@ -152,6 +159,10 @@ public final class AbyssalWorldgenProbe {
                         check(id == 0 || pb.m[id] != null, "block ID registered");
                         if (id < 3032 || id > 3043) continue;
                         counts[id - 3032]++;
+                        if (id == 3039) kelp++;
+                        if (id == 3035) fossils++;
+                        if (id == 3043) anemones++;
+                        if (id >= 3039) organisms++;
                         if (id >= 3039 || y == floor) feature = id;
                         int data = chunk.c(x, y, z);
                         if (id >= 3039) {
@@ -177,6 +188,16 @@ public final class AbyssalWorldgenProbe {
                         feature == 0 ? (trench ? 0x263a40 : color) : colors[feature - 3032]);
             }
             if (affected) {
+                if (columns >= 192) {
+                    int[] scores = {kelp, fossils, anemones, high - low,
+                            organisms <= 4 && fossils <= 4 && high - low <= 3 ? 64 - high : 0};
+                    for (int scene = 0; scene < scores.length; scene++) {
+                        if (scores[scene] <= bestScores[scene]) continue;
+                        bestScores[scene] = scores[scene];
+                        bestX[scene] = cx + dx;
+                        bestZ[scene] = cz + dz;
+                    }
+                }
                 trenchChunks++;
                 trenchTime += elapsed;
             } else {
@@ -227,6 +248,13 @@ public final class AbyssalWorldgenProbe {
         ImageIO.write(northSouth, "png", new File(previews, "cross-north-south.png"));
         ImageIO.write(depths, "png", new File(previews, "depth.png"));
         ImageIO.write(habitats, "png", new File(previews, "habitats.png"));
+        for (int scene = 0; scene < sceneNames.length; scene++) {
+            if (bestScores[scene] == 0) continue;
+            terrainProjection(provider.b(bestX[scene], bestZ[scene]),
+                    new File(previews, sceneNames[scene] + "-projection.png"));
+            System.out.printf("Scene %s seed=%d chunk=%d,%d score=%d%n",
+                    sceneNames[scene], SEED, bestX[scene], bestZ[scene], bestScores[scene]);
+        }
         System.out.printf(Locale.ROOT, "trenchColumns=%d deepColumns=%d ordinaryOceanColumns=%d otherBiomeColumns=%d%n", changed, deep, ordinary, land);
         System.out.printf(Locale.ROOT, "abyssal ocean coverage=%.2f%%%n", 100.0 * changed / (ordinary + changed));
         System.out.println("dry interruptions above seabed " + dryCaveColumns);
@@ -241,6 +269,44 @@ public final class AbyssalWorldgenProbe {
         int floor = 62;
         while (floor > 0 && (terrain[offset + floor] == 8 || terrain[offset + floor] == 9)) floor--;
         return floor;
+    }
+
+    private static void terrainProjection(ack chunk, File output) throws Exception {
+        BufferedImage image = new BufferedImage(360, 380, BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D draw = image.createGraphics();
+        draw.setColor(new java.awt.Color(16, 35, 44));
+        draw.fillRect(0, 0, image.getWidth(), image.getHeight());
+        int[] palette = {0x496779, 0x777160, 0x929388, 0xb59686, 0x776b65, 0x635e56,
+                0x9cd1b0, 0x64764a, 0x748553, 0xa07064, 0xbca982, 0x9ec4c4};
+        for (int depth = 30; depth >= 0; depth--) for (int z = 0; z < 16; z++) {
+            int x = depth - z;
+            if (x < 0 || x >= 16) continue;
+            for (int y = 12; y < 62; y++) {
+                int id = chunk.a(x, y, z);
+                if (id == 0 || id == 8 || id == 9) continue;
+                int px = 180 + (x - z) * 10, py = 391 - depth * 4 - y * 5;
+                int rgb = id >= 3032 && id <= 3043 ? palette[id - 3032] : 0x354952;
+                java.awt.Color color = new java.awt.Color(rgb);
+                if (id >= 3039 && id <= 3043) {
+                    int width = id == 3039 ? 2 : 5;
+                    draw.setColor(color);
+                    draw.drawLine(px - width, py + 3, px + width, py - 3);
+                    draw.drawLine(px, py + 5, px, py - 6);
+                    continue;
+                }
+                draw.setColor(color.darker());
+                draw.fillPolygon(new int[] {px - 10, px, px, px - 10},
+                        new int[] {py, py + 4, py + 9, py + 5}, 4);
+                draw.setColor(color);
+                draw.fillPolygon(new int[] {px, px + 10, px + 10, px},
+                        new int[] {py + 4, py, py + 5, py + 9}, 4);
+                draw.setColor(color.brighter());
+                draw.fillPolygon(new int[] {px - 10, px, px + 10, px},
+                        new int[] {py, py - 4, py, py + 4}, 4);
+            }
+        }
+        draw.dispose();
+        ImageIO.write(image, "png", output);
     }
 
     private static void continuity(File previews, int originX, int originZ, byte[] nativeFloor, byte[] shaped,

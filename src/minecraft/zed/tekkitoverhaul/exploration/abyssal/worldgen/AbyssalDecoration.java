@@ -67,8 +67,11 @@ final class AbyssalDecoration {
                         MarineType.SPONGE.placeInNewChunk(chunk, x, y + 1, z, 1, 0);
                 } else if (floor >= 22 && floor <= 44 && y - floor <= 2 && forest > 0.52 && incline <= 3) {
                     double canopy = Math.min(1, (forest - 0.52) * 7);
-                    if (lead > 0.079 + 0.026 * patches && ticket < 0.07 + canopy * (0.35 + 0.13 * patches)) {
-                        int height = Math.min(4, 1 + (int) (canopy * 3 + lead * 2));
+                    double shoots = TrenchRegion.field(seed ^ 619, wx, wz, 6);
+                    if (lead > 0.080 + 0.045 * patches && shoots > 0.34
+                            && ticket < 0.08 + canopy * (0.22 + 0.34 * shoots)) {
+                        double frond = TrenchRegion.unit(TrenchRegion.hash(roll, 7, 0));
+                        int height = Math.min(4, 1 + (int) (canopy * 0.9 + shoots * 1.7 + frond * 1.5));
                         MarineType.KELP.placeInNewChunk(chunk, x, y + 1, z, height, 0);
                     } else if (ticket > 0.83 && lead < 0.13) {
                         MarineType.ALGAE.placeInNewChunk(chunk, x, y + 1, z, 1, 0);

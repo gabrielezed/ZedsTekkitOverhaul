@@ -43,25 +43,29 @@ def enderkin():
     thief, saboteur = donor("thief"), donor("saboteur")
     body = Image.new("RGBA", (64, 64))
     eyes = Image.new("RGBA", body.size)
-    head = (0, 0, 7, 6, 6)
+    head = (0, 0, 7, 6, 7)
     remap(body, saboteur, SABOTEUR_HEAD, head)
     remap(eyes, donor("saboteur_eyes"), SABOTEUR_HEAD, head)
-    remap(body, thief, THIEF_TORSO, (0, 13, 6, 7, 4))
+    remap(body, thief, THIEF_TORSO, (0, 14, 6, 8, 4))
     for u, length in ((22, 4), (31, 3), (41, 7)):
-        remap(body, thief, ARM, (u, 13, 2, length, 2))
-    for u in (0, 12):
-        remap(body, thief, LEG, (u, 28, 2, 7, 2))
-    for u in (24, 38):
-        remap(body, saboteur, SABOTEUR_TORSO, (u, 28, 3, 1, 3))
-    for u in (28, 40):
-        gills = (u, 0, 1, 3, 4)
+        remap(body, thief, ARM, (u, 14, 2, length, 2))
+    for u, length in ((0, 4), (12, 4), (24, 3)):
+        remap(body, thief, LEG, (u, 29, 2, length, 2))
+    fin = (0, 40, 3, 1, 5)
+    remap(body, saboteur, SABOTEUR_TORSO, fin)
+    for u in (30, 43):
+        gills = (u, 0, 1, 4, 5)
         remap(body, thief, THIEF_HEAD, gills)
         embellish_gills(body, gills)
     draw = ImageDraw.Draw(body)
-    for u in (24, 38):
-        x, y, w, h = faces(u, 28, 3, 1, 3)[4]
-        for rib in range(w):
-            draw.line((x + rib, y, x + rib, y + h - 2), fill="#353443" if rib == 1 else "#4a4a58")
+    for face in (4, 5):
+        x, y, w, h = faces(*fin)[face]
+        draw.line((x + 1, y, x + 1, y + h - 1), fill="#302f3e")
+        draw.line((x, y + 1, x, y + h - 2), fill="#454652")
+        draw.line((x + w - 1, y + 1, x + w - 1, y + h - 2), fill="#3c3c49")
+    # Narrow reflected band under the squared Saboteur visor, inside the opaque UV.
+    x, y, w, h = faces(*head)[1]
+    draw.line((x + 1, y + h - 2, x + w - 2, y + h - 2), fill="#292a36")
     return body, eyes
 
 

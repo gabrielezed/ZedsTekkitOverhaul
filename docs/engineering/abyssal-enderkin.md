@@ -1,5 +1,7 @@
 # Abyssal Enderkin
 
+The beta.1 second pass gives the caster flared gills, separate shins and broad trailing fins. Swim effort pitches the torso and banks it through turns. The knees and fins lag behind the same stroke. Casting brings the upper body upright and keeps the right shoulder and arm on the native launch rig. The recoil phase blends the right side back into the swim posture.
+
 Small Enderkin patrol the galleries and attack from several elevations. They advance inside maximum casting range before stopping, retreat to a wider buffer when crowded and hold position during recharge while the target stays in range and visible. The one-arm casting pose distinguishes them from the Skirmisher. The dark indigo body has separate side gill geometry, a narrow torso, restrained lavender eyes and short kicking fins. The model uses the original 64×64 `/zed/textures/abyssal/enderkin.png` UVs and five positional mono cues under `/zed/sounds/abyssalenderkin/`.
 
 The owner refinement copies and remaps the existing Saboteur head and eyes and the Thief torso, arms and legs into the aquatic UV layout. The gill ribs are local accents. The one-arm attack retains the original shoulder, elbow and projectile origin. The eye layer uses its own pass and restores native render state.

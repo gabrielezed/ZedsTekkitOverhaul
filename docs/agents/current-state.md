@@ -1,6 +1,6 @@
 # Current implementation
 
-Survival `0.5.1-beta.1` adds terrain-surveyed revision-four portals and interior detailing, coherent kelp stands and luminous marine colonies, and revised Enderkin and Custodian presentation. [Candidate and owner walkthrough](survival-051-beta1.md).
+Survival `0.5.1-beta.1` adds revision-five Observatory compositions, cross-chunk fossil strata and escarpments, and movement-driven creature models. [Second artistic pass and owner walkthrough](survival-051-beta1.md)
 
 The alpha.4 owner refinement introduces buried revision-three Observatories, reduced Enderkin patrols, architecture blocks, the Spawn Eggs tab and the redesigned Custodian with native Compression. [Architecture](../engineering/abyssal-architecture.md) · [Owner playtest](../engineering/abyssal-custodian.md)
 

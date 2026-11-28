@@ -1,5 +1,7 @@
 # Abyssal architecture
 
+Revision five gives the Observatory three approaches keyed to the surveyed seabed. The strongest shoulder supports a broken outer wing, followed by two smaller thresholds descending into the ruin. The main cistern has a lowered sediment bed, a crossing and galleries at two elevations. The vault uses paired wall ribs and a deeper apse to frame the encounter while keeping both native approaches open. [Second artistic pass](../agents/survival-051-beta1.md)
+
 Revision three places the Observatory beneath the existing Trench seabed. The survey samples the pinned native terrain provider before claiming chunks. It chooses the highest common floor that fits under at least three blocks of natural cover over the principal rooms. A short entry shaft opens between eroded supports and leads to a stepped gallery, recessed observation hall, side return and tall Custodian chamber. The site leaves the surrounding seabed profile in place. The deepest chamber floor stays above the native lava-bearing cave zone.
 
 The old layout hashes, physical revision-one and revision-two plans, finite slot masks and Custodian records keep their original interpretation. A newly reserved site never writes into a previously loaded or stored footprint. A native slice containing foreign blocks is vetoed rather than carving through them. See [Sunken Observatory](sunken-observatory.md) for the site contract.

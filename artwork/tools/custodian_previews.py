@@ -95,6 +95,7 @@ import java.lang.reflect.Field;
 import net.minecraft.src.*;
 import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalCustodian;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.CustodianBalance;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.CustodianBalance.Attack;
 
 public final class Capture {
@@ -165,6 +166,27 @@ public final class Capture {
         casting.updateObject(20, Byte.valueOf((byte) 18));
         System.out.println("@abyssal release");
         model.render(caster, 0, 0, 28, 0, 0, 0.0625F);
+        for (int i = 0; i < 42; i++) {
+            caster.motionX = i < 18 ? 0.018 * Math.min(i, 10) : 0.18 * Math.max(0, 24 - i) / 6;
+            caster.motionY = i < 18 ? 0.033 * Math.sin(i * 0.16) : 0;
+            caster.prevRotationYaw = caster.rotationYaw;
+            caster.rotationYaw += i >= 8 && i < 18 ? 3 : 0;
+            int phase = i < 20 ? 0 : i < 34 ? i - 16 : i - 42;
+            casting.updateObject(20, Byte.valueOf((byte) phase));
+            System.out.println("@caster motion " + i);
+            model.render(caster, 0, 0, i, 0, -10, 0.0625F);
+        }
+        for (int i = 0; i < 54; i++) {
+            int tick = i * 2;
+            actor.motionX = 0.18 * Math.min(1F, i / 11F) * Math.max(0F, 1 - (i - 19) / 14F);
+            actor.prevRotationYaw = actor.rotationYaw;
+            actor.rotationYaw += i >= 8 && i < 23 ? 2 : 0;
+            float compressed = tick >= 22 && tick <= 78
+                    ? CustodianBalance.ease((tick - 22) / 12F) : 1 - CustodianBalance.ease((tick - 78) / 24F);
+            if (tick < 22) compressed = 0;
+            watcher.updateObject(27, Integer.valueOf(Float.floatToIntBits(1 - 0.62F * compressed)));
+            frame(actor, "custodian motion " + i, 4 + Attack.COMPRESSION.ordinal(), tick, 0, 0, 0, 0, tick);
+        }
         System.out.println("@enderman");
         new ModelEnderman().render(null, 0, 0, 0, 0, 0, 0.0625F);
         System.out.println("@player");
@@ -173,6 +195,11 @@ public final class Capture {
 
     private static void frame(EntityAbyssalCustodian actor, String name, int pose, int tick, int arm,
                               float reach, float pitch, int death) {
+        frame(actor, name, pose, tick, arm, reach, pitch, death, 38);
+    }
+
+    private static void frame(EntityAbyssalCustodian actor, String name, int pose, int tick, int arm,
+                              float reach, float pitch, int death, float age) {
         DataWatcher watcher = actor.getDataWatcher();
         watcher.updateObject(20, Integer.valueOf(pose));
         watcher.updateObject(21, Integer.valueOf(tick));
@@ -184,9 +211,9 @@ public final class Capture {
         GL11.glPushMatrix();
         if (death > 0) GL11.glRotatef(-78, 0, 0, 1);
         System.out.println("@" + name);
-        new CustodianModel(false).render(actor, 0, 0, 38, 0, 0, 0.0625F);
+        new CustodianModel(false).render(actor, 0, 0, age, 0, 0, 0.0625F);
         System.out.println("@" + name + " eyes");
-        new CustodianModel(true).render(actor, 0, 0, 38, 0, 0, 0.0625F);
+        new CustodianModel(true).render(actor, 0, 0, age, 0, 0, 0.0625F);
         GL11.glPopMatrix();
     }
 }
@@ -304,6 +331,22 @@ def main():
     scale.save(OUT / "scale.png")
     lineup(frames, skin)
     hurt_sheet(frames, skin, eyes)
+    motion(frames, "caster", Image.open(SOURCES / "enderkin.png").convert("RGBA"),
+           Image.open(SOURCES / "enderkin_eyes.png").convert("RGBA"), 42, 50, 83, (120, 43))
+    motion(frames, "custodian", skin, eyes, 54, 90, 37, (120, 144))
+
+
+def motion(frames, name, skin, eyes, count, duration, scale, anchor):
+    sequence = []
+    for index in range(count):
+        key = f"{name} motion {index}"
+        card = Image.new("RGB", (240, 240), "#263747")
+        depth = [float("inf")] * (card.width * card.height)
+        draw(card, depth, frames[key], skin, 34, -10, scale, anchor)
+        draw(card, depth, frames.get(key + " eyes", frames[key]), eyes, 34, -10, scale, anchor, True)
+        sequence.append(card)
+    sequence[0].save(OUT / f"{name}-motion.gif", save_all=True, append_images=sequence[1:],
+                     duration=duration, loop=0, optimize=True)
 
 
 def hurt_sheet(frames, custodian, eyes):
@@ -332,12 +375,12 @@ def lineup(frames, custodian):
     draw_ink = ImageDraw.Draw(sheet)
     abyss = Image.open(SOURCES / "enderkin.png").convert("RGBA")
     items = [("Thief", donor("thief"), THIEF_HEAD), ("Saboteur", donor("saboteur"), SABOTEUR_HEAD),
-             ("Revised Enderkin", abyss, (0,0,7,6,6)), ("Revised Custodian", custodian, (0,0,16,13,14))]
+             ("Revised Enderkin", abyss, (0,0,7,6,7)), ("Revised Custodian", custodian, (0,0,14,12,16))]
     previous = os.environ.get("ZTO_REFINEMENT_BASELINE")
     if previous:
         with ZipFile(previous) as archive:
             old = Image.open(BytesIO(archive.read("zed/textures/abyssal/enderkin.png"))).convert("RGBA")
-        items.insert(2, ("Previous Enderkin", old, (0,0,7,5,6)))
+        items.insert(2, ("Previous Enderkin", old, (0,0,7,6,6)))
     for i, (label, texture, head) in enumerate(items):
         x = 12+184*i
         tile = texture.resize((158,158), NEAREST)

@@ -3,6 +3,8 @@ param(
     [string]$PackJava,
     [long]$TrenchSeed = 32021,
     [string]$TrenchPreviewDirectory,
+    [string]$TrenchSceneTargets,
+    [string]$ObservatoryPreviewDirectory,
     [switch]$Pack,
     [switch]$AerialSample,
     [string]$CandidateJar,
@@ -75,6 +77,9 @@ try {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/UnderwaterEquipmentProbe.java'
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/DistillationVisualProbe.java'
         }
+        if ($Focus -in 'trench','observatory','custodian') {
+            $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalSceneSnapshot.java'
+        }
         if ($Focus -eq 'trench') { $headlessSources += Join-Path $PSScriptRoot 'zto-agent/AbyssalWorldgenProbe.java' }
         if ($Focus -in 'observatory','custodian') {
             $headlessSources += Join-Path $PSScriptRoot 'zto-agent/ObservatoryProbe.java'
@@ -129,15 +134,17 @@ try {
                 Copy-Item -LiteralPath (Join-Path $game 'buildcraft/config/buildcraft.cfg') -Destination $buildcraftConfig.FullName
                 $probe = if ($Focus -eq 'motorboat') { 'MotorboatProbe' } elseif ($Focus -eq 'abyssal') { 'AbyssalDecorationProbe' } else { 'UnderwaterEquipmentProbe' }
                 if ($Focus -in 'observatory','custodian') {
-                    $previews = Join-Path $root 'dist-zto/observatory-beta1-previews'
+                    $previews = if ($ObservatoryPreviewDirectory) {
+                        [IO.Path]::GetFullPath($ObservatoryPreviewDirectory, $root)
+                    } else { Join-Path $root 'dist-zto/observatory-beta1-previews' }
                     $ownerArgs = @()
                     if ($CustodianOwnerSave) { $ownerArgs += 'owner-save' }
                     & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $furnaceClasspath ObservatoryProbe $fixture.FullName $previews $Focus @ownerArgs
                     if ($LASTEXITCODE) { throw 'Native Observatory fixture failed.' }
                     if ($CustodianOwnerSave) {
                         Add-Type -AssemblyName System.IO.Compression.FileSystem
-                        $artifact = Join-Path $root "dist-zto/abyss-beta1-owner-$([guid]::NewGuid().ToString('N')).zip"
-                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Beauty of the Abyss'),
+                        $artifact = Join-Path $root "dist-zto/abyss-second-pass-owner-$([guid]::NewGuid().ToString('N')).zip"
+                        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $fixture.FullName 'ZTO Beauty of the Abyss - Second Pass'),
                             $artifact, [IO.Compression.CompressionLevel]::Optimal, $true)
                         Write-Output "Owner save: $artifact"
                     }
@@ -148,7 +155,10 @@ try {
                     if (!$TrenchPreviewDirectory) {
                         $TrenchPreviewDirectory = Join-Path $root "dist-zto/trench-refinement/after/$TrenchSeed"
                     }
-                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath AbyssalWorldgenProbe $fixture.FullName $TrenchPreviewDirectory $TrenchSeed
+                    $targetArgs = @()
+                    if ($TrenchSceneTargets) { $targetArgs += [IO.Path]::GetFullPath($TrenchSceneTargets, $root) }
+                    $TrenchPreviewDirectory = [IO.Path]::GetFullPath($TrenchPreviewDirectory, $root)
+                    & $PackJava '-Xverify:all' '-Djava.awt.headless=true' "-javaagent:$agent" -cp $industrialClasspath AbyssalWorldgenProbe $fixture.FullName $TrenchPreviewDirectory $TrenchSeed @targetArgs
                     if ($LASTEXITCODE) { throw 'Native trench fixture failed.' }
                     return
                 }

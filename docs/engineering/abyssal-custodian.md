@@ -12,6 +12,8 @@ The Observatory entrance is the owner's highest-priority visual redesign. The cu
 
 ## Entity, model and resources
 
+The beta.1 second pass adds a deeper head, flared gills and a ribbed shoulder mantle from the existing Enderkin texture family. The front and rear tentacle pairs carry the same stroke at successive phases. Movement trails the appendages and a turn reaches the tips after the body banks. During a committed strike the native shoulder, direction and extension still determine the rendered arm.
+
 `ZTO.AbyssalCustodian` is a registered legacy living entity with the native hostile marker, no natural spawn table or egg, and a stable 1.55 × 4.45 block body box. It breathes in water and retains native health, armor and damage attribution. It uses the existing loaded-water swim sweeps and bounded route search. Idle movement thrust is 0.09 blocks/tick, cruising 0.13, and phase-two repositioning 0.17 before drag. The controller bounds swimming by the chamber, permits pursuit at the entrances, and returns toward the center on retreat. The original construction remains mutable.
 
 The redesigned body carries four individually phased four-part tentacles. Front and rear roots are separated in depth and width. Tapered upper arms and separate forearms deform around the shoulder and elbow. The narrow neck allows independent head tracking. The body turns at bounded rates while the renderer interpolates across the shortest yaw arc. The strike commits its own direction and shares shoulder coordinates between Java hit geometry and model.

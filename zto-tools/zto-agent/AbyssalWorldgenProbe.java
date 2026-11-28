@@ -22,7 +22,7 @@ public final class AbyssalWorldgenProbe {
     public static void main(String[] args) {
         try {
             if (args.length > 2) SEED = Long.parseLong(args[2]);
-            run(new File(args[0]), new File(args[1]));
+            run(new File(args[0]), new File(args[1]), args.length > 3 ? new File(args[3]) : null);
             System.exit(0);
         } catch (Throwable failure) {
             failure.printStackTrace();
@@ -30,7 +30,7 @@ public final class AbyssalWorldgenProbe {
         }
     }
 
-    private static void run(File root, File previews) throws Exception {
+    private static void run(File root, File previews, File reference) throws Exception {
         UnderwaterEquipmentProbe.startFixture(root, "setup");
         ZtoConfig config = ZtoConfigLoader.load(new File(root, "config").toPath(), false, Logger.getLogger("trench"));
         AbyssalRegistry.register(config, 100);
@@ -249,11 +249,25 @@ public final class AbyssalWorldgenProbe {
         ImageIO.write(depths, "png", new File(previews, "depth.png"));
         ImageIO.write(habitats, "png", new File(previews, "habitats.png"));
         for (int scene = 0; scene < sceneNames.length; scene++) {
-            if (bestScores[scene] == 0) continue;
-            terrainProjection(provider.b(bestX[scene], bestZ[scene]),
-                    new File(previews, sceneNames[scene] + "-projection.png"));
-            System.out.printf("Scene %s seed=%d chunk=%d,%d score=%d%n",
-                    sceneNames[scene], SEED, bestX[scene], bestZ[scene], bestScores[scene]);
+            String name = sceneNames[scene];
+            File snapshot = new File(previews, name + ".zvox");
+            if (reference != null) {
+                File fixed = new File(reference, snapshot.getName());
+                if (!fixed.isFile()) continue;
+                int[] view = AbyssalSceneSnapshot.view(fixed);
+                AbyssalSceneSnapshot.write(provider::b, snapshot, Arrays.copyOfRange(view, 0, 3), Arrays.copyOfRange(view, 3, 6));
+            } else if (bestScores[scene] > 0) {
+                int cxScene = bestX[scene], czScene = bestZ[scene];
+                ack chunk = provider.b(cxScene, czScene);
+                int x = (cxScene << 4) + 8, z = (czScene << 4) + 8;
+                int y = surface(chunk, x, z);
+                int[] target = {x, y + (scene == 0 ? 2 : 1), z};
+                int[] camera = approach(provider, target, scene);
+                AbyssalSceneSnapshot.write(provider::b, snapshot, camera, target);
+                terrainProjection(chunk, new File(previews, name + "-projection.png"));
+                System.out.printf("Scene %s seed=%d camera=%s target=%s score=%d%n",
+                        name, SEED, Arrays.toString(camera), Arrays.toString(target), bestScores[scene]);
+            }
         }
         System.out.printf(Locale.ROOT, "trenchColumns=%d deepColumns=%d ordinaryOceanColumns=%d otherBiomeColumns=%d%n", changed, deep, ordinary, land);
         System.out.printf(Locale.ROOT, "abyssal ocean coverage=%.2f%%%n", 100.0 * changed / (ordinary + changed));
@@ -263,6 +277,42 @@ public final class AbyssalWorldgenProbe {
         System.out.printf(Locale.ROOT, "mean provideChunk trench=%.3f ms (%d), background=%.3f ms (%d)%n",
                 trenchTime / (trenchChunks * 1e6), trenchChunks, normalTime / (normalChunks * 1e6), normalChunks);
         System.out.println("PASS native provider, reverse order, high IDs, metadata, Anvil and prior chunk preservation");
+    }
+
+    private static int surface(ack chunk, int x, int z) {
+        int floor = 62;
+        while (floor > 0 && transparentWater(chunk.a(x & 15, floor, z & 15))) floor--;
+        return floor;
+    }
+
+    private static int[] approach(aly provider, int[] target, int scene) {
+        int[] best = null;
+        int bestScore = Integer.MIN_VALUE;
+        int[][] views = {{4,-14}, {-4,14}, {-14,-5}, {14,5}, {11,-10}, {-11,10}};
+        Map<Long, ack> chunks = new HashMap<>();
+        for (int[] offset : views) {
+            int dx = offset[0], dz = offset[1];
+            if (scene == 2) { dx /= 2; dz /= 2; }
+            int x = target[0] + dx, z = target[2] + dz;
+            int floor = surface(chunks.computeIfAbsent(key(x >> 4, z >> 4), ignored -> provider.b(x >> 4, z >> 4)), x, z);
+            int y = Math.min(60, Math.max(floor + 3, target[1] + (scene == 1 || scene == 3 ? -3 : 1)));
+            int blocked = 0;
+            for (int i = 1; i <= 8; i++) {
+                int px = x - dx * i / 10, pz = z - dz * i / 10, py = y + (target[1] - y) * i / 10;
+                ack chunk = chunks.computeIfAbsent(key(px >> 4, pz >> 4), ignored -> provider.b(px >> 4, pz >> 4));
+                if (!transparentWater(chunk.a(px & 15, py, pz & 15))) blocked++;
+            }
+            int score = -blocked * 12 - Math.abs(y - target[1]) - (floor >= 60 ? 60 : 0);
+            if (scene == 0 || scene == 2) {
+                ack foreground = chunks.get(key(x >> 4, z >> 4));
+                if (foreground.a(x & 15, y, z & 15) >= 3039) score -= 8;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = new int[] {x, y, z};
+            }
+        }
+        return best;
     }
 
     private static int rawFloor(byte[] terrain, int offset) {

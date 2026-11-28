@@ -30,6 +30,10 @@ Disk loading bypasses both callbacks, including for older unpopulated chunks. A 
 
 ## Habitat and density
 
+In the beta.1 second pass, larger warped canopy fields establish kelp stands with winding open-water leads. Sparse algae mark their edges. The deep reef field and a small patch field place anemones and sponges together in isolated pockets. The immediate one-cell marine inset still allows the native placement helper to verify all four adjacent water cells without loading a neighbor.
+
+Fossil banks and rock escarpments use jittered anchors with absolute crests based on the shared terrain halo. A formation can span up to 30 blocks. The cross-section falls sharply on one side and slopes out along the other. Height bands carry fossil material along connected ridges or a fork. Each owned column builds upward from verified native support and stops at the first non-source cell. The base terrain envelope remains independent of decoration.
+
 - Abyssal Stone coats two to four shallow layers. Shellstone favors 12- and 97-block fossil fields. Silt favors low or gently sloped terrain and combines 24- and 68-block sediment fields.
 - World-space woodland fields at 42 and 119 blocks favor kelp on shelf floors at Y23–43. A smaller field creates variable tree-height stands and corridors with ribbon algae. Slope comes from the existing terrain halo.
 - Fossil formations share the jittered 23-block grid and a 109-block frequency field. Tapered ridges and spurs carry Shellstone strata, with occasional taller stone stacks rooted in the seabed. Each chunk evaluates and writes its portion using native extended block storage.

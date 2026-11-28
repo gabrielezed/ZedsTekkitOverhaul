@@ -1,5 +1,7 @@
 # Abyssal decoration
 
+The beta.1 second pass groups kelp by a broad canopy field with winding leads, gives the shallow rock bands distinct fossil banks and escarpments, and reserves Ghost Anemones for isolated pockets. The provider places each owned slice of a formation on the native seabed. [Trench composition and ownership](abyssal-worldgen.md)
+
 Survival 0.5.1-alpha.2 Part I is a work in progress based on the Motorboat and local artwork branch from PR #51 at `1effc47c42727a38653dc7a2d706733612d96b88`. These materials support the project's environmental storytelling through recoverable ocean geology, recognizable marine silhouettes and submerged masonry. The content registers independently of terrain generation. Use Creative or NEI to obtain the initial building materials and propagules for a disposable Survival fixture.
 
 | Block | Config key after `block.` | Default ID | Normal harvest | Block light |

@@ -49,27 +49,32 @@ final class AbyssalDecoration {
                 if (plan.observatory != null && plan.observatory.coversColumn(wx, wz)) continue;
                 long roll = TrenchRegion.hash(seed ^ 7781, wx, wz);
                 double ticket = TrenchRegion.unit(roll);
-                double forest = 0.72 * TrenchRegion.field(seed ^ 764, wx, wz, 42)
-                        + 0.28 * TrenchRegion.field(seed ^ 813, wx, wz, 119);
-                double opening = TrenchRegion.field(seed ^ 523, wx, wz, 12);
-                double reef = TrenchRegion.field(seed ^ 5719, wx, wz, 19);
-                int incline = slope(plan, x, z, y);
+                int floor = y;
+                while (y < 58 && coated(chunk.getBlockID(x, y + 1, z))) y++;
+                double bend = (TrenchRegion.field(seed ^ 719, wx, wz, 63) - 0.5) * 28;
+                double forest = 0.68 * TrenchRegion.field(seed ^ 764, wx + (int) bend, wz, 51)
+                        + 0.32 * TrenchRegion.field(seed ^ 813, wx, wz, 121);
+                double lead = Math.abs(TrenchRegion.field(seed ^ 523, wx, wz, 24) - 0.50);
+                double reef = TrenchRegion.field(seed ^ 5719, wx, wz, 32);
+                double patches = TrenchRegion.field(seed ^ 3203, wx, wz, 8);
+                int incline = slope(plan, x, z, floor);
                 boolean rocky = chunk.getBlockID(x, y, z) != MaterialType.SILT.block().blockID;
-                if (y >= 23 && y <= 43 && forest > 0.55 && incline <= 3) {
-                    double canopy = Math.min(1, (forest - 0.55) * 6);
-                    if (opening > 0.31 && ticket < 0.12 + canopy * 0.35) {
-                        int height = Math.min(4, 1 + (int) (canopy * 2 + opening * 2));
+                if (y <= 34 && rocky && reef > 0.73 && incline <= 4 && patches > 0.48) {
+                    // Short bright pockets sit below the rim or among low formations.
+                    if (ticket < 0.25 && MarineType.ANEMONE.placeInNewChunk(chunk, x, y + 1, z, 1, 0))
+                        light(chunk, x, y + 1, z, 3);
+                    else if (ticket >= 0.25 && ticket < 0.58)
+                        MarineType.SPONGE.placeInNewChunk(chunk, x, y + 1, z, 1, 0);
+                } else if (floor >= 22 && floor <= 44 && y - floor <= 2 && forest > 0.52 && incline <= 3) {
+                    double canopy = Math.min(1, (forest - 0.52) * 7);
+                    if (lead > 0.079 + 0.026 * patches && ticket < 0.07 + canopy * (0.35 + 0.13 * patches)) {
+                        int height = Math.min(4, 1 + (int) (canopy * 3 + lead * 2));
                         MarineType.KELP.placeInNewChunk(chunk, x, y + 1, z, height, 0);
-                    } else if (ticket > 0.88 && opening < 0.53) {
+                    } else if (ticket > 0.83 && lead < 0.13) {
                         MarineType.ALGAE.placeInNewChunk(chunk, x, y + 1, z, 1, 0);
                     }
-                } else if (y <= 28 && rocky && reef > 0.75 && incline <= 4) {
-                    if (ticket < 0.13 && MarineType.ANEMONE.placeInNewChunk(chunk, x, y + 1, z, 1, 0))
-                        light(chunk, x, y + 1, z, 3);
-                    else if (ticket >= 0.13 && ticket < 0.29)
-                        MarineType.SPONGE.placeInNewChunk(chunk, x, y + 1, z, 1, 0);
-                } else if (y >= 20 && opening > 0.64 && ticket < 0.19) {
-                    MarineType type = rocky && ticket > 0.08 ? MarineType.FAN_CORAL : MarineType.ALGAE;
+                } else if (y >= 19 && patches > 0.75 && ticket < 0.22) {
+                    MarineType type = rocky && ticket > 0.07 ? MarineType.FAN_CORAL : MarineType.ALGAE;
                     type.placeInNewChunk(chunk, x, y + 1, z, 1, (int) roll);
                 }
             }
@@ -107,49 +112,56 @@ final class AbyssalDecoration {
 
     private static void formation(Chunk chunk, AbyssalWorldgen.Plan plan, long seed) {
         int startX = chunk.xPosition << 4, startZ = chunk.zPosition << 4;
-        int spacing = 23;
-        for (int gz = Math.floorDiv(startZ - 6, spacing); gz <= Math.floorDiv(startZ + 21, spacing); gz++) {
-            for (int gx = Math.floorDiv(startX - 6, spacing); gx <= Math.floorDiv(startX + 21, spacing); gx++) {
+        int spacing = 37, reach = 15;
+        for (int gz = Math.floorDiv(startZ - reach, spacing); gz <= Math.floorDiv(startZ + 15 + reach, spacing); gz++) {
+            for (int gx = Math.floorDiv(startX - reach, spacing); gx <= Math.floorDiv(startX + 15 + reach, spacing); gx++) {
                 long roll = TrenchRegion.hash(seed ^ 9133, gx, gz);
                 int wx = gx * spacing + (int) ((roll >>> 8) % spacing);
                 int wz = gz * spacing + (int) ((roll >>> 17) % spacing);
+                int anchorX = wx - startX, anchorZ = wz - startZ;
+                if (anchorX < -reach || anchorX > 15 + reach || anchorZ < -reach || anchorZ > 15 + reach
+                        || !plan.loweredAt(anchorX, anchorZ)) continue;
+                int footing = plan.seabedAt(anchorX, anchorZ);
+                if (footing < 15 || footing > 43) continue;
                 double fossils = TrenchRegion.field(seed ^ 8821, wx, wz, 109);
                 int ticket = (int) (roll & 127);
-                if (ticket > 11 + fossils * 38) continue;
-                boolean masonry = ticket < 3;
-                int anchorX = wx - startX, anchorZ = wz - startZ;
-                if (masonry && (anchorX < 3 || anchorX > 12 || anchorZ < 3 || anchorZ > 12)) continue;
+                if (ticket > 28 + fossils * 42) continue;
+                boolean escarpment = ticket < 19;
                 double angle = TrenchRegion.unit(TrenchRegion.hash(roll, 0, 0)) * Math.PI;
                 double sin = Math.sin(angle), cos = Math.cos(angle);
-                boolean stack = !masonry && (roll & 768) == 256;
-                int extent = 3 + (int) ((roll >>> 28) & 3);
-                int peak = stack ? 9 + (int) ((roll >>> 35) & 3) : 2 + (int) ((roll >>> 35) & 7);
-                for (int z = Math.max(0, anchorZ - 6); z <= Math.min(15, anchorZ + 6); z++) {
-                    for (int x = Math.max(0, anchorX - 6); x <= Math.min(15, anchorX + 6); x++) {
+                int length = 10 + (int) ((roll >>> 28) & 3);
+                int relief = (escarpment ? 12 : 5) + (int) ((roll >>> 35) & 3);
+                int dip = (roll & 256) == 0 ? -1 : 1;
+                for (int z = Math.max(0, anchorZ - reach); z <= Math.min(15, anchorZ + reach); z++) {
+                    for (int x = Math.max(0, anchorX - reach); x <= Math.min(15, anchorX + reach); x++) {
                         if (plan.observatory != null && plan.observatory.coversColumn(startX + x, startZ + z)) continue;
                         int y = plan.floor[(z << 4) | x];
-                        if (y < 15 || y > 44 || !coated(chunk.getBlockID(x, y, z))) continue;
+                        if (y < 14 || y > 47 || !coated(chunk.getBlockID(x, y, z))) continue;
                         int dx = x - anchorX, dz = z - anchorZ;
-                        double along = dx * cos + dz * sin, across = dz * cos - dx * sin;
-                        int height;
-                        if (masonry) {
-                            if (Math.abs(across) >= 0.65 || Math.abs(along) >= 3) continue;
-                            height = Math.abs(along) > 1.6 ? 3 : 1;
-                        } else {
-                            double branch = Math.abs(across - Math.sin(along) * (fossils + 0.35));
-                            double ridge = Math.abs(along) / extent + branch / (1.3 + fossils * 1.8);
-                            double spur = Math.abs(along + 1.4) / 3.8 + Math.abs(across + 0.55 * along) / 2.4;
-                            double falloff = stack ? Math.hypot(along * 0.37, across * 0.57)
-                                    : Math.min(ridge, spur + 0.24);
-                            double rock = TrenchRegion.field(roll, startX + x, startZ + z, 3);
-                            height = (int) Math.round(peak * (1 - falloff) + (rock - 0.5) * 2.5);
+                        double along = dx * cos + dz * sin, across = (dz * cos - dx * sin) * dip;
+                        double taper = Math.abs(along) / length;
+                        if (taper >= 1) continue;
+                        double course = 1.7 * Math.sin(along / 4.5) + along * along / (length * 9.0);
+                        double flank = across - course;
+                        double body = Math.abs(flank) / (flank > 0 ? 3.1 : 6.8) + taper * taper;
+                        if (!escarpment) {
+                            double fork = Math.abs(flank - 0.65 * (along + 3)) / 2.7
+                                    + Math.abs(along - 1) / (length * 0.9) + 0.12;
+                            body = Math.min(body, fork);
                         }
-                        long variant = TrenchRegion.hash(roll, dx, dz);
-                        for (int dy = 1; dy <= height && water(chunk, x, y + dy, z); dy++) {
-                            MaterialType material = masonry ? (((dy + variant) & 3) == 0 ? MaterialType.BRICKS
-                                    : MaterialType.ERODED_BRICKS) : stack && dy <= height / 2 ? MaterialType.STONE
-                                    : dy == 1 || (y + dy) % 5 == 0 ? MaterialType.SHELLSTONE : MaterialType.PETRIFIED_CORAL;
-                            put(chunk, x, y + dy, z, material);
+                        if (body >= 1) continue;
+                        double wear = TrenchRegion.field(roll, startX + x, startZ + z, 4);
+                        int strata = (int) Math.floor((along + 1) / 4);
+                        int crest = (int) (footing + relief * (1 - body) + strata * 0.6 + wear * 2);
+                        // Each cell builds straight up from actual support, even on a chunk edge.
+                        // The sampled crest is an absolute elevation shared by every owned slice.
+                        int top = Math.min(Math.min(crest, 55), y + (escarpment ? 15 : 9));
+                        for (int yy = y + 1; yy <= top && water(chunk, x, yy, z); yy++) {
+                            int seam = Math.floorMod(yy + strata, 5);
+                            MaterialType material = seam == 0 ? MaterialType.SHELLSTONE : MaterialType.STONE;
+                            if (!escarpment && (seam == 1 || yy == top && wear > 0.60))
+                                material = MaterialType.PETRIFIED_CORAL;
+                            put(chunk, x, yy, z, material);
                         }
                     }
                 }
@@ -159,7 +171,8 @@ final class AbyssalDecoration {
 
     private static boolean coated(int id) {
         return id == MaterialType.STONE.block().blockID || id == MaterialType.SILT.block().blockID
-                || id == MaterialType.SHELLSTONE.block().blockID;
+                || id == MaterialType.SHELLSTONE.block().blockID
+                || id == MaterialType.PETRIFIED_CORAL.block().blockID;
     }
 
     private static boolean water(Chunk chunk, int x, int y, int z) {

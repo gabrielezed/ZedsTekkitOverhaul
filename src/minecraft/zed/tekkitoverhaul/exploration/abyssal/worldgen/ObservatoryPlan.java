@@ -27,6 +27,10 @@ class ObservatoryPlan {
     private final int hallStart, hallEnd, atriumEnd, branch;
 
     ObservatoryPlan(long id, int x, int z, int y) {
+        this(id, x, z, y, -5, 0);
+    }
+
+    ObservatoryPlan(long id, int x, int z, int y, int approachStart, int rearExtension) {
         this.id = id;
         this.x = x;
         this.z = z;
@@ -59,7 +63,7 @@ class ObservatoryPlan {
             {1, 3, hallEnd - 3}, {1, 3, hallEnd + 2}, {-width + 2, 2, hallEnd + 3},
             {4, 3, atriumEnd - 2}, {6, 3, -3}, {-1, 2, hallStart - 3},
             {-3, 5, hallEnd - 3}};
-        int[] a = position(-width, 0, -5), b = position(width, 0, length);
+        int[] a = position(-width, 0, approachStart), b = position(width, 0, length + rearExtension);
         minX = Math.min(a[0], b[0]);
         maxX = Math.max(a[0], b[0]);
         minZ = Math.min(a[2], b[2]);

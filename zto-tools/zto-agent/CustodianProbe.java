@@ -4,6 +4,7 @@ import ee.TileCondenser;
 import ee.TransTabletData;
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -21,8 +22,10 @@ import zed.tekkitoverhaul.exploration.abyssal.worldgen.ObservatorySites.Site;
 /** Exercises the reobfuscated Custodian in the existing disposable native Observatory fixture. */
 final class CustodianProbe {
     private static final int PEARL = 368, EYE = 381;
+    static final String OWNER_SAVE = "ZTO Beauty of the Abyss - Second Pass";
 
-    static void ownerSave(File root, xd world, Site site, ZtoConfig config, int x, int z) throws Exception {
+    static void ownerSave(File root, xd world, Site site, ZtoConfig config, int x, int z, int[] entrance,
+                          int[] openWater) throws Exception {
         yw diver = fixturePlayer(world);
         admit(world, site, diver);
         EntityAbyssalCustodian boss = actor(world);
@@ -51,13 +54,53 @@ final class CustodianProbe {
         world.g(x - 2, 66, z, 3038);
         world.g(x - 2, 67, z, 3049);
         world.a(new uh(x, 65, z));
+        check(world.a(openWater[0], openWater[1], openWater[2]) == 9
+                && world.a(openWater[0], openWater[1] + 5, openWater[2]) == 9, "clear native water for creature inspection");
+        ArrayList<String> locations = new ArrayList<>();
+        locations.add("Disposable Creative world. Equip the mask, flippers and a charged tank from the platform chest.");
+        locations.add("Switch to Survival for combat. The Observatory has a legitimate Custodian.");
+        locations.add("Platform " + x + ", 65, " + z);
+        locations.add("Entrance " + java.util.Arrays.toString(entrance));
+        locations.add("Open water for Creative Spawn Eggs " + java.util.Arrays.toString(openWater));
+        nearbyHabitats(world, x, z, locations);
         world.a(true, null);
         world.n();
         ce.a.a();
         agp.a();
-        Files.createFile(new File(root, "ZTO Beauty of the Abyss/.zto-disposable-test").toPath());
-        check(new File(root, "ZTO Beauty of the Abyss/level.dat").isFile(), "owner fixture saved level.dat");
+        File save = new File(root, OWNER_SAVE);
+        Files.createFile(new File(save, ".zto-disposable-test").toPath());
+        Files.write(new File(save, "Dive locations.txt").toPath(), locations, StandardCharsets.UTF_8);
+        check(new File(save, "level.dat").isFile(), "owner fixture saved level.dat");
+        for (String location : locations) System.out.println("Owner fixture | " + location);
         System.out.println("PASS marked owner save on the surface above the buried entrance");
+    }
+
+    private static void nearbyHabitats(xd world, int x, int z, ArrayList<String> locations) {
+        int[] species = {3039, 3035, 3043}, best = new int[species.length];
+        int[][] position = new int[species.length][3];
+        for (int cz = (z >> 4) - 5; cz <= (z >> 4) + 5; cz++) {
+            for (int cx = (x >> 4) - 5; cx <= (x >> 4) + 5; cx++) {
+                ack chunk = world.d(cx, cz);
+                int[] counts = new int[species.length];
+                int[][] points = new int[species.length][3];
+                for (int u = 0; u < 16; u++) for (int v = 0; v < 16; v++) for (int y = 16; y <= 49; y++) {
+                    int block = chunk.a(u, y, v);
+                    for (int i = 0; i < species.length; i++) if (block == species[i]) {
+                        counts[i]++;
+                        points[i][0] = (cx << 4) + u;
+                        points[i][1] = y;
+                        points[i][2] = (cz << 4) + v;
+                    }
+                }
+                for (int i = 0; i < species.length; i++) if (counts[i] > best[i]) {
+                    best[i] = counts[i];
+                    position[i] = points[i];
+                }
+            }
+        }
+        String[] names = {"Kelp canopy", "Fossil formation", "Ghost Anemone habitat"};
+        for (int i = 0; i < names.length; i++)
+            if (best[i] > 0) locations.add(names[i] + " " + java.util.Arrays.toString(position[i]));
     }
 
     static void verifyCreativeCatalog(ZtoConfig config) throws Exception {

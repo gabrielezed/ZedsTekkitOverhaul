@@ -18,11 +18,12 @@ SOUNDS = ART.parent / "src/minecraft/zed/sounds/custodian"
 
 # UV origin, width, height, depth, material. These match CustodianModel.
 PARTS = {
-    "head": (0, 0, 16, 13, 14),
-    "left gill": (62, 0, 2, 7, 6),
-    "right gill": (79, 0, 2, 7, 6),
-    "neck": (96, 0, 6, 8, 6),
-    "torso": (0, 29, 18, 22, 10),
+    "head": (0, 0, 14, 12, 16),
+    "left gill": (62, 0, 3, 8, 6),
+    "right gill": (81, 0, 3, 8, 6),
+    "neck": (102, 0, 6, 8, 6),
+    "torso": (0, 29, 14, 22, 10),
+    "mantle": (103, 30, 4, 12, 8),
     "waist": (58, 29, 12, 7, 10),
     "upper arm": (0, 65, 5, 13, 5),
     "forearm": (22, 65, 4, 12, 4),
@@ -61,7 +62,7 @@ def atlas():
     for part, uv in PARTS.items():
         if part == "head":
             source, region = thief, THIEF_HEAD
-        elif part in ("neck", "waist"):
+        elif part in ("neck", "waist", "mantle"):
             source, region = saboteur, SABOTEUR_TORSO
         elif part == "torso":
             source, region = thief, THIEF_TORSO
@@ -79,9 +80,15 @@ def atlas():
     draw = ImageDraw.Draw(image)
     x, y, _, _ = faces(*PARTS["torso"])[1]
     for i in range(5):
-        r = 4 + i*3
+        r = 5 + i * 3
         for side in (-1, 1):
-            draw.line((x+8+side*2, y+r, x+8+side*(4+i//2), y+r-2), fill="#25232e")
+            draw.line((x + 6 + side, y + r, x + 6 + side * (3 + i // 2), y + r - 2), fill="#363542")
+            draw.point((x + 6 + side * (3 + i // 2), y + r - 2), fill="#494653")
+    for face in (0, 2):
+        x, y, w, h = faces(*PARTS["mantle"])[face]
+        for rib in range(3):
+            draw.line((x+1, y+2+rib*3, x+w-2, y+1+rib*3), fill="#3b3b48")
+            draw.line((x+2, y+3+rib*3, x+w-2, y+2+rib*3), fill="#232431")
     for part in ("tentacle root", "tentacle joint", "tentacle taper", "tentacle tip"):
         x, y, w, h = faces(*PARTS[part])[1]
         for row in range(1, h - 1, 3):

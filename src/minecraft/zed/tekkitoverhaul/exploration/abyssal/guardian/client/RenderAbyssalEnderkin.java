@@ -11,6 +11,8 @@ import net.minecraft.src.RenderLiving;
 import net.minecraft.src.OpenGlHelper;
 import org.lwjgl.opengl.GL11;
 import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalEnderkin;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.CustodianBalance;
+import zed.tekkitoverhaul.exploration.abyssal.guardian.EntityAbyssalCustodian;
 
 public final class RenderAbyssalEnderkin extends RenderLiving {
     private RenderAbyssalEnderkin() {
@@ -49,6 +51,7 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
 
     private static final class CasterModel extends ModelBase {
         private final ModelRenderer head, torso, right, left, elbow, rightLeg, leftLeg, gillLeft, gillRight;
+        private final ModelRenderer[] shins = new ModelRenderer[2], fins = new ModelRenderer[2];
         private float partial;
 
         @Override public void setLivingAnimations(EntityLiving actor, float stride, float swing, float partial) {
@@ -57,20 +60,25 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
 
         CasterModel() {
             textureWidth = textureHeight = 64;
-            head = box(0, 0, 0, 9, 0, -3.5F, -6, -3, 7, 6, 6);
-            gillLeft = box(28, 0, -3.5F, -1, 0, -1, -2, -2, 1, 3, 4);
-            gillRight = box(40, 0, 3.5F, -1, 0, 0, -2, -2, 1, 3, 4);
+            head = box(0, 0, 0, 9, 0, -3.5F, -6, -4, 7, 6, 7);
+            gillLeft = box(30, 0, -3.2F, -2, 0, -1, -2, -1, 1, 4, 5);
+            gillRight = box(43, 0, 3.2F, -2, 0, 0, -2, -1, 1, 4, 5);
             head.addChild(gillLeft);
             head.addChild(gillRight);
-            torso = box(0, 13, 0, 9, 0, -3, 0, -2, 6, 7, 4);
-            right = box(22, 13, -4, 9, 0, -1, 0, -1, 2, 4, 2);
-            elbow = box(31, 13, 0, 4, 0, -0.85F, 0, -1, 2, 3, 2);
+            torso = box(0, 14, 0, 9, 0, -3, 0, -1.5F, 6, 8, 4);
+            right = box(22, 14, -4, 9, 0, -1, 0, -1, 2, 4, 2);
+            elbow = box(31, 14, 0, 3.8F, 0, -0.85F, 0, -1, 2, 3, 2);
             right.addChild(elbow);
-            left = box(41, 13, 4, 9, 0, -1, 0, -1, 2, 7, 2);
-            rightLeg = box(0, 28, -1.6F, 16, 0, -1, 0, -1, 2, 7, 2);
-            leftLeg = box(12, 28, 1.6F, 16, 0, -1, 0, -1, 2, 7, 2);
-            rightLeg.addChild(box(24, 28, 0, 6, 0, -1.5F, 0, 0, 3, 1, 3));
-            leftLeg.addChild(box(38, 28, 0, 6, 0, -1.5F, 0, 0, 3, 1, 3));
+            left = box(41, 14, 4, 9, 0, -1, 0, -1, 2, 7, 2);
+            rightLeg = box(0, 29, -1.5F, 16, 0.5F, -1, 0, -1, 2, 4, 2);
+            leftLeg = box(12, 29, 1.5F, 16, 0.5F, -1, 0, -1, 2, 4, 2);
+            for (int i = 0; i < 2; i++) {
+                shins[i] = box(24, 29, 0, 3.7F, 0, -0.75F, 0, -0.75F, 2, 3, 2);
+                fins[i] = box(0, 40, 0, 2.8F, 0, -1.5F, -0.5F, 0, 3, 1, 5);
+                shins[i].addChild(fins[i]);
+            }
+            rightLeg.addChild(shins[0]);
+            leftLeg.addChild(shins[1]);
         }
 
         private ModelRenderer box(int u, int v, float px, float py, float pz, float x, float y, float z,
@@ -83,40 +91,72 @@ public final class RenderAbyssalEnderkin extends RenderLiving {
         @Override public void render(Entity actor, float stride, float swing, float age, float yaw, float pitch, float scale) {
             EntityAbyssalEnderkin caster = (EntityAbyssalEnderkin) actor;
             int phase = caster.casting();
-            float travel = (float) Math.sqrt(caster.motionX * caster.motionX + caster.motionZ * caster.motionZ);
-            float stroke = Math.min(1, 0.25F + travel * 5);
-            float kick = MathHelper.sin(age * 0.30F) * stroke;
-            float glide = MathHelper.sin(age * 0.15F);
-            float rise = phase > 0 ? Math.min(1, phase / 8.0F) : 0;
+            float travel = (float) Math.hypot(caster.motionX, caster.motionZ);
+            float effort = Math.min(1, travel * 6);
+            float phaseTime = age * 0.31F;
+            float vitality = 1 - CustodianBalance.ease(caster.deathTime / 17F);
+            float stroke = (0.12F + effort * 0.69F) * vitality;
+            float windup = CustodianBalance.ease(phase / 8.0F);
+            float recoil = phase < 0 ? CustodianBalance.ease((-phase + 1 - partial) / 8) : 0;
+            float casting = Math.max(windup, recoil);
             float flinch = AquaticHurtPose.recoil(caster, partial, 0);
-            float legs = AquaticHurtPose.recoil(caster, partial, 2);
+            float tailFlinch = AquaticHurtPose.recoil(caster, partial, 2);
             float lateral = AquaticHurtPose.lateral(caster);
             float backward = AquaticHurtPose.backward(caster);
-            head.rotateAngleX = pitch * 0.017453292F - (0.16F + 0.37F * backward) * flinch;
-            head.rotateAngleY = lateral * flinch * 0.35F;
-            head.rotateAngleZ = -lateral * flinch * 0.26F;
-            torso.rotateAngleX = (-0.10F - 0.16F * stroke) * (1 - rise) + backward * flinch * 0.21F;
-            torso.rotateAngleZ = lateral * flinch * 0.21F;
-            gillLeft.rotateAngleY = -0.17F + 0.09F * kick - 0.27F * flinch;
-            gillRight.rotateAngleY = 0.17F - 0.09F * kick + 0.27F * flinch;
-            // Keep the casting shoulder and hand aligned with the authoritative pulse origin.
-            right.rotateAngleX = phase == 0 ? -0.2F + kick * 0.23F + flinch * 0.65F
-                    : EntityAbyssalEnderkin.armPitch(caster.rotationPitch, phase);
-            right.rotateAngleZ = phase == 0 ? -0.28F * flinch : 0;
-            elbow.rotateAngleX = phase > 0 ? -0.19F * (1 - Math.min(phase, 12) / 12.0F)
-                    : phase == 0 ? -0.76F * flinch : 0;
-            left.rotateAngleX = -0.30F - kick * 0.28F - rise * 0.28F - flinch * 0.66F;
-            left.rotateAngleZ = 0.19F + rise * 0.22F + glide * 0.05F + flinch * 0.39F;
-            rightLeg.rotateAngleX = 0.3F + 0.35F * kick + 0.46F * legs;
-            leftLeg.rotateAngleX = 0.3F - 0.35F * kick + 0.26F * legs;
-            rightLeg.rotateAngleZ = -0.22F * legs;
-            leftLeg.rotateAngleZ = 0.21F * legs;
+            float turn = EntityAbyssalCustodian.wrap(caster.rotationYaw - caster.prevRotationYaw);
+            float bank = Math.max(-0.28F, Math.min(0.28F, turn * 0.043F)) * (1 - casting);
+            float climb = (float) Math.max(-0.22, Math.min(0.22, caster.motionY * 1.7));
+            float lean = (-0.16F - 0.76F * effort - climb) * (1 - casting);
+            lean += backward * flinch * 0.19F;
+            bank += lateral * flinch * 0.19F;
+            head.rotateAngleX = pitch * 0.017453292F - lean * 0.63F - (0.16F + 0.37F * backward) * flinch;
+            head.rotateAngleY = -bank * 0.58F + lateral * flinch * 0.2F;
+            head.rotateAngleZ = -bank * 0.6F;
+            float breath = 0.11F + 0.08F * MathHelper.sin(age * 0.19F) * vitality + 0.25F * flinch + 0.13F * casting;
+            gillLeft.rotateAngleY = -breath;
+            gillRight.rotateAngleY = breath;
+            gillLeft.rotateAngleZ = -0.23F - breath * 0.45F;
+            gillRight.rotateAngleZ = 0.23F + breath * 0.45F;
+            float driftingArm = -0.16F + 0.65F * effort + flinch * 0.6F;
+            right.rotateAngleX = phase > 0 ? EntityAbyssalEnderkin.armPitch(caster.rotationPitch, phase)
+                    : driftingArm + (EntityAbyssalEnderkin.armPitch(caster.rotationPitch, phase) - driftingArm) * recoil;
+            right.rotateAngleZ = -0.25F * flinch * (1 - casting);
+            elbow.rotateAngleX = (-0.22F - 0.60F * flinch) * (1 - casting);
+            left.rotateAngleX = driftingArm - casting * 0.63F - flinch;
+            left.rotateAngleZ = 0.20F + casting * 0.32F + bank * 0.6F;
+            for (int i = 0; i < 2; i++) {
+                float sign = i == 0 ? -1 : 1;
+                ModelRenderer thigh = i == 0 ? rightLeg : leftLeg;
+                thigh.rotateAngleX = 0.25F + sign * stroke * MathHelper.sin(phaseTime) + tailFlinch * 0.34F;
+                thigh.rotateAngleZ = sign * (0.08F + tailFlinch * 0.18F) - bank * 0.54F;
+                shins[i].rotateAngleX = -0.19F + sign * stroke * MathHelper.sin(phaseTime - 0.75F) * 0.61F;
+                fins[i].rotateAngleX = -0.29F + sign * stroke * MathHelper.sin(phaseTime - 1.4F) * 0.76F;
+                fins[i].rotateAngleZ = sign * (0.13F + effort * 0.21F);
+            }
+            // The moving body follows the current. During a cast the hand uses the same
+            // unbanked shoulder and pitch as the native projectile origin.
+            GL11.glPushMatrix();
+            GL11.glTranslatef(0, 9 * scale, 0);
+            GL11.glRotatef(bank * 57.29578F, 0, 0, 1);
+            GL11.glRotatef(lean * 57.29578F, 1, 0, 0);
+            GL11.glTranslatef(0, -9 * scale, 0);
             head.render(scale);
             torso.render(scale);
-            right.render(scale);
             left.render(scale);
             rightLeg.render(scale);
             leftLeg.render(scale);
+            if (phase == 0) right.render(scale);
+            GL11.glPopMatrix();
+            if (phase != 0) {
+                // Blend back through the body rig on the final recoil frames.
+                GL11.glPushMatrix();
+                GL11.glTranslatef(0, 9 * scale, 0);
+                GL11.glRotatef(bank * (phase > 0 ? 0 : 1 - recoil) * 57.29578F, 0, 0, 1);
+                GL11.glRotatef(lean * (phase > 0 ? 0 : 1 - recoil) * 57.29578F, 1, 0, 0);
+                GL11.glTranslatef(0, -9 * scale, 0);
+                right.render(scale);
+                GL11.glPopMatrix();
+            }
         }
     }
 }

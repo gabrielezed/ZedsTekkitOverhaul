@@ -2,7 +2,13 @@
 
 The Observatory gives the Abyssal Trench a destination for a diving expedition. Follow the weathered columns to the entrance, descend through the flooded halls, and return by a side gallery or through the main approach. Oxygen, lights, temporary refuges, mining and advanced Tekkit equipment remain ordinary sandbox tools.
 
-## Revision four
+## Revision five
+
+The survey compares both shoulders with the foreground shelf before selecting receding frames, a cleft or a terrace. It freezes the sill, profile and higher side after the existing native-envelope survey. The entrance uses a longer forecourt, with an intact rock cap where the terrain rises over the inner thresholds. The cistern has a central crossing and recessed side loggias. The inner vault ends in an apse beyond the original combat volume. The existing chamber center, entries, patrol policy and reward ownership still use the original site identity.
+
+Revision five stores sill, profile and shoulder after the base floor. Its slice bitset covers the revised approach and rear extent. The reader uses each historical layout's own width and depth when interpreting its slice bitset. Revisions one through four retain their geometry, stamps and slot ownership. [Native evidence and coordinates](../agents/survival-051-beta1.md)
+
+## Historical revision four
 
 New sites use the same candidate grid, footprint, native terrain survey and buried room envelope. The survey measures the approach floor and rock shoulders. A stored sill and profile bind the portal to those measurements across chunk writes and save/reload. The shelf and recessed compositions share a three- or five-block opening, stepped stone crown, pillar jambs and an asymmetrically damaged outer support. The threshold opens into a descending flooded vestibule on the existing gallery axis.
 

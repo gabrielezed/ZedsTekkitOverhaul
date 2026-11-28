@@ -95,6 +95,7 @@ public final class ObservatoryProbe {
         verifyLegacy(root, 1);
         verifyLegacy(root, 2);
         verifyLegacy(root, 3);
+        verifyLegacy(root, 4);
         long[] ownerLocation = null;
         for (long[] sample : discovered) {
             long seed = sample[0];
@@ -114,11 +115,11 @@ public final class ObservatoryProbe {
                 System.out.println("Unready native candidate at " + x + ", " + z + ": " + (site == null ? "unadmitted" : site.status()));
                 continue;
             }
-            check(site.revision() == 4 && site.count() >= 8 && site.count() <= 12, "buried plan and reduced allocation");
+            check(site.revision() >= 4 && site.count() >= 8 && site.count() <= 12, "buried plan and reduced allocation");
             System.out.printf("Native site seed=%d entrance=%d,%d,%d id=%x allocated=%d generation=%.0f ms%n",
                     seed, x, y, z, site.identity(), site.count(), (System.nanoTime() - generation) / 1e6);
             verifyBurial(world, site, plan, y, previews, completed);
-            verifyLighting(world, minX, maxX, minZ, maxZ, y);
+            verifyLighting(world, minX, maxX, minZ, maxZ, y, site.revision());
             if (completed == 0) {
                 ownerLocation = sample;
                 defendOld(root, seed, minX, minZ, maxX, maxZ, x, z);
@@ -170,13 +171,20 @@ public final class ObservatoryProbe {
         if (ownerSave) {
             long[] sample = ownerLocation;
             Object plan = candidate.invoke(null, sample[0], (int) sample[1], (int) sample[2]);
-            xd owner = world(root, "ZTO Beauty of the Abyss", sample[0], 1);
+            xd owner = world(root, CustodianProbe.OWNER_SAVE, sample[0], 1);
             load(owner, get(plan, "minX") >> 4, get(plan, "maxX") >> 4,
                     get(plan, "minZ") >> 4, get(plan, "maxZ") >> 4, false);
             int x = get(plan, "x"), z = get(plan, "z");
             Site site = ObservatorySites.nearby(owner, x, z);
             check(site != null && site.ready(owner), "owner fixture native site");
-            CustodianProbe.ownerSave(root, owner, site, config, x, z);
+            Field frozen = Site.class.getDeclaredField("plan");
+            frozen.setAccessible(true);
+            Object portal = frozen.get(site);
+            Method position = method(portal.getClass(), "position", int.class, int.class, int.class);
+            int sill = get(portal, "sill");
+            int[] entrance = (int[]) position.invoke(portal, 0, sill + 2, -5);
+            int[] openWater = (int[]) position.invoke(portal, 12, 55 - (int) sample[3], -18);
+            CustodianProbe.ownerSave(root, owner, site, config, x, z, entrance, openWater);
             System.out.printf("Owner entrance seed=%d X=%d Z=%d base Y=%d%n", sample[0], x, z, sample[3]);
         }
         System.out.println("PASS native Observatory placement, alternatives, stamps, old terrain and finite Enderkin persistence");
@@ -201,6 +209,10 @@ public final class ObservatoryProbe {
             stream.writeInt(x);
             stream.writeInt(z);
             stream.writeInt(y);
+            if (revision == 4) {
+                stream.writeByte(12);
+                stream.writeByte(1);
+            }
             stream.writeLong(0L);
             stream.writeInt(1);
             stream.writeInt(1);
@@ -210,7 +222,7 @@ public final class ObservatoryProbe {
         load(legacy, get(plan, "minX") >> 4, get(plan, "maxX") >> 4, get(plan, "minZ") >> 4, get(plan, "maxZ") >> 4, false);
         Site old = ObservatorySites.nearby(legacy, x, z);
         check(old != null && old.revision() == revision && old.ready(legacy) && old.consumed(0) && old.terminal(0)
-                && (revision == 3 ? old.count() >= 8 && old.count() <= 12 : old.count() >= 16), "historical layout and finite slot allocation remain readable");
+                && (revision >= 3 ? old.count() >= 8 && old.count() <= 12 : old.count() >= 16), "historical layout and finite slot allocation remain readable");
         yw player = NaturalSpawnProbe.join(legacy);
         player.c(x + 0.5, y + 3, z + 0.5, 180, 0);
         for (int tick = 0; tick < 1800; tick += 20) {
@@ -275,11 +287,11 @@ public final class ObservatoryProbe {
         System.out.println("PASS pinned OptiFine water faces on six sides of five submerged shapes, masonry, open water and lava");
     }
 
-    private static void verifyLighting(xd world, int minX, int maxX, int minZ, int maxZ, int floor) {
+    private static void verifyLighting(xd world, int minX, int maxX, int minZ, int maxZ, int floor, int revision) {
         int lamps = 0, litWater = 0, seams = 0;
         int[][] sides = {{1,0,0}, {-1,0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
         for (int x = minX * 16; x < (maxX + 1) * 16; x++) for (int z = minZ * 16; z < (maxZ + 1) * 16; z++) {
-            for (int y = floor - 2; y <= floor + 11; y++) {
+            for (int y = floor - 2; y <= floor + (revision >= 5 ? 30 : 11); y++) {
                 if (world.a(x, y, z) != 3038) continue;
                 lamps++;
                 check(world.b(wl.b, x, y, z) == 5, "generated lamp retains native block emission");
@@ -548,19 +560,31 @@ public final class ObservatoryProbe {
         int sill = get(portal, "sill");
         int[] mouth = (int[]) position.invoke(plan, 0, 0, -2);
         mouth[1] = floor + sill + 1;
-        System.out.printf("Portal %s approach=%d,%d,%d%n",
-                flag(portal, "recessed") ? "recessed" : "terraced", mouth[0], mouth[1], mouth[2]);
-        int jamb = get(portal, "jamb");
+        int profile = site.revision() == 5 ? get(portal, "profile") : -1;
+        String entrance = profile < 0 ? (flag(portal, "recessed") ? "recessed" : "terraced")
+                : new String[] {"frames", "cleft", "terrace"}[profile];
+        System.out.printf("Portal %s approach=%d,%d,%d%n", entrance, mouth[0], mouth[1], mouth[2]);
+        int jamb = profile < 0 ? get(portal, "jamb") : profile == 0 ? 4 : profile == 1 ? 3 : 5;
         for (int u = 1 - jamb; u < jamb; u++) {
             int[] opening = (int[]) position.invoke(portal, u, 1, 0);
             for (int rise = 0; rise < 4; rise++)
                 check(wet(world.a(opening[0], opening[1] + sill + rise, opening[2])), "clear portal aperture");
         }
+        if (profile >= 0) verifyRib(world, portal, position, sill);
         int[] center = site.arenaCenter();
         check(wet(world.a(mouth[0],mouth[1],mouth[2])), "flooded entrance shaft");
         check(swimmable(world, mouth, center, null), "native entrance to chamber");
         check(swimmable(world, mouth, center, site.arenaEntry(false)), "native alternative path around blocked inner approach");
         check(previews.isDirectory() || previews.mkdirs(), "preview directory");
+        scene(world, position, portal, previews, index, "arrival", 8, sill+5, -17, 0, sill+3, 1);
+        scene(world, position, portal, previews, index, "portal", 1, sill+3, -8, 0, sill+3, 4);
+        scene(world, position, portal, previews, index, "threshold", 0, sill+2, site.revision() == 5 ? 1 : -2,
+                0, sill-1, 8);
+        if (index == 0) {
+            scene(world, position, portal, previews, index, "descent", 0, 6, 10, 0, 4, 20);
+            scene(world, position, portal, previews, index, "cistern", 2, 5, 22, -4, 2, 30);
+            scene(world, position, portal, previews, index, "vault", 3, 4, length-15, 0, 5, length+1);
+        }
         writeMap(top, previews, "buried-" + index + "-seabed");
         writeMap(interior, previews, "buried-" + index + "-interior");
         writeMap(section, previews, "buried-" + index + "-section");
@@ -592,6 +616,45 @@ public final class ObservatoryProbe {
         }
         System.out.printf("PASS native burial %d/%d covered, %d lamps, %d details%n",
                 covered, qualifying, lamps, details);
+    }
+
+    private static void verifyRib(xd world, Object plan, Method position, int sill) throws Exception {
+        int span = 21, levels = 16;
+        int[][] blocks = new int[span][levels];
+        boolean[][] supported = new boolean[span][levels];
+        ArrayDeque<int[]> route = new ArrayDeque<>();
+        for (int u = 0; u < span; u++) for (int h = 0; h < levels; h++) {
+            int[] at = (int[]) position.invoke(plan, u - span / 2, sill + h - 4, 0);
+            blocks[u][h] = world.a(at[0], at[1], at[2]);
+            if (h == 0 && blocks[u][h] != 0 && !wet(blocks[u][h])) {
+                supported[u][h] = true;
+                route.add(new int[] {u,h});
+            }
+        }
+        int[][] step = {{1,0},{-1,0},{0,1},{0,-1}};
+        while (!route.isEmpty()) {
+            int[] cell = route.removeFirst();
+            for (int[] delta : step) {
+                int u = cell[0] + delta[0], h = cell[1] + delta[1];
+                if (u < 0 || u >= span || h < 0 || h >= levels || supported[u][h]
+                        || blocks[u][h] == 0 || wet(blocks[u][h])) continue;
+                supported[u][h] = true;
+                route.add(new int[] {u,h});
+            }
+        }
+        int courses = 0;
+        for (int u = 0; u < span; u++) for (int h = 0; h < levels; h++) if (blocks[u][h] == 3049) {
+            check(supported[u][h], "stepped portal frieze shares a face-connected course with its footing");
+            courses++;
+        }
+        check(courses >= 5, "native portal has a continuous frieze");
+    }
+
+    private static void scene(xd world, Method position, Object plan, File previews, int index, String name,
+                              int u, int h, int v, int focusU, int focusH, int focusV) throws Exception {
+        int[] camera = (int[]) position.invoke(plan, u, h, v);
+        int[] target = (int[]) position.invoke(plan, focusU, focusH, focusV);
+        AbyssalSceneSnapshot.write(world::d, new File(previews, "site-" + index + "-" + name + ".zvox"), camera, target);
     }
 
     /** Bounded perspective diagnostic using generated block IDs, with a fixed water attenuation. */

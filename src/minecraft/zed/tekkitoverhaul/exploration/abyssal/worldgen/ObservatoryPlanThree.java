@@ -14,7 +14,11 @@ class ObservatoryPlanThree extends ObservatoryPlan {
     private final Room chamber;
 
     ObservatoryPlanThree(long id, int x, int z, int y) {
-        super(id, x, z, y);
+        this(id, x, z, y, -5, 0);
+    }
+
+    ObservatoryPlanThree(long id, int x, int z, int y, int approachStart, int rearExtension) {
+        super(id, x, z, y, approachStart, rearExtension);
         wing = (id & 4) == 0 ? -1 : 1;
         hallWidth = 7 + (int) (id & 1);
         chamberFront = length - 18;
@@ -139,7 +143,7 @@ class ObservatoryPlanThree extends ObservatoryPlan {
         int span = width * 2 + 1, depth = length + 1;
         boolean[] seen = new boolean[span * depth * 13];
         ArrayDeque<int[]> queue = new ArrayDeque<int[]>();
-        queue.add(new int[] {0, 9, 2});
+        queue.add(routeStart());
         int[][] offsets = {{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
         while (!queue.isEmpty()) {
             int[] p = queue.removeFirst();
@@ -156,4 +160,6 @@ class ObservatoryPlanThree extends ObservatoryPlan {
         }
         return false;
     }
+
+    int[] routeStart() { return new int[] {0, 9, 2}; }
 }

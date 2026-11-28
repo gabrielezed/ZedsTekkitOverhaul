@@ -2,9 +2,9 @@
 
 ## 0.5.1-beta.1 — The Beauty of the Abyss
 
-- Compose new revision-four Sunken Observatories with surveyed portals, flooded vestibules, contextual masonry and more distinct interior landmarks.
-- Establish coherent kelp stands, deep luminous marine colonies, branching fossil deposits and rooted stone stacks. Natural seabed decoration no longer generates freestanding Abyssal Lamps.
-- Refine the Enderkin fin and Custodian tentacle textures and animate swimming, casting preparation and attack transitions.
+- Build revision-five Sunken Observatories around buried approaches with receding thresholds, a flooded cistern with side loggias and a recessed inner vault.
+- Shape kelp canopies around winding clearings, separate luminous colonies with quiet water and build layered escarpments and forked fossil banks across chunk boundaries.
+- Redraw aquatic Enderkin gills, fins and Custodian mantle details using the existing Enderkin family textures. Connect swim strokes, turns, casting, tentacle trailing and damage reactions.
 - Preserve prior layout geometry, finite populations, encounter records and nonrepeatable pearl rewards. This version is a trial pending graphical acceptance.
 
 ## 0.5.1-alpha.4 — The Abyssal Custodian

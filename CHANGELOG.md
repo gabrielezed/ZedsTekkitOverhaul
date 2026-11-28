@@ -1,20 +1,20 @@
 # ZedsTekkitOverhaul changelog
 
-## 0.5.1-alpha.4 — The Abyssal Custodian
+## 0.5.1-alpha.4 — Custodian encounter and Ender Pearl scarcity
 
 - Add an articulated, transforming aquatic Custodian with four combat moves and two phases.
 - Bind a persistent Custodian to stamped revision-one and revision-two Observatories. On legitimate defeat, the site issues one vanilla Ender Pearl.
 - Remove ordinary native Enderman pearls and protect Ender Pearls and Eyes of Ender from EE2 replication while preserving physical items and the native Eye of Ender recipe.
 - Add a marked owner save, native encounter and economy verification, and previews captured from the actual model. [Encounter](docs/engineering/abyssal-custodian.md) · [Scarcity](docs/engineering/ender-pearl-scarcity.md)
 
-## 0.5.1-alpha.3 — The Sunken Observatory
+## 0.5.1-alpha.3 — Sunken Observatory and aquatic mobs
 
 - Generate rare flooded observatories in newly explored Abyssal Trench terrain. Each ruin includes alternative routes and a reserved chamber for alpha.4.
 - Add Fangfish, Diver Zombies and Diver Skeletons to natural ocean encounters. New Observatory sites use finite Abyssal Enderkin patrols with a one-handed cast. Revision-one sites retain their original populations.
 - Compose new Observatory layouts from flooded room and passage modules at varied elevations. Cull water top faces under solid abyssal masonry and initialize lamp light across slice boundaries.
 - Add a developer Observatory locator and native generation and persistence checks.
 
-## 0.5.1-alpha.2 — The Abyss Below
+## 0.5.1-alpha.2 — Abyssal Trench generation and decoration
 
 - Add seven abyssal building materials, five submerged organisms and six resource items with original textures.
 - Add decorative crafting, support-aware underwater planting, four-segment Kelp and oriented Fan Coral.

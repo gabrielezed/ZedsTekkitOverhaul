@@ -2,34 +2,11 @@
 
 A **Minecraft 1.2.5** overhaul for **Tekkit Classic 3.1.2**. Territory grows more dangerous as you spend time in it, full moons bring assaults, and the Overworld gives you new reasons to prepare, fortify, and explore.
 
-## Survival 0.5.1-alpha.4 · The Abyssal Custodian
+## Underwater exploration
 
-A transforming aquatic Enderman relative guards the deep Sunken Observatory chamber. Its tentacles, extended strikes, repulsion and local Riftstep reward careful movement and cover. Each eligible site can issue one Ender Pearl on its first legitimate defeat. Ordinary Endermen no longer drop pearls, and EE2 excludes pearls and eyes from direct exchange. [Encounter and owner playtest](docs/engineering/abyssal-custodian.md) · [Pearl scarcity](docs/engineering/ender-pearl-scarcity.md)
+Survival 0.5.1 adds the Abyssal Trench, a deep-ocean biome with fossil formations and marine colonies. Use the Motorboat to reach it, the Underwater Mask and Flippers to explore it, and the IC2 Air Compressor to recharge your Oxygen Tank. [World generation](docs/engineering/abyssal-worldgen.md) · [Diving equipment](docs/agents/survival-051-alpha1.md) · [Motorboat](docs/engineering/motorboat.md)
 
-The Abyssal Enderkin and Custodian now recoil when hit. The alpha also refines Enderkin combat movement, corrects stray water faces in existing Observatories, and groups spawn eggs in a dedicated Creative tab.
-
-The owner accepted this alpha with reservations. Future visual work will improve mob animations and textures, and develop the beauty and atmosphere of the Abyssal Trench and Sunken Observatory, starting with the entrance. [Owner acceptance and art direction](docs/engineering/abyssal-custodian.md#owner-acceptance-and-future-art-direction)
-
-## Survival 0.5.1-alpha.3 · The Sunken Observatory
-
-New Abyssal Trench expeditions can lead to a submerged ruin with weathered masonry, flooded galleries and a central chamber. Abyssal Enderkin patrol newly generated Observatories. Fangfish and diving undead create rare encounters in ocean water. Each Observatory has a finite population that persists across visits. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Aquatic ecology](docs/engineering/abyssal-ecology.md)
-
-## Survival 0.5.1-alpha.2 · The Abyss Below
-
-New Default Overworld oceans can contain the Abyssal Trench, with deep terraces, fossil formations, clustered marine life and weathered masonry. The Motorboat and diving equipment support expeditions to the biome. [World generation and owner walkthrough](docs/engineering/abyssal-worldgen.md) · [Decorative palette](docs/engineering/abyssal-decoration.md)
-
-## Survival 0.5.1-alpha.1 · Water exploration
-
-**Alpha preview.** Headless Tekkit Classic checks cover diving equipment, oxygen charging, distillation and Motorboat operation. In-game visual and audio checks are tracked in the [owner playtest checklist](docs/engineering/local-artwork-recovery.md#owner-playtest).
-
-- **Diving equipment.** The Underwater Mask improves visibility in water with the matching ZTOAgent. The Oxygen Tank provides a finite air supply, and Flippers improve swimming.
-- **Air Compressor.** The IC2 low-voltage machine recharges Oxygen Tanks. Its grille faces the player when placed, and its panel shows remaining charge and stored EU.
-- **Fractional Distillation.** The refinery has connected vessels, indicators and positional audio driven by actual processing, and updated controls in the classic Minecraft and IC2 palette. The existing seven-block arrangement still forms the refinery.
-- **Motorboat.** Fit an outboard to a vanilla boat for faster ocean travel. Sneak-right-click to fill its 4,000 mB ZTO Gasoline tank and collect the empty bucket. The propeller spins under thrust and reverses with the engine. Dismantle the boat to recover the hull and its remaining fuel. [Recipes and controls](docs/engineering/motorboat.md)
-
-The default `local-dev` build restores the approved refinery and Air Compressor artwork for Tekkit Dev. The explicit `public` profile packages the public artwork baseline. [Artwork profiles](artwork/README.md#build-profiles)
-
-[Underwater playtest walkthrough](docs/agents/survival-051-alpha1.md#validation-and-owner-walkthrough) · [Distillation walkthrough](docs/engineering/distillation-industrial-presentation.md#verification-and-owner-walkthrough)
+Buried Sunken Observatories contain flooded galleries, finite Enderkin patrols and the Abyssal Custodian. Defeating the Custodian can yield one Ender Pearl per site. Fangfish and diving undead also inhabit open water. [Observatory and test seeds](docs/engineering/sunken-observatory.md) · [Custodian playtest](docs/engineering/abyssal-custodian.md) · [Pearl rules](docs/engineering/ender-pearl-scarcity.md)
 
 ## Survival 0.4.0-alpha.4 · Fortress warfare
 
@@ -62,11 +39,11 @@ The default `local-dev` build restores the approved refinery and Air Compressor 
 
 [Biome ecology and wildlife](docs/agents/survival-023-implementation.md) · [Industrial Saboteur](docs/agents/saboteur-industrial.md) · [Fieldwork and verification](docs/agents/survival-023-alpha2-fieldwork.md) · [Changelog](CHANGELOG.md)
 
-## Survival 0.2.1 · The Enderkin bestiary
+## Overworld Enderkin
 
 ![The five Enderkin in Survival 0.2.1: Skirmisher, Breacher, Tank, Thief and Saboteur](docs/agents/images/enderkin-021-lineup.png)
 
-*The full bestiary, rendered from the same models and textures used in the game.*
+*Rendered from the in-game models and textures.*
 
 | Enderkin | Encounter |
 | --- | --- |

@@ -1,5 +1,5 @@
 # ZedsTekkitOverhaul — Survival 0.2.2
-## Aerial Ecology & Atmospheric Hazards
+## Aerial mobs and jetpack hazards
 
 **Document type:** Game Design & Functional Specification  
 **Status:** Design Draft — Pending Owner Approval and Gameplay Validation  

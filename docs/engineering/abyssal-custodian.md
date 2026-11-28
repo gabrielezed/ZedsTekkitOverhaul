@@ -44,7 +44,7 @@ Compression preserves the feet anchor, native identity, health, damage eligibili
 
 ## Admission and persistence
 
-All three Observatory layout revisions are eligible once their persisted footprint is complete, loaded, stamped and populated. Admission checks hostile difficulty, the nearby diver and native water clearance. The full-body bounds come from that layout's chamber. Modifications are never repaired. Failed geometry can defer initial admission. This policy uses the existing Anvil provider and site stamp hooks.
+Observatory layout revisions one through five are eligible once their persisted footprint is complete, loaded, stamped and populated. Admission checks hostile difficulty, the nearby diver and native water clearance. The full-body bounds come from that layout's chamber. Modifications are never repaired. Failed geometry can defer initial admission. This policy uses the existing Anvil provider and site stamp hooks.
 
 A versioned file adjacent to the site record binds its site identity to a generated encounter UUID. A synced atomic replacement reserves it before native insertion. Native NBT owns actor position, health and phase. On load, site ownership and UUID must match the record. The lowest native entity ID among nearby copies of the same authorized actor is canonical. Peaceful suspends the fight and preserves the actor. Retreat preserves health and resets the current attack. Terminal defeat consumes the local reward before a normal Ender Pearl item enters the native drop list. [Reward and crash semantics](ender-pearl-scarcity.md)
 

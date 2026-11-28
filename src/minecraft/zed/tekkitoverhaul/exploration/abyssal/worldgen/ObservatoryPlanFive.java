@@ -3,6 +3,7 @@ package zed.tekkitoverhaul.exploration.abyssal.worldgen;
 /** An eroded threshold above a buried cistern, gallery and inner vault. */
 final class ObservatoryPlanFive extends ObservatoryPlanThree {
     static final int APPROACH = -12;
+    static final int MAX_HEIGHT = 32;
     static final int FRAMES = 0, CLEFT = 1, TERRACE = 2;
     final int sill, profile, shoulder;
     private final int hallWall;

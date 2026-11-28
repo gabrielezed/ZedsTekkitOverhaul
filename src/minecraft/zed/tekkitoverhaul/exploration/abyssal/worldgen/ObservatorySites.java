@@ -311,7 +311,7 @@ public final class ObservatorySites {
         long bit = 1L << plan.slice(chunk.xPosition, chunk.zPosition);
         if ((site.slices & bit) != 0 || site.failed) return;
         boolean buried = plan.revision() >= 3;
-        int high = buried ? ObservatoryPlanThree.MAX_HEIGHT : 11;
+        int high = plan.revision() == 5 ? ObservatoryPlanFive.MAX_HEIGHT : buried ? ObservatoryPlanThree.MAX_HEIGHT : 11;
         int[] writes = new int[16 * 16 * (high + FOUNDATION + 1)];
         for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
             int wx = (chunk.xPosition << 4) + x, wz = (chunk.zPosition << 4) + z;
@@ -366,7 +366,7 @@ public final class ObservatorySites {
             int otherX = startX + x + (side == 0 ? -1 : side == 1 ? 1 : 0);
             int otherZ = startZ + z + (side == 2 ? -1 : side == 3 ? 1 : 0);
             int u = plan.across(otherX, otherZ), v = plan.along(otherX, otherZ);
-            for (int h = 0; h <= (plan.revision() == 5 ? ObservatoryPlanThree.MAX_HEIGHT : 11); h++) {
+            for (int h = 0; h <= (plan.revision() == 5 ? ObservatoryPlanFive.MAX_HEIGHT : 11); h++) {
                 int y = plan.y + h;
                 if (chunk.getBlockID(x, y, z) != Block.waterStill.blockID
                         || plan.cell(u, h, v, h) != ObservatoryPlan.LAMP) continue;

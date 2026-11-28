@@ -291,7 +291,7 @@ public final class ObservatoryProbe {
         int lamps = 0, litWater = 0, seams = 0;
         int[][] sides = {{1,0,0}, {-1,0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1}};
         for (int x = minX * 16; x < (maxX + 1) * 16; x++) for (int z = minZ * 16; z < (maxZ + 1) * 16; z++) {
-            for (int y = floor - 2; y <= floor + (revision >= 5 ? 30 : 11); y++) {
+            for (int y = floor - 2; y <= floor + (revision >= 5 ? 32 : 11); y++) {
                 if (world.a(x, y, z) != 3038) continue;
                 lamps++;
                 check(world.b(wl.b, x, y, z) == 5, "generated lamp retains native block emission");
@@ -545,7 +545,7 @@ public final class ObservatoryProbe {
                 qualifying++;
                 if (surface >= floor + cover + 3 && !architecture(exposed)) covered++;
             }
-            for (int y = floor - 1; y <= Math.min(53, floor + 30); y++) {
+            for (int y = floor - 1; y <= Math.min(53, floor + (site.revision() >= 5 ? 32 : 30)); y++) {
                 int block = world.a(tx,y,tz);
                 if (block == 3038 && y <= floor + 12) lamps++;
                 if (block >= 3044 && block <= 3051) details++;
